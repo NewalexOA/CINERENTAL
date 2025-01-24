@@ -1,4 +1,5 @@
 """Main FastAPI application module."""
+
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -24,8 +25,8 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title=settings.APP_NAME,
-    version="1.0.0",
-    description="Cinema Equipment Rental Management System",
+    version='1.0.0',
+    description='Cinema Equipment Rental Management System',
     lifespan=lifespan,
 )
 
@@ -34,9 +35,21 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.CORS_ORIGINS,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=['*'],
+    allow_headers=['*'],
 )
 
 # Include API router
-app.include_router(api_router, prefix="/api/v1")
+app.include_router(api_router, prefix='/api/v1')
+
+
+@app.on_event('startup')
+async def startup_event() -> None:
+    """Initialize services on startup."""
+    init_redis()
+
+
+@app.on_event('shutdown')
+async def shutdown_event() -> None:
+    """Cleanup services on shutdown."""
+    await close_redis()
