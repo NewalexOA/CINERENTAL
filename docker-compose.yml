@@ -62,4 +62,4 @@ volumes:
 
 networks:
   cinerental_network:
-    driver: bridge 
+    driver: bridge
