@@ -1,4 +1,5 @@
 """API router module."""
+
 from fastapi import APIRouter
 
 from backend.api.v1.endpoints import (
