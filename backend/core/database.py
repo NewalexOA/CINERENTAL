@@ -1,29 +1,42 @@
 """Database initialization module."""
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
-from sqlalchemy.orm import sessionmaker, declarative_base
+from typing import AsyncGenerator
+
+from sqlalchemy.ext.asyncio import (
+    AsyncSession,
+    async_sessionmaker,
+    create_async_engine,
+)
+from sqlalchemy.orm import DeclarativeBase
 
 from backend.core.config import settings
+
+
+class Base(DeclarativeBase):
+    """Base class for all database models."""
+
 
 # Create async engine
 engine = create_async_engine(
     settings.DATABASE_URL,
     echo=settings.DEBUG,
-    future=True,
+    pool_pre_ping=True,
 )
 
 # Create async session factory
-AsyncSessionLocal = sessionmaker(
+AsyncSessionLocal = async_sessionmaker(
     engine,
     class_=AsyncSession,
     expire_on_commit=False,
+    autoflush=False,
 )
 
-# Create declarative base
-Base = declarative_base()
 
+async def get_db() -> AsyncGenerator[AsyncSession, None]:
+    """Get database session.
 
-async def get_session() -> AsyncSession:
-    """Get database session."""
+    Yields:
+        AsyncSession: Database session.
+    """
     async with AsyncSessionLocal() as session:
         try:
             yield session

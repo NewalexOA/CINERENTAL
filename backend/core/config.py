@@ -21,10 +21,23 @@ class Settings(BaseSettings):
     POSTGRES_USER: str
     POSTGRES_PASSWORD: str
 
+    @property
+    def DATABASE_URL(self) -> str:
+        """Get database URL."""
+        return (
+            f"postgresql+asyncpg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}"
+            f"@{self.POSTGRES_SERVER}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
+        )
+
     # Redis
     REDIS_HOST: str
     REDIS_PORT: int = 6379
     REDIS_DB: int = 0
+
+    @property
+    def REDIS_URL(self) -> str:
+        """Get Redis URL."""
+        return f"redis://{self.REDIS_HOST}:{self.REDIS_PORT}/{self.REDIS_DB}"
 
     # Security
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
@@ -39,24 +52,10 @@ class Settings(BaseSettings):
 
     # File Storage
     UPLOAD_DIR: str = "./media"
-    MAX_UPLOAD_SIZE: int = 10485760  # 10MB
-
-    @property
-    def DATABASE_URL(self) -> str:
-        """Get database URL."""
-        return (
-            f"postgresql://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}"
-            f"@{self.POSTGRES_SERVER}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
-        )
-
-    @property
-    def REDIS_URL(self) -> str:
-        """Get Redis URL."""
-        return f"redis://{self.REDIS_HOST}:{self.REDIS_PORT}/{self.REDIS_DB}"
+    MAX_UPLOAD_SIZE: int = 10 * 1024 * 1024  # 10MB
 
     model_config = SettingsConfigDict(
         env_file=".env",
-        env_file_encoding="utf-8",
         case_sensitive=True,
     )
 
