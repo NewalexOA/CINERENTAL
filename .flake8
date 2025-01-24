@@ -23,4 +23,4 @@ application-import-names = backend
 inline-quotes = single
 multiline-quotes = single
 docstring-quotes = double
-avoid-escape = True 
+avoid-escape = True

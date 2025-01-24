@@ -25,8 +25,8 @@
   - [x] Первичный коммит
 - [x] Настройка Docker и docker-compose
 - [x] Настройка FastAPI
-- [ ] Настройка PostgreSQL
-- [ ] Настройка Redis
+- [x] Настройка PostgreSQL
+- [x] Настройка Redis
 - [x] Создание базовой структуры проекта
 - [x] Настройка линтеров и форматтеров
 - [x] Настройка pre-commit хуков
@@ -161,4 +161,4 @@
 ### Инструменты для отслеживания прогресса:
 - GitHub Projects для задач
 - GitHub Actions для CI/CD
-- Confluence/Wiki для документации 
+- Confluence/Wiki для документации

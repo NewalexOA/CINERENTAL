@@ -35,4 +35,8 @@ repos:
     hooks:
       - id: mypy
         additional_dependencies:
-          - types-all 
+          - types-redis
+          - types-sqlalchemy
+          - types-python-dateutil
+          - types-PyYAML
+          - types-requests

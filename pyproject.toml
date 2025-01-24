@@ -18,4 +18,4 @@ ensure_newline_before_comments = true
 line_length = 88
 known_first_party = ["backend"]
 sections = ["FUTURE", "STDLIB", "THIRDPARTY", "FIRSTPARTY", "LOCALFOLDER"]
-default_section = "THIRDPARTY" 
+default_section = "THIRDPARTY"

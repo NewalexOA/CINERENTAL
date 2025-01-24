@@ -24,8 +24,8 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title=settings.APP_NAME,
-    version='1.0.0',
-    description='Cinema Equipment Rental Management System',
+    version="1.0.0",
+    description="Cinema Equipment Rental Management System",
     lifespan=lifespan,
 )
 
@@ -34,9 +34,9 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.CORS_ORIGINS,
     allow_credentials=True,
-    allow_methods=['*'],
-    allow_headers=['*'],
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 # Include API router
-app.include_router(api_router, prefix='/api/v1')
+app.include_router(api_router, prefix="/api/v1")
