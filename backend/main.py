@@ -41,15 +41,3 @@ app.add_middleware(
 
 # Include API router
 app.include_router(api_router, prefix='/api/v1')
-
-
-@app.on_event('startup')
-async def startup_event() -> None:
-    """Initialize services on startup."""
-    init_redis()
-
-
-@app.on_event('shutdown')
-async def shutdown_event() -> None:
-    """Cleanup services on shutdown."""
-    await close_redis()
