@@ -6,4 +6,4 @@ timestamp tracking and soft delete support.
 """
 from backend.models.base import Base, SoftDeleteMixin, TimestampMixin
 
-__all__ = ["Base", "TimestampMixin", "SoftDeleteMixin"]
+__all__ = ['Base', 'TimestampMixin', 'SoftDeleteMixin']
