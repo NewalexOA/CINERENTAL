@@ -14,7 +14,7 @@ async def init_redis() -> None:
     global redis
     redis = from_url(
         settings.REDIS_URL,
-        encoding="utf-8",
+        encoding='utf-8',
         decode_responses=True,
     )
 
@@ -29,11 +29,11 @@ async def get_redis() -> Redis:
         RuntimeError: If Redis is not initialized.
     """
     if redis is None:
-        raise RuntimeError("Redis is not initialized")
+        raise RuntimeError('Redis is not initialized')
     return redis
 
 
 async def close_redis() -> None:
     """Close Redis connection."""
     if redis is not None:
-        await redis.close() 
+        await redis.close()

@@ -5,7 +5,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from backend.api.v1.api import api_router
-from backend.core.cache import init_redis, close_redis
+from backend.core.cache import close_redis, init_redis
 from backend.core.config import settings
 
 
@@ -24,8 +24,8 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title=settings.APP_NAME,
-    version="1.0.0",
-    description="Cinema Equipment Rental Management System",
+    version='1.0.0',
+    description='Cinema Equipment Rental Management System',
     lifespan=lifespan,
 )
 
@@ -34,9 +34,9 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.CORS_ORIGINS,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=['*'],
+    allow_headers=['*'],
 )
 
 # Include API router
-app.include_router(api_router, prefix="/api/v1") 
+app.include_router(api_router, prefix='/api/v1')
