@@ -1,18 +1,23 @@
 """Base repository module."""
 
 from typing import Any, Generic, List, Optional, Type, TypeVar
-from sqlalchemy import select, update, delete
+
+from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.sql import Select
 
 from backend.models.base import Base
 
-ModelType = TypeVar("ModelType", bound=Base)
+ModelType = TypeVar('ModelType', bound=Base)
 
 
 class BaseRepository(Generic[ModelType]):
     """Base repository with common CRUD operations."""
 
-    def __init__(self, model: Type[ModelType], session: AsyncSession):
+    model: Type[ModelType]
+    session: AsyncSession
+
+    def __init__(self, model: Type[ModelType], session: AsyncSession) -> None:
         """Initialize repository.
 
         Args:
@@ -31,7 +36,7 @@ class BaseRepository(Generic[ModelType]):
         Returns:
             Entity if found, None otherwise
         """
-        query = select(self.model).where(self.model.id == id)
+        query: Select[tuple[ModelType]] = select(self.model).where(self.model.id == id)
         result = await self.session.execute(query)
         return result.scalar_one_or_none()
 
@@ -41,7 +46,7 @@ class BaseRepository(Generic[ModelType]):
         Returns:
             List of entities
         """
-        query = select(self.model)
+        query: Select[tuple[ModelType]] = select(self.model)
         result = await self.session.execute(query)
         return list(result.scalars().all())
 
@@ -103,6 +108,6 @@ class BaseRepository(Generic[ModelType]):
         Returns:
             True if entity exists, False otherwise
         """
-        query = select(self.model.id).where(self.model.id == id)
+        query: Select[tuple[int]] = select(self.model.id).where(self.model.id == id)
         result = await self.session.execute(query)
-        return result.scalar_one_or_none() is not None 
+        return result.scalar_one_or_none() is not None

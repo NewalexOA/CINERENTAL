@@ -5,8 +5,10 @@ including creating, retrieving, updating, and organizing hierarchical relationsh
 """
 
 from typing import List, Optional
+
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.sql import Select
 
 from backend.models.category import Category
 from backend.repositories.base import BaseRepository
@@ -15,7 +17,7 @@ from backend.repositories.base import BaseRepository
 class CategoryRepository(BaseRepository[Category]):
     """Repository for equipment categories."""
 
-    def __init__(self, session: AsyncSession):
+    def __init__(self, session: AsyncSession) -> None:
         """Initialize repository.
 
         Args:
@@ -32,7 +34,9 @@ class CategoryRepository(BaseRepository[Category]):
         Returns:
             Category if found, None otherwise
         """
-        query = select(self.model).where(self.model.name == name)
+        query: Select[tuple[Category]] = select(self.model).where(
+            self.model.name == name
+        )
         result = await self.session.execute(query)
         return result.scalar_one_or_none()
 
@@ -45,7 +49,9 @@ class CategoryRepository(BaseRepository[Category]):
         Returns:
             List of child categories
         """
-        query = select(self.model).where(self.model.parent_id == parent_id)
+        query: Select[tuple[Category]] = select(self.model).where(
+            self.model.parent_id == parent_id
+        )
         result = await self.session.execute(query)
         return list(result.scalars().all())
 
@@ -55,7 +61,9 @@ class CategoryRepository(BaseRepository[Category]):
         Returns:
             List of root categories
         """
-        query = select(self.model).where(self.model.parent_id.is_(None))
+        query: Select[tuple[Category]] = select(self.model).where(
+            self.model.parent_id.is_(None)
+        )
         result = await self.session.execute(query)
         return list(result.scalars().all())
 
@@ -68,14 +76,14 @@ class CategoryRepository(BaseRepository[Category]):
         Returns:
             List of categories from root to given category
         """
-        path = []
-        current = await self.get(category_id)
-        
+        path: List[Category] = []
+        current: Optional[Category] = await self.get(category_id)
+
         while current:
             path.insert(0, current)
             if current.parent_id:
                 current = await self.get(current.parent_id)
             else:
                 break
-                
+
         return path
