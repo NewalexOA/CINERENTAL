@@ -1,12 +1,9 @@
-# Use Python 3.10 slim image
-FROM python:3.10-slim
+# Use Python 3.12 slim image
+FROM python:3.12-slim
 
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1 \
-    POETRY_VERSION=1.4.2 \
-    POETRY_HOME="/opt/poetry" \
-    POETRY_VIRTUALENVS_CREATE=false
+    PYTHONUNBUFFERED=1
 
 # Set work directory
 WORKDIR /app
@@ -20,22 +17,24 @@ RUN apt-get update \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements
-COPY requirements.txt .
+# Create and activate virtual environment
+RUN python -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
 
-# Install Python dependencies
+# Copy and install requirements
+COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy project files
-COPY . .
+# Create media directory and non-root user
+RUN mkdir -p media && \
+    adduser --disabled-password --gecos '' appuser && \
+    chown -R appuser:appuser /app /opt/venv
 
-# Create media directory
-RUN mkdir -p media
-
-# Create non-root user
-RUN adduser --disabled-password --gecos '' appuser
-RUN chown -R appuser:appuser /app
+# Switch to non-root user
 USER appuser
+
+# Copy project files
+COPY --chown=appuser:appuser . .
 
 # Expose port
 EXPOSE 8000

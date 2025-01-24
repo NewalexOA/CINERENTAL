@@ -1,4 +1,4 @@
-version: '3.8'
+name: cinerental
 
 services:
   web:
@@ -16,8 +16,10 @@ services:
       - POSTGRES_SERVER=db
       - REDIS_HOST=redis
     depends_on:
-      - db
-      - redis
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     networks:
       - cinerental_network
 
