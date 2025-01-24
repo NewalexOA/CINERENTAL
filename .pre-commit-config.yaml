@@ -1,6 +1,6 @@
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.4.0
+    rev: v4.5.0
     hooks:
       - id: trailing-whitespace
       - id: end-of-file-fixer
@@ -10,33 +10,34 @@ repos:
       - id: debug-statements
 
   - repo: https://github.com/psf/black
-    rev: 23.10.1
+    rev: 24.1.0
     hooks:
       - id: black
         language_version: python3.12
 
   - repo: https://github.com/pycqa/isort
-    rev: 5.12.0
+    rev: 5.13.2
     hooks:
       - id: isort
-        args: ["--profile", "black"]
 
   - repo: https://github.com/pycqa/flake8
-    rev: 6.1.0
+    rev: 7.0.0
     hooks:
       - id: flake8
         additional_dependencies:
-          - flake8-docstrings
           - flake8-quotes
-        args: ["--max-line-length=88"]  # Match black's line length
 
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.7.0
+    rev: v1.8.0
     hooks:
       - id: mypy
         additional_dependencies:
+          - pydantic
+          - sqlalchemy[mypy]
           - types-redis
-          - types-sqlalchemy
-          - types-python-dateutil
-          - types-PyYAML
-          - types-requests
+          - types-passlib
+          - types-python-jose
+          - fastapi
+          - pydantic-settings
+          - alembic
+        args: [--config-file=pyproject.toml]

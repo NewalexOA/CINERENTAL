@@ -1,15 +1,15 @@
-"""Authentication endpoints module.
-
-This module implements API endpoints for user authentication and authorization.
-It provides routes for user login, token refresh, and password management.
-"""
+"""Authentication endpoints."""
 
 from fastapi import APIRouter
 
-router = APIRouter()
+auth_router = APIRouter()
 
 
-@router.get('/health-check')
-async def health_check() -> dict:
-    """Health check endpoint."""
-    return {'status': 'ok', 'message': 'Service is running'}
+@auth_router.get('/health')
+async def health_check() -> dict[str, str]:
+    """Health check endpoint.
+
+    Returns:
+        Status message indicating service is running
+    """
+    return {'status': 'Service is running'}
