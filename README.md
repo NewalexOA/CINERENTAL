@@ -10,6 +10,13 @@
 ## Description
 CINERENTAL is a comprehensive system for managing cinema equipment rentals. It allows managers to control equipment availability, handle bookings, and track equipment returns efficiently.
 
+## Documentation
+- [Project Architecture](docs/architecture.md) - Detailed system architecture and design decisions
+- [Development Plan](docs/development_plan.md) - Current development status and roadmap
+- [Code Style Guide](docs/code_style.md) - Coding standards and best practices
+- [Project Structure](docs/project_structure.md) - Detailed explanation of project organization
+- [Technical Requirements](docs/техническое_задание.md) - Project specifications and requirements
+
 ## Features
 - Equipment management with hierarchical categories
 - Client management
@@ -28,17 +35,27 @@ CINERENTAL is a comprehensive system for managing cinema equipment rentals. It a
 ## Project Structure
 ```
 cinerental/
-├── backend/
-│   ├── api/              # FastAPI routes
-│   ├── services/         # Business logic
-│   ├── repositories/     # Database operations
-│   ├── models/          # Pydantic models and ORM models
-│   └── core/            # Configuration, utilities
-├── frontend/
-│   ├── static/          # CSS, JS, images
-│   └── templates/       # HTML templates
-├── tests/               # Tests
-└── docker/             # Docker configuration
+├── backend/             # Backend application
+│   ├── api/            # API endpoints and routers
+│   │   └── v1/        # API version 1
+│   ├── core/          # Core functionality and config
+│   ├── models/        # Database models
+│   ├── schemas/       # Pydantic schemas
+│   ├── services/      # Business logic layer
+│   └── repositories/  # Database access layer
+├── docs/              # Project documentation
+│   ├── architecture.md       # System architecture
+│   ├── code_style.md        # Coding standards
+│   ├── development_plan.md  # Development roadmap
+│   └── project_structure.md # Project organization
+├── frontend/          # Frontend application
+│   ├── static/       # Static assets (CSS, JS, images)
+│   └── templates/    # Jinja2 HTML templates
+├── tests/            # Test suite
+│   ├── unit/        # Unit tests
+│   └── integration/ # Integration tests
+├── docker/          # Docker configuration files
+└── requirements.txt # Python dependencies
 ```
 
 ## Prerequisites
@@ -87,15 +104,10 @@ cinerental/
    ```
 
 ## Development
-- Follow PEP 8 style guide
+- Follow [Code Style Guide](docs/code_style.md)
 - Use pre-commit hooks
 - Write tests for new features
 - Update documentation
 
 ## Testing
-```bash
-pytest
 ```
-
-## License
-[MIT License](LICENSE) 
