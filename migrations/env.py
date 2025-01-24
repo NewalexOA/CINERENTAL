@@ -26,8 +26,11 @@ if config.config_file_name is not None:
 # for 'autogenerate' support
 target_metadata = Base.metadata
 
-# Set sqlalchemy.url from settings
-config.set_main_option('sqlalchemy.url', settings.SYNC_DATABASE_URL)
+# Use database URL from settings
+config.set_main_option(
+    'sqlalchemy.url',
+    settings.SYNC_DATABASE_URL,
+)
 
 
 def run_migrations_offline() -> None:

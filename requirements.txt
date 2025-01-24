@@ -39,3 +39,6 @@ pre-commit==3.5.0
 
 # WebSocket support
 websockets==12.0
+
+# Added python-dateutil
+python-dateutil>=2.8.2
