@@ -1,0 +1,26 @@
+[flake8]
+max-line-length = 88
+extend-ignore = E203
+exclude =
+    .git,
+    __pycache__,
+    build,
+    dist,
+    *.pyc,
+    *.egg-info,
+    .eggs,
+    migrations/versions
+
+# Docstring settings
+docstring-convention = google
+ignore-docstrings = True
+
+# Import settings
+import-order-style = google
+application-import-names = backend
+
+# Quote settings
+inline-quotes = single
+multiline-quotes = single
+docstring-quotes = double
+avoid-escape = True 
