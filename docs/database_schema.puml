@@ -1,0 +1,79 @@
+@startuml CINERENTAL Database Schema
+
+!define table(x) class x << (T,#FFAAAA) >>
+!define primary_key(x) <b>x</b>
+!define foreign_key(x) <i>x</i>
+
+hide methods
+hide stereotypes
+
+table(categories) {
+  primary_key(id): UUID
+  name: VARCHAR(255)
+  description: TEXT
+  foreign_key(parent_id): UUID
+  created_at: TIMESTAMP
+  updated_at: TIMESTAMP
+}
+
+table(equipment) {
+  primary_key(id): UUID
+  foreign_key(category_id): UUID
+  name: VARCHAR(255)
+  description: TEXT
+  barcode: VARCHAR(50)
+  daily_price: DECIMAL
+  status: VARCHAR(20)
+  created_at: TIMESTAMP
+  updated_at: TIMESTAMP
+}
+
+table(clients) {
+  primary_key(id): UUID
+  first_name: VARCHAR(100)
+  last_name: VARCHAR(100)
+  email: VARCHAR(255)
+  phone: VARCHAR(20)
+  address: TEXT
+  created_at: TIMESTAMP
+  updated_at: TIMESTAMP
+}
+
+table(bookings) {
+  primary_key(id): UUID
+  foreign_key(client_id): UUID
+  start_date: TIMESTAMP
+  end_date: TIMESTAMP
+  status: VARCHAR(20)
+  total_price: DECIMAL
+  created_at: TIMESTAMP
+  updated_at: TIMESTAMP
+}
+
+table(booking_items) {
+  primary_key(id): UUID
+  foreign_key(booking_id): UUID
+  foreign_key(equipment_id): UUID
+  daily_price: DECIMAL
+  created_at: TIMESTAMP
+  updated_at: TIMESTAMP
+}
+
+table(documents) {
+  primary_key(id): UUID
+  foreign_key(booking_id): UUID
+  type: VARCHAR(50)
+  number: VARCHAR(100)
+  content: TEXT
+  created_at: TIMESTAMP
+  updated_at: TIMESTAMP
+}
+
+categories "1" -- "0..*" categories : parent >
+categories "1" -- "0..*" equipment : contains >
+clients "1" -- "0..*" bookings : makes >
+bookings "1" -- "0..*" booking_items : contains >
+bookings "1" -- "0..*" documents : has >
+equipment "1" -- "0..*" booking_items : included in >
+
+@enduml 
