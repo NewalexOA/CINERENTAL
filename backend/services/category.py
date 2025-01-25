@@ -141,3 +141,22 @@ class CategoryService:
             raise ValueError(msg)
 
         return await self.repository.delete(category_id)
+
+    async def search_categories(self, query: str) -> List[Category]:
+        """Search categories by name or description.
+
+        Args:
+            query: Search query string
+
+        Returns:
+            List of matching categories
+        """
+        return await self.repository.search(query)
+
+    async def get_with_equipment_count(self) -> List[Category]:
+        """Get all categories with equipment count.
+
+        Returns:
+            List of categories with equipment count
+        """
+        return await self.repository.get_all_with_equipment_count()
