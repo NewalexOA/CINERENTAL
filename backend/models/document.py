@@ -26,6 +26,17 @@ class DocumentType(str, Enum):
     OTHER = 'other'  # Other document types
 
 
+class DocumentStatus(str, Enum):
+    """Document status enumeration."""
+
+    DRAFT = 'draft'  # Document is being prepared
+    PENDING = 'pending'  # Document is awaiting approval
+    APPROVED = 'approved'  # Document has been approved
+    REJECTED = 'rejected'  # Document has been rejected
+    EXPIRED = 'expired'  # Document has expired
+    CANCELLED = 'cancelled'  # Document has been cancelled
+
+
 class Document(TimestampMixin, Base):
     """Document model.
 
@@ -41,6 +52,7 @@ class Document(TimestampMixin, Base):
         file_size: File size in bytes.
         mime_type: File MIME type.
         notes: Optional internal notes.
+        status: Document status.
         client: Client relationship.
         booking: Booking relationship.
     """
@@ -66,6 +78,12 @@ class Document(TimestampMixin, Base):
     file_size: Mapped[int] = mapped_column(nullable=False)
     mime_type: Mapped[str] = mapped_column(String(100), nullable=False)
     notes: Mapped[str | None] = mapped_column(String(1000))
+    status: Mapped[DocumentStatus] = mapped_column(
+        SQLEnum(DocumentStatus),
+        nullable=False,
+        default=DocumentStatus.DRAFT,
+        index=True,
+    )
 
     # Relationships
     client = relationship('Client', back_populates='documents')
