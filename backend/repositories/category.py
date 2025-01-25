@@ -116,3 +116,45 @@ class CategoryRepository(BaseRepository[Category]):
             List of subcategories
         """
         return await self.get_children(category_id)
+
+    async def search(self, query: str) -> List[Category]:
+        """Search categories by name or description.
+
+        Args:
+            query: Search query string
+
+        Returns:
+            List of matching categories
+        """
+        search_query = f'%{query}%'
+        stmt = select(self.model).where(
+            (self.model.name.ilike(search_query))
+            | (self.model.description.ilike(search_query))
+        )
+        result = await self.session.execute(stmt)
+        return list(result.scalars().all())
+
+    async def get_all_with_equipment_count(self) -> List[Category]:
+        """Get all categories with equipment count.
+
+        Returns:
+            List of categories with equipment count
+        """
+        subquery = (
+            select(Equipment.category_id, func.count().label('equipment_count'))
+            .group_by(Equipment.category_id)
+            .subquery()
+        )
+
+        stmt = select(
+            self.model,
+            func.coalesce(subquery.c.equipment_count, 0).label('equipment_count'),
+        ).outerjoin(subquery, self.model.id == subquery.c.category_id)
+
+        result = await self.session.execute(stmt)
+        categories = []
+        for row in result:
+            category = row[0]
+            category.equipment_count = row[1]
+            categories.append(category)
+        return categories
