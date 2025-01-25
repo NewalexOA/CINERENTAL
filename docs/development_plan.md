@@ -63,18 +63,18 @@
   - [x] ClientRepository
   - [x] BookingRepository
   - [x] DocumentRepository
-- [ ] Реализация базовых сервисов:
-  - [ ] EquipmentService
-  - [ ] CategoryService
-  - [ ] ClientService
-  - [ ] BookingService
-  - [ ] PricingService
+- [x] Реализация базовых сервисов:
+  - [x] EquipmentService
+  - [x] CategoryService
+  - [x] ClientService
+  - [x] BookingService
+  - [x] DocumentService
 
 ### Документация этапа
-- [ ] Документация по репозиториям
-- [ ] Документация по сервисам
-- [ ] Описание бизнес-логики
-- [ ] Примеры использования
+- [x] Документация по репозиториям
+- [x] Документация по сервисам
+- [x] Описание бизнес-логики
+- [x] Примеры использования
 
 ## Этап 4: Разработка API (2-3 дня)
 ### Задачи
