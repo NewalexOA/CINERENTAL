@@ -9,7 +9,9 @@ from datetime import datetime
 from decimal import Decimal
 from enum import Enum
 
-from sqlalchemy import ForeignKey, String, DateTime, Numeric, Enum as SQLEnum
+from sqlalchemy import DateTime
+from sqlalchemy import Enum as SQLEnum
+from sqlalchemy import ForeignKey, Numeric, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from backend.models.base import Base, TimestampMixin
@@ -60,10 +62,18 @@ class Booking(TimestampMixin, Base):
     __tablename__ = 'bookings'
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    client_id: Mapped[int] = mapped_column(ForeignKey('clients.id', ondelete='RESTRICT'))
-    equipment_id: Mapped[int] = mapped_column(ForeignKey('equipment.id', ondelete='RESTRICT'))
-    start_date: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, index=True)
-    end_date: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, index=True)
+    client_id: Mapped[int] = mapped_column(
+        ForeignKey('clients.id', ondelete='RESTRICT')
+    )
+    equipment_id: Mapped[int] = mapped_column(
+        ForeignKey('equipment.id', ondelete='RESTRICT')
+    )
+    start_date: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, index=True
+    )
+    end_date: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, index=True
+    )
     actual_return_date: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     booking_status: Mapped[BookingStatus] = mapped_column(
         SQLEnum(BookingStatus),
@@ -78,11 +88,15 @@ class Booking(TimestampMixin, Base):
         index=True,
     )
     total_amount: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
-    paid_amount: Mapped[Decimal] = mapped_column(Numeric(10, 2), default=0, nullable=False)
+    paid_amount: Mapped[Decimal] = mapped_column(
+        Numeric(10, 2), default=0, nullable=False
+    )
     deposit_amount: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
     notes: Mapped[str | None] = mapped_column(String(1000))
 
     # Relationships
     client = relationship('Client', back_populates='bookings')
     equipment = relationship('Equipment', back_populates='bookings')
-    documents = relationship('Document', back_populates='booking', cascade='all, delete-orphan')
+    documents = relationship(
+        'Document', back_populates='booking', cascade='all, delete-orphan'
+    )

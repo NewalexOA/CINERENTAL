@@ -75,4 +75,4 @@
 - `maintenance_work_mem`: увеличен для оптимизации создания индексов
 - `effective_cache_size`: настроен в соответствии с доступной памятью
 - `random_page_cost`: оптимизирован для SSD
-- `default_statistics_target`: увеличен для более точного планирования запросов 
+- `default_statistics_target`: увеличен для более точного планирования запросов

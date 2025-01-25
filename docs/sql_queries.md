@@ -104,7 +104,7 @@ ORDER BY b.end_date;
 
 ### Получение активных бронирований на период
 ```sql
-SELECT b.*, c.name as client_name, 
+SELECT b.*, c.name as client_name,
        json_agg(e.*) as equipment
 FROM bookings b
 JOIN clients c ON b.client_id = c.id
@@ -121,7 +121,7 @@ ORDER BY b.start_date;
 
 ### Получение детальной информации о бронировании
 ```sql
-SELECT b.*, 
+SELECT b.*,
        c.name as client_name,
        c.phone as client_phone,
        c.email as client_email,
@@ -169,4 +169,4 @@ WHERE d.type = :document_type
   AND d.deleted_at IS NULL
 ORDER BY d.created_at;
 ```
-Запрос для поиска документов определенного типа за указанный период времени. 
+Запрос для поиска документов определенного типа за указанный период времени.

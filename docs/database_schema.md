@@ -74,4 +74,4 @@ ERD диаграмма доступна в файле [database_schema.puml](dat
 - `number` (VARCHAR(100)) - номер документа
 - `content` (TEXT) - содержимое документа
 - `created_at` (TIMESTAMP) - дата и время создания
-- `updated_at` (TIMESTAMP) - дата и время последнего обновления 
+- `updated_at` (TIMESTAMP) - дата и время последнего обновления

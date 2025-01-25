@@ -7,10 +7,11 @@ and rental history references.
 
 from enum import Enum
 
-from sqlalchemy import String, Enum as SQLEnum
+from sqlalchemy import Enum as SQLEnum
+from sqlalchemy import String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from backend.models.base import Base, TimestampMixin, SoftDeleteMixin
+from backend.models.base import Base, SoftDeleteMixin, TimestampMixin
 
 
 class ClientStatus(str, Enum):
@@ -58,5 +59,9 @@ class Client(TimestampMixin, SoftDeleteMixin, Base):
     address: Mapped[str] = mapped_column(String(500), nullable=False)
 
     # Relationships
-    bookings = relationship('Booking', back_populates='client', cascade='all, delete-orphan')
-    documents = relationship('Document', back_populates='client', cascade='all, delete-orphan')
+    bookings = relationship(
+        'Booking', back_populates='client', cascade='all, delete-orphan'
+    )
+    documents = relationship(
+        'Document', back_populates='client', cascade='all, delete-orphan'
+    )

@@ -1,4 +1,5 @@
 """Base model module with common functionality for all models."""
+
 from datetime import datetime
 from typing import Optional
 

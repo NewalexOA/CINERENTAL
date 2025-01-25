@@ -9,10 +9,11 @@ and availability status.
 from decimal import Decimal
 from enum import Enum
 
-from sqlalchemy import ForeignKey, String, Numeric, Enum as SQLEnum
+from sqlalchemy import Enum as SQLEnum
+from sqlalchemy import ForeignKey, Numeric, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from backend.models.base import Base, TimestampMixin, SoftDeleteMixin
+from backend.models.base import Base, SoftDeleteMixin, TimestampMixin
 
 
 class EquipmentStatus(str, Enum):
@@ -50,7 +51,9 @@ class Equipment(TimestampMixin, SoftDeleteMixin, Base):
     description: Mapped[str | None] = mapped_column(String(1000))
     serial_number: Mapped[str] = mapped_column(String(100), unique=True, index=True)
     barcode: Mapped[str] = mapped_column(String(100), unique=True, index=True)
-    category_id: Mapped[int] = mapped_column(ForeignKey('categories.id', ondelete='RESTRICT'))
+    category_id: Mapped[int] = mapped_column(
+        ForeignKey('categories.id', ondelete='RESTRICT')
+    )
     status: Mapped[EquipmentStatus] = mapped_column(
         SQLEnum(EquipmentStatus),
         default=EquipmentStatus.AVAILABLE,

@@ -80,7 +80,7 @@ ORDER BY b.end_date;
 -- Bookings queries
 
 -- Get active bookings for period
-SELECT b.*, c.name as client_name, 
+SELECT b.*, c.name as client_name,
        json_agg(e.*) as equipment
 FROM bookings b
 JOIN clients c ON b.client_id = c.id
@@ -94,7 +94,7 @@ GROUP BY b.id, c.name
 ORDER BY b.start_date;
 
 -- Get booking details with all related info
-SELECT b.*, 
+SELECT b.*,
        c.name as client_name,
        c.phone as client_phone,
        c.email as client_email,
@@ -134,4 +134,4 @@ JOIN clients c ON b.client_id = c.id
 WHERE d.type = :document_type
   AND d.created_at BETWEEN :start_date AND :end_date
   AND d.deleted_at IS NULL
-ORDER BY d.created_at; 
+ORDER BY d.created_at;

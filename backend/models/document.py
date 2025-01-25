@@ -7,7 +7,8 @@ with equipment rentals and client interactions.
 
 from enum import Enum
 
-from sqlalchemy import ForeignKey, String, Enum as SQLEnum
+from sqlalchemy import Enum as SQLEnum
+from sqlalchemy import ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from backend.models.base import Base, TimestampMixin
@@ -47,8 +48,12 @@ class Document(TimestampMixin, Base):
     __tablename__ = 'documents'
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    client_id: Mapped[int] = mapped_column(ForeignKey('clients.id', ondelete='RESTRICT'))
-    booking_id: Mapped[int | None] = mapped_column(ForeignKey('bookings.id', ondelete='SET NULL'))
+    client_id: Mapped[int] = mapped_column(
+        ForeignKey('clients.id', ondelete='RESTRICT')
+    )
+    booking_id: Mapped[int | None] = mapped_column(
+        ForeignKey('bookings.id', ondelete='SET NULL')
+    )
     type: Mapped[DocumentType] = mapped_column(
         SQLEnum(DocumentType),
         nullable=False,

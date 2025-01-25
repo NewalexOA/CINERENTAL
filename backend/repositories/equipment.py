@@ -5,15 +5,21 @@ including inventory tracking, availability status, and maintenance records.
 """
 
 from datetime import datetime
-from typing import List, Optional
+from typing import List, Optional, Protocol, Type, cast
 
-from sqlalchemy import and_, or_, select
+from sqlalchemy import Column, and_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import Select
 
 from backend.models.booking import Booking, BookingStatus
 from backend.models.equipment import Equipment, EquipmentStatus
 from backend.repositories.base import BaseRepository
+
+
+class HasStatus(Protocol):
+    """Protocol for models with status attribute."""
+
+    status: Column[BookingStatus]
 
 
 class EquipmentRepository(BaseRepository[Equipment]):
@@ -49,7 +55,9 @@ class EquipmentRepository(BaseRepository[Equipment]):
         Returns:
             Equipment if found, None otherwise
         """
-        query: Select = select(self.model).where(self.model.serial_number == serial_number)
+        query: Select = select(self.model).where(
+            self.model.serial_number == serial_number
+        )
         result: Optional[Equipment] = await self.session.scalar(query)
         return result
 
@@ -63,8 +71,8 @@ class EquipmentRepository(BaseRepository[Equipment]):
             List of equipment in category
         """
         query: Select = select(self.model).where(self.model.category_id == category_id)
-        result: List[Equipment] = (await self.session.scalars(query)).all()
-        return result
+        result = await self.session.scalars(query)
+        return cast(List[Equipment], list(result.all()))
 
     async def get_available(
         self, start_date: datetime, end_date: datetime
@@ -81,6 +89,7 @@ class EquipmentRepository(BaseRepository[Equipment]):
         # Equipment is available if:
         # 1. It has status 'available'
         # 2. It has no bookings for the specified period
+        booking_model = cast(Type[HasStatus], Booking)
         query: Select = select(self.model).where(
             and_(
                 self.model.status == EquipmentStatus.AVAILABLE,
@@ -88,13 +97,13 @@ class EquipmentRepository(BaseRepository[Equipment]):
                     and_(
                         Booking.start_date < end_date,
                         Booking.end_date > start_date,
-                        Booking.status != BookingStatus.CANCELLED,
+                        booking_model.status != BookingStatus.CANCELLED,
                     )
                 ),
             )
         )
-        result: List[Equipment] = (await self.session.scalars(query)).all()
-        return result
+        result = await self.session.scalars(query)
+        return cast(List[Equipment], list(result.all()))
 
     async def search(self, query_str: str) -> List[Equipment]:
         """Search equipment by name or description.
@@ -111,5 +120,5 @@ class EquipmentRepository(BaseRepository[Equipment]):
                 self.model.description.ilike(f'%{query_str}%'),
             )
         )
-        result: List[Equipment] = (await self.session.scalars(query)).all()
-        return result
+        result = await self.session.scalars(query)
+        return cast(List[Equipment], list(result.all()))

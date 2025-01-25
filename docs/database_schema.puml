@@ -76,4 +76,4 @@ bookings "1" -- "0..*" booking_items : contains >
 bookings "1" -- "0..*" documents : has >
 equipment "1" -- "0..*" booking_items : included in >
 
-@enduml 
+@enduml

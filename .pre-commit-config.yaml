@@ -10,34 +10,40 @@ repos:
       - id: debug-statements
 
   - repo: https://github.com/psf/black
-    rev: 24.1.0
+    rev: 23.10.1
     hooks:
       - id: black
         language_version: python3.12
+        args: [--skip-string-normalization]
 
   - repo: https://github.com/pycqa/isort
-    rev: 5.13.2
+    rev: 5.12.0
     hooks:
       - id: isort
+        name: isort (python)
 
   - repo: https://github.com/pycqa/flake8
-    rev: 7.0.0
+    rev: 6.1.0
     hooks:
       - id: flake8
         additional_dependencies:
+          - flake8-docstrings
           - flake8-quotes
+        exclude: ^migrations/
 
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.8.0
+    rev: v1.7.1
     hooks:
       - id: mypy
         additional_dependencies:
-          - pydantic
-          - sqlalchemy[mypy]
+          - types-python-dateutil
+          - types-pytz
           - types-redis
-          - types-passlib
-          - types-python-jose
-          - fastapi
-          - pydantic-settings
-          - alembic
-        args: [--config-file=pyproject.toml]
+          - types-requests
+          - types-setuptools
+          - types-toml
+          - types-ujson
+          - sqlalchemy[mypy]
+          - pydantic
+        exclude: ^migrations/
+        args: [--explicit-package-bases]

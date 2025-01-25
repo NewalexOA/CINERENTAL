@@ -1,4 +1,5 @@
 """Redis cache initialization module."""
+
 from typing import Optional
 
 from redis.asyncio import Redis, from_url

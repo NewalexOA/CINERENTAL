@@ -29,7 +29,9 @@ class Category(TimestampMixin, Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
     description: Mapped[str | None] = mapped_column(String(500))
-    parent_id: Mapped[int | None] = mapped_column(ForeignKey('categories.id', ondelete='SET NULL'))
+    parent_id: Mapped[int | None] = mapped_column(
+        ForeignKey('categories.id', ondelete='SET NULL')
+    )
 
     # Relationships
     parent: Mapped['Category | None'] = relationship(
