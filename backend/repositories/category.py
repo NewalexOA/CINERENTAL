@@ -6,11 +6,12 @@ including creating, retrieving, updating, and organizing hierarchical relationsh
 
 from typing import List, Optional
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import Select
 
 from backend.models.category import Category
+from backend.models.equipment import Equipment
 from backend.repositories.base import BaseRepository
 
 
@@ -87,3 +88,31 @@ class CategoryRepository(BaseRepository[Category]):
                 break
 
         return path
+
+    async def get_equipment_count(self, category_id: int) -> int:
+        """Get number of equipment items in category.
+
+        Args:
+            category_id: Category ID
+
+        Returns:
+            Number of equipment items
+        """
+        query = (
+            select(func.count())
+            .select_from(Equipment)
+            .where(Equipment.category_id == category_id)
+        )
+        result = await self.session.execute(query)
+        return result.scalar_one()
+
+    async def get_subcategories(self, category_id: int) -> List[Category]:
+        """Get all subcategories (direct children).
+
+        Args:
+            category_id: Category ID
+
+        Returns:
+            List of subcategories
+        """
+        return await self.get_children(category_id)
