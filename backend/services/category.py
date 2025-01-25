@@ -58,7 +58,7 @@ class CategoryService:
         name: Optional[str] = None,
         description: Optional[str] = None,
         parent_id: Optional[int] = None,
-    ) -> Optional[Category]:
+    ) -> Category:
         """Update category details.
 
         Args:
@@ -68,11 +68,16 @@ class CategoryService:
             parent_id: New parent category ID (optional)
 
         Returns:
-            Updated category if found, None otherwise
+            Updated category
 
         Raises:
-            ValueError: If category with given name already exists
+            ValueError: If category with given name already exists or category not found
         """
+        # Check if category exists
+        category = await self.repository.get(category_id)
+        if not category:
+            raise ValueError('Category not found')
+
         if name is not None:
             existing = await self.repository.get_by_name(name)
             if existing and existing.id != category_id:
@@ -88,8 +93,11 @@ class CategoryService:
             update_data['parent_id'] = parent_id
 
         if update_data:
-            return await self.repository.update(category_id, **update_data)
-        return await self.repository.get(category_id)
+            result = await self.repository.update(category_id, **update_data)
+            if not result:
+                raise ValueError('Category not found')
+            return result
+        return category
 
     async def get_categories(self) -> List[Category]:
         """Get all categories.
