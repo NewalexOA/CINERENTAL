@@ -1,7 +1,6 @@
 """Test configuration and fixtures."""
 
-import asyncio
-from typing import AsyncGenerator, Callable, Generator
+from typing import AsyncGenerator, Callable
 
 import pytest
 from sqlalchemy.ext.asyncio import (
@@ -11,20 +10,7 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
 )
 
-from backend.core.config import settings
 from backend.models.base import Base
-
-
-@pytest.fixture(scope='session')  # type: ignore[misc]
-def event_loop() -> Generator[asyncio.AbstractEventLoop, None, None]:
-    """Create event loop for tests.
-
-    Returns:
-        Event loop instance
-    """
-    loop = asyncio.new_event_loop()
-    yield loop
-    loop.close()
 
 
 @pytest.fixture(scope='function')  # type: ignore[misc]
@@ -34,9 +20,8 @@ async def db_engine() -> AsyncGenerator[AsyncEngine, None]:
     Yields:
         Database engine instance
     """
-    database_url = settings.DATABASE_URL.replace(
-        'postgresql+asyncpg://',
-        'postgresql+asyncpg://postgres:postgres@localhost:5432/cinerental_test',
+    database_url = (
+        'postgresql+asyncpg://postgres:postgres@localhost:5432/cinerental_test'
     )
 
     engine = create_async_engine(database_url, echo=False)
