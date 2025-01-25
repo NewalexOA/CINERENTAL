@@ -122,3 +122,33 @@ class EquipmentRepository(BaseRepository[Equipment]):
         )
         result = await self.session.scalars(query)
         return cast(List[Equipment], list(result.all()))
+
+    async def check_availability(
+        self, equipment_id: int, start_date: datetime, end_date: datetime
+    ) -> bool:
+        """Check if equipment is available for booking.
+
+        Args:
+            equipment_id: Equipment ID
+            start_date: Start date
+            end_date: End date
+
+        Returns:
+            True if equipment is available, False otherwise
+        """
+        booking_model = cast(Type[HasStatus], Booking)
+        query: Select = select(self.model).where(
+            and_(
+                self.model.id == equipment_id,
+                self.model.status == EquipmentStatus.AVAILABLE,
+                ~self.model.bookings.any(
+                    and_(
+                        Booking.start_date < end_date,
+                        Booking.end_date > start_date,
+                        booking_model.status != BookingStatus.CANCELLED,
+                    )
+                ),
+            )
+        )
+        result = await self.session.scalar(query)
+        return result is not None
