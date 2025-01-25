@@ -12,7 +12,7 @@ from sqlalchemy import and_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import Select
 
-from backend.models.document import Document, DocumentType
+from backend.models.document import Document, DocumentStatus, DocumentType
 from backend.repositories.base import BaseRepository
 
 
@@ -92,6 +92,40 @@ class DocumentRepository(BaseRepository[Document]):
             or_(
                 self.model.title.ilike(f'%{query_str}%'),
                 self.model.description.ilike(f'%{query_str}%'),
+            )
+        )
+        result = await self.session.scalars(query)
+        return list(result.all())
+
+    async def get_by_status(self, status: DocumentStatus) -> List[Document]:
+        """Get documents by status.
+
+        Args:
+            status: Document status
+
+        Returns:
+            List of documents
+        """
+        query: Select = select(self.model).where(self.model.status == status)
+        result = await self.session.scalars(query)
+        return list(result.all())
+
+    async def get_by_date_range(
+        self, start_date: datetime, end_date: datetime
+    ) -> List[Document]:
+        """Get documents created within date range.
+
+        Args:
+            start_date: Start date
+            end_date: End date
+
+        Returns:
+            List of documents
+        """
+        query: Select = select(self.model).where(
+            and_(
+                self.model.created_at >= start_date,
+                self.model.created_at <= end_date,
             )
         )
         result = await self.session.scalars(query)
