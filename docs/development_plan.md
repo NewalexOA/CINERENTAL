@@ -57,12 +57,12 @@
 
 ## Этап 3: Разработка базового функционала (3-4 дня)
 ### Задачи
-- [ ] Реализация репозиториев:
-  - [ ] EquipmentRepository
-  - [ ] CategoryRepository
-  - [ ] ClientRepository
-  - [ ] BookingRepository
-  - [ ] DocumentRepository
+- [x] Реализация репозиториев:
+  - [x] EquipmentRepository
+  - [x] CategoryRepository
+  - [x] ClientRepository
+  - [x] BookingRepository
+  - [x] DocumentRepository
 - [ ] Реализация базовых сервисов:
   - [ ] EquipmentService
   - [ ] CategoryService
