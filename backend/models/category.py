@@ -5,7 +5,9 @@ Categories can be hierarchical (have parent categories) and are used
 to organize equipment items into logical groups.
 """
 
-from sqlalchemy import ForeignKey, String
+from typing import Optional
+
+from sqlalchemy import ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from backend.models.base import Base, TimestampMixin
@@ -22,15 +24,18 @@ class Category(TimestampMixin, Base):
         parent: Parent category relationship.
         children: Child categories relationship.
         equipment: Equipment items in this category.
+        equipment_count: Virtual attribute for equipment count.
     """
 
     __tablename__ = 'categories'
 
-    id: Mapped[int] = mapped_column(primary_key=True)
-    name: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
-    description: Mapped[str | None] = mapped_column(String(500))
-    parent_id: Mapped[int | None] = mapped_column(
-        ForeignKey('categories.id', ondelete='SET NULL')
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    name: Mapped[str] = mapped_column(String(100), unique=True)
+    description: Mapped[str] = mapped_column(String(500))
+    parent_id: Mapped[Optional[int]] = mapped_column(
+        Integer,
+        ForeignKey('categories.id', ondelete='RESTRICT'),
+        nullable=True,
     )
 
     # Relationships
@@ -49,3 +54,14 @@ class Category(TimestampMixin, Base):
         back_populates='category',
         cascade='all, delete-orphan',
     )
+
+    # Virtual attribute for equipment count
+    equipment_count: int = 0
+
+    def __repr__(self) -> str:
+        """Get string representation.
+
+        Returns:
+            String representation
+        """
+        return f'Category(id={self.id}, name={self.name})'

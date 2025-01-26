@@ -6,7 +6,7 @@ including creating, retrieving, updating, and organizing hierarchical relationsh
 
 from typing import List, Optional
 
-from sqlalchemy import func, select
+from sqlalchemy import CTE, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import Select
 
@@ -126,11 +126,10 @@ class CategoryRepository(BaseRepository[Category]):
         Returns:
             List of matching categories
         """
-        search_query = f'%{query}%'
-        stmt = select(self.model).where(
-            (self.model.name.ilike(search_query))
-            | (self.model.description.ilike(search_query))
-        )
+        # Convert query to lowercase for case-insensitive search
+        query = query.lower()
+
+        stmt = select(self.model).where(func.lower(self.model.name) == query)
         result = await self.session.execute(stmt)
         return list(result.scalars().all())
 
@@ -138,18 +137,49 @@ class CategoryRepository(BaseRepository[Category]):
         """Get all categories with equipment count.
 
         Returns:
-            List of categories with equipment count
+            List of categories with equipment count, including equipment
+            from subcategories.
         """
-        subquery = (
-            select(Equipment.category_id, func.count().label('equipment_count'))
-            .group_by(Equipment.category_id)
+        # Create recursive CTE to get all subcategories
+        hierarchy: CTE = select(
+            Category.id.label('category_id'),
+            Category.id.label('subcategory_id'),
+        ).cte(recursive=True)
+
+        hierarchy = hierarchy.union_all(
+            select(
+                hierarchy.c.category_id,
+                Category.id.label('subcategory_id'),
+            ).join(
+                Category,
+                Category.parent_id == hierarchy.c.subcategory_id,
+            )
+        )
+
+        # Count equipment in each category and its subcategories
+        equipment_count = (
+            select(
+                hierarchy.c.category_id,
+                func.count(Equipment.id).label('equipment_count'),
+            )
+            .join(
+                Equipment,
+                Equipment.category_id == hierarchy.c.subcategory_id,
+            )
+            .group_by(hierarchy.c.category_id)
             .subquery()
         )
 
+        # Get categories with equipment count
         stmt = select(
             self.model,
-            func.coalesce(subquery.c.equipment_count, 0).label('equipment_count'),
-        ).outerjoin(subquery, self.model.id == subquery.c.category_id)
+            func.coalesce(equipment_count.c.equipment_count, 0).label(
+                'equipment_count'
+            ),
+        ).outerjoin(
+            equipment_count,
+            self.model.id == equipment_count.c.category_id,
+        )
 
         result = await self.session.execute(stmt)
         categories = []

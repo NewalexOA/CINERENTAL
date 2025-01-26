@@ -8,8 +8,10 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Dict, List, Optional
 
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from backend.models.booking import Booking, BookingStatus
 from backend.models.equipment import Equipment, EquipmentStatus
 from backend.repositories.equipment import EquipmentRepository
 
@@ -171,6 +173,7 @@ class EquipmentService:
 
         Raises:
             ValueError: If equipment not found or status transition not allowed
+                      or if equipment has active bookings
         """
         # Get equipment
         equipment = await self.repository.get(equipment_id)
@@ -194,6 +197,27 @@ class EquipmentService:
         if status not in allowed_transitions[equipment.status]:
             msg = f'Invalid status transition from {equipment.status} to {status}'
             raise ValueError(msg)
+
+        # Check for active bookings if transitioning to RETIRED
+        if status == EquipmentStatus.RETIRED:
+            query = select(Booking).where(
+                Booking.equipment_id == equipment_id,
+                Booking.booking_status.in_(
+                    [
+                        BookingStatus.PENDING,
+                        BookingStatus.CONFIRMED,
+                        BookingStatus.ACTIVE,
+                    ]
+                ),
+            )
+            result = await self.session.execute(query)
+            active_bookings = result.scalars().all()
+            if active_bookings:
+                msg = (
+                    f'Cannot retire equipment {equipment_id} - '
+                    f'it has {len(active_bookings)} active bookings'
+                )
+                raise ValueError(msg)
 
         # Update status
         equipment.status = status

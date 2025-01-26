@@ -9,11 +9,12 @@ from typing import Any, Dict
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.models.booking import BookingStatus, PaymentStatus
+from backend.models.booking import Booking, BookingStatus, PaymentStatus
 from backend.models.client import Client
 from backend.models.document import DocumentStatus, DocumentType
-from backend.models.equipment import Equipment
+from backend.models.equipment import Equipment, EquipmentStatus
 from backend.services.booking import BookingService
+from backend.services.category import CategoryService
 from backend.services.client import ClientService
 from backend.services.document import DocumentService
 from backend.services.equipment import EquipmentService
@@ -27,6 +28,7 @@ def services(db_session: AsyncSession) -> Dict[str, Any]:
         'client': ClientService(db_session),
         'document': DocumentService(db_session),
         'equipment': EquipmentService(db_session),
+        'category': CategoryService(db_session),
     }
 
 
@@ -196,3 +198,347 @@ class TestBookingProcess:
         await services['document'].change_status(contract.id, DocumentStatus.APPROVED)
         contract = await services['document'].get_document(contract.id)
         assert contract.status == DocumentStatus.APPROVED
+
+
+class TestCategoryHierarchy:
+    """Test category hierarchy and equipment counting."""
+
+    @pytest.mark.asyncio  # type: ignore[misc]
+    async def test_category_tree(
+        self,
+        db_session: AsyncSession,
+        equipment_service: EquipmentService,
+    ) -> None:
+        """Test category hierarchy and equipment counting."""
+        category_service = CategoryService(db_session)
+
+        # Create root categories
+        cameras = await category_service.create_category(
+            name='Cameras',
+            description='Photo and video cameras',
+        )
+        await category_service.create_category(
+            name='Lighting',
+            description='Studio and location lighting',
+        )
+
+        # Create subcategories
+        dslr = await category_service.create_category(
+            name='DSLR',
+            description='Digital SLR cameras',
+            parent_id=cameras.id,
+        )
+        video = await category_service.create_category(
+            name='Video',
+            description='Professional video cameras',
+            parent_id=cameras.id,
+        )
+
+        # Add equipment
+        await equipment_service.create_equipment(
+            name='Canon 5D Mark IV',
+            category_id=dslr.id,
+            description='Professional DSLR camera',
+            serial_number='5D4001',
+            barcode='CANON5D4001',
+            daily_rate=100.0,
+            replacement_cost=2000.0,
+        )
+        await equipment_service.create_equipment(
+            name='Sony FX6',
+            category_id=video.id,
+            description='Professional video camera',
+            serial_number='FX6001',
+            barcode='SONYFX6001',
+            daily_rate=200.0,
+            replacement_cost=5000.0,
+        )
+
+        # Get all categories
+        categories = await category_service.get_categories()
+        root_categories = [c for c in categories if c.parent_id is None]
+
+        # Verify root categories
+        assert len(root_categories) == 2
+        assert {c.name for c in root_categories} == {'Cameras', 'Lighting'}
+
+        # Get subcategories
+        camera_subcategories = [c for c in categories if c.parent_id == cameras.id]
+        assert len(camera_subcategories) == 2
+        assert {c.name for c in camera_subcategories} == {'DSLR', 'Video'}
+
+        # Check equipment count
+        categories_with_count = await category_service.get_with_equipment_count()
+        for category in categories_with_count:
+            if category.name == 'Cameras':
+                assert category.equipment_count == 2
+            elif category.name in ('DSLR', 'Video'):
+                assert category.equipment_count == 1
+            elif category.name == 'Lighting':
+                assert category.equipment_count == 0
+
+        # Test category search
+        search_results = await category_service.search_categories('cameras')
+        assert len(search_results) == 1
+        assert search_results[0].name == 'Cameras'
+
+        search_results = await category_service.search_categories('dslr')
+        assert len(search_results) == 1
+        assert search_results[0].name == 'DSLR'
+
+
+class TestBookingLifecycle:
+    """Test booking lifecycle."""
+
+    @pytest.mark.asyncio  # type: ignore[misc]
+    async def test_booking_status_transitions(
+        self,
+        db_session: AsyncSession,
+        test_client: Client,
+        test_equipment: Equipment,
+        booking_service: BookingService,
+        equipment_service: EquipmentService,
+    ) -> None:
+        """Test the complete lifecycle of a booking with status transitions."""
+        # Initial setup
+        start_date = datetime.now(timezone.utc) + timedelta(days=1)
+        end_date = start_date + timedelta(days=3)
+
+        # Create booking
+        booking = await booking_service.create_booking(
+            client_id=test_client.id,
+            equipment_id=test_equipment.id,
+            start_date=start_date,
+            end_date=end_date,
+            total_amount=300.0,
+            deposit_amount=100.0,
+            notes='Test booking',
+        )
+        assert booking.booking_status == BookingStatus.PENDING
+        assert booking.payment_status == PaymentStatus.PENDING
+
+        # Confirm booking
+        booking = await booking_service.change_status(
+            booking.id, BookingStatus.CONFIRMED
+        )
+        assert booking.booking_status == BookingStatus.CONFIRMED
+
+        # Make partial payment
+        booking = await booking_service.change_payment_status(
+            booking.id, PaymentStatus.PARTIAL
+        )
+        assert booking.payment_status == PaymentStatus.PARTIAL
+
+        # Complete payment
+        booking = await booking_service.change_payment_status(
+            booking.id, PaymentStatus.PAID
+        )
+        assert booking.payment_status == PaymentStatus.PAID
+
+        # Activate booking
+        booking = await booking_service.change_status(booking.id, BookingStatus.ACTIVE)
+        assert booking.booking_status == BookingStatus.ACTIVE
+
+        # Complete booking
+        booking = await booking_service.change_status(
+            booking.id, BookingStatus.COMPLETED
+        )
+        assert booking.booking_status == BookingStatus.COMPLETED
+
+    @pytest.mark.asyncio  # type: ignore[misc]
+    async def test_equipment_status_affects_booking(
+        self,
+        db_session: AsyncSession,
+        test_client: Client,
+        test_equipment: Equipment,
+        booking_service: BookingService,
+        equipment_service: EquipmentService,
+    ) -> None:
+        """Test that equipment status affects booking availability."""
+        start_date = datetime.now(timezone.utc) + timedelta(days=1)
+        end_date = start_date + timedelta(days=3)
+
+        # Put equipment in maintenance
+        await equipment_service.change_status(
+            test_equipment.id,
+            EquipmentStatus.MAINTENANCE,
+        )
+
+        # Try to create booking for equipment in maintenance
+        with pytest.raises(ValueError):
+            await booking_service.create_booking(
+                client_id=test_client.id,
+                equipment_id=test_equipment.id,
+                start_date=start_date,
+                end_date=end_date,
+                total_amount=300.0,
+                deposit_amount=100.0,
+            )
+
+        # Make equipment available
+        await equipment_service.change_status(
+            test_equipment.id,
+            EquipmentStatus.AVAILABLE,
+        )
+
+        # Now booking should be possible
+        booking = await booking_service.create_booking(
+            client_id=test_client.id,
+            equipment_id=test_equipment.id,
+            start_date=start_date,
+            end_date=end_date,
+            total_amount=300.0,
+            deposit_amount=100.0,
+        )
+        assert booking.booking_status == BookingStatus.PENDING
+
+        # Confirm and activate booking
+        booking = await booking_service.change_status(
+            booking.id, BookingStatus.CONFIRMED
+        )
+        booking = await booking_service.change_status(booking.id, BookingStatus.ACTIVE)
+
+        # Cannot retire equipment with active booking
+        with pytest.raises(ValueError):
+            await equipment_service.change_status(
+                test_equipment.id,
+                EquipmentStatus.RETIRED,
+            )
+
+
+class TestDocumentLifecycle:
+    """Test document lifecycle."""
+
+    @pytest.mark.asyncio  # type: ignore[misc]
+    async def test_document_status_transitions(
+        self,
+        db_session: AsyncSession,
+        test_booking: Booking,
+        document_service: DocumentService,
+    ) -> None:
+        """Test the complete lifecycle of a document with status transitions."""
+        # Create document
+        document = await document_service.create_document(
+            client_id=test_booking.client_id,
+            booking_id=test_booking.id,
+            document_type=DocumentType.CONTRACT,
+            file_path='/test/path/contract.pdf',
+            title='Rental Contract',
+            description='Contract for equipment rental',
+            file_name='contract.pdf',
+            file_size=1024,
+            mime_type='application/pdf',
+            notes='Test document',
+        )
+        assert document.status == DocumentStatus.DRAFT
+
+        # Submit document
+        document = await document_service.change_status(
+            document.id, DocumentStatus.PENDING
+        )
+        assert document.status == DocumentStatus.PENDING
+
+        # Review document
+        document = await document_service.change_status(
+            document.id, DocumentStatus.UNDER_REVIEW
+        )
+        assert document.status == DocumentStatus.UNDER_REVIEW
+
+        # Approve document
+        document = await document_service.change_status(
+            document.id, DocumentStatus.APPROVED
+        )
+        assert document.status == DocumentStatus.APPROVED
+
+    @pytest.mark.asyncio  # type: ignore[misc]
+    async def test_document_rejection_flow(
+        self,
+        db_session: AsyncSession,
+        test_booking: Booking,
+        document_service: DocumentService,
+    ) -> None:
+        """Test document rejection and resubmission flow."""
+        # Create and submit document
+        document = await document_service.create_document(
+            client_id=test_booking.client_id,
+            booking_id=test_booking.id,
+            document_type=DocumentType.CONTRACT,
+            file_path='/test/path/contract.pdf',
+            title='Rental Contract',
+            description='Contract for equipment rental',
+            file_name='contract.pdf',
+            file_size=1024,
+            mime_type='application/pdf',
+            notes='Test document',
+        )
+        document = await document_service.change_status(
+            document.id, DocumentStatus.PENDING
+        )
+
+        # Review and reject document
+        document = await document_service.change_status(
+            document.id, DocumentStatus.UNDER_REVIEW
+        )
+        document = await document_service.change_status(
+            document.id, DocumentStatus.REJECTED
+        )
+        assert document.status == DocumentStatus.REJECTED
+
+        # Update and resubmit
+        document = await document_service.update_document(
+            document.id,
+            notes='Test document with signature',
+        )
+        document = await document_service.change_status(
+            document.id, DocumentStatus.PENDING
+        )
+        assert document.status == DocumentStatus.PENDING
+
+        # Review and approve resubmitted document
+        document = await document_service.change_status(
+            document.id, DocumentStatus.UNDER_REVIEW
+        )
+        document = await document_service.change_status(
+            document.id, DocumentStatus.APPROVED
+        )
+        assert document.status == DocumentStatus.APPROVED
+
+    @pytest.mark.asyncio  # type: ignore[misc]
+    async def test_invalid_document_transitions(
+        self,
+        db_session: AsyncSession,
+        test_booking: Booking,
+        document_service: DocumentService,
+    ) -> None:
+        """Test that invalid document status transitions are rejected."""
+        # Create document
+        document = await document_service.create_document(
+            client_id=test_booking.client_id,
+            booking_id=test_booking.id,
+            document_type=DocumentType.CONTRACT,
+            file_path='/test/path/contract.pdf',
+            title='Rental Contract',
+            description='Contract for equipment rental',
+            file_name='contract.pdf',
+            file_size=1024,
+            mime_type='application/pdf',
+            notes='Test document',
+        )
+
+        # Try invalid transitions
+        with pytest.raises(ValueError):
+            # Cannot go directly from DRAFT to APPROVED
+            await document_service.change_status(document.id, DocumentStatus.APPROVED)
+
+        with pytest.raises(ValueError):
+            # Cannot go directly from DRAFT to REJECTED
+            await document_service.change_status(document.id, DocumentStatus.REJECTED)
+
+        # Submit document
+        document = await document_service.change_status(
+            document.id, DocumentStatus.PENDING
+        )
+
+        with pytest.raises(ValueError):
+            # Cannot go back to DRAFT
+            await document_service.change_status(document.id, DocumentStatus.DRAFT)

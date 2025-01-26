@@ -1,13 +1,18 @@
 """Test configuration and fixtures for integration tests."""
 
+from datetime import datetime, timedelta, timezone
+
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from backend.models.booking import Booking
 from backend.models.category import Category
 from backend.models.client import Client
 from backend.models.equipment import Equipment
+from backend.services.booking import BookingService
 from backend.services.category import CategoryService
 from backend.services.client import ClientService
+from backend.services.document import DocumentService
 from backend.services.equipment import EquipmentService
 
 
@@ -51,4 +56,43 @@ async def test_client(db_session: AsyncSession) -> Client:
         address='123 Test St',
         company='Test Company',
         notes='Test client',
+    )
+
+
+@pytest.fixture  # type: ignore[misc]
+async def booking_service(db_session: AsyncSession) -> BookingService:
+    """Create booking service instance."""
+    return BookingService(db_session)
+
+
+@pytest.fixture  # type: ignore[misc]
+async def document_service(db_session: AsyncSession) -> DocumentService:
+    """Create document service instance."""
+    return DocumentService(db_session)
+
+
+@pytest.fixture  # type: ignore[misc]
+async def equipment_service(db_session: AsyncSession) -> EquipmentService:
+    """Create equipment service instance."""
+    return EquipmentService(db_session)
+
+
+@pytest.fixture  # type: ignore[misc]
+async def test_booking(
+    db_session: AsyncSession,
+    test_client: Client,
+    test_equipment: Equipment,
+) -> Booking:
+    """Create test booking."""
+    booking_service = BookingService(db_session)
+    start_date = datetime.now(timezone.utc) + timedelta(days=1)
+    end_date = start_date + timedelta(days=4)
+    return await booking_service.create_booking(
+        client_id=test_client.id,
+        equipment_id=test_equipment.id,
+        start_date=start_date,
+        end_date=end_date,
+        total_amount=500.00,
+        deposit_amount=100.00,
+        notes='Test booking',
     )

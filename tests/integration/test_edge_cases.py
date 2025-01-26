@@ -9,9 +9,10 @@ from typing import Any, Dict
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from backend.models.booking import BookingStatus
 from backend.models.client import Client
 from backend.models.document import DocumentStatus, DocumentType
-from backend.models.equipment import Equipment
+from backend.models.equipment import Equipment, EquipmentStatus
 from backend.services.booking import BookingService
 from backend.services.client import ClientService
 from backend.services.document import DocumentService
@@ -204,3 +205,255 @@ class TestEquipmentEdgeCases:
         assert await services['equipment'].check_availability(
             test_equipment.id, end1 + timedelta(days=1), end1 + timedelta(days=2)
         )
+
+
+class TestSoftDelete:
+    """Test class for soft delete functionality."""
+
+    @pytest.mark.asyncio  # type: ignore[misc]
+    async def test_equipment_soft_delete(
+        self, services: Dict[str, Any], test_equipment: Equipment
+    ) -> None:
+        """Test equipment soft delete functionality."""
+        # Get equipment by ID
+        equipment = await services['equipment'].get_equipment(test_equipment.id)
+        assert equipment is not None
+        assert equipment.deleted_at is None
+
+        # Soft delete equipment
+        await services['equipment'].delete_equipment(equipment.id)
+
+        # Try to get deleted equipment
+        equipment = await services['equipment'].get_equipment(test_equipment.id)
+        assert equipment is None
+
+        # Get with include_deleted=True
+        equipment = await services['equipment'].get_equipment(
+            test_equipment.id, include_deleted=True
+        )
+        assert equipment is not None
+        assert equipment.deleted_at is not None
+
+        # Verify equipment doesn't appear in search
+        search_results = await services['equipment'].search(test_equipment.name)
+        assert len(search_results) == 0
+
+        # But appears in search with include_deleted=True
+        search_results = await services['equipment'].search(
+            test_equipment.name, include_deleted=True
+        )
+        assert len(search_results) == 1
+        assert search_results[0].id == test_equipment.id
+
+    @pytest.mark.asyncio  # type: ignore[misc]
+    async def test_client_soft_delete(
+        self, services: Dict[str, Any], test_client: Client
+    ) -> None:
+        """Test client soft delete functionality."""
+        # Get client by ID
+        client = await services['client'].get_client(test_client.id)
+        assert client is not None
+        assert client.deleted_at is None
+
+        # Soft delete client
+        await services['client'].delete_client(client.id)
+
+        # Try to get deleted client
+        client = await services['client'].get_client(test_client.id)
+        assert client is None
+
+        # Get with include_deleted=True
+        client = await services['client'].get_client(
+            test_client.id, include_deleted=True
+        )
+        assert client is not None
+        assert client.deleted_at is not None
+
+        # Verify client doesn't appear in search
+        search_results = await services['client'].search(test_client.email)
+        assert len(search_results) == 0
+
+        # But appears in search with include_deleted=True
+        search_results = await services['client'].search(
+            test_client.email, include_deleted=True
+        )
+        assert len(search_results) == 1
+        assert search_results[0].id == test_client.id
+
+    @pytest.mark.asyncio  # type: ignore[misc]
+    async def test_delete_with_relations(
+        self, services: Dict[str, Any], test_client: Client, test_equipment: Equipment
+    ) -> None:
+        """Test soft delete with related records."""
+        # Create booking
+        start_date = datetime.now(timezone.utc) + timedelta(days=1)
+        end_date = start_date + timedelta(days=3)
+        booking = await services['booking'].create_booking(
+            client_id=test_client.id,
+            equipment_id=test_equipment.id,
+            start_date=start_date,
+            end_date=end_date,
+            total_amount=300.0,
+            deposit_amount=200.0,
+        )
+
+        # Create document
+        document = await services['document'].create_document(
+            client_id=test_client.id,
+            booking_id=booking.id,
+            document_type=DocumentType.CONTRACT,
+            file_path='/path/to/contract.pdf',
+            title='Rental Contract',
+            description='Equipment rental contract',
+            file_name='contract.pdf',
+            file_size=1024,
+            mime_type='application/pdf',
+        )
+
+        # Try to delete client with active booking
+        with pytest.raises(
+            ValueError, match='Cannot delete client with active bookings'
+        ):
+            await services['client'].delete_client(test_client.id)
+
+        # Complete the booking
+        await services['booking'].change_status(booking.id, BookingStatus.COMPLETED)
+
+        # Now we can delete the client
+        await services['client'].delete_client(test_client.id)
+
+        # Verify booking and document are still accessible
+        booking = await services['booking'].get_booking(booking.id)
+        assert booking is not None
+        document = await services['document'].get_document(document.id)
+        assert document is not None
+
+
+class TestEquipmentStatus:
+    """Test class for equipment status scenarios."""
+
+    @pytest.mark.asyncio  # type: ignore[misc]
+    async def test_equipment_status_changes(
+        self, services: Dict[str, Any], test_equipment: Equipment
+    ) -> None:
+        """Test equipment status changes and their effect on availability."""
+        # Initially equipment should be available
+        assert test_equipment.status == EquipmentStatus.AVAILABLE
+        assert await services['equipment'].check_availability(
+            test_equipment.id,
+            datetime.now(timezone.utc) + timedelta(days=1),
+            datetime.now(timezone.utc) + timedelta(days=2),
+        )
+
+        # Set equipment to maintenance
+        await services['equipment'].update_equipment(
+            test_equipment.id,
+            status=EquipmentStatus.MAINTENANCE,
+        )
+
+        # Equipment should not be available while in maintenance
+        assert not await services['equipment'].check_availability(
+            test_equipment.id,
+            datetime.now(timezone.utc) + timedelta(days=1),
+            datetime.now(timezone.utc) + timedelta(days=2),
+        )
+
+        # Set equipment back to available
+        await services['equipment'].update_equipment(
+            test_equipment.id,
+            status=EquipmentStatus.AVAILABLE,
+        )
+
+        # Equipment should be available again
+        assert await services['equipment'].check_availability(
+            test_equipment.id,
+            datetime.now(timezone.utc) + timedelta(days=1),
+            datetime.now(timezone.utc) + timedelta(days=2),
+        )
+
+    @pytest.mark.asyncio  # type: ignore[misc]
+    async def test_booking_with_status_changes(
+        self, services: Dict[str, Any], test_client: Client, test_equipment: Equipment
+    ) -> None:
+        """Test booking interactions with equipment status changes."""
+        start_date = datetime.now(timezone.utc) + timedelta(days=1)
+        end_date = start_date + timedelta(days=3)
+
+        # Create booking
+        booking = await services['booking'].create_booking(
+            client_id=test_client.id,
+            equipment_id=test_equipment.id,
+            start_date=start_date,
+            end_date=end_date,
+            total_amount=300.0,
+            deposit_amount=200.0,
+        )
+
+        # Equipment should be marked as rented when booking becomes active
+        await services['booking'].change_status(booking.id, BookingStatus.ACTIVE)
+        equipment = await services['equipment'].get_equipment(test_equipment.id)
+        assert equipment.status == EquipmentStatus.RENTED
+
+        # Equipment should be available again when booking is completed
+        await services['booking'].change_status(booking.id, BookingStatus.COMPLETED)
+        equipment = await services['equipment'].get_equipment(test_equipment.id)
+        assert equipment.status == EquipmentStatus.AVAILABLE
+
+    @pytest.mark.asyncio  # type: ignore[misc]
+    async def test_booking_unavailable_equipment(
+        self, services: Dict[str, Any], test_client: Client, test_equipment: Equipment
+    ) -> None:
+        """Test that unavailable equipment cannot be booked."""
+        start_date = datetime.now(timezone.utc) + timedelta(days=1)
+        end_date = start_date + timedelta(days=3)
+
+        # Set equipment to maintenance
+        await services['equipment'].update_equipment(
+            test_equipment.id,
+            status=EquipmentStatus.MAINTENANCE,
+        )
+
+        # Try to book equipment in maintenance
+        with pytest.raises(ValueError, match='Equipment is not available'):
+            await services['booking'].create_booking(
+                client_id=test_client.id,
+                equipment_id=test_equipment.id,
+                start_date=start_date,
+                end_date=end_date,
+                total_amount=300.0,
+                deposit_amount=200.0,
+            )
+
+        # Set equipment to broken
+        await services['equipment'].update_equipment(
+            test_equipment.id,
+            status=EquipmentStatus.BROKEN,
+        )
+
+        # Try to book broken equipment
+        with pytest.raises(ValueError, match='Equipment is not available'):
+            await services['booking'].create_booking(
+                client_id=test_client.id,
+                equipment_id=test_equipment.id,
+                start_date=start_date,
+                end_date=end_date,
+                total_amount=300.0,
+                deposit_amount=200.0,
+            )
+
+        # Set equipment to retired
+        await services['equipment'].update_equipment(
+            test_equipment.id,
+            status=EquipmentStatus.RETIRED,
+        )
+
+        # Try to book retired equipment
+        with pytest.raises(ValueError, match='Equipment is not available'):
+            await services['booking'].create_booking(
+                client_id=test_client.id,
+                equipment_id=test_equipment.id,
+                start_date=start_date,
+                end_date=end_date,
+                total_amount=300.0,
+                deposit_amount=200.0,
+            )
