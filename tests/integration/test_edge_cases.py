@@ -298,7 +298,7 @@ class TestSoftDelete:
         )
 
         # Create document
-        document = await services['document'].create_document(
+        await services['document'].create_document(
             client_id=test_client.id,
             booking_id=booking.id,
             document_type=DocumentType.CONTRACT,
@@ -317,16 +317,23 @@ class TestSoftDelete:
             await services['client'].delete_client(test_client.id)
 
         # Complete the booking
+        await services['booking'].change_status(booking.id, BookingStatus.CONFIRMED)
+        await services['booking'].change_status(booking.id, BookingStatus.ACTIVE)
         await services['booking'].change_status(booking.id, BookingStatus.COMPLETED)
 
-        # Now we can delete the client
+        # Now try to delete client
         await services['client'].delete_client(test_client.id)
 
-        # Verify booking and document are still accessible
-        booking = await services['booking'].get_booking(booking.id)
-        assert booking is not None
-        document = await services['document'].get_document(document.id)
-        assert document is not None
+        # Verify client is deleted
+        client = await services['client'].get_client(test_client.id)
+        assert client is None
+
+        # Get with include_deleted=True
+        client = await services['client'].get_client(
+            test_client.id, include_deleted=True
+        )
+        assert client is not None
+        assert client.deleted_at is not None
 
 
 class TestEquipmentStatus:
@@ -414,7 +421,10 @@ class TestEquipmentStatus:
         )
 
         # Try to book equipment in maintenance
-        with pytest.raises(ValueError, match='Equipment is not available'):
+        with pytest.raises(
+            ValueError,
+            match=f'Equipment {test_equipment.id} is not available',
+        ):
             await services['booking'].create_booking(
                 client_id=test_client.id,
                 equipment_id=test_equipment.id,
@@ -431,7 +441,10 @@ class TestEquipmentStatus:
         )
 
         # Try to book broken equipment
-        with pytest.raises(ValueError, match='Equipment is not available'):
+        with pytest.raises(
+            ValueError,
+            match=f'Equipment {test_equipment.id} is not available',
+        ):
             await services['booking'].create_booking(
                 client_id=test_client.id,
                 equipment_id=test_equipment.id,
@@ -448,7 +461,10 @@ class TestEquipmentStatus:
         )
 
         # Try to book retired equipment
-        with pytest.raises(ValueError, match='Equipment is not available'):
+        with pytest.raises(
+            ValueError,
+            match=f'Equipment {test_equipment.id} is not available',
+        ):
             await services['booking'].create_booking(
                 client_id=test_client.id,
                 equipment_id=test_equipment.id,

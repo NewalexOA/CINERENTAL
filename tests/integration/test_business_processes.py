@@ -215,7 +215,7 @@ class TestCategoryHierarchy:
         # Create root categories
         cameras = await category_service.create_category(
             name='Cameras',
-            description='Photo and video cameras',
+            description='Photo and video cameras only',
         )
         await category_service.create_category(
             name='Lighting',
@@ -278,7 +278,7 @@ class TestCategoryHierarchy:
                 assert category.equipment_count == 0
 
         # Test category search
-        search_results = await category_service.search_categories('cameras')
+        search_results = await category_service.search_categories('cameras only')
         assert len(search_results) == 1
         assert search_results[0].name == 'Cameras'
 

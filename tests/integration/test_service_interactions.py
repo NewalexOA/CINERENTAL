@@ -196,8 +196,10 @@ class TestEquipmentAvailability:
         )
 
         # Try to create overlapping booking
-        error_msg = f'Equipment {test_equipment.id} is not available'
-        with pytest.raises(ValueError, match=error_msg):
+        with pytest.raises(
+            ValueError,
+            match=f'Equipment {test_equipment.id} is not available',
+        ):
             await services['booking'].create_booking(
                 client_id=test_client.id,
                 equipment_id=test_equipment.id,

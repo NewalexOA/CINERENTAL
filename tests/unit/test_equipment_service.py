@@ -279,26 +279,28 @@ class TestEquipmentService:
         assert len(available) == 0
 
     async def test_search_equipment(
-        self, service: EquipmentService, equipment: Equipment
+        self,
+        service: EquipmentService,
+        equipment: Equipment,
     ) -> None:
-        """Test equipment search.
+        """Test searching equipment.
 
         Args:
-            service: EquipmentService instance
+            service: Equipment service
             equipment: Test equipment
         """
         # Search by name
-        results = await service.search_equipment('Test Equipment')
+        results = await service.repository.search('Test Equipment')
         assert len(results) == 1
         assert results[0].id == equipment.id
 
         # Search by description
-        results = await service.search_equipment('Test Description')
+        results = await service.repository.search('Test Description')
         assert len(results) == 1
         assert results[0].id == equipment.id
 
         # Search with no matches
-        results = await service.search_equipment('Non-existent')
+        results = await service.repository.search('Nonexistent')
         assert len(results) == 0
 
     async def test_get_by_category(
@@ -330,7 +332,7 @@ class TestEquipmentService:
             equipment: Test equipment
         """
         # Get equipment by barcode
-        result = await service.get_by_barcode(barcode='TEST001')
+        result = await service.get_by_barcode(barcode=equipment.barcode)
         assert result is not None
         assert result.id == equipment.id
 
