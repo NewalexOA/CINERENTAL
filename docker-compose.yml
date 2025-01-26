@@ -57,10 +57,16 @@ services:
                pytest tests/ -v --cov=backend --cov-report=html"
     volumes:
       - .:/app
+      - ./htmlcov:/app/htmlcov
     environment:
       - POSTGRES_SERVER=db
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
+      - POSTGRES_DB=cinerental_test
       - REDIS_HOST=redis
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-}
       - TESTING=1
+      - SECRET_KEY=test-secret-key
     depends_on:
       db:
         condition: service_healthy
