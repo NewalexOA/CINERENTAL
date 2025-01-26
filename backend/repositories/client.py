@@ -4,9 +4,10 @@ This module provides database operations for managing client records,
 including registration, profile updates, and rental history tracking.
 """
 
+from datetime import datetime, timezone
 from typing import List, Optional, cast
 
-from sqlalchemy import or_, select
+from sqlalchemy import and_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import Select
 
@@ -81,12 +82,11 @@ class ClientRepository(BaseRepository[Client]):
         Returns:
             Client with active bookings if found, None otherwise
         """
-        statuses = [BookingStatus.PENDING, BookingStatus.ACTIVE]
         query: Select = (
             select(self.model)
             .where(self.model.id == client_id)
             .join(self.model.bookings)
-            .where(Booking.booking_status.in_(statuses))
+            .where(Booking.booking_status == BookingStatus.ACTIVE)
         )
         result = await self.session.scalar(query)
         return cast(Optional[Client], result)
@@ -97,10 +97,16 @@ class ClientRepository(BaseRepository[Client]):
         Returns:
             List of clients with overdue bookings
         """
+        now = datetime.now(timezone.utc)
         query: Select = (
             select(self.model)
             .join(self.model.bookings)
-            .where(Booking.booking_status == BookingStatus.OVERDUE)
+            .where(
+                and_(
+                    Booking.booking_status == BookingStatus.ACTIVE,
+                    Booking.end_date < now,
+                )
+            )
             .distinct()
         )
         result = await self.session.scalars(query)
