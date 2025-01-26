@@ -1,5 +1,6 @@
 """Test configuration and fixtures."""
 
+import os
 from typing import AsyncGenerator, Callable
 
 import pytest
@@ -20,9 +21,11 @@ async def db_engine() -> AsyncGenerator[AsyncEngine, None]:
     Yields:
         Database engine instance
     """
-    database_url = (
-        'postgresql+asyncpg://postgres:postgres@localhost:5432/cinerental_test'
-    )
+    user = os.environ['POSTGRES_USER']
+    password = os.environ['POSTGRES_PASSWORD']
+    host = os.environ['POSTGRES_SERVER']
+    db = os.environ['POSTGRES_DB']
+    database_url = f'postgresql+asyncpg://{user}:{password}@{host}:5432/{db}'
 
     engine = create_async_engine(database_url, echo=False)
 
