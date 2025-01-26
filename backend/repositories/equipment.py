@@ -5,7 +5,7 @@ including inventory tracking, availability status, and maintenance records.
 """
 
 from datetime import datetime
-from typing import List, Optional, Protocol, Type, cast
+from typing import List, Optional, Protocol, cast
 
 from sqlalchemy import Column, and_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -16,10 +16,10 @@ from backend.models.equipment import Equipment, EquipmentStatus
 from backend.repositories.base import BaseRepository
 
 
-class HasStatus(Protocol):
-    """Protocol for models with status attribute."""
+class HasBookingStatus(Protocol):
+    """Protocol for models with booking_status attribute."""
 
-    status: Column[BookingStatus]
+    booking_status: Column[BookingStatus]
 
 
 class EquipmentRepository(BaseRepository[Equipment]):
@@ -89,7 +89,6 @@ class EquipmentRepository(BaseRepository[Equipment]):
         # Equipment is available if:
         # 1. It has status 'available'
         # 2. It has no bookings for the specified period
-        booking_model = cast(Type[HasStatus], Booking)
         query: Select = select(self.model).where(
             and_(
                 self.model.status == EquipmentStatus.AVAILABLE,
@@ -97,7 +96,7 @@ class EquipmentRepository(BaseRepository[Equipment]):
                     and_(
                         Booking.start_date < end_date,
                         Booking.end_date > start_date,
-                        booking_model.status != BookingStatus.CANCELLED,
+                        Booking.booking_status != BookingStatus.CANCELLED,
                     )
                 ),
             )
@@ -136,7 +135,6 @@ class EquipmentRepository(BaseRepository[Equipment]):
         Returns:
             True if equipment is available, False otherwise
         """
-        booking_model = cast(Type[HasStatus], Booking)
         query: Select = select(self.model).where(
             and_(
                 self.model.id == equipment_id,
@@ -145,7 +143,7 @@ class EquipmentRepository(BaseRepository[Equipment]):
                     and_(
                         Booking.start_date < end_date,
                         Booking.end_date > start_date,
-                        booking_model.status != BookingStatus.CANCELLED,
+                        Booking.booking_status != BookingStatus.CANCELLED,
                     )
                 ),
             )
