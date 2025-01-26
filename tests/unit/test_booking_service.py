@@ -401,3 +401,99 @@ class TestBookingService:
 
         # Change payment status back to PENDING
         await service.change_payment_status(booking.id, PaymentStatus.PENDING)
+
+    async def test_update_booking_dates(
+        self,
+        service: BookingService,
+        booking: Booking,
+    ) -> None:
+        """Test updating booking dates."""
+        # Update booking dates
+        new_start = booking.start_date + timedelta(days=5)
+        new_end = booking.end_date + timedelta(days=5)
+
+        updated = await service.update_booking(
+            booking.id,
+            start_date=new_start,
+            end_date=new_end,
+        )
+
+        # Check that dates were updated
+        assert updated.start_date == new_start
+        assert updated.end_date == new_end
+
+        # Try to update to unavailable dates (current dates)
+        with pytest.raises(ValueError, match='Equipment .* is not available'):
+            await service.update_booking(
+                booking.id,
+                start_date=booking.start_date,
+                end_date=booking.end_date,
+            )
+
+    async def test_update_booking_payment(
+        self,
+        service: BookingService,
+        booking: Booking,
+    ) -> None:
+        """Test updating booking payment."""
+        total = float(300.00)
+
+        # Update total amount
+        updated = await service.update_booking(
+            booking.id,
+            total_amount=total,
+        )
+        assert updated.total_amount == total
+
+        # Make partial payment
+        partial = total / 2
+        updated = await service.update_booking(
+            booking.id,
+            paid_amount=partial,
+            total_amount=total,
+        )
+        assert updated.paid_amount == partial
+        assert updated.payment_status == PaymentStatus.PARTIAL
+
+        # Pay in full
+        updated = await service.update_booking(
+            booking.id,
+            paid_amount=total,
+            total_amount=total,
+        )
+        assert updated.paid_amount == total
+        assert updated.payment_status == PaymentStatus.PAID
+
+    async def test_get_overdue(
+        self,
+        service: BookingService,
+        booking: Booking,
+    ) -> None:
+        """Test getting overdue bookings."""
+        # Initially our booking is not overdue
+        overdue = await service.get_overdue()
+        assert not any(b.id == booking.id for b in overdue)
+
+        # Update booking to be overdue
+        past_start = datetime.now(timezone.utc) - timedelta(days=5)
+        past_end = datetime.now(timezone.utc) - timedelta(days=2)
+        await service.update_booking(
+            booking.id,
+            start_date=past_start,
+            end_date=past_end,
+        )
+        await service.change_status(booking.id, BookingStatus.ACTIVE)
+
+        # Check that booking is in overdue list
+        overdue = await service.get_overdue()
+        assert any(b.id == booking.id for b in overdue)
+
+        # Reset booking dates and status
+        future_start = datetime.now(timezone.utc) + timedelta(days=1)
+        future_end = future_start + timedelta(days=3)
+        await service.update_booking(
+            booking.id,
+            start_date=future_start,
+            end_date=future_end,
+        )
+        await service.change_status(booking.id, BookingStatus.PENDING)
