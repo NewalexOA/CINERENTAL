@@ -1,20 +1,13 @@
 """Base repository module."""
 
-from typing import Generic, List, Optional, Protocol, Type, TypeVar, Union, cast
+from datetime import datetime, timezone
+from typing import Generic, List, Optional, Type, TypeVar, Union
 from uuid import UUID
 
-from sqlalchemy import Column, delete, select
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.sql import Select
 
 from backend.models.base import Base
-
-
-class HasId(Protocol):
-    """Protocol for models with id attribute."""
-
-    id: Union[Column[int], Column[UUID]]
-
 
 ModelType = TypeVar('ModelType', bound=Base)
 
@@ -25,7 +18,9 @@ class BaseRepository(Generic[ModelType]):
     This class provides basic CRUD operations for models.
     """
 
-    def __init__(self, session: AsyncSession, model: type[ModelType]) -> None:
+    model: Type[ModelType]
+
+    def __init__(self, session: AsyncSession, model: Type[ModelType]) -> None:
         """Initialize repository.
 
         Args:
@@ -35,17 +30,25 @@ class BaseRepository(Generic[ModelType]):
         self.session = session
         self.model = model
 
-    async def get(self, id: Union[int, UUID]) -> Optional[ModelType]:
+    async def get(
+        self,
+        id: Union[int, UUID],
+        include_deleted: bool = False,
+    ) -> Optional[ModelType]:
         """Get entity by ID.
 
         Args:
             id: Entity ID
+            include_deleted: Whether to include deleted entities
 
         Returns:
             Entity if found, None otherwise
         """
-        model = cast(Type[HasId], self.model)
-        query: Select[tuple[ModelType]] = select(self.model).where(model.id == id)
+        conditions = [self.model.id == id]  # type: ignore
+        if not include_deleted:
+            conditions.append(self.model.deleted_at.is_(None))  # type: ignore
+
+        query = select(self.model).where(*conditions)
         result = await self.session.execute(query)
         return result.scalar_one_or_none()
 
@@ -55,7 +58,9 @@ class BaseRepository(Generic[ModelType]):
         Returns:
             List of entities
         """
-        query: Select[tuple[ModelType]] = select(self.model)
+        query = select(self.model).where(
+            self.model.deleted_at.is_(None),  # type: ignore
+        )
         result = await self.session.execute(query)
         return list(result.scalars().all())
 
@@ -96,8 +101,7 @@ class BaseRepository(Generic[ModelType]):
         Returns:
             True if record was deleted, False otherwise
         """
-        model = cast(Type[HasId], self.model)
-        query = delete(self.model).where(model.id == id)
+        query = delete(self.model).where(self.model.id == id)  # type: ignore
         result = await self.session.execute(query)
         await self.session.commit()
         return result.rowcount > 0
@@ -111,7 +115,22 @@ class BaseRepository(Generic[ModelType]):
         Returns:
             True if entity exists, False otherwise
         """
-        model = cast(Type[HasId], self.model)
-        query = select(model.id).where(model.id == id)
+        query = select(self.model.id).where(self.model.id == id)  # type: ignore
         result = await self.session.execute(query)
         return result.scalar_one_or_none() is not None
+
+    async def soft_delete(self, id: Union[int, UUID]) -> Optional[ModelType]:
+        """Soft delete record.
+
+        Args:
+            id: Record ID
+
+        Returns:
+            Deleted record if found, None otherwise
+        """
+        instance = await self.get(id)
+        if instance:
+            instance.deleted_at = datetime.now(timezone.utc)  # type: ignore
+            await self.session.flush()
+            await self.session.refresh(instance)
+        return instance
