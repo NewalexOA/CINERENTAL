@@ -87,7 +87,7 @@ class BookingService:
         deposit_amount: Optional[float] = None,
         paid_amount: Optional[float] = None,
         notes: Optional[str] = None,
-    ) -> Optional[Booking]:
+    ) -> Booking:
         """Update booking details.
 
         Args:
@@ -100,14 +100,14 @@ class BookingService:
             notes: New notes (optional)
 
         Returns:
-            Updated booking if found, None otherwise
+            Updated booking
 
         Raises:
-            ValueError: If new dates overlap with other bookings
+            ValueError: If booking is not found or new dates overlap with other bookings
         """
         booking = await self.repository.get(booking_id)
         if not booking:
-            return None
+            raise ValueError('Booking not found')
 
         if start_date or end_date:
             # Check equipment availability for new dates
@@ -143,12 +143,13 @@ class BookingService:
             update_data['notes'] = notes
 
         if update_data:
-            return await self.repository.update(booking_id, **update_data)
+            result = await self.repository.update(booking_id, **update_data)
+            if not result:
+                raise ValueError('Booking not found')
+            return result
         return booking
 
-    async def change_status(
-        self, booking_id: int, status: BookingStatus
-    ) -> Optional[Booking]:
+    async def change_status(self, booking_id: int, status: BookingStatus) -> Booking:
         """Change booking status.
 
         Args:
@@ -156,13 +157,19 @@ class BookingService:
             status: New status
 
         Returns:
-            Updated booking if found, None otherwise
+            Updated booking
+
+        Raises:
+            ValueError: If booking is not found
         """
-        return await self.repository.update(booking_id, booking_status=status)
+        result = await self.repository.update(booking_id, booking_status=status)
+        if not result:
+            raise ValueError('Booking not found')
+        return result
 
     async def change_payment_status(
         self, booking_id: int, status: PaymentStatus
-    ) -> Optional[Booking]:
+    ) -> Booking:
         """Change booking payment status.
 
         Args:
@@ -170,9 +177,15 @@ class BookingService:
             status: New payment status
 
         Returns:
-            Updated booking if found, None otherwise
+            Updated booking
+
+        Raises:
+            ValueError: If booking is not found
         """
-        return await self.repository.update(booking_id, payment_status=status)
+        result = await self.repository.update(booking_id, payment_status=status)
+        if not result:
+            raise ValueError('Booking not found')
+        return result
 
     async def get_bookings(self) -> List[Booking]:
         """Get all bookings.
@@ -182,16 +195,22 @@ class BookingService:
         """
         return await self.repository.get_all()
 
-    async def get_booking(self, booking_id: int) -> Optional[Booking]:
+    async def get_booking(self, booking_id: int) -> Booking:
         """Get booking by ID.
 
         Args:
             booking_id: Booking ID
 
         Returns:
-            Booking if found, None otherwise
+            Booking if found
+
+        Raises:
+            ValueError: If booking is not found
         """
-        return await self.repository.get(booking_id)
+        booking = await self.repository.get(booking_id)
+        if not booking:
+            raise ValueError('Booking not found')
+        return booking
 
     async def get_by_client(self, client_id: int) -> List[Booking]:
         """Get all bookings for a client.
