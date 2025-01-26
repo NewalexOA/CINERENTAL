@@ -10,6 +10,7 @@ from typing import List, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.models.booking import Booking, BookingStatus, PaymentStatus
+from backend.models.equipment import EquipmentStatus
 from backend.repositories.booking import BookingRepository
 from backend.repositories.equipment import EquipmentRepository
 
@@ -250,11 +251,26 @@ class BookingService:
 
         # Define allowed transitions
         allowed_transitions = {
-            BookingStatus.PENDING: [BookingStatus.CONFIRMED, BookingStatus.CANCELLED],
-            BookingStatus.CONFIRMED: [BookingStatus.ACTIVE, BookingStatus.CANCELLED],
-            BookingStatus.ACTIVE: [BookingStatus.COMPLETED, BookingStatus.CANCELLED],
+            BookingStatus.PENDING: [
+                BookingStatus.CONFIRMED,
+                BookingStatus.ACTIVE,
+                BookingStatus.CANCELLED,
+            ],
+            BookingStatus.CONFIRMED: [
+                BookingStatus.ACTIVE,
+                BookingStatus.CANCELLED,
+            ],
+            BookingStatus.ACTIVE: [
+                BookingStatus.COMPLETED,
+                BookingStatus.CANCELLED,
+                BookingStatus.OVERDUE,
+            ],
             BookingStatus.COMPLETED: [],
             BookingStatus.CANCELLED: [],
+            BookingStatus.OVERDUE: [
+                BookingStatus.COMPLETED,
+                BookingStatus.CANCELLED,
+            ],
         }
 
         allowed = allowed_transitions.get(booking.booking_status, [])
@@ -265,6 +281,19 @@ class BookingService:
             raise ValueError(msg)
 
         booking.booking_status = status
+
+        # Update equipment status based on booking status
+        if status == BookingStatus.ACTIVE:
+            equipment = await self.equipment_repository.get(booking.equipment_id)
+            if equipment:
+                equipment.status = EquipmentStatus.RENTED
+                await self.equipment_repository.update(equipment)
+        elif status in [BookingStatus.COMPLETED, BookingStatus.CANCELLED]:
+            equipment = await self.equipment_repository.get(booking.equipment_id)
+            if equipment:
+                equipment.status = EquipmentStatus.AVAILABLE
+                await self.equipment_repository.update(equipment)
+
         return await self.repository.update(booking)
 
     async def change_payment_status(

@@ -4,7 +4,7 @@ This module implements business logic for managing rental equipment,
 including inventory management, availability tracking, and equipment status updates.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from decimal import Decimal
 from typing import Dict, List, Optional
 
@@ -97,6 +97,22 @@ class EquipmentService:
         )
         return await self.repository.create(equipment)
 
+    async def get_equipment(
+        self,
+        equipment_id: int,
+        include_deleted: bool = False,
+    ) -> Optional[Equipment]:
+        """Get equipment by ID.
+
+        Args:
+            equipment_id: Equipment ID
+            include_deleted: Whether to include deleted equipment
+
+        Returns:
+            Equipment if found, None otherwise
+        """
+        return await self.repository.get(equipment_id, include_deleted=include_deleted)
+
     async def update_equipment(
         self,
         equipment_id: int,
@@ -107,6 +123,7 @@ class EquipmentService:
         daily_rate: Optional[float] = None,
         replacement_cost: Optional[float] = None,
         notes: Optional[str] = None,
+        status: Optional[EquipmentStatus] = None,
     ) -> Equipment:
         """Update equipment details.
 
@@ -119,12 +136,14 @@ class EquipmentService:
             daily_rate: New daily rental rate (optional)
             replacement_cost: New replacement cost (optional)
             notes: New notes (optional)
+            status: New equipment status (optional)
 
         Returns:
             Updated equipment
 
         Raises:
             ValueError: If equipment not found or if new barcode already exists
+                      or if status transition not allowed
         """
         # Get equipment
         equipment = await self.repository.get(equipment_id)
@@ -154,6 +173,58 @@ class EquipmentService:
             equipment.replacement_cost = Decimal(str(replacement_cost))
         if notes is not None:
             equipment.notes = notes
+        if status is not None:
+            # Check if status transition is allowed
+            allowed_transitions: Dict[EquipmentStatus, List[EquipmentStatus]] = {
+                EquipmentStatus.AVAILABLE: [
+                    EquipmentStatus.MAINTENANCE,
+                    EquipmentStatus.BROKEN,
+                    EquipmentStatus.RETIRED,
+                    EquipmentStatus.RENTED,
+                ],
+                EquipmentStatus.MAINTENANCE: [
+                    EquipmentStatus.AVAILABLE,
+                    EquipmentStatus.BROKEN,
+                    EquipmentStatus.RETIRED,
+                ],
+                EquipmentStatus.BROKEN: [
+                    EquipmentStatus.MAINTENANCE,
+                    EquipmentStatus.RETIRED,
+                ],
+                EquipmentStatus.RETIRED: [],
+                EquipmentStatus.RENTED: [
+                    EquipmentStatus.AVAILABLE,
+                    EquipmentStatus.MAINTENANCE,
+                    EquipmentStatus.BROKEN,
+                ],
+            }
+
+            if status not in allowed_transitions[equipment.status]:
+                msg = f'Invalid status transition from {equipment.status} to {status}'
+                raise ValueError(msg)
+
+            # Check for active bookings if transitioning to RETIRED
+            if status == EquipmentStatus.RETIRED:
+                query = select(Booking).where(
+                    Booking.equipment_id == equipment_id,
+                    Booking.booking_status.in_(
+                        [
+                            BookingStatus.PENDING,
+                            BookingStatus.CONFIRMED,
+                            BookingStatus.ACTIVE,
+                        ]
+                    ),
+                )
+                result = await self.session.execute(query)
+                active_bookings = result.scalars().all()
+                if active_bookings:
+                    msg = (
+                        f'Cannot retire equipment {equipment_id} - '
+                        f'it has {len(active_bookings)} active bookings'
+                    )
+                    raise ValueError(msg)
+
+            equipment.status = status
 
         return await self.repository.update(equipment)
 
@@ -185,13 +256,25 @@ class EquipmentService:
         allowed_transitions: Dict[EquipmentStatus, List[EquipmentStatus]] = {
             EquipmentStatus.AVAILABLE: [
                 EquipmentStatus.MAINTENANCE,
+                EquipmentStatus.BROKEN,
                 EquipmentStatus.RETIRED,
+                EquipmentStatus.RENTED,
             ],
             EquipmentStatus.MAINTENANCE: [
                 EquipmentStatus.AVAILABLE,
+                EquipmentStatus.BROKEN,
+                EquipmentStatus.RETIRED,
+            ],
+            EquipmentStatus.BROKEN: [
+                EquipmentStatus.MAINTENANCE,
                 EquipmentStatus.RETIRED,
             ],
             EquipmentStatus.RETIRED: [],
+            EquipmentStatus.RENTED: [
+                EquipmentStatus.AVAILABLE,
+                EquipmentStatus.MAINTENANCE,
+                EquipmentStatus.BROKEN,
+            ],
         }
 
         if status not in allowed_transitions[equipment.status]:
@@ -260,16 +343,21 @@ class EquipmentService:
         """
         return await self.repository.get_available(start_date, end_date)
 
-    async def search_equipment(self, query: str) -> List[Equipment]:
+    async def search(
+        self,
+        query_str: str,
+        include_deleted: bool = False,
+    ) -> List[Equipment]:
         """Search equipment by name or description.
 
         Args:
-            query: Search query
+            query_str: Search query string
+            include_deleted: Whether to include deleted equipment
 
         Returns:
             List of matching equipment
         """
-        return await self.repository.search(query)
+        return await self.repository.search(query_str, include_deleted=include_deleted)
 
     async def get_by_category(self, category_id: int) -> List[Equipment]:
         """Get equipment by category.
@@ -292,3 +380,42 @@ class EquipmentService:
             Equipment if found, None otherwise
         """
         return await self.repository.get_by_barcode(barcode)
+
+    async def delete_equipment(self, equipment_id: int) -> None:
+        """Soft delete equipment.
+
+        Args:
+            equipment_id: Equipment ID
+
+        Raises:
+            ValueError: If equipment not found or has active bookings
+        """
+        # Get equipment
+        equipment = await self.repository.get(equipment_id)
+        if not equipment:
+            msg = f'Equipment with ID {equipment_id} not found'
+            raise ValueError(msg)
+
+        # Check for active bookings
+        query = select(Booking).where(
+            Booking.equipment_id == equipment_id,
+            Booking.booking_status.in_(
+                [
+                    BookingStatus.PENDING,
+                    BookingStatus.CONFIRMED,
+                    BookingStatus.ACTIVE,
+                ]
+            ),
+        )
+        result = await self.session.execute(query)
+        active_bookings = result.scalars().all()
+        if active_bookings:
+            msg = (
+                f'Cannot delete equipment {equipment_id} - '
+                f'it has {len(active_bookings)} active bookings'
+            )
+            raise ValueError(msg)
+
+        # Set deleted_at timestamp
+        equipment.deleted_at = datetime.now(timezone.utc)
+        await self.repository.update(equipment)

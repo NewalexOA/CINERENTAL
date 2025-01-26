@@ -9,7 +9,7 @@ from typing import List, Optional, cast
 
 from sqlalchemy import and_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.sql import Select
+from sqlalchemy.sql import Select, func
 
 from backend.models.booking import Booking, BookingStatus
 from backend.models.client import Client, ClientStatus
@@ -53,25 +53,33 @@ class ClientRepository(BaseRepository[Client]):
         result = await self.session.scalar(query)
         return cast(Optional[Client], result)
 
-    async def search(self, query_str: str) -> List[Client]:
-        """Search clients by name, email, or phone.
+    async def search(
+        self,
+        query_str: str,
+        include_deleted: bool = False,
+    ) -> List[Client]:
+        """Search clients by name, email or phone.
 
         Args:
-            query_str: Search query
+            query_str: Search query string
+            include_deleted: Whether to include deleted clients
 
         Returns:
             List of matching clients
         """
-        query: Select = select(self.model).where(
+        query = query_str.lower()
+        stmt = select(self.model).where(
             or_(
-                self.model.first_name.ilike(f'%{query_str}%'),
-                self.model.last_name.ilike(f'%{query_str}%'),
-                self.model.email.ilike(f'%{query_str}%'),
-                self.model.phone.ilike(f'%{query_str}%'),
+                func.lower(self.model.first_name).contains(query),
+                func.lower(self.model.last_name).contains(query),
+                func.lower(self.model.email).contains(query),
+                func.lower(self.model.phone).contains(query),
             )
         )
-        result = await self.session.scalars(query)
-        return list(result.all())
+        if not include_deleted:
+            stmt = stmt.where(self.model.deleted_at.is_(None))
+        result = await self.session.execute(stmt)
+        return list(result.scalars().all())
 
     async def get_with_active_bookings(self, client_id: int) -> Optional[Client]:
         """Get client with active bookings.

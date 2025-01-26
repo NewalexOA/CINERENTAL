@@ -4,12 +4,14 @@ This module implements business logic for managing rental service clients,
 including client registration, profile updates, and rental history tracking.
 """
 
+from datetime import datetime, timezone
 from typing import List, Optional, cast
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.models.booking import Booking
 from backend.models.client import Client, ClientStatus
+from backend.repositories.booking import BookingRepository
 from backend.repositories.client import ClientRepository
 
 
@@ -24,6 +26,7 @@ class ClientService:
         """
         self.session = session
         self.repository = ClientRepository(session)
+        self.booking_repository = BookingRepository(session)
 
     async def create_client(
         self,
@@ -181,27 +184,37 @@ class ClientService:
         """
         return await self.repository.get_all()
 
-    async def get_client(self, client_id: int) -> Optional[Client]:
+    async def get_client(
+        self,
+        client_id: int,
+        include_deleted: bool = False,
+    ) -> Optional[Client]:
         """Get client by ID.
 
         Args:
             client_id: Client ID
+            include_deleted: Whether to include deleted clients
 
         Returns:
             Client if found, None otherwise
         """
-        return await self.repository.get(client_id)
+        return await self.repository.get(client_id, include_deleted=include_deleted)
 
-    async def search_clients(self, query: str) -> List[Client]:
+    async def search_clients(
+        self,
+        query: str,
+        include_deleted: bool = False,
+    ) -> List[Client]:
         """Search clients by name, email, or phone.
 
         Args:
             query: Search query
+            include_deleted: Whether to include deleted clients
 
         Returns:
             List of matching clients
         """
-        return await self.repository.search(query)
+        return await self.repository.search(query, include_deleted=include_deleted)
 
     async def get_with_active_bookings(self, client_id: int) -> Optional[Client]:
         """Get client with active bookings.
@@ -249,3 +262,43 @@ class ClientService:
         if not client:
             raise ValueError('Client not found')
         return cast(List[Booking], client.bookings)
+
+    async def delete_client(self, client_id: int) -> None:
+        """Soft delete client.
+
+        Args:
+            client_id: Client ID
+
+        Raises:
+            ValueError: If client not found or has active bookings
+        """
+        # Get client
+        client = await self.repository.get(client_id)
+        if not client:
+            msg = f'Client with ID {client_id} not found'
+            raise ValueError(msg)
+
+        # Check for active bookings
+        active_bookings = await self.booking_repository.get_active_by_client(client_id)
+        if active_bookings:
+            raise ValueError('Cannot delete client with active bookings')
+
+        # Set deleted_at timestamp
+        client.deleted_at = datetime.now(timezone.utc)
+        await self.repository.update(client)
+
+    async def search(
+        self,
+        query: str,
+        include_deleted: bool = False,
+    ) -> List[Client]:
+        """Search clients by name, email or phone.
+
+        Args:
+            query: Search query
+            include_deleted: Whether to include deleted clients
+
+        Returns:
+            List of matching clients
+        """
+        return await self.repository.search(query, include_deleted=include_deleted)

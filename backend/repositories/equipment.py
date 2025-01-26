@@ -9,7 +9,7 @@ from typing import List, Optional, Protocol, cast
 
 from sqlalchemy import Column, and_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.sql import Select
+from sqlalchemy.sql import Select, func
 
 from backend.models.booking import Booking, BookingStatus
 from backend.models.equipment import Equipment, EquipmentStatus
@@ -110,22 +110,30 @@ class EquipmentRepository(BaseRepository[Equipment]):
         result = await self.session.scalars(query)
         return cast(List[Equipment], list(result.all()))
 
-    async def search(self, query_str: str) -> List[Equipment]:
+    async def search(
+        self,
+        query_str: str,
+        include_deleted: bool = False,
+    ) -> List[Equipment]:
         """Search equipment by name or description.
 
         Args:
-            query: Search query
+            query_str: Search query string
+            include_deleted: Whether to include deleted equipment
 
         Returns:
             List of matching equipment
         """
-        query: Select = select(self.model).where(
+        query = query_str.lower()
+        stmt = select(self.model).where(
             or_(
-                self.model.name.ilike(f'%{query_str}%'),
-                self.model.description.ilike(f'%{query_str}%'),
+                func.lower(self.model.name).contains(query),
+                func.lower(self.model.description).contains(query),
             )
         )
-        result = await self.session.scalars(query)
+        if not include_deleted:
+            stmt = stmt.where(self.model.deleted_at.is_(None))
+        result = await self.session.scalars(stmt)
         return cast(List[Equipment], list(result.all()))
 
     async def check_availability(

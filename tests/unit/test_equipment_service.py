@@ -290,17 +290,17 @@ class TestEquipmentService:
             equipment: Test equipment
         """
         # Search by name
-        results = await service.repository.search('Test Equipment')
+        results = await service.search('Test Equipment')
         assert len(results) == 1
         assert results[0].id == equipment.id
 
         # Search by description
-        results = await service.repository.search('Test Description')
+        results = await service.search('Test Description')
         assert len(results) == 1
         assert results[0].id == equipment.id
 
         # Search with no matches
-        results = await service.repository.search('Nonexistent')
+        results = await service.search('Nonexistent')
         assert len(results) == 0
 
     async def test_get_by_category(

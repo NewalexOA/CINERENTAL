@@ -44,9 +44,9 @@ class BaseRepository(Generic[ModelType]):
         Returns:
             Entity if found, None otherwise
         """
-        conditions = [self.model.id == id]  # type: ignore
+        conditions = [self.model.id == id]
         if not include_deleted:
-            conditions.append(self.model.deleted_at.is_(None))  # type: ignore
+            conditions.append(self.model.deleted_at.is_(None))
 
         query = select(self.model).where(*conditions)
         result = await self.session.execute(query)
@@ -59,7 +59,7 @@ class BaseRepository(Generic[ModelType]):
             List of entities
         """
         query = select(self.model).where(
-            self.model.deleted_at.is_(None),  # type: ignore
+            self.model.deleted_at.is_(None),
         )
         result = await self.session.execute(query)
         return list(result.scalars().all())
@@ -101,7 +101,7 @@ class BaseRepository(Generic[ModelType]):
         Returns:
             True if record was deleted, False otherwise
         """
-        query = delete(self.model).where(self.model.id == id)  # type: ignore
+        query = delete(self.model).where(self.model.id == id)
         result = await self.session.execute(query)
         await self.session.commit()
         return result.rowcount > 0
@@ -115,7 +115,7 @@ class BaseRepository(Generic[ModelType]):
         Returns:
             True if entity exists, False otherwise
         """
-        query = select(self.model.id).where(self.model.id == id)  # type: ignore
+        query = select(self.model.id).where(self.model.id == id)
         result = await self.session.execute(query)
         return result.scalar_one_or_none() is not None
 
@@ -130,7 +130,26 @@ class BaseRepository(Generic[ModelType]):
         """
         instance = await self.get(id)
         if instance:
-            instance.deleted_at = datetime.now(timezone.utc)  # type: ignore
+            instance.deleted_at = datetime.now(timezone.utc)
             await self.session.flush()
             await self.session.refresh(instance)
         return instance
+
+    async def search(
+        self,
+        query_str: str,
+        include_deleted: bool = False,
+    ) -> List[ModelType]:
+        """Search entities.
+
+        Args:
+            query_str: Search query string
+            include_deleted: Whether to include deleted entities
+
+        Returns:
+            List of matching entities
+
+        Raises:
+            NotImplementedError: If not implemented by child class
+        """
+        raise NotImplementedError
