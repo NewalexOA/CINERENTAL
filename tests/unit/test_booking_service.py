@@ -347,3 +347,57 @@ class TestBookingService:
 
         # Set booking status back to PENDING
         await service.change_status(booking.id, BookingStatus.PENDING)
+
+    async def test_get_by_status(
+        self,
+        service: BookingService,
+        booking: Booking,
+    ) -> None:
+        """Test getting bookings by status."""
+        # Initially booking has PENDING status
+        bookings = await service.get_by_status(BookingStatus.PENDING)
+        assert len(bookings) >= 1
+        assert any(b.id == booking.id for b in bookings)
+
+        # Change status to CONFIRMED
+        await service.change_status(booking.id, BookingStatus.CONFIRMED)
+        bookings = await service.get_by_status(BookingStatus.CONFIRMED)
+        assert len(bookings) >= 1
+        assert any(b.id == booking.id for b in bookings)
+
+        # Check that booking is not in PENDING anymore
+        bookings = await service.get_by_status(BookingStatus.PENDING)
+        assert not any(b.id == booking.id for b in bookings)
+
+        # Change status back to PENDING
+        await service.change_status(booking.id, BookingStatus.PENDING)
+
+    async def test_get_by_payment_status(
+        self,
+        service: BookingService,
+        booking: Booking,
+    ) -> None:
+        """Test getting bookings by payment status."""
+        # Initially booking has PENDING payment status
+        bookings = await service.get_by_payment_status(PaymentStatus.PENDING)
+        assert len(bookings) >= 1
+        assert any(b.id == booking.id for b in bookings)
+
+        # Change payment status to PARTIAL
+        await service.change_payment_status(booking.id, PaymentStatus.PARTIAL)
+        bookings = await service.get_by_payment_status(PaymentStatus.PARTIAL)
+        assert len(bookings) >= 1
+        assert any(b.id == booking.id for b in bookings)
+
+        # Check that booking is not in PENDING anymore
+        bookings = await service.get_by_payment_status(PaymentStatus.PENDING)
+        assert not any(b.id == booking.id for b in bookings)
+
+        # Change payment status to PAID
+        await service.change_payment_status(booking.id, PaymentStatus.PAID)
+        bookings = await service.get_by_payment_status(PaymentStatus.PAID)
+        assert len(bookings) >= 1
+        assert any(b.id == booking.id for b in bookings)
+
+        # Change payment status back to PENDING
+        await service.change_payment_status(booking.id, PaymentStatus.PENDING)
