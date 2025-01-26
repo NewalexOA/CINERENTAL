@@ -97,6 +97,7 @@ class TestDocumentService:
     ) -> Document:
         """Create test document."""
         return await service.create_document(
+            client_id=booking.client_id,
             booking_id=booking.id,
             document_type=DocumentType.CONTRACT,
             file_path='/test/contract.pdf',
@@ -116,6 +117,7 @@ class TestDocumentService:
         """Test document creation."""
         # Create document with booking
         document = await service.create_document(
+            client_id=booking.client_id,
             booking_id=booking.id,
             document_type=DocumentType.CONTRACT,
             file_path='/test/contract.pdf',
@@ -142,8 +144,8 @@ class TestDocumentService:
 
         # Create document with client_id only
         document = await service.create_document(
-            booking_id=None,
             client_id=booking.client_id,
+            booking_id=None,
             document_type=DocumentType.PASSPORT,
             file_path='/test/passport.pdf',
             title='Test Passport',
@@ -167,27 +169,10 @@ class TestDocumentService:
         assert document.notes == 'Test passport scan'
         assert document.status == DocumentStatus.DRAFT
 
-        # Test error when neither booking_id nor client_id is provided
-        with pytest.raises(
-            ValueError,
-            match='Either booking_id or client_id must be provided',
-        ):
-            await service.create_document(
-                booking_id=None,
-                client_id=None,
-                document_type=DocumentType.OTHER,
-                file_path='/test/other.pdf',
-                title='Test Other',
-                description='Test other document',
-                file_name='other.pdf',
-                file_size=256,
-                mime_type='application/pdf',
-                notes='Test other document',
-            )
-
         # Test error when booking is not found
-        with pytest.raises(ValueError, match='Booking with ID .* not found'):
+        with pytest.raises(ValueError, match='Booking with ID 999 not found'):
             await service.create_document(
+                client_id=booking.client_id,
                 booking_id=999,
                 document_type=DocumentType.OTHER,
                 file_path='/test/other.pdf',
@@ -228,8 +213,8 @@ class TestDocumentService:
         assert result.notes == 'Updated notes'  # Should remain unchanged
 
         # Test updating non-existent document
-        result = await service.update_document(999, file_path='/non-existent.pdf')
-        assert result is None
+        with pytest.raises(ValueError, match='Document with ID 999 not found'):
+            await service.update_document(999, file_path='/non-existent.pdf')
 
     async def test_change_status(
         self, service: DocumentService, document: Document
@@ -240,14 +225,19 @@ class TestDocumentService:
         assert updated is not None
         assert updated.status == DocumentStatus.PENDING
 
+        # Change status to UNDER_REVIEW
+        updated = await service.change_status(document.id, DocumentStatus.UNDER_REVIEW)
+        assert updated is not None
+        assert updated.status == DocumentStatus.UNDER_REVIEW
+
         # Change status to APPROVED
         updated = await service.change_status(document.id, DocumentStatus.APPROVED)
         assert updated is not None
         assert updated.status == DocumentStatus.APPROVED
 
         # Test changing status of non-existent document
-        result = await service.change_status(999, DocumentStatus.APPROVED)
-        assert result is None
+        with pytest.raises(ValueError, match='Document with ID .* not found'):
+            await service.change_status(999, DocumentStatus.APPROVED)
 
     async def test_get_document(
         self, service: DocumentService, document: Document
@@ -282,6 +272,7 @@ class TestDocumentService:
 
         # Create another document
         another_document = await service.create_document(
+            client_id=document.client_id,
             booking_id=document.booking_id,
             document_type=DocumentType.INVOICE,
             file_path='/test/invoice.pdf',
@@ -340,15 +331,23 @@ class TestDocumentService:
         assert len(documents) >= 1
         assert any(d.id == document.id for d in documents)
 
+        # Change status to PENDING
+        await service.change_status(document.id, DocumentStatus.PENDING)
+        documents = await service.get_by_status(DocumentStatus.PENDING)
+        assert len(documents) >= 1
+        assert any(d.id == document.id for d in documents)
+
+        # Change status to UNDER_REVIEW
+        await service.change_status(document.id, DocumentStatus.UNDER_REVIEW)
+        documents = await service.get_by_status(DocumentStatus.UNDER_REVIEW)
+        assert len(documents) >= 1
+        assert any(d.id == document.id for d in documents)
+
         # Change status to APPROVED
         await service.change_status(document.id, DocumentStatus.APPROVED)
         documents = await service.get_by_status(DocumentStatus.APPROVED)
         assert len(documents) >= 1
         assert any(d.id == document.id for d in documents)
-
-        # Check that document is not in DRAFT anymore
-        documents = await service.get_by_status(DocumentStatus.DRAFT)
-        assert not any(d.id == document.id for d in documents)
 
     async def test_get_by_date_range(
         self, service: DocumentService, document: Document

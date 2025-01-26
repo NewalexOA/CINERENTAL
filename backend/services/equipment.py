@@ -5,7 +5,8 @@ including inventory management, availability tracking, and equipment status upda
 """
 
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from decimal import Decimal
+from typing import Dict, List, Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -28,96 +29,137 @@ class EquipmentService:
     async def create_equipment(
         self,
         name: str,
-        category_id: int,
         description: str,
-        serial_number: str,
+        category_id: int,
         barcode: str,
+        serial_number: str,
         daily_rate: float,
         replacement_cost: float,
+        notes: Optional[str] = None,
     ) -> Equipment:
         """Create new equipment.
 
         Args:
             name: Equipment name
-            category_id: Category ID
             description: Equipment description
-            serial_number: Serial number
-            barcode: Barcode for scanning
+            category_id: Category ID
+            barcode: Equipment barcode
+            serial_number: Equipment serial number
             daily_rate: Daily rental rate
-            replacement_cost: Cost to replace if damaged
+            replacement_cost: Replacement cost
+            notes: Additional notes (optional)
 
         Returns:
             Created equipment
 
         Raises:
-            ValueError: If equipment with given serial number or barcode already exists
+            ValueError: If equipment with given barcode exists or if parameters are
+                invalid
         """
-        # Check if equipment with given serial number or barcode exists
-        existing = await self.repository.get_by_serial_number(serial_number)
-        if existing:
-            msg = f'Equipment with serial number {serial_number} already exists'
-            raise ValueError(msg)
+        # Validate input parameters
+        if not name or not name.strip():
+            raise ValueError('Equipment name cannot be empty')
+        if not description or not description.strip():
+            raise ValueError('Equipment description cannot be empty')
+        if not barcode or not barcode.strip():
+            raise ValueError('Equipment barcode cannot be empty')
+        if not serial_number or not serial_number.strip():
+            raise ValueError('Equipment serial number cannot be empty')
+        if daily_rate <= 0:
+            raise ValueError('Daily rate must be positive')
+        if replacement_cost <= 0:
+            raise ValueError('Replacement cost must be positive')
 
+        # Check if equipment with given barcode exists
         existing = await self.repository.get_by_barcode(barcode)
         if existing:
             msg = f'Equipment with barcode {barcode} already exists'
             raise ValueError(msg)
 
-        return await self.repository.create(
+        # Check if equipment with given serial number exists
+        existing = await self.repository.get_by_serial_number(serial_number)
+        if existing:
+            msg = f'Equipment with serial number {serial_number} already exists'
+            raise ValueError(msg)
+
+        equipment = Equipment(
             name=name,
-            category_id=category_id,
             description=description,
-            serial_number=serial_number,
+            category_id=category_id,
             barcode=barcode,
-            daily_rate=daily_rate,
-            replacement_cost=replacement_cost,
+            serial_number=serial_number,
+            daily_rate=Decimal(str(daily_rate)),
+            replacement_cost=Decimal(str(replacement_cost)),
+            notes=notes,
             status=EquipmentStatus.AVAILABLE,
         )
+        return await self.repository.create(equipment)
 
     async def update_equipment(
         self,
         equipment_id: int,
         name: Optional[str] = None,
-        category_id: Optional[int] = None,
         description: Optional[str] = None,
+        category_id: Optional[int] = None,
+        barcode: Optional[str] = None,
         daily_rate: Optional[float] = None,
         replacement_cost: Optional[float] = None,
-    ) -> Optional[Equipment]:
+        notes: Optional[str] = None,
+    ) -> Equipment:
         """Update equipment details.
 
         Args:
             equipment_id: Equipment ID
-            name: New name (optional)
+            name: New equipment name (optional)
+            description: New equipment description (optional)
             category_id: New category ID (optional)
-            description: New description (optional)
-            daily_rate: New daily rate (optional)
+            barcode: New equipment barcode (optional)
+            daily_rate: New daily rental rate (optional)
             replacement_cost: New replacement cost (optional)
+            notes: New notes (optional)
 
         Returns:
-            Updated equipment if found, None otherwise
-        """
-        update_data: Dict[str, Any] = {}
-        if name is not None:
-            update_data['name'] = name
-        if category_id is not None:
-            update_data['category_id'] = category_id
-        if description is not None:
-            update_data['description'] = description
-        if daily_rate is not None:
-            update_data['daily_rate'] = daily_rate
-        if replacement_cost is not None:
-            update_data['replacement_cost'] = replacement_cost
+            Updated equipment
 
-        if update_data:
-            return await self.repository.update(
-                equipment_id,
-                **update_data,
-            )
-        return await self.repository.get(equipment_id)
+        Raises:
+            ValueError: If equipment not found or if new barcode already exists
+        """
+        # Get equipment
+        equipment = await self.repository.get(equipment_id)
+        if not equipment:
+            msg = f'Equipment with ID {equipment_id} not found'
+            raise ValueError(msg)
+
+        # Check if new barcode is unique
+        if barcode and barcode != equipment.barcode:
+            existing = await self.repository.get_by_barcode(barcode)
+            if existing:
+                msg = f'Equipment with barcode {barcode} already exists'
+                raise ValueError(msg)
+
+        # Update fields
+        if name is not None:
+            equipment.name = name
+        if description is not None:
+            equipment.description = description
+        if category_id is not None:
+            equipment.category_id = category_id
+        if barcode is not None:
+            equipment.barcode = barcode
+        if daily_rate is not None:
+            equipment.daily_rate = Decimal(str(daily_rate))
+        if replacement_cost is not None:
+            equipment.replacement_cost = Decimal(str(replacement_cost))
+        if notes is not None:
+            equipment.notes = notes
+
+        return await self.repository.update(equipment)
 
     async def change_status(
-        self, equipment_id: int, status: EquipmentStatus
-    ) -> Optional[Equipment]:
+        self,
+        equipment_id: int,
+        status: EquipmentStatus,
+    ) -> Equipment:
         """Change equipment status.
 
         Args:
@@ -125,9 +167,37 @@ class EquipmentService:
             status: New status
 
         Returns:
-            Updated equipment if found, None otherwise
+            Updated equipment
+
+        Raises:
+            ValueError: If equipment not found or status transition not allowed
         """
-        return await self.repository.update(equipment_id, status=status)
+        # Get equipment
+        equipment = await self.repository.get(equipment_id)
+        if not equipment:
+            msg = f'Equipment with ID {equipment_id} not found'
+            raise ValueError(msg)
+
+        # Check if status transition is allowed
+        allowed_transitions: Dict[EquipmentStatus, List[EquipmentStatus]] = {
+            EquipmentStatus.AVAILABLE: [
+                EquipmentStatus.MAINTENANCE,
+                EquipmentStatus.RETIRED,
+            ],
+            EquipmentStatus.MAINTENANCE: [
+                EquipmentStatus.AVAILABLE,
+                EquipmentStatus.RETIRED,
+            ],
+            EquipmentStatus.RETIRED: [],
+        }
+
+        if status not in allowed_transitions[equipment.status]:
+            msg = f'Invalid status transition from {equipment.status} to {status}'
+            raise ValueError(msg)
+
+        # Update status
+        equipment.status = status
+        return await self.repository.update(equipment)
 
     async def check_availability(
         self, equipment_id: int, start_date: datetime, end_date: datetime

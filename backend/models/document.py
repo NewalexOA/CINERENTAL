@@ -31,6 +31,7 @@ class DocumentStatus(str, Enum):
 
     DRAFT = 'draft'  # Document is being prepared
     PENDING = 'pending'  # Document is awaiting approval
+    UNDER_REVIEW = 'under_review'  # Document is being reviewed
     APPROVED = 'approved'  # Document has been approved
     REJECTED = 'rejected'  # Document has been rejected
     EXPIRED = 'expired'  # Document has expired

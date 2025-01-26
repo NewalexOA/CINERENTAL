@@ -24,7 +24,7 @@ class CategoryRepository(BaseRepository[Category]):
         Args:
             session: SQLAlchemy async session
         """
-        super().__init__(Category, session)
+        super().__init__(session, Category)
 
     async def get_by_name(self, name: str) -> Optional[Category]:
         """Get category by name.

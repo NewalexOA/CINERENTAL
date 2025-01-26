@@ -4,10 +4,11 @@ This module implements business logic for managing rental service clients,
 including client registration, profile updates, and rental history tracking.
 """
 
-from typing import Any, Dict, List, Optional
+from typing import List, Optional, cast
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from backend.models.booking import Booking
 from backend.models.client import Client, ClientStatus
 from backend.repositories.client import ClientRepository
 
@@ -65,7 +66,7 @@ class ClientService:
             msg = f'Client with phone {phone} already exists'
             raise ValueError(msg)
 
-        return await self.repository.create(
+        client = Client(
             first_name=first_name,
             last_name=last_name,
             email=email,
@@ -76,6 +77,7 @@ class ClientService:
             notes=notes,
             status=ClientStatus.ACTIVE,
         )
+        return await self.repository.create(client)
 
     async def update_client(
         self,
@@ -88,7 +90,7 @@ class ClientService:
         address: Optional[str] = None,
         company: Optional[str] = None,
         notes: Optional[str] = None,
-    ) -> Optional[Client]:
+    ) -> Client:
         """Update client details.
 
         Args:
@@ -103,48 +105,52 @@ class ClientService:
             notes: New notes (optional)
 
         Returns:
-            Updated client if found, None otherwise
+            Updated client
 
         Raises:
-            ValueError: If client with given email or phone already exists
+            ValueError: If client not found or if new email/phone already exists
         """
-        if email is not None:
+        # Get client
+        client = await self.repository.get(client_id)
+        if not client:
+            msg = f'Client with ID {client_id} not found'
+            raise ValueError(msg)
+
+        # Check if new email is unique
+        if email and email != client.email:
             existing = await self.repository.get_by_email(email)
-            if existing and existing.id != client_id:
+            if existing:
                 msg = f'Client with email {email} already exists'
                 raise ValueError(msg)
 
-        if phone is not None:
+        # Check if new phone is unique
+        if phone and phone != client.phone:
             existing = await self.repository.get_by_phone(phone)
-            if existing and existing.id != client_id:
+            if existing:
                 msg = f'Client with phone {phone} already exists'
                 raise ValueError(msg)
 
-        update_data: Dict[str, Any] = {}
+        # Update fields
         if first_name is not None:
-            update_data['first_name'] = first_name
+            client.first_name = first_name
         if last_name is not None:
-            update_data['last_name'] = last_name
+            client.last_name = last_name
         if email is not None:
-            update_data['email'] = email
+            client.email = email
         if phone is not None:
-            update_data['phone'] = phone
+            client.phone = phone
         if passport_number is not None:
-            update_data['passport_number'] = passport_number
+            client.passport_number = passport_number
         if address is not None:
-            update_data['address'] = address
+            client.address = address
         if company is not None:
-            update_data['company'] = company
+            client.company = company
         if notes is not None:
-            update_data['notes'] = notes
+            client.notes = notes
 
-        if update_data:
-            return await self.repository.update(client_id, **update_data)
-        return await self.repository.get(client_id)
+        return await self.repository.update(client)
 
-    async def change_status(
-        self, client_id: int, status: ClientStatus
-    ) -> Optional[Client]:
+    async def change_status(self, client_id: int, status: ClientStatus) -> Client:
         """Change client status.
 
         Args:
@@ -152,9 +158,20 @@ class ClientService:
             status: New status
 
         Returns:
-            Updated client if found, None otherwise
+            Updated client
+
+        Raises:
+            ValueError: If client not found
         """
-        return await self.repository.update(client_id, status=status)
+        # Get client
+        client = await self.repository.get(client_id)
+        if not client:
+            msg = f'Client with ID {client_id} not found'
+            raise ValueError(msg)
+
+        # Update status
+        client.status = status
+        return await self.repository.update(client)
 
     async def get_clients(self) -> List[Client]:
         """Get all clients.
@@ -215,3 +232,20 @@ class ClientService:
             List of clients with specified status
         """
         return await self.repository.get_by_status(status)
+
+    async def get_client_bookings(self, client_id: int) -> List[Booking]:
+        """Get all bookings for a client.
+
+        Args:
+            client_id: Client ID
+
+        Returns:
+            List of client's bookings
+
+        Raises:
+            ValueError: If client is not found
+        """
+        client = await self.repository.get(client_id)
+        if not client:
+            raise ValueError('Client not found')
+        return cast(List[Booking], client.bookings)

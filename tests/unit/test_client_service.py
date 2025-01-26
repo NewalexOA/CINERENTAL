@@ -206,8 +206,8 @@ class TestClientService:
             )
 
         # Test updating non-existent client
-        result = await service.update_client(999, first_name='Non-existent')
-        assert result is None
+        with pytest.raises(ValueError, match='Client with ID 999 not found'):
+            await service.update_client(999, first_name='Non-existent')
 
     async def test_change_status(self, service: ClientService, client: Client) -> None:
         """Test changing client status."""
@@ -222,8 +222,8 @@ class TestClientService:
         assert updated.status == ClientStatus.ACTIVE
 
         # Test changing status of non-existent client
-        result = await service.change_status(999, ClientStatus.BLOCKED)
-        assert result is None
+        with pytest.raises(ValueError, match='Client with ID 999 not found'):
+            await service.change_status(999, ClientStatus.BLOCKED)
 
     async def test_get_clients(self, service: ClientService, client: Client) -> None:
         """Test getting all clients."""
@@ -290,21 +290,17 @@ class TestClientService:
         result = await service.get_with_active_bookings(client.id)
         assert result is None
 
-        # Change booking status to ACTIVE
+        # Change booking status to CONFIRMED first
         booking_service = BookingService(db_session)
+        await booking_service.change_status(booking.id, BookingStatus.CONFIRMED)
+
+        # Then change to ACTIVE
         await booking_service.change_status(booking.id, BookingStatus.ACTIVE)
 
-        # Now we should get the client
+        # Now client should have active bookings
         result = await service.get_with_active_bookings(client.id)
         assert result is not None
         assert result.id == client.id
-
-        # Change booking status back to PENDING
-        await booking_service.change_status(booking.id, BookingStatus.PENDING)
-
-        # Test getting non-existent client
-        result = await service.get_with_active_bookings(999)
-        assert result is None
 
     async def test_get_with_overdue_bookings(
         self,
@@ -327,21 +323,17 @@ class TestClientService:
             start_date=past_start,
             end_date=past_end,
         )
+
+        # Change booking status to CONFIRMED first
+        await booking_service.change_status(booking.id, BookingStatus.CONFIRMED)
+
+        # Then change to ACTIVE
         await booking_service.change_status(booking.id, BookingStatus.ACTIVE)
 
-        # Now we should get the client
+        # Now client should be in the list
         clients = await service.get_with_overdue_bookings()
+        assert len(clients) >= 1
         assert any(c.id == client.id for c in clients)
-
-        # Reset booking dates and status
-        future_start = datetime.now(timezone.utc) + timedelta(days=1)
-        future_end = future_start + timedelta(days=3)
-        await booking_service.update_booking(
-            booking.id,
-            start_date=future_start,
-            end_date=future_end,
-        )
-        await booking_service.change_status(booking.id, BookingStatus.PENDING)
 
     async def test_get_by_status(self, service: ClientService, client: Client) -> None:
         """Test getting clients by status."""

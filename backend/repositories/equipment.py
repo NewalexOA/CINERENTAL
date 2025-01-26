@@ -31,7 +31,7 @@ class EquipmentRepository(BaseRepository[Equipment]):
         Args:
             session: SQLAlchemy async session
         """
-        super().__init__(Equipment, session)
+        super().__init__(session, Equipment)
 
     async def get_by_barcode(self, barcode: str) -> Optional[Equipment]:
         """Get equipment by barcode.
@@ -88,7 +88,7 @@ class EquipmentRepository(BaseRepository[Equipment]):
         """
         # Equipment is available if:
         # 1. It has status 'available'
-        # 2. It has no bookings for the specified period
+        # 2. It has no active bookings for the specified period
         query: Select = select(self.model).where(
             and_(
                 self.model.status == EquipmentStatus.AVAILABLE,
@@ -96,7 +96,13 @@ class EquipmentRepository(BaseRepository[Equipment]):
                     and_(
                         Booking.start_date < end_date,
                         Booking.end_date > start_date,
-                        Booking.booking_status != BookingStatus.CANCELLED,
+                        Booking.booking_status.in_(
+                            [
+                                BookingStatus.PENDING,
+                                BookingStatus.CONFIRMED,
+                                BookingStatus.ACTIVE,
+                            ]
+                        ),
                     )
                 ),
             )
@@ -123,30 +129,68 @@ class EquipmentRepository(BaseRepository[Equipment]):
         return cast(List[Equipment], list(result.all()))
 
     async def check_availability(
-        self, equipment_id: int, start_date: datetime, end_date: datetime
+        self,
+        equipment_id: int,
+        start_date: datetime,
+        end_date: datetime,
+        exclude_booking_id: Optional[int] = None,
     ) -> bool:
-        """Check if equipment is available for booking.
+        """Check if equipment is available for the specified period.
 
         Args:
             equipment_id: Equipment ID
             start_date: Start date
             end_date: End date
+            exclude_booking_id: Booking ID to exclude from check (optional)
 
         Returns:
             True if equipment is available, False otherwise
         """
-        query: Select = select(self.model).where(
+        # First check if equipment exists and is available
+        equipment = await self.get(equipment_id)
+        if not equipment or equipment.status != EquipmentStatus.AVAILABLE:
+            return False
+
+        # Then check for overlapping bookings
+        query = select(Booking).where(
             and_(
-                self.model.id == equipment_id,
-                self.model.status == EquipmentStatus.AVAILABLE,
-                ~self.model.bookings.any(
+                Booking.equipment_id == equipment_id,
+                Booking.booking_status.in_(
+                    [
+                        BookingStatus.PENDING,
+                        BookingStatus.CONFIRMED,
+                        BookingStatus.ACTIVE,
+                    ]
+                ),
+                or_(
                     and_(
                         Booking.start_date < end_date,
                         Booking.end_date > start_date,
-                        Booking.booking_status != BookingStatus.CANCELLED,
-                    )
+                    ),
+                    and_(
+                        Booking.start_date >= start_date,
+                        Booking.start_date < end_date,
+                    ),
                 ),
             )
         )
-        result = await self.session.scalar(query)
-        return result is not None
+
+        if exclude_booking_id:
+            query = query.where(Booking.id != exclude_booking_id)
+
+        result = await self.session.execute(query)
+        return not bool(result.scalar_one_or_none())
+
+    async def get_by_status(self, status: EquipmentStatus) -> List[Equipment]:
+        """Get equipment by status.
+
+        Args:
+            status: Equipment status
+
+        Returns:
+            List of equipment with specified status
+        """
+        result = await self.session.execute(
+            select(Equipment).where(Equipment.status == status)
+        )
+        return list(result.scalars().all())

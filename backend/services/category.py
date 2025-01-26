@@ -4,7 +4,7 @@ This module implements business logic for managing equipment categories,
 including hierarchy management and validation of category relationships.
 """
 
-from typing import Any, Dict, List, Optional
+from typing import List, Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -46,11 +46,12 @@ class CategoryService:
             msg = f'Category with name {name} already exists'
             raise ValueError(msg)
 
-        return await self.repository.create(
+        category = Category(
             name=name,
             description=description,
             parent_id=parent_id,
         )
+        return await self.repository.create(category)
 
     async def update_category(
         self,
@@ -59,45 +60,42 @@ class CategoryService:
         description: Optional[str] = None,
         parent_id: Optional[int] = None,
     ) -> Category:
-        """Update category details.
+        """Update equipment category.
 
         Args:
             category_id: Category ID
-            name: New name (optional)
-            description: New description (optional)
+            name: New category name (optional)
+            description: New category description (optional)
             parent_id: New parent category ID (optional)
 
         Returns:
             Updated category
 
         Raises:
-            ValueError: If category with given name already exists or category not found
+            ValueError: If category not found or if new name already exists
         """
-        # Check if category exists
+        # Get category
         category = await self.repository.get(category_id)
         if not category:
-            raise ValueError('Category not found')
+            msg = f'Category with ID {category_id} not found'
+            raise ValueError(msg)
 
-        if name is not None:
+        # Check if new name is unique
+        if name and name != category.name:
             existing = await self.repository.get_by_name(name)
-            if existing and existing.id != category_id:
+            if existing:
                 msg = f'Category with name {name} already exists'
                 raise ValueError(msg)
 
-        update_data: Dict[str, Any] = {}
+        # Update fields
         if name is not None:
-            update_data['name'] = name
+            category.name = name
         if description is not None:
-            update_data['description'] = description
+            category.description = description
         if parent_id is not None:
-            update_data['parent_id'] = parent_id
+            category.parent_id = parent_id
 
-        if update_data:
-            result = await self.repository.update(category_id, **update_data)
-            if not result:
-                raise ValueError('Category not found')
-            return result
-        return category
+        return await self.repository.update(category)
 
     async def get_categories(self) -> List[Category]:
         """Get all categories.

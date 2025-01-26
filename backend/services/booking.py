@@ -1,11 +1,11 @@
 """Booking service module.
 
-This module implements business logic for managing equipment bookings,
-including availability checks, booking creation, and status management.
+This module implements business logic for managing equipment bookings.
 """
 
-from datetime import datetime
-from typing import Any, Dict, List, Optional
+from datetime import datetime, timedelta, timezone
+from decimal import Decimal
+from typing import List, Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -17,15 +17,14 @@ from backend.repositories.equipment import EquipmentRepository
 class BookingService:
     """Service for managing bookings."""
 
-    def __init__(self, session: AsyncSession) -> None:
+    def __init__(self, db_session: AsyncSession) -> None:
         """Initialize service.
 
         Args:
-            session: SQLAlchemy async session
+            db_session: Database session
         """
-        self.session = session
-        self.repository = BookingRepository(session)
-        self.equipment_repository = EquipmentRepository(session)
+        self.repository = BookingRepository(db_session)
+        self.equipment_repository = EquipmentRepository(db_session)
 
     async def create_booking(
         self,
@@ -53,30 +52,41 @@ class BookingService:
 
         Raises:
             ValueError: If equipment is not available for the specified period
+                      or if start date is in the past
+                      or if end date is before start date
+                      or if booking is too far in advance
         """
-        # Check equipment availability
-        is_available = await self.equipment_repository.check_availability(
-            equipment_id, start_date, end_date
-        )
-        if not is_available:
-            msg = (
-                f'Equipment {equipment_id} is not available '
-                f'from {start_date} to {end_date}'
-            )
-            raise ValueError(msg)
+        # Validate start date
+        now = datetime.now(timezone.utc)
+        if start_date < now:
+            raise ValueError('Start date cannot be in the past')
 
-        return await self.repository.create(
+        # Validate end date
+        if end_date <= start_date:
+            raise ValueError('End date must be after start date')
+
+        # Validate booking period
+        max_advance = now + timedelta(days=365)
+        if start_date > max_advance:
+            raise ValueError('Booking too far in advance')
+
+        # Check equipment availability
+        if not await self.equipment_repository.check_availability(
+            equipment_id, start_date, end_date
+        ):
+            raise ValueError(f'Equipment {equipment_id} is not available')
+
+        # Create booking
+        booking = Booking(
             client_id=client_id,
             equipment_id=equipment_id,
             start_date=start_date,
             end_date=end_date,
-            total_amount=total_amount,
-            deposit_amount=deposit_amount,
-            paid_amount=0,
+            total_amount=Decimal(str(total_amount)),
+            deposit_amount=Decimal(str(deposit_amount)),
             notes=notes,
-            booking_status=BookingStatus.PENDING,
-            payment_status=PaymentStatus.PENDING,
         )
+        return await self.repository.create(booking)
 
     async def update_booking(
         self,
@@ -109,83 +119,42 @@ class BookingService:
         if not booking:
             raise ValueError('Booking not found')
 
-        if start_date or end_date:
-            # Check equipment availability for new dates
-            is_available = await self.equipment_repository.check_availability(
+        if start_date and end_date:
+            # Check if new dates overlap with other bookings
+            if not await self.equipment_repository.check_availability(
                 booking.equipment_id,
-                start_date or booking.start_date,
-                end_date or booking.end_date,
-            )
-            if not is_available:
-                msg = (
-                    f'Equipment {booking.equipment_id} is not available '
-                    f'for the new dates'
-                )
-                raise ValueError(msg)
+                start_date,
+                end_date,
+                exclude_booking_id=booking_id,
+            ):
+                raise ValueError(f'Equipment {booking.equipment_id} is not available')
 
-        update_data: Dict[str, Any] = {}
-        if start_date is not None:
-            update_data['start_date'] = start_date
-        if end_date is not None:
-            update_data['end_date'] = end_date
+        # Update fields if provided
+        if start_date:
+            booking.start_date = start_date
+        if end_date:
+            booking.end_date = end_date
         if total_amount is not None:
-            update_data['total_amount'] = total_amount
+            booking.total_amount = Decimal(str(total_amount))
         if deposit_amount is not None:
-            update_data['deposit_amount'] = deposit_amount
+            booking.deposit_amount = Decimal(str(deposit_amount))
         if paid_amount is not None:
-            update_data['paid_amount'] = paid_amount
-            # Update payment status based on paid amount
-            if total_amount is not None and paid_amount >= total_amount:
-                update_data['payment_status'] = PaymentStatus.PAID
-            elif paid_amount > 0:
-                update_data['payment_status'] = PaymentStatus.PARTIAL
+            booking.paid_amount = Decimal(str(paid_amount))
         if notes is not None:
-            update_data['notes'] = notes
+            booking.notes = notes
 
-        if update_data:
-            result = await self.repository.update(booking_id, **update_data)
-            if not result:
-                raise ValueError('Booking not found')
-            return result
-        return booking
+        return await self.repository.update(booking)
 
-    async def change_status(self, booking_id: int, status: BookingStatus) -> Booking:
-        """Change booking status.
+    async def get_booking(self, booking_id: int) -> Optional[Booking]:
+        """Get booking by ID.
 
         Args:
             booking_id: Booking ID
-            status: New status
 
         Returns:
-            Updated booking
-
-        Raises:
-            ValueError: If booking is not found
+            Booking if found, None otherwise
         """
-        result = await self.repository.update(booking_id, booking_status=status)
-        if not result:
-            raise ValueError('Booking not found')
-        return result
-
-    async def change_payment_status(
-        self, booking_id: int, status: PaymentStatus
-    ) -> Booking:
-        """Change booking payment status.
-
-        Args:
-            booking_id: Booking ID
-            status: New payment status
-
-        Returns:
-            Updated booking
-
-        Raises:
-            ValueError: If booking is not found
-        """
-        result = await self.repository.update(booking_id, payment_status=status)
-        if not result:
-            raise ValueError('Booking not found')
-        return result
+        return await self.repository.get(booking_id)
 
     async def get_bookings(self) -> List[Booking]:
         """Get all bookings.
@@ -195,25 +164,8 @@ class BookingService:
         """
         return await self.repository.get_all()
 
-    async def get_booking(self, booking_id: int) -> Booking:
-        """Get booking by ID.
-
-        Args:
-            booking_id: Booking ID
-
-        Returns:
-            Booking if found
-
-        Raises:
-            ValueError: If booking is not found
-        """
-        booking = await self.repository.get(booking_id)
-        if not booking:
-            raise ValueError('Booking not found')
-        return booking
-
     async def get_by_client(self, client_id: int) -> List[Booking]:
-        """Get all bookings for a client.
+        """Get bookings by client.
 
         Args:
             client_id: Client ID
@@ -224,7 +176,7 @@ class BookingService:
         return await self.repository.get_by_client(client_id)
 
     async def get_by_equipment(self, equipment_id: int) -> List[Booking]:
-        """Get all bookings for an equipment.
+        """Get bookings by equipment.
 
         Args:
             equipment_id: Equipment ID
@@ -237,14 +189,14 @@ class BookingService:
     async def get_active_for_period(
         self, start_date: datetime, end_date: datetime
     ) -> List[Booking]:
-        """Get active bookings for a period.
+        """Get active bookings for period.
 
         Args:
             start_date: Period start date
             end_date: Period end date
 
         Returns:
-            List of active bookings
+            List of active bookings for period
         """
         return await self.repository.get_active_for_period(start_date, end_date)
 
@@ -276,4 +228,81 @@ class BookingService:
         Returns:
             List of overdue bookings
         """
-        return await self.repository.get_overdue()
+        now = datetime.now(timezone.utc)
+        return await self.repository.get_overdue(now)
+
+    async def change_status(self, booking_id: int, status: BookingStatus) -> Booking:
+        """Change booking status.
+
+        Args:
+            booking_id: Booking ID
+            status: New status
+
+        Returns:
+            Updated booking
+
+        Raises:
+            ValueError: If booking is not found or status transition is invalid
+        """
+        booking = await self.repository.get(booking_id)
+        if not booking:
+            raise ValueError('Booking not found')
+
+        # Define allowed transitions
+        allowed_transitions = {
+            BookingStatus.PENDING: [BookingStatus.CONFIRMED, BookingStatus.CANCELLED],
+            BookingStatus.CONFIRMED: [BookingStatus.ACTIVE, BookingStatus.CANCELLED],
+            BookingStatus.ACTIVE: [BookingStatus.COMPLETED, BookingStatus.CANCELLED],
+            BookingStatus.COMPLETED: [],
+            BookingStatus.CANCELLED: [],
+        }
+
+        allowed = allowed_transitions.get(booking.booking_status, [])
+        if not isinstance(allowed, list):
+            allowed = []
+        if status not in allowed:
+            msg = f'Invalid status transition from {booking.booking_status} to {status}'
+            raise ValueError(msg)
+
+        booking.booking_status = status
+        return await self.repository.update(booking)
+
+    async def change_payment_status(
+        self, booking_id: int, status: PaymentStatus
+    ) -> Booking:
+        """Change booking payment status.
+
+        Args:
+            booking_id: Booking ID
+            status: New payment status
+
+        Returns:
+            Updated booking
+
+        Raises:
+            ValueError: If booking is not found or status transition is invalid
+        """
+        booking = await self.repository.get(booking_id)
+        if not booking:
+            raise ValueError('Booking not found')
+
+        # Define allowed transitions
+        allowed_transitions = {
+            PaymentStatus.PENDING: [PaymentStatus.PARTIAL, PaymentStatus.PAID],
+            PaymentStatus.PARTIAL: [PaymentStatus.PAID],
+            PaymentStatus.PAID: [],
+            PaymentStatus.REFUNDED: [],
+        }
+
+        allowed = allowed_transitions.get(booking.payment_status, [])
+        if not isinstance(allowed, list):
+            allowed = []
+        if status not in allowed:
+            msg = (
+                f'Invalid payment status transition from '
+                f'{booking.payment_status} to {status}'
+            )
+            raise ValueError(msg)
+
+        booking.payment_status = status
+        return await self.repository.update(booking)

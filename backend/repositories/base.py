@@ -1,9 +1,9 @@
 """Base repository module."""
 
-from typing import Any, Generic, List, Optional, Protocol, Type, TypeVar, Union, cast
+from typing import Generic, List, Optional, Protocol, Type, TypeVar, Union, cast
 from uuid import UUID
 
-from sqlalchemy import Column, delete, select, update
+from sqlalchemy import Column, delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import Select
 
@@ -20,20 +20,20 @@ ModelType = TypeVar('ModelType', bound=Base)
 
 
 class BaseRepository(Generic[ModelType]):
-    """Base repository with common CRUD operations."""
+    """Base repository class.
 
-    model: Type[ModelType]
-    session: AsyncSession
+    This class provides basic CRUD operations for models.
+    """
 
-    def __init__(self, model: Type[ModelType], session: AsyncSession) -> None:
+    def __init__(self, session: AsyncSession, model: type[ModelType]) -> None:
         """Initialize repository.
 
         Args:
-            model: SQLAlchemy model class
             session: SQLAlchemy async session
+            model: SQLAlchemy model class
         """
-        self.model = model
         self.session = session
+        self.model = model
 
     async def get(self, id: Union[int, UUID]) -> Optional[ModelType]:
         """Get entity by ID.
@@ -59,50 +59,42 @@ class BaseRepository(Generic[ModelType]):
         result = await self.session.execute(query)
         return list(result.scalars().all())
 
-    async def create(self, **kwargs: Any) -> ModelType:
-        """Create new entity.
+    async def create(self, instance: ModelType) -> ModelType:
+        """Create new record.
 
         Args:
-            **kwargs: Entity attributes
+            instance: Model instance to create
 
         Returns:
-            Created entity
+            Created record
         """
-        entity = self.model(**kwargs)
-        self.session.add(entity)
-        await self.session.commit()
-        await self.session.refresh(entity)
-        return entity
+        self.session.add(instance)
+        await self.session.flush()
+        await self.session.refresh(instance)
+        return instance
 
-    async def update(self, id: Union[int, UUID], **kwargs: Any) -> Optional[ModelType]:
-        """Update entity by ID.
+    async def update(self, instance: ModelType) -> ModelType:
+        """Update record.
 
         Args:
-            id: Entity ID
-            **kwargs: Attributes to update
+            instance: Model instance to update
 
         Returns:
-            Updated entity if found, None otherwise
+            Updated record
         """
-        model = cast(Type[HasId], self.model)
-        query = (
-            update(self.model)
-            .where(model.id == id)
-            .values(**kwargs)
-            .returning(self.model)
-        )
-        result = await self.session.execute(query)
-        await self.session.commit()
-        return result.scalar_one_or_none()
+        self.session.add(instance)
+        await self.session.flush()
+        await self.session.refresh(instance)
+        return instance
 
     async def delete(self, id: Union[int, UUID]) -> bool:
-        """Delete entity by ID.
+        """Delete record.
 
         Args:
-            id: Entity ID
+            id: Record ID
 
         Returns:
-            True if entity was deleted, False otherwise
+            True if record was deleted, False otherwise
         """
         model = cast(Type[HasId], self.model)
         query = delete(self.model).where(model.id == id)

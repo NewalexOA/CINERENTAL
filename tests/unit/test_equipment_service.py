@@ -173,11 +173,11 @@ class TestEquipmentService:
         assert updated.replacement_cost == 2000.0  # Unchanged
 
         # Try to update non-existent equipment
-        updated = await service.update_equipment(
-            equipment_id=9999,
-            name='Non-existent',
-        )
-        assert updated is None
+        with pytest.raises(ValueError, match='Equipment with ID 9999 not found'):
+            await service.update_equipment(
+                equipment_id=9999,
+                name='Non-existent',
+            )
 
     async def test_change_status(
         self, service: EquipmentService, equipment: Equipment
@@ -199,11 +199,11 @@ class TestEquipmentService:
         assert updated.status == EquipmentStatus.MAINTENANCE
 
         # Try to change status of non-existent equipment
-        updated = await service.change_status(
-            equipment_id=9999,
-            status=EquipmentStatus.MAINTENANCE,
-        )
-        assert updated is None
+        with pytest.raises(ValueError, match='Equipment with ID 9999 not found'):
+            await service.change_status(
+                equipment_id=9999,
+                status=EquipmentStatus.MAINTENANCE,
+            )
 
     async def test_check_availability(
         self, service: EquipmentService, equipment: Equipment

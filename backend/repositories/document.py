@@ -25,7 +25,7 @@ class DocumentRepository(BaseRepository[Document]):
         Args:
             session: SQLAlchemy async session
         """
-        super().__init__(Document, session)
+        super().__init__(session, Document)
 
     async def get_by_booking(self, booking_id: int) -> List[Document]:
         """Get all documents for a booking.

@@ -77,7 +77,7 @@ class TestCategoryService:
         category_service: CategoryService,
     ) -> None:
         """Test updating a nonexistent category."""
-        with pytest.raises(ValueError, match='Category not found'):
+        with pytest.raises(ValueError, match='Category with ID 999 not found'):
             await category_service.update_category(
                 999,
                 name='Updated Category',

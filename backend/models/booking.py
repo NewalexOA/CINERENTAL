@@ -8,6 +8,7 @@ and includes rental terms, status, and payment information.
 from datetime import datetime
 from decimal import Decimal
 from enum import Enum
+from typing import Any
 
 from sqlalchemy import DateTime
 from sqlalchemy import Enum as SQLEnum
@@ -100,3 +101,11 @@ class Booking(TimestampMixin, Base):
     documents = relationship(
         'Document', back_populates='booking', cascade='all, delete-orphan'
     )
+
+    def __init__(self, **kwargs: Any) -> None:
+        """Initialize booking."""
+        super().__init__(**kwargs)
+        if not self.booking_status:
+            self.booking_status = BookingStatus.PENDING
+        if not self.payment_status:
+            self.payment_status = PaymentStatus.PENDING

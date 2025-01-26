@@ -25,7 +25,7 @@ class ClientRepository(BaseRepository[Client]):
         Args:
             session: SQLAlchemy async session
         """
-        super().__init__(Client, session)
+        super().__init__(session, Client)
 
     async def get_by_email(self, email: str) -> Optional[Client]:
         """Get client by email.
