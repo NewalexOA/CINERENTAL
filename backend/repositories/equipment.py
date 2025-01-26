@@ -19,7 +19,7 @@ from backend.repositories.base import BaseRepository
 class HasStatus(Protocol):
     """Protocol for models with status attribute."""
 
-    status: Column[BookingStatus]
+    booking_status: Column[BookingStatus]
 
 
 class EquipmentRepository(BaseRepository[Equipment]):
@@ -97,7 +97,7 @@ class EquipmentRepository(BaseRepository[Equipment]):
                     and_(
                         Booking.start_date < end_date,
                         Booking.end_date > start_date,
-                        booking_model.status != BookingStatus.CANCELLED,
+                        booking_model.booking_status != BookingStatus.CANCELLED,
                     )
                 ),
             )
@@ -145,7 +145,7 @@ class EquipmentRepository(BaseRepository[Equipment]):
                     and_(
                         Booking.start_date < end_date,
                         Booking.end_date > start_date,
-                        booking_model.status != BookingStatus.CANCELLED,
+                        booking_model.booking_status != BookingStatus.CANCELLED,
                     )
                 ),
             )
