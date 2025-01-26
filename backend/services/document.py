@@ -230,3 +230,19 @@ class DocumentService:
             List of documents created within specified date range
         """
         return await self.repository.get_by_date_range(start_date, end_date)
+
+    async def search(
+        self,
+        query_str: str,
+        include_deleted: bool = False,
+    ) -> List[Document]:
+        """Search documents by title or description.
+
+        Args:
+            query_str: Search query string
+            include_deleted: Whether to include deleted documents
+
+        Returns:
+            List of matching documents
+        """
+        return await self.repository.search(query_str, include_deleted=include_deleted)

@@ -10,7 +10,7 @@ from typing import List, Optional
 
 from sqlalchemy import and_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.sql import Select
+from sqlalchemy.sql import Select, func
 
 from backend.models.document import Document, DocumentStatus, DocumentType
 from backend.repositories.base import BaseRepository
@@ -79,22 +79,30 @@ class DocumentRepository(BaseRepository[Document]):
         result = await self.session.scalars(query)
         return list(result.all())
 
-    async def search(self, query_str: str) -> List[Document]:
+    async def search(
+        self,
+        query_str: str,
+        include_deleted: bool = False,
+    ) -> List[Document]:
         """Search documents by title or description.
 
         Args:
-            query_str: Search query
+            query_str: Search query string
+            include_deleted: Whether to include deleted documents
 
         Returns:
             List of matching documents
         """
-        query: Select = select(self.model).where(
+        query = query_str.lower()
+        stmt = select(self.model).where(
             or_(
-                self.model.title.ilike(f'%{query_str}%'),
-                self.model.description.ilike(f'%{query_str}%'),
+                func.lower(self.model.title).contains(query),
+                func.lower(self.model.description).contains(query),
             )
         )
-        result = await self.session.scalars(query)
+        if not include_deleted:
+            stmt = stmt.where(self.model.deleted_at.is_(None))
+        result = await self.session.scalars(stmt)
         return list(result.all())
 
     async def get_by_status(self, status: DocumentStatus) -> List[Document]:
