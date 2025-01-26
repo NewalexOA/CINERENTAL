@@ -98,4 +98,4 @@ Separate containers for:
 - Password hashing
 - Input validation and sanitization
 - CORS configuration
-- Rate limiting for API endpoints 
+- Rate limiting for API endpoints

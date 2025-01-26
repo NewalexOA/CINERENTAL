@@ -1,10 +1,24 @@
 """Authentication endpoints."""
+
 from fastapi import APIRouter
+from fastapi.responses import JSONResponse
 
-router = APIRouter()
+from backend.api.v1.decorators import typed_get
+
+auth_router: APIRouter = APIRouter()
 
 
-@router.get("/health-check")
-async def health_check() -> dict:
-    """Health check endpoint."""
-    return {"status": "ok", "message": "Service is running"}
+@typed_get(
+    auth_router,
+    '/health',
+    response_model=dict[str, str],
+    response_class=JSONResponse,
+    response_model_exclude_none=True,
+)
+async def health_check() -> dict[str, str]:
+    """Health check endpoint.
+
+    Returns:
+        Status message indicating service is running
+    """
+    return {'status': 'Service is running'}

@@ -14,12 +14,16 @@ RUN apt-get update \
         build-essential \
         curl \
         netcat-traditional \
+        python3-setuptools \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
 # Create and activate virtual environment
 RUN python -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
+
+# Install setuptools first
+RUN pip install --no-cache-dir setuptools wheel
 
 # Copy and install requirements
 COPY requirements.txt .
@@ -30,14 +34,17 @@ RUN mkdir -p media && \
     adduser --disabled-password --gecos '' appuser && \
     chown -R appuser:appuser /app /opt/venv
 
-# Switch to non-root user
-USER appuser
-
 # Copy project files
 COPY --chown=appuser:appuser . .
+
+# Install package in development mode
+RUN pip install -e .
+
+# Switch to non-root user
+USER appuser
 
 # Expose port
 EXPOSE 8000
 
 # Run the application
-CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8000"] 
+CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8000"]

@@ -1,19 +1,10 @@
 """Database initialization module."""
+
 from typing import AsyncGenerator
 
-from sqlalchemy.ext.asyncio import (
-    AsyncSession,
-    async_sessionmaker,
-    create_async_engine,
-)
-from sqlalchemy.orm import DeclarativeBase
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from backend.core.config import settings
-
-
-class Base(DeclarativeBase):
-    """Base class for all database models."""
-
 
 # Create async engine
 engine = create_async_engine(
@@ -41,4 +32,4 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
         try:
             yield session
         finally:
-            await session.close() 
+            await session.close()

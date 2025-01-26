@@ -1,0 +1,159 @@
+"""Document service module.
+
+This module implements business logic for managing rental documents,
+including contracts, handover acts, and other related documents.
+"""
+
+from datetime import datetime
+from typing import Any, Dict, List, Optional
+
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from backend.models.document import Document, DocumentStatus, DocumentType
+from backend.repositories.document import DocumentRepository
+
+
+class DocumentService:
+    """Service for managing rental documents."""
+
+    def __init__(self, session: AsyncSession) -> None:
+        """Initialize service.
+
+        Args:
+            session: SQLAlchemy async session
+        """
+        self.session = session
+        self.repository = DocumentRepository(session)
+
+    async def create_document(
+        self,
+        booking_id: int,
+        document_type: DocumentType,
+        file_path: str,
+        notes: Optional[str] = None,
+    ) -> Document:
+        """Create new document.
+
+        Args:
+            booking_id: Related booking ID
+            document_type: Type of document
+            file_path: Path to document file
+            notes: Additional notes (optional)
+
+        Returns:
+            Created document
+        """
+        return await self.repository.create(
+            booking_id=booking_id,
+            document_type=document_type,
+            file_path=file_path,
+            created_at=datetime.utcnow(),
+            notes=notes,
+            status=DocumentStatus.DRAFT,
+        )
+
+    async def update_document(
+        self,
+        document_id: int,
+        file_path: Optional[str] = None,
+        notes: Optional[str] = None,
+    ) -> Optional[Document]:
+        """Update document details.
+
+        Args:
+            document_id: Document ID
+            file_path: New file path (optional)
+            notes: New notes (optional)
+
+        Returns:
+            Updated document if found, None otherwise
+        """
+        update_data: Dict[str, Any] = {}
+        if file_path is not None:
+            update_data['file_path'] = file_path
+        if notes is not None:
+            update_data['notes'] = notes
+
+        if update_data:
+            return await self.repository.update(document_id, **update_data)
+        return await self.repository.get(document_id)
+
+    async def change_status(
+        self, document_id: int, status: DocumentStatus
+    ) -> Optional[Document]:
+        """Change document status.
+
+        Args:
+            document_id: Document ID
+            status: New status
+
+        Returns:
+            Updated document if found, None otherwise
+        """
+        return await self.repository.update(document_id, status=status)
+
+    async def get_documents(self) -> List[Document]:
+        """Get all documents.
+
+        Returns:
+            List of all documents
+        """
+        return await self.repository.get_all()
+
+    async def get_document(self, document_id: int) -> Optional[Document]:
+        """Get document by ID.
+
+        Args:
+            document_id: Document ID
+
+        Returns:
+            Document if found, None otherwise
+        """
+        return await self.repository.get(document_id)
+
+    async def get_by_booking(self, booking_id: int) -> List[Document]:
+        """Get all documents for a booking.
+
+        Args:
+            booking_id: Booking ID
+
+        Returns:
+            List of booking's documents
+        """
+        return await self.repository.get_by_booking(booking_id)
+
+    async def get_by_type(self, document_type: DocumentType) -> List[Document]:
+        """Get documents by type.
+
+        Args:
+            document_type: Document type
+
+        Returns:
+            List of documents with specified type
+        """
+        return await self.repository.get_by_type(document_type)
+
+    async def get_by_status(self, status: DocumentStatus) -> List[Document]:
+        """Get documents by status.
+
+        Args:
+            status: Document status
+
+        Returns:
+            List of documents with specified status
+        """
+        return await self.repository.get_by_status(status)
+
+    async def get_by_date_range(
+        self, start_date: datetime, end_date: datetime
+    ) -> List[Document]:
+        """Get documents created within date range.
+
+        Args:
+            start_date: Start date
+            end_date: End date
+
+        Returns:
+            List of documents created within specified date range
+        """
+        return await self.repository.get_by_date_range(start_date, end_date)

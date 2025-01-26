@@ -6,7 +6,12 @@ services:
     command: >
       bash -c "./docker/wait-for-it.sh db 5432 &&
                ./docker/wait-for-it.sh redis 6379 &&
-               uvicorn backend.main:app --host 0.0.0.0 --port 8000 --reload"
+               uvicorn backend.main:app
+               --host 0.0.0.0
+               --port 8000
+               --workers ${WORKERS_COUNT:-1}
+               --log-level ${LOG_LEVEL:-info}
+               ${DEBUG:+--reload}"
     volumes:
       - .:/app
       - media_volume:/app/media
@@ -14,7 +19,54 @@ services:
       - "8000:8000"
     environment:
       - POSTGRES_SERVER=db
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
+      - POSTGRES_DB=${POSTGRES_DB:-cinerental}
       - REDIS_HOST=redis
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-}
+      - SECRET_KEY=${SECRET_KEY:-your-secret-key}
+      - DEBUG=${DEBUG:-false}
+      - WORKERS_COUNT=${WORKERS_COUNT:-1}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - ALLOWED_HOSTS=${ALLOWED_HOSTS:-localhost,127.0.0.1}
+      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:3000}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - cinerental_network
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  test:
+    build: .
+    command: >
+      bash -c "./docker/wait-for-it.sh db 5432 &&
+               pytest tests/ -v --cov=backend --cov-report=html"
+    volumes:
+      - .:/app
+      - ./htmlcov:/app/htmlcov
+    environment:
+      - POSTGRES_SERVER=db
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
+      - POSTGRES_DB=cinerental_test
+      - REDIS_HOST=redis
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-}
+      - TESTING=1
+      - SECRET_KEY=test-secret-key
     depends_on:
       db:
         condition: service_healthy
@@ -62,4 +114,4 @@ volumes:
 
 networks:
   cinerental_network:
-    driver: bridge 
+    driver: bridge
