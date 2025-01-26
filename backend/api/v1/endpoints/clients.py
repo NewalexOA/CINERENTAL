@@ -6,11 +6,20 @@ and accessing rental history and related documents.
 """
 
 from fastapi import APIRouter
+from fastapi.responses import JSONResponse
 
-clients_router = APIRouter()
+from backend.api.v1.decorators import typed_get
+
+clients_router: APIRouter = APIRouter()
 
 
-@clients_router.get('/health', response_model=dict[str, str])  # type: ignore[misc]
+@typed_get(
+    clients_router,
+    '/health',
+    response_model=dict[str, str],
+    response_class=JSONResponse,
+    response_model_exclude_none=True,
+)
 async def health_check() -> dict[str, str]:
     """Health check endpoint.
 

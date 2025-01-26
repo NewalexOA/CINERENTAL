@@ -20,15 +20,17 @@ class Settings(BaseSettings):
     APP_NAME: str = 'CINERENTAL'
     ENVIRONMENT: str = 'development'
     DEBUG: bool = True
-    SECRET_KEY: str
+    SECRET_KEY: str = 'your-super-secret-key-change-in-production'
     ALLOWED_HOSTS: str = 'localhost,127.0.0.1'
+    WORKERS_COUNT: int = 1
+    LOG_LEVEL: str = 'info'
 
     # Database
-    POSTGRES_SERVER: str
+    POSTGRES_SERVER: str = 'localhost'
     POSTGRES_PORT: int = 5432
-    POSTGRES_DB: str
-    POSTGRES_USER: str
-    POSTGRES_PASSWORD: str
+    POSTGRES_DB: str = 'cinerental'
+    POSTGRES_USER: str = 'postgres'
+    POSTGRES_PASSWORD: str = 'postgres'
 
     @property
     def DATABASE_URL(self) -> str:
@@ -47,13 +49,19 @@ class Settings(BaseSettings):
         )
 
     # Redis
-    REDIS_HOST: str
+    REDIS_HOST: str = 'localhost'
     REDIS_PORT: int = 6379
     REDIS_DB: int = 0
+    REDIS_PASSWORD: str = ''
 
     @property
     def REDIS_URL(self) -> str:
         """Get Redis URL."""
+        if self.REDIS_PASSWORD:
+            return (
+                f'redis://:{self.REDIS_PASSWORD}@{self.REDIS_HOST}:'
+                f'{self.REDIS_PORT}/{self.REDIS_DB}'
+            )
         return f'redis://{self.REDIS_HOST}:{self.REDIS_PORT}/{self.REDIS_DB}'
 
     # Security
