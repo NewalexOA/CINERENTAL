@@ -5,9 +5,10 @@ Categories can be hierarchical (have parent categories) and are used
 to organize equipment items into logical groups.
 """
 
+from datetime import datetime
 from typing import Optional
 
-from sqlalchemy import ForeignKey, Integer, String
+from sqlalchemy import DateTime, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from backend.models.base import Base, TimestampMixin
@@ -25,6 +26,7 @@ class Category(TimestampMixin, Base):
         children: Child categories relationship.
         equipment: Equipment items in this category.
         equipment_count: Virtual attribute for equipment count.
+        deleted_at: Deletion timestamp
     """
 
     __tablename__ = 'categories'
@@ -35,6 +37,10 @@ class Category(TimestampMixin, Base):
     parent_id: Mapped[Optional[int]] = mapped_column(
         Integer,
         ForeignKey('categories.id', ondelete='RESTRICT'),
+        nullable=True,
+    )
+    deleted_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True),
         nullable=True,
     )
 
