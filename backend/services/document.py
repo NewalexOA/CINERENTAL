@@ -4,11 +4,12 @@ This module implements business logic for managing rental documents,
 including contracts, handover acts, and other related documents.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from backend.models.booking import Booking
 from backend.models.document import Document, DocumentStatus, DocumentType
 from backend.repositories.document import DocumentRepository
 
@@ -27,27 +28,56 @@ class DocumentService:
 
     async def create_document(
         self,
-        booking_id: int,
+        booking_id: Optional[int],
         document_type: DocumentType,
         file_path: str,
+        title: str,
+        description: Optional[str],
+        file_name: str,
+        file_size: int,
+        mime_type: str,
         notes: Optional[str] = None,
+        client_id: Optional[int] = None,
     ) -> Document:
         """Create new document.
 
         Args:
-            booking_id: Related booking ID
+            booking_id: Related booking ID (optional)
             document_type: Type of document
             file_path: Path to document file
+            title: Document title
+            description: Document description (optional)
+            file_name: Original file name
+            file_size: File size in bytes
+            mime_type: File MIME type
             notes: Additional notes (optional)
+            client_id: Client ID (optional, will be taken from booking if not provided)
 
         Returns:
             Created document
+
+        Raises:
+            ValueError: If neither booking_id nor client_id is provided
         """
+        if booking_id is not None:
+            booking = await self.session.get(Booking, booking_id)
+            if booking is None:
+                raise ValueError(f'Booking with ID {booking_id} not found')
+            client_id = booking.client_id
+        elif client_id is None:
+            raise ValueError('Either booking_id or client_id must be provided')
+
         return await self.repository.create(
             booking_id=booking_id,
-            document_type=document_type,
+            client_id=client_id,
+            type=document_type,
             file_path=file_path,
-            created_at=datetime.utcnow(),
+            title=title,
+            description=description,
+            file_name=file_name,
+            file_size=file_size,
+            mime_type=mime_type,
+            created_at=datetime.now(timezone.utc),
             notes=notes,
             status=DocumentStatus.DRAFT,
         )
