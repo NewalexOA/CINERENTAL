@@ -5,7 +5,7 @@ from fastapi import APIRouter
 auth_router = APIRouter()
 
 
-@auth_router.get('/health')
+@auth_router.get('/health', response_model=dict[str, str])  # type: ignore[misc]
 async def health_check() -> dict[str, str]:
     """Health check endpoint.
 
