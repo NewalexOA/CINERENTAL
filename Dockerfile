@@ -14,31 +14,19 @@ RUN apt-get update \
         build-essential \
         curl \
         netcat-traditional \
-        python3-setuptools \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# Create and activate virtual environment
-RUN python -m venv /opt/venv
-ENV PATH="/opt/venv/bin:$PATH"
+# Copy project files
+COPY . .
 
-# Install setuptools first
-RUN pip install --no-cache-dir setuptools wheel
-
-# Copy and install requirements
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# Install project in development mode
+RUN pip install -e ".[dev]"
 
 # Create media directory and non-root user
 RUN mkdir -p media && \
     adduser --disabled-password --gecos '' appuser && \
-    chown -R appuser:appuser /app /opt/venv
-
-# Copy project files
-COPY --chown=appuser:appuser . .
-
-# Install package in development mode
-RUN pip install -e .
+    chown -R appuser:appuser /app
 
 # Switch to non-root user
 USER appuser

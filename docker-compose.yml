@@ -54,7 +54,7 @@ services:
     build: .
     command: >
       bash -c "./docker/wait-for-it.sh db 5432 &&
-               pytest tests/ -v --cov=backend --cov-report=html"
+               python -m pytest tests/ -v --cov=backend --cov-report=html"
     volumes:
       - .:/app
       - ./htmlcov:/app/htmlcov
