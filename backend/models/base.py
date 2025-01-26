@@ -1,18 +1,29 @@
-"""Base model module with common functionality for all models."""
+"""Base model module.
+
+This module provides base model class for all models.
+"""
 
 from datetime import datetime
 from typing import Optional
 
-from sqlalchemy import DateTime, func
+from sqlalchemy import DateTime, Integer, func
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
-class Base(DeclarativeBase):
-    """Base class for all models.
+class HasId:
+    """Base class for models with ID."""
 
-    This class serves as the declarative base for SQLAlchemy models
-    and provides common functionality.
-    """
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    deleted_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+
+
+class Base(DeclarativeBase, HasId):
+    """Base model class."""
+
+    pass
 
 
 class TimestampMixin:
