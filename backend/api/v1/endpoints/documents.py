@@ -10,7 +10,7 @@ from fastapi import APIRouter
 documents_router = APIRouter()
 
 
-@documents_router.get('/health')
+@documents_router.get('/health', response_model=dict[str, str])  # type: ignore[misc]
 async def health_check() -> dict[str, str]:
     """Health check endpoint.
 
