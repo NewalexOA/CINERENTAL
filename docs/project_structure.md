@@ -41,32 +41,49 @@ backend/
 ├── core/                   # Ядро приложения
 │   ├── config.py          # Конфигурация
 │   ├── database.py        # Инициализация БД
+│   ├── exceptions.py      # Пользовательские исключения
 │   └── cache.py           # Инициализация Redis
 ├── models/                 # SQLAlchemy модели
+│   ├── base.py           # Базовая модель
 │   ├── equipment.py
 │   ├── category.py
 │   ├── client.py
 │   ├── booking.py
 │   └── document.py
-├── schemas/               # Pydantic схемы
+├── repositories/          # Работа с данными
+│   ├── base.py          # Базовый репозиторий
 │   ├── equipment.py
 │   ├── category.py
 │   ├── client.py
 │   ├── booking.py
 │   └── document.py
 ├── services/             # Бизнес-логика
+│   ├── base.py         # Базовый сервис
 │   ├── equipment.py
 │   ├── category.py
 │   ├── client.py
 │   ├── booking.py
 │   └── document.py
-├── repositories/         # Работа с данными
+├── schemas/             # Pydantic схемы
+│   ├── base.py        # Базовые схемы
 │   ├── equipment.py
 │   ├── category.py
 │   ├── client.py
 │   ├── booking.py
 │   └── document.py
-└── main.py              # Точка входа приложения
+├── tests/              # Тесты
+│   ├── conftest.py    # Конфигурация тестов
+│   ├── unit/         # Модульные тесты
+│   │   ├── test_equipment_service.py
+│   │   ├── test_category_service.py
+│   │   ├── test_client_service.py
+│   │   ├── test_booking_service.py
+│   │   └── test_document_service.py
+│   └── integration/  # Интеграционные тесты
+│       ├── test_business_processes.py
+│       ├── test_service_interactions.py
+│       └── test_edge_cases.py
+└── main.py           # Точка входа приложения
 ```
 
 ### 3. Основные компоненты
@@ -87,6 +104,7 @@ backend/
 - Асинхронное подключение к PostgreSQL
 - Управление сессиями
 - Базовый класс для моделей
+- Миграции с помощью Alembic
 
 #### Cache (core/cache.py)
 - Асинхронное подключение к Redis
@@ -112,6 +130,7 @@ backend/
 - **Redis**: Кеширование
 - **Docker**: Контейнеризация
 - **Alembic**: Миграции базы данных
+- **pytest**: Тестирование
 
 ### 6. Безопасность
 
@@ -120,6 +139,7 @@ backend/
 - Валидация входных данных
 - Безопасное хранение паролей
 - Ограничение размера файлов
+- Обработка исключений
 
 ### 7. Масштабируемость
 
