@@ -73,31 +73,116 @@ class BookingRepository(BaseRepository[Booking]):
         return not bool(result.scalar_one_or_none())
 
     async def get_by_client(self, client_id: int) -> List[Booking]:
-        """Get bookings by client.
+        """Get all bookings for client.
 
         Args:
             client_id: Client ID
 
         Returns:
-            List of client's bookings
+            List of bookings
         """
-        result = await self.session.execute(
-            select(Booking).where(Booking.client_id == client_id)
+        stmt = select(self.model).where(self.model.client_id == client_id)
+        result = await self.session.execute(stmt)
+        return list(result.scalars().all())
+
+    async def get_active_by_client(self, client_id: int) -> List[Booking]:
+        """Get active bookings for client.
+
+        Args:
+            client_id: Client ID
+
+        Returns:
+            List of active bookings
+        """
+        stmt = select(self.model).where(
+            self.model.client_id == client_id,
+            self.model.booking_status.in_(
+                [
+                    BookingStatus.PENDING,
+                    BookingStatus.CONFIRMED,
+                    BookingStatus.ACTIVE,
+                    BookingStatus.OVERDUE,
+                ]
+            ),
         )
+        result = await self.session.execute(stmt)
         return list(result.scalars().all())
 
     async def get_by_equipment(self, equipment_id: int) -> List[Booking]:
-        """Get bookings by equipment.
+        """Get all bookings for equipment.
 
         Args:
             equipment_id: Equipment ID
 
         Returns:
-            List of equipment's bookings
+            List of bookings
         """
-        result = await self.session.execute(
-            select(Booking).where(Booking.equipment_id == equipment_id)
+        stmt = select(self.model).where(self.model.equipment_id == equipment_id)
+        result = await self.session.execute(stmt)
+        return list(result.scalars().all())
+
+    async def get_active_by_equipment(self, equipment_id: int) -> List[Booking]:
+        """Get active bookings for equipment.
+
+        Args:
+            equipment_id: Equipment ID
+
+        Returns:
+            List of active bookings
+        """
+        stmt = select(self.model).where(
+            self.model.equipment_id == equipment_id,
+            self.model.booking_status.in_(
+                [
+                    BookingStatus.PENDING,
+                    BookingStatus.CONFIRMED,
+                    BookingStatus.ACTIVE,
+                    BookingStatus.OVERDUE,
+                ]
+            ),
         )
+        result = await self.session.execute(stmt)
+        return list(result.scalars().all())
+
+    async def get_overlapping(
+        self, equipment_id: int, start_date: datetime, end_date: datetime
+    ) -> List[Booking]:
+        """Get overlapping bookings for equipment.
+
+        Args:
+            equipment_id: Equipment ID
+            start_date: Start date
+            end_date: End date
+
+        Returns:
+            List of overlapping bookings
+        """
+        stmt = select(self.model).where(
+            self.model.equipment_id == equipment_id,
+            self.model.booking_status.in_(
+                [
+                    BookingStatus.PENDING,
+                    BookingStatus.CONFIRMED,
+                    BookingStatus.ACTIVE,
+                    BookingStatus.OVERDUE,
+                ]
+            ),
+            or_(
+                and_(
+                    self.model.start_date <= start_date,
+                    self.model.end_date > start_date,
+                ),
+                and_(
+                    self.model.start_date < end_date,
+                    self.model.end_date >= end_date,
+                ),
+                and_(
+                    self.model.start_date >= start_date,
+                    self.model.end_date <= end_date,
+                ),
+            ),
+        )
+        result = await self.session.execute(stmt)
         return list(result.scalars().all())
 
     async def get_active_for_period(
