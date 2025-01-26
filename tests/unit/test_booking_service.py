@@ -266,3 +266,84 @@ class TestBookingService:
         assert test_booking.total_amount == booking.total_amount
         assert test_booking.deposit_amount == booking.deposit_amount
         assert test_booking.notes == booking.notes
+
+    async def test_get_by_client(
+        self,
+        service: BookingService,
+        booking: Booking,
+        client: Client,
+    ) -> None:
+        """Test getting bookings by client."""
+        # Get bookings for client
+        bookings = await service.get_by_client(client.id)
+
+        # Check that the list contains our booking
+        assert len(bookings) >= 1
+        assert any(b.id == booking.id for b in bookings)
+
+        # Check that all bookings belong to the client
+        for b in bookings:
+            assert b.client_id == client.id
+
+        # Test getting bookings for non-existent client
+        result = await service.get_by_client(999)
+        assert len(result) == 0
+
+    async def test_get_by_equipment(
+        self,
+        service: BookingService,
+        booking: Booking,
+        equipment: Equipment,
+    ) -> None:
+        """Test getting bookings by equipment."""
+        # Get bookings for equipment
+        bookings = await service.get_by_equipment(equipment.id)
+
+        # Check that the list contains our booking
+        assert len(bookings) >= 1
+        assert any(b.id == booking.id for b in bookings)
+
+        # Check that all bookings are for the equipment
+        for b in bookings:
+            assert b.equipment_id == equipment.id
+
+        # Test getting bookings for non-existent equipment
+        result = await service.get_by_equipment(999)
+        assert len(result) == 0
+
+    async def test_get_active_for_period(
+        self,
+        service: BookingService,
+        booking: Booking,
+    ) -> None:
+        """Test getting active bookings for a period."""
+        # Set booking status to ACTIVE
+        await service.change_status(booking.id, BookingStatus.ACTIVE)
+
+        # Get bookings for a period that includes our booking
+        start = booking.start_date - timedelta(days=1)
+        end = booking.end_date + timedelta(days=1)
+        bookings = await service.get_active_for_period(start, end)
+
+        # Check that the list contains our booking
+        assert len(bookings) >= 1
+        assert any(b.id == booking.id for b in bookings)
+
+        # Get bookings for a period before our booking
+        start = booking.start_date - timedelta(days=10)
+        end = booking.start_date - timedelta(days=5)
+        bookings = await service.get_active_for_period(start, end)
+
+        # Check that the list does not contain our booking
+        assert not any(b.id == booking.id for b in bookings)
+
+        # Get bookings for a period after our booking
+        start = booking.end_date + timedelta(days=5)
+        end = booking.end_date + timedelta(days=10)
+        bookings = await service.get_active_for_period(start, end)
+
+        # Check that the list does not contain our booking
+        assert not any(b.id == booking.id for b in bookings)
+
+        # Set booking status back to PENDING
+        await service.change_status(booking.id, BookingStatus.PENDING)
