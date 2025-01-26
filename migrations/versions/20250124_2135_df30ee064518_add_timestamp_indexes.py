@@ -30,14 +30,14 @@ def upgrade() -> None:
         'created_at',
         existing_type=postgresql.TIMESTAMP(timezone=True),
         nullable=False,
-        existing_server_default=sa.text('now()'),
+        existing_server_default='now()',
     )
     op.alter_column(
         'bookings',
         'updated_at',
         existing_type=postgresql.TIMESTAMP(timezone=True),
         nullable=False,
-        existing_server_default=sa.text('now()'),
+        existing_server_default='now()',
     )
     op.create_index(
         op.f('ix_bookings_booking_status'), 'bookings', ['booking_status'], unique=False
@@ -56,14 +56,14 @@ def upgrade() -> None:
         'created_at',
         existing_type=postgresql.TIMESTAMP(timezone=True),
         nullable=False,
-        existing_server_default=sa.text('now()'),
+        existing_server_default='now()',
     )
     op.alter_column(
         'categories',
         'updated_at',
         existing_type=postgresql.TIMESTAMP(timezone=True),
         nullable=False,
-        existing_server_default=sa.text('now()'),
+        existing_server_default='now()',
     )
     op.create_index(
         op.f('ix_categories_created_at'), 'categories', ['created_at'], unique=False
@@ -79,14 +79,14 @@ def upgrade() -> None:
         'created_at',
         existing_type=postgresql.TIMESTAMP(timezone=True),
         nullable=False,
-        existing_server_default=sa.text('now()'),
+        existing_server_default='now()',
     )
     op.alter_column(
         'clients',
         'updated_at',
         existing_type=postgresql.TIMESTAMP(timezone=True),
         nullable=False,
-        existing_server_default=sa.text('now()'),
+        existing_server_default='now()',
     )
     op.create_index(
         op.f('ix_clients_created_at'), 'clients', ['created_at'], unique=False
@@ -106,14 +106,14 @@ def upgrade() -> None:
         'created_at',
         existing_type=postgresql.TIMESTAMP(timezone=True),
         nullable=False,
-        existing_server_default=sa.text('now()'),
+        existing_server_default='now()',
     )
     op.alter_column(
         'documents',
         'updated_at',
         existing_type=postgresql.TIMESTAMP(timezone=True),
         nullable=False,
-        existing_server_default=sa.text('now()'),
+        existing_server_default='now()',
     )
     op.create_index(
         op.f('ix_documents_created_at'), 'documents', ['created_at'], unique=False
@@ -139,14 +139,14 @@ def upgrade() -> None:
         'created_at',
         existing_type=postgresql.TIMESTAMP(timezone=True),
         nullable=False,
-        existing_server_default=sa.text('now()'),
+        existing_server_default='now()',
     )
     op.alter_column(
         'equipment',
         'updated_at',
         existing_type=postgresql.TIMESTAMP(timezone=True),
         nullable=False,
-        existing_server_default=sa.text('now()'),
+        existing_server_default='now()',
     )
     op.create_index(
         op.f('ix_equipment_created_at'), 'equipment', ['created_at'], unique=False
@@ -172,26 +172,26 @@ def downgrade() -> None:
         'updated_at',
         existing_type=postgresql.TIMESTAMP(timezone=True),
         nullable=True,
-        existing_server_default=sa.text('now()'),
+        existing_server_default='now()',
     )
     op.alter_column(
         'equipment',
         'created_at',
         existing_type=postgresql.TIMESTAMP(timezone=True),
         nullable=True,
-        existing_server_default=sa.text('now()'),
+        existing_server_default='now()',
     )
     op.alter_column(
         'equipment', 'category_id', existing_type=sa.INTEGER(), nullable=True
-    )
-    op.alter_column(
-        'equipment', 'barcode', existing_type=sa.VARCHAR(length=100), nullable=True
     )
     op.alter_column(
         'equipment',
         'serial_number',
         existing_type=sa.VARCHAR(length=100),
         nullable=True,
+    )
+    op.alter_column(
+        'equipment', 'barcode', existing_type=sa.VARCHAR(length=100), nullable=True
     )
     op.drop_index(op.f('ix_documents_updated_at'), table_name='documents')
     op.drop_index(op.f('ix_documents_type'), table_name='documents')
@@ -201,14 +201,14 @@ def downgrade() -> None:
         'updated_at',
         existing_type=postgresql.TIMESTAMP(timezone=True),
         nullable=True,
-        existing_server_default=sa.text('now()'),
+        existing_server_default='now()',
     )
     op.alter_column(
         'documents',
         'created_at',
         existing_type=postgresql.TIMESTAMP(timezone=True),
         nullable=True,
-        existing_server_default=sa.text('now()'),
+        existing_server_default='now()',
     )
     op.alter_column('documents', 'client_id', existing_type=sa.INTEGER(), nullable=True)
     op.drop_index(op.f('ix_clients_updated_at'), table_name='clients')
@@ -220,14 +220,14 @@ def downgrade() -> None:
         'updated_at',
         existing_type=postgresql.TIMESTAMP(timezone=True),
         nullable=True,
-        existing_server_default=sa.text('now()'),
+        existing_server_default='now()',
     )
     op.alter_column(
         'clients',
         'created_at',
         existing_type=postgresql.TIMESTAMP(timezone=True),
         nullable=True,
-        existing_server_default=sa.text('now()'),
+        existing_server_default='now()',
     )
     op.alter_column(
         'clients', 'email', existing_type=sa.VARCHAR(length=255), nullable=True
@@ -239,14 +239,14 @@ def downgrade() -> None:
         'updated_at',
         existing_type=postgresql.TIMESTAMP(timezone=True),
         nullable=True,
-        existing_server_default=sa.text('now()'),
+        existing_server_default='now()',
     )
     op.alter_column(
         'categories',
         'created_at',
         existing_type=postgresql.TIMESTAMP(timezone=True),
         nullable=True,
-        existing_server_default=sa.text('now()'),
+        existing_server_default='now()',
     )
     op.drop_index(op.f('ix_bookings_updated_at'), table_name='bookings')
     op.drop_index(op.f('ix_bookings_payment_status'), table_name='bookings')
@@ -257,14 +257,14 @@ def downgrade() -> None:
         'updated_at',
         existing_type=postgresql.TIMESTAMP(timezone=True),
         nullable=True,
-        existing_server_default=sa.text('now()'),
+        existing_server_default='now()',
     )
     op.alter_column(
         'bookings',
         'created_at',
         existing_type=postgresql.TIMESTAMP(timezone=True),
         nullable=True,
-        existing_server_default=sa.text('now()'),
+        existing_server_default='now()',
     )
     op.alter_column(
         'bookings', 'equipment_id', existing_type=sa.INTEGER(), nullable=True
