@@ -17,8 +17,8 @@ ERD диаграмма доступна в файле [database_schema.puml](dat
 Таблица для хранения иерархической структуры категорий оборудования.
 - `id` (INTEGER, PK) - уникальный идентификатор категории
 - `name` (VARCHAR(100), NOT NULL, INDEX) - название категории
-- `description` (VARCHAR(500)) - описание категории
-- `parent_id` (INTEGER, FK) - ссылка на родительскую категорию (SET NULL)
+- `description` (VARCHAR(500), INDEX) - описание категории
+- `parent_id` (INTEGER, FK) - ссылка на родительскую категорию (CASCADE)
 - `created_at` (TIMESTAMP WITH TIMEZONE, NOT NULL, INDEX) - дата и время создания
 - `updated_at` (TIMESTAMP WITH TIMEZONE, NOT NULL, INDEX) - дата и время последнего обновления
 
@@ -26,7 +26,7 @@ ERD диаграмма доступна в файле [database_schema.puml](dat
 Таблица для хранения информации об оборудовании.
 - `id` (INTEGER, PK) - уникальный идентификатор оборудования
 - `name` (VARCHAR(200), NOT NULL, INDEX) - название оборудования
-- `description` (VARCHAR(1000)) - описание оборудования
+- `description` (VARCHAR(1000), INDEX) - описание оборудования
 - `serial_number` (VARCHAR(100), NOT NULL, UNIQUE, INDEX) - серийный номер
 - `barcode` (VARCHAR(100), NOT NULL, UNIQUE, INDEX) - штрих-код для идентификации
 - `category_id` (INTEGER, FK, NOT NULL) - ссылка на категорию (RESTRICT)
