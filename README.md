@@ -64,6 +64,52 @@ cinerental/
 - PostgreSQL 14+
 - Redis 6+
 
+## Environment Variables
+
+### Database Settings
+- `POSTGRES_USER` - PostgreSQL username (default: postgres)
+- `POSTGRES_PASSWORD` - PostgreSQL password (default: postgres)
+- `POSTGRES_DB` - Database name (default: cinerental)
+- `POSTGRES_SERVER` - Database host (default: db)
+
+### Redis Settings
+- `REDIS_HOST` - Redis host (default: redis)
+- `REDIS_PASSWORD` - Redis password (optional)
+
+### Application Settings
+- `SECRET_KEY` - Secret key for JWT tokens and security
+- `DEBUG` - Enable debug mode (default: false)
+- `WORKERS_COUNT` - Number of uvicorn workers (default: 1)
+- `LOG_LEVEL` - Logging level (default: info)
+
+### Security Settings
+- `ALLOWED_HOSTS` - Comma-separated list of allowed hosts
+- `CORS_ORIGINS` - Comma-separated list of allowed CORS origins
+
+## Development
+
+1. Clone the repository
+2. Copy `.env.example` to `.env` and adjust values
+3. Run development server:
+```bash
+docker compose up
+```
+
+## Testing
+
+Run tests with coverage report:
+```bash
+docker compose up test
+```
+
+## Production
+
+1. Copy `.env.example` to `.env.production` and set secure values
+2. Build and run production services:
+```bash
+docker compose -f docker-compose.prod.yml up -d
+```
+
 ## Installation
 1. Clone the repository:
    ```bash
