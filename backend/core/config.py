@@ -40,17 +40,12 @@ class Settings(BaseSettings):
     POSTGRES_DB: str = 'cinerental'
     POSTGRES_USER: str = 'postgres'
     POSTGRES_PASSWORD: str = 'postgres'
-    DATABASE_URL: str = (
-        'postgresql+asyncpg://postgres:postgres@localhost:5432/cinerental'
-    )
-    SYNC_DATABASE_URL: str = 'postgresql://postgres:postgres@localhost:5432/cinerental'
 
     # Redis
     REDIS_HOST: str = 'localhost'
     REDIS_PORT: int = 6379
     REDIS_DB: int = 0
     REDIS_PASSWORD: str = ''
-    REDIS_URL: str = 'redis://localhost:6379/0'
 
     # Security
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
@@ -72,7 +67,30 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_file='.env',
         case_sensitive=True,
+        extra='allow',
     )
+
+    @property
+    def DATABASE_URL(self) -> str:
+        """Get async database URL."""
+        return (
+            f'postgresql+asyncpg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}'
+            f'@{self.POSTGRES_SERVER}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}'
+        )
+
+    @property
+    def SYNC_DATABASE_URL(self) -> str:
+        """Get sync database URL."""
+        return (
+            f'postgresql://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}'
+            f'@{self.POSTGRES_SERVER}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}'
+        )
+
+    @property
+    def REDIS_URL(self) -> str:
+        """Get Redis URL."""
+        auth = f':{self.REDIS_PASSWORD}@' if self.REDIS_PASSWORD else ''
+        return f'redis://{auth}{self.REDIS_HOST}:{self.REDIS_PORT}/{self.REDIS_DB}'
 
 
 settings = Settings()
