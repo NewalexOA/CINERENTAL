@@ -1,46 +1,140 @@
-"""FastAPI typed decorators module."""
+"""API decorators module.
 
-from enum import Enum
-from typing import Any, Callable, TypeVar, Union
+This module provides typed decorators for FastAPI routes.
+"""
 
-from fastapi import APIRouter
+from typing import Callable, Optional, ParamSpec, Type, TypeVar, cast
 
-F = TypeVar('F', bound=Callable[..., Any])
+from fastapi import APIRouter, Response
+
+T = TypeVar('T')
+P = ParamSpec('P')
+R = TypeVar('R')
 
 
 def typed_get(
     router: APIRouter,
     path: str,
     *,
-    response_model: Any = None,
-    status_code: int = 200,
-    tags: list[Union[str, Enum]] | None = None,
-    **kwargs: Any,
-) -> Callable[[F], F]:
-    """Create a typed GET route decorator.
+    response_model: Optional[Type[T]] = None,
+    status_code: Optional[int] = None,
+    response_class: Type[Response] = Response,
+    response_model_exclude_none: bool = False,
+) -> Callable[[Callable[P, R]], Callable[P, R]]:
+    """Typed GET decorator.
 
     Args:
-        router: The FastAPI router instance
-        path: The URL path for the endpoint
-        response_model: The Pydantic model for the response
+        router: FastAPI router
+        path: URL path
+        response_model: Response model type
         status_code: HTTP status code
-        tags: OpenAPI tags
-        **kwargs: Additional arguments for the route
+        response_class: Response class
+        response_model_exclude_none: Whether to exclude None values
 
     Returns:
-        A typed decorator for FastAPI GET routes
+        Decorated function
     """
+    decorator = router.get(
+        path,
+        response_model=response_model,
+        status_code=status_code,
+        response_class=response_class,
+        response_model_exclude_none=response_model_exclude_none,
+    )
+    return cast(Callable[[Callable[P, R]], Callable[P, R]], decorator)
 
-    def decorator(func: F) -> F:
-        # Here we're using the original FastAPI decorator
-        # but with proper type hints
-        decorated: F = router.get(
-            path,
-            response_model=response_model,
-            status_code=status_code,
-            tags=tags,
-            **kwargs,
-        )(func)
-        return decorated
 
-    return decorator
+def typed_post(
+    router: APIRouter,
+    path: str,
+    *,
+    response_model: Optional[Type[T]] = None,
+    status_code: Optional[int] = None,
+    response_class: Type[Response] = Response,
+    response_model_exclude_none: bool = False,
+) -> Callable[[Callable[P, R]], Callable[P, R]]:
+    """Typed POST decorator.
+
+    Args:
+        router: FastAPI router
+        path: URL path
+        response_model: Response model type
+        status_code: HTTP status code
+        response_class: Response class
+        response_model_exclude_none: Whether to exclude None values
+
+    Returns:
+        Decorated function
+    """
+    decorator = router.post(
+        path,
+        response_model=response_model,
+        status_code=status_code,
+        response_class=response_class,
+        response_model_exclude_none=response_model_exclude_none,
+    )
+    return cast(Callable[[Callable[P, R]], Callable[P, R]], decorator)
+
+
+def typed_put(
+    router: APIRouter,
+    path: str,
+    *,
+    response_model: Optional[Type[T]] = None,
+    status_code: Optional[int] = None,
+    response_class: Type[Response] = Response,
+    response_model_exclude_none: bool = False,
+) -> Callable[[Callable[P, R]], Callable[P, R]]:
+    """Typed PUT decorator.
+
+    Args:
+        router: FastAPI router
+        path: URL path
+        response_model: Response model type
+        status_code: HTTP status code
+        response_class: Response class
+        response_model_exclude_none: Whether to exclude None values
+
+    Returns:
+        Decorated function
+    """
+    decorator = router.put(
+        path,
+        response_model=response_model,
+        status_code=status_code,
+        response_class=response_class,
+        response_model_exclude_none=response_model_exclude_none,
+    )
+    return cast(Callable[[Callable[P, R]], Callable[P, R]], decorator)
+
+
+def typed_delete(
+    router: APIRouter,
+    path: str,
+    *,
+    response_model: Optional[Type[T]] = None,
+    status_code: Optional[int] = None,
+    response_class: Type[Response] = Response,
+    response_model_exclude_none: bool = False,
+) -> Callable[[Callable[P, R]], Callable[P, R]]:
+    """Typed DELETE decorator.
+
+    Args:
+        router: FastAPI router
+        path: URL path
+        response_model: Response model type
+        status_code: HTTP status code
+        response_class: Response class
+        response_model_exclude_none: Whether to exclude None values
+
+    Returns:
+        Decorated function
+    """
+    decorator = router.delete(
+        path,
+        response_model=response_model,
+        status_code=status_code,
+        response_class=response_class,
+        response_model_exclude_none=response_model_exclude_none,
+    )
+    return cast(Callable[[Callable[P, R]], Callable[P, R]], decorator)

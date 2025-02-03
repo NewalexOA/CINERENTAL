@@ -25,44 +25,32 @@ class Settings(BaseSettings):
     WORKERS_COUNT: int = 1
     LOG_LEVEL: str = 'info'
 
+    # API Documentation
+    API_V1_STR: str = '/api/v1'
+    OPENAPI_URL: str = f'{API_V1_STR}/openapi.json'
+    DOCS_URL: str = f'{API_V1_STR}/docs'
+    REDOC_URL: str = f'{API_V1_STR}/redoc'
+    PROJECT_NAME: str = 'CINERENTAL API'
+    PROJECT_DESCRIPTION: str = 'Equipment Rental Management System API'
+    PROJECT_VERSION: str = '1.0.0'
+
     # Database
     POSTGRES_SERVER: str = 'localhost'
     POSTGRES_PORT: int = 5432
     POSTGRES_DB: str = 'cinerental'
     POSTGRES_USER: str = 'postgres'
     POSTGRES_PASSWORD: str = 'postgres'
-
-    @property
-    def DATABASE_URL(self) -> str:
-        """Get database URL."""
-        return (
-            f'postgresql+asyncpg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}'
-            f'@{self.POSTGRES_SERVER}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}'
-        )
-
-    @property
-    def SYNC_DATABASE_URL(self) -> str:
-        """Get synchronous database URL for Alembic."""
-        return (
-            f'postgresql://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}'
-            f'@{self.POSTGRES_SERVER}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}'
-        )
+    DATABASE_URL: str = (
+        'postgresql+asyncpg://postgres:postgres@localhost:5432/cinerental'
+    )
+    SYNC_DATABASE_URL: str = 'postgresql://postgres:postgres@localhost:5432/cinerental'
 
     # Redis
     REDIS_HOST: str = 'localhost'
     REDIS_PORT: int = 6379
     REDIS_DB: int = 0
     REDIS_PASSWORD: str = ''
-
-    @property
-    def REDIS_URL(self) -> str:
-        """Get Redis URL."""
-        if self.REDIS_PASSWORD:
-            return (
-                f'redis://:{self.REDIS_PASSWORD}@{self.REDIS_HOST}:'
-                f'{self.REDIS_PORT}/{self.REDIS_DB}'
-            )
-        return f'redis://{self.REDIS_HOST}:{self.REDIS_PORT}/{self.REDIS_DB}'
+    REDIS_URL: str = 'redis://localhost:6379/0'
 
     # Security
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30

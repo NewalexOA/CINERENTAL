@@ -25,9 +25,12 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
 
 app = FastAPI(
-    title=settings.APP_NAME,
-    version='1.0.0',
-    description='Cinema Equipment Rental Management System',
+    title=settings.PROJECT_NAME,
+    description=settings.PROJECT_DESCRIPTION,
+    version=settings.PROJECT_VERSION,
+    openapi_url=settings.OPENAPI_URL,
+    docs_url=settings.DOCS_URL,
+    redoc_url=settings.REDOC_URL,
     lifespan=lifespan,
 )
 
@@ -41,4 +44,4 @@ app.add_middleware(
 )
 
 # Include API router
-app.include_router(api_router, prefix='/api/v1')
+app.include_router(api_router, prefix=settings.API_V1_STR)
