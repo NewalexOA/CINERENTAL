@@ -3,15 +3,7 @@ name: cinerental
 services:
   web:
     build: .
-    command: >
-      bash -c "./docker/wait-for-it.sh db 5432 &&
-               ./docker/wait-for-it.sh redis 6379 &&
-               uvicorn backend.main:app
-               --host 0.0.0.0
-               --port 8000
-               --workers ${WORKERS_COUNT:-1}
-               --log-level ${LOG_LEVEL:-info}
-               ${DEBUG:+--reload}"
+    command: ./docker/start.sh
     volumes:
       - .:/app
       - media_volume:/app/media
@@ -79,6 +71,7 @@ services:
     image: postgres:14
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./docker/init-test-db.sh:/docker-entrypoint-initdb.d/init-test-db.sh
     environment:
       - POSTGRES_DB=cinerental
       - POSTGRES_USER=postgres

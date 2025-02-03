@@ -14,14 +14,16 @@ RUN apt-get update \
         build-essential \
         curl \
         netcat-traditional \
+        libpq-dev \
+        python3-dev \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy project files
 COPY . .
 
-# Install project in development mode
-RUN pip install -e ".[dev]"
+# Install project in development mode and psycopg2-binary
+RUN pip install psycopg2-binary && pip install -e ".[dev]"
 
 # Create media directory and non-root user
 RUN mkdir -p media && \
