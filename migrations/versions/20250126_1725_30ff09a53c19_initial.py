@@ -37,11 +37,15 @@ def upgrade() -> None:
             server_default=sa.text('now()'),
             nullable=False,
         ),
+        sa.Column('deleted_at', sa.DateTime(timezone=True), nullable=True),
         sa.ForeignKeyConstraint(['parent_id'], ['categories.id'], ondelete='SET NULL'),
         sa.PrimaryKeyConstraint('id'),
     )
     op.create_index(
         op.f('ix_categories_created_at'), 'categories', ['created_at'], unique=False
+    )
+    op.create_index(
+        op.f('ix_categories_deleted_at'), 'categories', ['deleted_at'], unique=False
     )
     op.create_index(op.f('ix_categories_name'), 'categories', ['name'], unique=False)
     op.create_index(
@@ -316,6 +320,7 @@ def downgrade() -> None:
     op.drop_index(op.f('ix_clients_created_at'), table_name='clients')
     op.drop_table('clients')
     op.drop_index(op.f('ix_categories_updated_at'), table_name='categories')
+    op.drop_index(op.f('ix_categories_deleted_at'), table_name='categories')
     op.drop_index(op.f('ix_categories_name'), table_name='categories')
     op.drop_index(op.f('ix_categories_created_at'), table_name='categories')
     op.drop_table('categories')

@@ -5,7 +5,8 @@ This module provides typed decorators for FastAPI routes.
 
 from typing import Callable, Optional, ParamSpec, Type, TypeVar, cast
 
-from fastapi import APIRouter, Response
+from fastapi import APIRouter
+from fastapi.responses import JSONResponse
 
 T = TypeVar('T')
 P = ParamSpec('P')
@@ -18,7 +19,7 @@ def typed_get(
     *,
     response_model: Optional[Type[T]] = None,
     status_code: Optional[int] = None,
-    response_class: Type[Response] = Response,
+    response_class: Type[JSONResponse] = JSONResponse,
     response_model_exclude_none: bool = False,
 ) -> Callable[[Callable[P, R]], Callable[P, R]]:
     """Typed GET decorator.
@@ -50,7 +51,7 @@ def typed_post(
     *,
     response_model: Optional[Type[T]] = None,
     status_code: Optional[int] = None,
-    response_class: Type[Response] = Response,
+    response_class: Type[JSONResponse] = JSONResponse,
     response_model_exclude_none: bool = False,
 ) -> Callable[[Callable[P, R]], Callable[P, R]]:
     """Typed POST decorator.
@@ -82,7 +83,7 @@ def typed_put(
     *,
     response_model: Optional[Type[T]] = None,
     status_code: Optional[int] = None,
-    response_class: Type[Response] = Response,
+    response_class: Type[JSONResponse] = JSONResponse,
     response_model_exclude_none: bool = False,
 ) -> Callable[[Callable[P, R]], Callable[P, R]]:
     """Typed PUT decorator.
@@ -114,7 +115,7 @@ def typed_delete(
     *,
     response_model: Optional[Type[T]] = None,
     status_code: Optional[int] = None,
-    response_class: Type[Response] = Response,
+    response_class: Type[JSONResponse] = JSONResponse,
     response_model_exclude_none: bool = False,
 ) -> Callable[[Callable[P, R]], Callable[P, R]]:
     """Typed DELETE decorator.
