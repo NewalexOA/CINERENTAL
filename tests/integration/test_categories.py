@@ -1,13 +1,13 @@
 """Integration tests for category endpoints."""
 
-import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.models.category import Category
+from tests.conftest import async_test
 
 
-@pytest.mark.asyncio  # type: ignore[misc]
+@async_test
 async def test_create_category(
     async_client: AsyncClient,
     db_session: AsyncSession,
@@ -24,7 +24,7 @@ async def test_create_category(
     assert data['id'] is not None
 
 
-@pytest.mark.asyncio  # type: ignore[misc]
+@async_test
 async def test_create_category_duplicate_name(
     async_client: AsyncClient,
     db_session: AsyncSession,
@@ -39,7 +39,7 @@ async def test_create_category_duplicate_name(
     assert 'already exists' in response.json()['detail'].lower()
 
 
-@pytest.mark.asyncio  # type: ignore[misc]
+@async_test
 async def test_get_categories(
     async_client: AsyncClient,
     db_session: AsyncSession,
@@ -54,7 +54,7 @@ async def test_get_categories(
     assert any(cat['id'] == test_category.id for cat in data)
 
 
-@pytest.mark.asyncio  # type: ignore[misc]
+@async_test
 async def test_get_categories_with_equipment_count(
     async_client: AsyncClient,
     db_session: AsyncSession,
@@ -70,7 +70,7 @@ async def test_get_categories_with_equipment_count(
     assert 'equipment_count' in category
 
 
-@pytest.mark.asyncio  # type: ignore[misc]
+@async_test
 async def test_get_category(
     async_client: AsyncClient,
     db_session: AsyncSession,
@@ -84,7 +84,7 @@ async def test_get_category(
     assert data['name'] == test_category.name
 
 
-@pytest.mark.asyncio  # type: ignore[misc]
+@async_test
 async def test_get_category_not_found(
     async_client: AsyncClient,
     db_session: AsyncSession,
@@ -94,7 +94,7 @@ async def test_get_category_not_found(
     assert response.status_code == 404
 
 
-@pytest.mark.asyncio  # type: ignore[misc]
+@async_test
 async def test_update_category(
     async_client: AsyncClient,
     db_session: AsyncSession,
@@ -111,7 +111,7 @@ async def test_update_category(
     assert data['description'] == 'Updated Description'
 
 
-@pytest.mark.asyncio  # type: ignore[misc]
+@async_test
 async def test_update_category_not_found(
     async_client: AsyncClient,
     db_session: AsyncSession,
@@ -124,7 +124,7 @@ async def test_update_category_not_found(
     assert response.status_code == 404
 
 
-@pytest.mark.asyncio  # type: ignore[misc]
+@async_test
 async def test_delete_category(
     async_client: AsyncClient,
     db_session: AsyncSession,
@@ -139,7 +139,7 @@ async def test_delete_category(
     assert get_response.status_code == 404
 
 
-@pytest.mark.asyncio  # type: ignore[misc]
+@async_test
 async def test_delete_category_not_found(
     async_client: AsyncClient,
     db_session: AsyncSession,
@@ -149,7 +149,7 @@ async def test_delete_category_not_found(
     assert response.status_code == 404
 
 
-@pytest.mark.asyncio  # type: ignore[misc]
+@async_test
 async def test_search_categories(
     async_client: AsyncClient,
     db_session: AsyncSession,

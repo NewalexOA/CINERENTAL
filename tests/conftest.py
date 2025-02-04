@@ -1,9 +1,20 @@
 """Test configuration and fixtures."""
 
 import asyncio
-from typing import AsyncGenerator, Generator
+from functools import wraps
+from typing import (
+    Any,
+    AsyncGenerator,
+    Callable,
+    Coroutine,
+    Generator,
+    ParamSpec,
+    TypeVar,
+    overload,
+)
 
 import asyncpg
+import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
@@ -13,6 +24,74 @@ from backend.core.database import get_db
 from backend.main import app
 from backend.models.base import Base
 from backend.models.category import Category
+
+P = ParamSpec('P')
+T = TypeVar('T')
+
+
+def async_test(
+    func: Callable[P, Coroutine[None, None, T]],
+) -> Callable[P, Coroutine[None, None, T]]:
+    """Properly typed decorator for async tests.
+
+    This decorator preserves the signature of the decorated function,
+    allowing proper type checking of parameters and return values.
+    It also preserves the function's metadata (docstring, name, etc.).
+
+    Args:
+        func: Async test function to decorate
+
+    Returns:
+        Decorated test function with preserved signature and metadata
+    """
+    decorator = pytest.mark.asyncio(func)
+
+    @wraps(func)
+    async def wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
+        result = await decorator(*args, **kwargs)
+        assert isinstance(result, T)  # Runtime check for type safety
+        return result
+
+    return wrapper
+
+
+@overload
+def async_fixture(
+    func: Callable[P, AsyncGenerator[T, None]],
+) -> Callable[P, AsyncGenerator[T, None]]:
+    ...
+
+
+@overload
+def async_fixture(
+    func: Callable[P, Coroutine[None, None, T]],
+) -> Callable[P, Coroutine[None, None, T]]:
+    ...
+
+
+def async_fixture(
+    func: Callable[P, AsyncGenerator[T, None] | Coroutine[None, None, T]],
+) -> Callable[P, AsyncGenerator[T, None] | Coroutine[None, None, T]]:
+    """Properly typed decorator for async fixtures.
+
+    This decorator preserves the signature of the decorated function,
+    allowing proper type checking of parameters and return values.
+    It also preserves the function's metadata (docstring, name, etc.).
+
+    Args:
+        func: Async fixture function to decorate
+
+    Returns:
+        Decorated fixture function with preserved signature and metadata
+    """
+    fixture = pytest_asyncio.fixture(func)
+
+    @wraps(func)
+    async def wrapper(*args: Any, **kwargs: Any) -> Any:
+        return await fixture(*args, **kwargs)
+
+    return wrapper
+
 
 # Test database URL
 TEST_DATABASE_URL = (
@@ -58,7 +137,7 @@ async def create_test_database() -> None:
         await sys_conn.close()
 
 
-@pytest_asyncio.fixture(scope='session')  # type: ignore[misc]
+@pytest.fixture(scope='session')  # type: ignore[misc]
 def event_loop() -> Generator[asyncio.AbstractEventLoop, None, None]:
     """Create an instance of the default event loop for each test case."""
     loop = asyncio.get_event_loop_policy().new_event_loop()
@@ -66,7 +145,7 @@ def event_loop() -> Generator[asyncio.AbstractEventLoop, None, None]:
     loop.close()
 
 
-@pytest_asyncio.fixture(scope='session')  # type: ignore[misc]
+@async_fixture
 async def test_db_setup() -> AsyncGenerator[None, None]:
     """Set up the test database."""
     await create_test_database()
@@ -79,7 +158,7 @@ async def test_db_setup() -> AsyncGenerator[None, None]:
         await conn.run_sync(Base.metadata.drop_all)
 
 
-@pytest_asyncio.fixture  # type: ignore[misc]
+@async_fixture
 async def db_session(test_db_setup: None) -> AsyncGenerator[AsyncSession, None]:
     """Create a fresh database session for a test."""
     async with TestingSessionLocal() as session:
@@ -88,7 +167,7 @@ async def db_session(test_db_setup: None) -> AsyncGenerator[AsyncSession, None]:
         await session.close()
 
 
-@pytest_asyncio.fixture  # type: ignore[misc]
+@async_fixture
 async def test_category(db_session: AsyncSession) -> AsyncGenerator[Category, None]:
     """Create a test category."""
     category = Category(name='Test Category', description='Test Description')
@@ -98,7 +177,7 @@ async def test_category(db_session: AsyncSession) -> AsyncGenerator[Category, No
     yield category
 
 
-@pytest_asyncio.fixture  # type: ignore[misc]
+@async_fixture
 async def async_client(db_session: AsyncSession) -> AsyncGenerator[AsyncClient, None]:
     """Create an async client for testing."""
 

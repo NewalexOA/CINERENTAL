@@ -17,10 +17,13 @@ from backend.services.booking import BookingService
 from backend.services.client import ClientService
 from backend.services.document import DocumentService
 from backend.services.equipment import EquipmentService
+from tests.conftest import async_test
 
 
-@pytest.fixture(scope='function')  # type: ignore[misc]
-def services(db_session: AsyncSession) -> Dict[str, Any]:
+@pytest.fixture  # type: ignore[misc]
+def services(
+    db_session: AsyncSession,
+) -> Dict[str, Any]:
     """Fixture providing initialized services for testing."""
     return {
         'booking': BookingService(db_session),
@@ -33,7 +36,7 @@ def services(db_session: AsyncSession) -> Dict[str, Any]:
 class TestBookingEdgeCases:
     """Test class for booking edge cases."""
 
-    @pytest.mark.asyncio  # type: ignore[misc]
+    @async_test
     async def test_booking_date_validation(
         self, services: Dict[str, Any], test_client: Client, test_equipment: Equipment
     ) -> None:
@@ -82,7 +85,7 @@ class TestBookingEdgeCases:
 class TestDocumentEdgeCases:
     """Test class for document edge cases."""
 
-    @pytest.mark.asyncio  # type: ignore[misc]
+    @async_test
     async def test_document_status_transitions(
         self, services: Dict[str, Any], test_client: Client, test_equipment: Equipment
     ) -> None:
@@ -157,7 +160,7 @@ class TestDocumentEdgeCases:
 class TestEquipmentEdgeCases:
     """Test class for equipment edge cases."""
 
-    @pytest.mark.asyncio  # type: ignore[misc]
+    @async_test
     async def test_equipment_availability_edge_cases(
         self, services: Dict[str, Any], test_client: Client, test_equipment: Equipment
     ) -> None:
@@ -210,7 +213,7 @@ class TestEquipmentEdgeCases:
 class TestSoftDelete:
     """Test class for soft delete functionality."""
 
-    @pytest.mark.asyncio  # type: ignore[misc]
+    @async_test
     async def test_equipment_soft_delete(
         self, services: Dict[str, Any], test_equipment: Equipment
     ) -> None:
@@ -245,7 +248,7 @@ class TestSoftDelete:
         assert len(search_results) == 1
         assert search_results[0].id == test_equipment.id
 
-    @pytest.mark.asyncio  # type: ignore[misc]
+    @async_test
     async def test_client_soft_delete(
         self, services: Dict[str, Any], test_client: Client
     ) -> None:
@@ -280,7 +283,7 @@ class TestSoftDelete:
         assert len(search_results) == 1
         assert search_results[0].id == test_client.id
 
-    @pytest.mark.asyncio  # type: ignore[misc]
+    @async_test
     async def test_delete_with_relations(
         self, services: Dict[str, Any], test_client: Client, test_equipment: Equipment
     ) -> None:
@@ -339,7 +342,7 @@ class TestSoftDelete:
 class TestEquipmentStatus:
     """Test class for equipment status scenarios."""
 
-    @pytest.mark.asyncio  # type: ignore[misc]
+    @async_test
     async def test_equipment_status_changes(
         self, services: Dict[str, Any], test_equipment: Equipment
     ) -> None:
@@ -378,7 +381,7 @@ class TestEquipmentStatus:
             datetime.now(timezone.utc) + timedelta(days=2),
         )
 
-    @pytest.mark.asyncio  # type: ignore[misc]
+    @async_test
     async def test_booking_with_status_changes(
         self, services: Dict[str, Any], test_client: Client, test_equipment: Equipment
     ) -> None:
@@ -406,7 +409,7 @@ class TestEquipmentStatus:
         equipment = await services['equipment'].get_equipment(test_equipment.id)
         assert equipment.status == EquipmentStatus.AVAILABLE
 
-    @pytest.mark.asyncio  # type: ignore[misc]
+    @async_test
     async def test_booking_unavailable_equipment(
         self, services: Dict[str, Any], test_client: Client, test_equipment: Equipment
     ) -> None:

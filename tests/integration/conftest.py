@@ -1,8 +1,18 @@
 """Test configuration and fixtures for integration tests."""
 
 from datetime import datetime, timedelta, timezone
+from functools import wraps
+from typing import (
+    Any,
+    AsyncGenerator,
+    Callable,
+    Coroutine,
+    ParamSpec,
+    TypeVar,
+    overload,
+)
 
-import pytest
+import pytest_asyncio
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.models.booking import Booking
@@ -15,24 +25,66 @@ from backend.services.client import ClientService
 from backend.services.document import DocumentService
 from backend.services.equipment import EquipmentService
 
+P = ParamSpec('P')
+T = TypeVar('T')
 
-@pytest.fixture  # type: ignore[misc]
-async def test_category(db_session: AsyncSession) -> Category:
+
+@overload
+def async_fixture(
+    func: Callable[P, AsyncGenerator[T, None]],
+) -> Callable[P, AsyncGenerator[T, None]]:
+    ...
+
+
+@overload
+def async_fixture(
+    func: Callable[P, Coroutine[None, None, T]],
+) -> Callable[P, Coroutine[None, None, T]]:
+    ...
+
+
+def async_fixture(
+    func: Callable[P, AsyncGenerator[T, None] | Coroutine[None, None, T]],
+) -> Callable[P, AsyncGenerator[T, None] | Coroutine[None, None, T]]:
+    """Properly typed decorator for async fixtures.
+
+    This decorator preserves the signature of the decorated function,
+    allowing proper type checking of parameters and return values.
+    It also preserves the function's metadata (docstring, name, etc.).
+
+    Args:
+        func: Async fixture function to decorate
+
+    Returns:
+        Decorated fixture function with preserved signature and metadata
+    """
+    fixture = pytest_asyncio.fixture(func)
+
+    @wraps(func)
+    async def wrapper(*args: Any, **kwargs: Any) -> Any:
+        return await fixture(*args, **kwargs)
+
+    return wrapper
+
+
+@async_fixture
+async def test_category(db_session: AsyncSession) -> AsyncGenerator[Category, None]:
     """Create test category."""
     category_service = CategoryService(db_session)
-    return await category_service.create_category(
+    category = await category_service.create_category(
         name='Test Category',
         description='Test Description',
     )
+    yield category
 
 
-@pytest.fixture  # type: ignore[misc]
+@async_fixture
 async def test_equipment(
     db_session: AsyncSession, test_category: Category
-) -> Equipment:
+) -> AsyncGenerator[Equipment, None]:
     """Create test equipment."""
     equipment_service = EquipmentService(db_session)
-    return await equipment_service.create_equipment(
+    equipment = await equipment_service.create_equipment(
         name='Test Equipment',
         category_id=test_category.id,
         description='Test Description',
@@ -41,13 +93,14 @@ async def test_equipment(
         daily_rate=100.0,
         replacement_cost=1000.0,
     )
+    yield equipment
 
 
-@pytest.fixture  # type: ignore[misc]
-async def test_client(db_session: AsyncSession) -> Client:
+@async_fixture
+async def test_client(db_session: AsyncSession) -> AsyncGenerator[Client, None]:
     """Create test client."""
     client_service = ClientService(db_session)
-    return await client_service.create_client(
+    client = await client_service.create_client(
         first_name='John',
         last_name='Doe',
         email='john.doe@example.com',
@@ -57,37 +110,44 @@ async def test_client(db_session: AsyncSession) -> Client:
         company='Test Company',
         notes='Test client',
     )
+    yield client
 
 
-@pytest.fixture  # type: ignore[misc]
-async def booking_service(db_session: AsyncSession) -> BookingService:
+@async_fixture
+async def booking_service(
+    db_session: AsyncSession,
+) -> AsyncGenerator[BookingService, None]:
     """Create booking service instance."""
-    return BookingService(db_session)
+    yield BookingService(db_session)
 
 
-@pytest.fixture  # type: ignore[misc]
-async def document_service(db_session: AsyncSession) -> DocumentService:
+@async_fixture
+async def document_service(
+    db_session: AsyncSession,
+) -> AsyncGenerator[DocumentService, None]:
     """Create document service instance."""
-    return DocumentService(db_session)
+    yield DocumentService(db_session)
 
 
-@pytest.fixture  # type: ignore[misc]
-async def equipment_service(db_session: AsyncSession) -> EquipmentService:
+@async_fixture
+async def equipment_service(
+    db_session: AsyncSession,
+) -> AsyncGenerator[EquipmentService, None]:
     """Create equipment service instance."""
-    return EquipmentService(db_session)
+    yield EquipmentService(db_session)
 
 
-@pytest.fixture  # type: ignore[misc]
+@async_fixture
 async def test_booking(
     db_session: AsyncSession,
     test_client: Client,
     test_equipment: Equipment,
-) -> Booking:
+) -> AsyncGenerator[Booking, None]:
     """Create test booking."""
     booking_service = BookingService(db_session)
     start_date = datetime.now(timezone.utc) + timedelta(days=1)
     end_date = start_date + timedelta(days=4)
-    return await booking_service.create_booking(
+    booking = await booking_service.create_booking(
         client_id=test_client.id,
         equipment_id=test_equipment.id,
         start_date=start_date,
@@ -96,3 +156,4 @@ async def test_booking(
         deposit_amount=100.00,
         notes='Test booking',
     )
+    yield booking

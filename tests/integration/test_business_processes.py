@@ -18,24 +18,26 @@ from backend.services.category import CategoryService
 from backend.services.client import ClientService
 from backend.services.document import DocumentService
 from backend.services.equipment import EquipmentService
+from tests.conftest import async_test
 
 
-@pytest.fixture(scope='function')  # type: ignore[misc]
-def services(db_session: AsyncSession) -> Dict[str, Any]:
+@pytest.fixture  # type: ignore[misc]
+def services(
+    db_session: AsyncSession,
+) -> Dict[str, Any]:
     """Fixture providing initialized services for testing."""
     return {
         'booking': BookingService(db_session),
         'client': ClientService(db_session),
         'document': DocumentService(db_session),
         'equipment': EquipmentService(db_session),
-        'category': CategoryService(db_session),
     }
 
 
 class TestBookingProcess:
     """Test class for booking process scenarios."""
 
-    @pytest.mark.asyncio  # type: ignore[misc]
+    @async_test
     async def test_booking_status_transitions(
         self, services: Dict[str, Any], test_client: Client, test_equipment: Equipment
     ) -> None:
@@ -109,7 +111,7 @@ class TestBookingProcess:
         booking = await services['booking'].get_booking(booking.id)
         assert booking.booking_status == BookingStatus.COMPLETED
 
-    @pytest.mark.asyncio  # type: ignore[misc]
+    @async_test
     async def test_payment_processing(
         self, services: Dict[str, Any], test_client: Client, test_equipment: Equipment
     ) -> None:
@@ -155,7 +157,7 @@ class TestBookingProcess:
         booking = await services['booking'].get_booking(booking.id)
         assert booking.paid_amount == total_amount
 
-    @pytest.mark.asyncio  # type: ignore[misc]
+    @async_test
     async def test_document_workflow(
         self, services: Dict[str, Any], test_client: Client, test_equipment: Equipment
     ) -> None:
@@ -203,7 +205,7 @@ class TestBookingProcess:
 class TestCategoryHierarchy:
     """Test category hierarchy and equipment counting."""
 
-    @pytest.mark.asyncio  # type: ignore[misc]
+    @async_test
     async def test_category_tree(
         self,
         db_session: AsyncSession,
@@ -290,7 +292,7 @@ class TestCategoryHierarchy:
 class TestBookingLifecycle:
     """Test booking lifecycle."""
 
-    @pytest.mark.asyncio  # type: ignore[misc]
+    @async_test
     async def test_booking_status_transitions(
         self,
         db_session: AsyncSession,
@@ -345,7 +347,7 @@ class TestBookingLifecycle:
         )
         assert booking.booking_status == BookingStatus.COMPLETED
 
-    @pytest.mark.asyncio  # type: ignore[misc]
+    @async_test
     async def test_equipment_status_affects_booking(
         self,
         db_session: AsyncSession,
@@ -409,7 +411,7 @@ class TestBookingLifecycle:
 class TestDocumentLifecycle:
     """Test document lifecycle."""
 
-    @pytest.mark.asyncio  # type: ignore[misc]
+    @async_test
     async def test_document_status_transitions(
         self,
         db_session: AsyncSession,
@@ -450,7 +452,7 @@ class TestDocumentLifecycle:
         )
         assert document.status == DocumentStatus.APPROVED
 
-    @pytest.mark.asyncio  # type: ignore[misc]
+    @async_test
     async def test_document_rejection_flow(
         self,
         db_session: AsyncSession,
@@ -503,7 +505,7 @@ class TestDocumentLifecycle:
         )
         assert document.status == DocumentStatus.APPROVED
 
-    @pytest.mark.asyncio  # type: ignore[misc]
+    @async_test
     async def test_invalid_document_transitions(
         self,
         db_session: AsyncSession,

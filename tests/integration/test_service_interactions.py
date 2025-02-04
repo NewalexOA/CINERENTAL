@@ -17,10 +17,13 @@ from backend.services.booking import BookingService
 from backend.services.client import ClientService
 from backend.services.document import DocumentService
 from backend.services.equipment import EquipmentService
+from tests.conftest import async_test
 
 
-@pytest.fixture(scope='function')  # type: ignore[misc]
-def services(db_session: AsyncSession) -> Dict[str, Any]:
+@pytest.fixture  # type: ignore[misc]
+def services(
+    db_session: AsyncSession,
+) -> Dict[str, Any]:
     """Fixture providing initialized services for testing."""
     return {
         'booking': BookingService(db_session),
@@ -33,7 +36,7 @@ def services(db_session: AsyncSession) -> Dict[str, Any]:
 class TestBookingFlow:
     """Test class for booking flow scenarios."""
 
-    @pytest.mark.asyncio  # type: ignore[misc]
+    @async_test
     async def test_create_booking_with_documents(
         self, services: Dict[str, Any], test_client: Client, test_equipment: Equipment
     ) -> None:
@@ -86,7 +89,7 @@ class TestBookingFlow:
         assert passport.booking_id == booking.id
         assert passport.type == DocumentType.PASSPORT
 
-    @pytest.mark.asyncio  # type: ignore[misc]
+    @async_test
     async def test_complete_booking_flow(
         self, services: Dict[str, Any], test_client: Client, test_equipment: Equipment
     ) -> None:
@@ -173,7 +176,7 @@ class TestBookingFlow:
 class TestEquipmentAvailability:
     """Test class for equipment availability scenarios."""
 
-    @pytest.mark.asyncio  # type: ignore[misc]
+    @async_test
     async def test_overlapping_bookings(
         self, services: Dict[str, Any], test_client: Client, test_equipment: Equipment
     ) -> None:
