@@ -10,6 +10,7 @@ from typing import (
     Generator,
     ParamSpec,
     TypeVar,
+    cast,
     overload,
 )
 
@@ -18,6 +19,7 @@ import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from starlette.types import ASGIApp
 
 from backend.core.config import settings
 from backend.core.database import get_db
@@ -26,17 +28,14 @@ from backend.models.base import Base
 from backend.models.category import Category
 
 P = ParamSpec('P')
-T = TypeVar('T')
+T = TypeVar('T', covariant=True)
+R = TypeVar('R')
 
 
 def async_test(
-    func: Callable[P, Coroutine[None, None, T]],
-) -> Callable[P, Coroutine[None, None, T]]:
+    func: Callable[P, Coroutine[Any, Any, R]],
+) -> Callable[P, Coroutine[Any, Any, R]]:
     """Properly typed decorator for async tests.
-
-    This decorator preserves the signature of the decorated function,
-    allowing proper type checking of parameters and return values.
-    It also preserves the function's metadata (docstring, name, etc.).
 
     Args:
         func: Async test function to decorate
@@ -44,15 +43,14 @@ def async_test(
     Returns:
         Decorated test function with preserved signature and metadata
     """
-    decorator = pytest.mark.asyncio(func)
+    decorated = pytest.mark.asyncio(func)
 
     @wraps(func)
-    async def wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
-        result = await decorator(*args, **kwargs)
-        assert isinstance(result, T)  # Runtime check for type safety
-        return result
+    async def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
+        result = await decorated(*args, **kwargs)
+        return cast(R, result)
 
-    return wrapper
+    return cast(Callable[P, Coroutine[Any, Any, R]], wrapper)
 
 
 @overload
@@ -64,19 +62,15 @@ def async_fixture(
 
 @overload
 def async_fixture(
-    func: Callable[P, Coroutine[None, None, T]],
-) -> Callable[P, Coroutine[None, None, T]]:
+    func: Callable[P, Coroutine[Any, Any, T]],
+) -> Callable[P, Coroutine[Any, Any, T]]:
     ...
 
 
 def async_fixture(
-    func: Callable[P, AsyncGenerator[T, None] | Coroutine[None, None, T]],
-) -> Callable[P, AsyncGenerator[T, None] | Coroutine[None, None, T]]:
+    func: Callable[P, AsyncGenerator[T, None] | Coroutine[Any, Any, T]],
+) -> Callable[P, AsyncGenerator[T, None] | Coroutine[Any, Any, T]]:
     """Properly typed decorator for async fixtures.
-
-    This decorator preserves the signature of the decorated function,
-    allowing proper type checking of parameters and return values.
-    It also preserves the function's metadata (docstring, name, etc.).
 
     Args:
         func: Async fixture function to decorate
@@ -87,10 +81,17 @@ def async_fixture(
     fixture = pytest_asyncio.fixture(func)
 
     @wraps(func)
-    async def wrapper(*args: Any, **kwargs: Any) -> Any:
-        return await fixture(*args, **kwargs)
+    async def wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
+        result = await fixture(*args, **kwargs)
+        if isinstance(result, AsyncGenerator):
+            async for item in result:
+                return cast(T, item)
+        return cast(T, result)
 
-    return wrapper
+    return cast(
+        Callable[P, AsyncGenerator[T, None] | Coroutine[Any, Any, T]],
+        wrapper,
+    )
 
 
 # Test database URL
@@ -162,9 +163,11 @@ async def test_db_setup() -> AsyncGenerator[None, None]:
 async def db_session(test_db_setup: None) -> AsyncGenerator[AsyncSession, None]:
     """Create a fresh database session for a test."""
     async with TestingSessionLocal() as session:
-        yield session
-        await session.rollback()
-        await session.close()
+        try:
+            yield session
+            await session.rollback()
+        finally:
+            await session.close()
 
 
 @async_fixture
@@ -186,7 +189,7 @@ async def async_client(db_session: AsyncSession) -> AsyncGenerator[AsyncClient, 
 
     app.dependency_overrides[get_db] = override_get_db
 
-    transport = ASGITransport(app=app)  # type: ignore[arg-type]
+    transport = ASGITransport(app=cast(ASGIApp, app))
     async with AsyncClient(transport=transport, base_url='http://test') as client:
         yield client
 

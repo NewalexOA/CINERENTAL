@@ -1,10 +1,22 @@
 """Integration tests for category endpoints."""
 
+from typing import AsyncGenerator
+
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.models.category import Category
-from tests.conftest import async_test
+from tests.conftest import async_fixture, async_test
+
+
+@async_fixture
+async def test_category(db_session: AsyncSession) -> AsyncGenerator[Category, None]:
+    """Create test category."""
+    category = Category(name='Test Category', description='Test Description')
+    db_session.add(category)
+    await db_session.commit()
+    await db_session.refresh(category)
+    yield category
 
 
 @async_test
