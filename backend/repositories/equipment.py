@@ -9,7 +9,7 @@ from typing import List, Optional, Protocol, cast
 
 from sqlalchemy import Column, and_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.sql import Select, func
+from sqlalchemy.sql import Select
 
 from backend.models.booking import Booking, BookingStatus
 from backend.models.equipment import Equipment, EquipmentStatus
@@ -42,9 +42,14 @@ class EquipmentRepository(BaseRepository[Equipment]):
         Returns:
             Equipment if found, None otherwise
         """
-        query: Select = select(self.model).where(self.model.barcode == barcode)
-        result: Optional[Equipment] = await self.session.scalar(query)
-        return result
+        query = select(Equipment).where(
+            and_(
+                Equipment.barcode == barcode,
+                Equipment.deleted_at.is_(None)
+            )
+        )
+        result = await self.session.execute(query)
+        return result.scalar_one_or_none()
 
     async def get_by_serial_number(self, serial_number: str) -> Optional[Equipment]:
         """Get equipment by serial number.
@@ -70,9 +75,14 @@ class EquipmentRepository(BaseRepository[Equipment]):
         Returns:
             List of equipment in category
         """
-        query: Select = select(self.model).where(self.model.category_id == category_id)
-        result = await self.session.scalars(query)
-        return cast(List[Equipment], list(result.all()))
+        query = select(Equipment).where(
+            and_(
+                Equipment.category_id == category_id,
+                Equipment.deleted_at.is_(None)
+            )
+        )
+        result = await self.session.execute(query)
+        return list(result.scalars().all())
 
     async def get_available(
         self, start_date: datetime, end_date: datetime
@@ -86,23 +96,18 @@ class EquipmentRepository(BaseRepository[Equipment]):
         Returns:
             List of available equipment
         """
-        # Equipment is available if:
-        # 1. It has status 'available'
-        # 2. It has no active bookings for the specified period
-        query: Select = select(self.model).where(
+        query = select(Equipment).where(
             and_(
-                self.model.status == EquipmentStatus.AVAILABLE,
-                ~self.model.bookings.any(
+                Equipment.status == EquipmentStatus.AVAILABLE,
+                ~Equipment.bookings.any(
                     and_(
                         Booking.start_date < end_date,
                         Booking.end_date > start_date,
-                        Booking.booking_status.in_(
-                            [
-                                BookingStatus.PENDING,
-                                BookingStatus.CONFIRMED,
-                                BookingStatus.ACTIVE,
-                            ]
-                        ),
+                        Booking.booking_status.in_([
+                            BookingStatus.PENDING,
+                            BookingStatus.CONFIRMED,
+                            BookingStatus.ACTIVE,
+                        ]),
                     )
                 ),
             )
@@ -110,31 +115,108 @@ class EquipmentRepository(BaseRepository[Equipment]):
         result = await self.session.scalars(query)
         return cast(List[Equipment], list(result.all()))
 
-    async def search(
+    async def get_equipment_list(
         self,
-        query_str: str,
-        include_deleted: bool = False,
+        category_id: Optional[int] = None,
+        status: Optional[EquipmentStatus] = None,
+        available_from: Optional[datetime] = None,
+        available_to: Optional[datetime] = None,
+        skip: int = 0,
+        limit: int = 100,
     ) -> List[Equipment]:
+        """Get equipment list with filtering and pagination.
+
+        Args:
+            category_id: Filter by category ID
+            status: Filter by equipment status
+            available_from: Filter by availability start date
+            available_to: Filter by availability end date
+            skip: Number of records to skip
+            limit: Maximum number of records to return
+
+        Returns:
+            List of equipment items
+        """
+        query = select(Equipment).where(Equipment.deleted_at.is_(None))
+
+        if category_id is not None:
+            query = query.where(Equipment.category_id == category_id)
+        if status is not None:
+            query = query.where(Equipment.status == status)
+        if available_from is not None and available_to is not None:
+            bookings_subquery = self._build_availability_subquery(
+                available_from, available_to
+            )
+            query = query.where(
+                and_(
+                    Equipment.status == EquipmentStatus.AVAILABLE,
+                    Equipment.id.not_in(bookings_subquery)
+                )
+            )
+
+        query = query.offset(skip).limit(limit)
+        result = await self.session.execute(query)
+        return list(result.scalars().all())
+
+    def _build_availability_subquery(
+        self,
+        available_from: datetime,
+        available_to: datetime
+    ):
+        """Build subquery for checking equipment availability.
+
+        Args:
+            available_from: Start date of availability period
+            available_to: End date of availability period
+
+        Returns:
+            SQLAlchemy subquery
+        """
+        return (
+            select(Booking.equipment_id)
+            .where(
+                and_(
+                    Booking.booking_status != BookingStatus.CANCELLED,
+                    or_(
+                        and_(
+                            Booking.start_date <= available_from,
+                            Booking.end_date >= available_from
+                        ),
+                        and_(
+                            Booking.start_date <= available_to,
+                            Booking.end_date >= available_to
+                        ),
+                        and_(
+                            Booking.start_date >= available_from,
+                            Booking.end_date <= available_to
+                        )
+                    )
+                )
+            )
+            .distinct()
+            .scalar_subquery()
+        )
+
+    async def search(self, query: str) -> List[Equipment]:
         """Search equipment by name or description.
 
         Args:
-            query_str: Search query string
-            include_deleted: Whether to include deleted equipment
+            query: Search query string
 
         Returns:
             List of matching equipment
         """
-        query = query_str.lower()
-        stmt = select(self.model).where(
-            or_(
-                func.lower(self.model.name).contains(query),
-                func.lower(self.model.description).contains(query),
+        search_query = select(Equipment).where(
+            and_(
+                or_(
+                    Equipment.name.ilike(f"%{query}%"),
+                    Equipment.description.ilike(f"%{query}%")
+                ),
+                Equipment.deleted_at.is_(None)
             )
         )
-        if not include_deleted:
-            stmt = stmt.where(self.model.deleted_at.is_(None))
-        result = await self.session.scalars(stmt)
-        return cast(List[Equipment], list(result.all()))
+        result = await self.session.execute(search_query)
+        return list(result.scalars().all())
 
     async def check_availability(
         self,
@@ -163,13 +245,11 @@ class EquipmentRepository(BaseRepository[Equipment]):
         query = select(Booking).where(
             and_(
                 Booking.equipment_id == equipment_id,
-                Booking.booking_status.in_(
-                    [
-                        BookingStatus.PENDING,
-                        BookingStatus.CONFIRMED,
-                        BookingStatus.ACTIVE,
-                    ]
-                ),
+                Booking.booking_status.in_([
+                    BookingStatus.PENDING,
+                    BookingStatus.CONFIRMED,
+                    BookingStatus.ACTIVE,
+                ]),
                 or_(
                     and_(
                         Booking.start_date < end_date,

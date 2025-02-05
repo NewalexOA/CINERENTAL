@@ -7,23 +7,23 @@ and availability status.
 """
 
 from decimal import Decimal
-from enum import Enum
+from typing import Optional
 
-from sqlalchemy import Enum as SQLEnum
-from sqlalchemy import ForeignKey, Numeric, String
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy import ForeignKey, String, Numeric
+from sqlalchemy.orm import relationship, Mapped, mapped_column
+from sqlalchemy.dialects.postgresql import ENUM
 
 from backend.models.base import Base, SoftDeleteMixin, TimestampMixin
+from backend.schemas.equipment import EquipmentStatus
 
-
-class EquipmentStatus(str, Enum):
-    """Equipment status enumeration."""
-
-    AVAILABLE = 'available'
-    RENTED = 'rented'
-    MAINTENANCE = 'maintenance'
-    BROKEN = 'broken'
-    RETIRED = 'retired'
+# Create ENUM type for PostgreSQL
+equipment_status_enum = ENUM(
+    EquipmentStatus,
+    name='equipmentstatus',
+    create_type=True,
+    values_callable=lambda obj: [e.value for e in obj],
+    metadata=Base.metadata,
+)
 
 
 class Equipment(TimestampMixin, SoftDeleteMixin, Base):
@@ -55,7 +55,7 @@ class Equipment(TimestampMixin, SoftDeleteMixin, Base):
         ForeignKey('categories.id', ondelete='RESTRICT')
     )
     status: Mapped[EquipmentStatus] = mapped_column(
-        SQLEnum(EquipmentStatus),
+        equipment_status_enum,
         default=EquipmentStatus.AVAILABLE,
         nullable=False,
         index=True,
@@ -67,3 +67,10 @@ class Equipment(TimestampMixin, SoftDeleteMixin, Base):
     # Relationships
     category = relationship('Category', back_populates='equipment')
     bookings = relationship('Booking', back_populates='equipment')
+
+    @property
+    def category_name(self) -> Optional[str]:
+        """Get category name."""
+        if self.category:
+            return self.category.name
+        return None
