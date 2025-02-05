@@ -109,3 +109,21 @@ class Booking(TimestampMixin, Base):
             self.booking_status = BookingStatus.PENDING
         if not self.payment_status:
             self.payment_status = PaymentStatus.PENDING
+
+    def is_active(self) -> bool:
+        """Check if booking is active.
+
+        A booking is considered active if it is in one of these statuses:
+        - PENDING
+        - CONFIRMED
+        - ACTIVE
+
+        Returns:
+            True if booking is active, False otherwise
+        """
+        active_statuses = [
+            BookingStatus.PENDING,
+            BookingStatus.CONFIRMED,
+            BookingStatus.ACTIVE,
+        ]
+        return self.booking_status in active_statuses
