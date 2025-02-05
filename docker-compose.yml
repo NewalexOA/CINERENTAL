@@ -44,23 +44,21 @@ services:
 
   test:
     build: .
-    command: >
-      bash -c "./docker/wait-for-it.sh db 5432 &&
-               python -m pytest tests/ -v --cov=backend --cov-report=html"
+    entrypoint: ./docker/run-tests.sh
     volumes:
       - .:/app
       - ./htmlcov:/app/htmlcov
     environment:
-      - POSTGRES_SERVER=db
-      - POSTGRES_USER=${POSTGRES_USER:-postgres}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
+      - POSTGRES_SERVER=test_db
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
       - POSTGRES_DB=cinerental_test
       - REDIS_HOST=redis
-      - REDIS_PASSWORD=${REDIS_PASSWORD:-}
+      - REDIS_PASSWORD=
       - TESTING=1
       - SECRET_KEY=test-secret-key
     depends_on:
-      db:
+      test_db:
         condition: service_healthy
       redis:
         condition: service_healthy
@@ -71,13 +69,30 @@ services:
     image: postgres:14
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./docker/init-test-db.sh:/docker-entrypoint-initdb.d/init-test-db.sh
     environment:
       - POSTGRES_DB=cinerental
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
     ports:
       - "5432:5432"
+    networks:
+      - cinerental_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  test_db:
+    image: postgres:14
+    volumes:
+      - postgres_test_data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_DB=cinerental_test
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    ports:
+      - "5433:5432"
     networks:
       - cinerental_network
     healthcheck:
@@ -102,6 +117,7 @@ services:
 
 volumes:
   postgres_data:
+  postgres_test_data:
   redis_data:
   media_volume:
 
