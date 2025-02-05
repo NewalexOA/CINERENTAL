@@ -20,11 +20,11 @@ from backend.services.equipment import EquipmentService
 from tests.conftest import async_test
 
 
-@pytest.fixture  # type: ignore[misc]
+@pytest.fixture
 def services(
     db_session: AsyncSession,
 ) -> Dict[str, Any]:
-    """Fixture providing initialized services for testing."""
+    """Create services for testing."""
     return {
         'booking': BookingService(db_session),
         'client': ClientService(db_session),

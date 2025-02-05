@@ -70,12 +70,21 @@ def async_fixture(
 @async_fixture
 async def test_category(db_session: AsyncSession) -> AsyncGenerator[Category, None]:
     """Create test category."""
-    category_service = CategoryService(db_session)
-    category = await category_service.create_category(
-        name='Test Category',
-        description='Test Description',
-    )
+    async def create_category():
+        category_service = CategoryService(db_session)
+        category = await category_service.create_category(
+            name='Test Category',
+            description='Test Description',
+        )
+        await db_session.refresh(category)
+        return category
+
+    category = await db_session.run_sync(lambda _: create_category())
     yield category
+
+    # Cleanup
+    await db_session.delete(category)
+    await db_session.commit()
 
 
 @async_fixture
