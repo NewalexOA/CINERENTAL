@@ -4,11 +4,18 @@ from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 
 from fastapi import FastAPI
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import ValidationError
 
 from backend.api.v1.api import api_router
+from backend.api.v1.exceptions import (
+    business_exception_handler,
+    validation_exception_handler,
+)
 from backend.core.cache import close_redis, init_redis
 from backend.core.config import settings
+from backend.exceptions import BusinessError
 
 
 @asynccontextmanager
@@ -33,6 +40,11 @@ app = FastAPI(
     redoc_url=settings.REDOC_URL,
     lifespan=lifespan,
 )
+
+# Add exception handlers
+app.add_exception_handler(BusinessError, business_exception_handler)
+app.add_exception_handler(ValidationError, validation_exception_handler)
+app.add_exception_handler(RequestValidationError, validation_exception_handler)
 
 # Set CORS middleware
 app.add_middleware(
