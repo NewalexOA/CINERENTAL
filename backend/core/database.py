@@ -37,7 +37,7 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
 
     Example:
         ```python
-        @app.get("/items")
+        @app.get('/items')
         async def get_items(session: AsyncSession = Depends(get_db)):
             items = await session.execute(select(Item))
             return items.scalars().all()
