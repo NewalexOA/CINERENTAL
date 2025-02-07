@@ -499,4 +499,4 @@ curl -X PUT "http://localhost:8000/api/v1/equipment/1" \
      -d '{
            "status": "maintenance"
          }'
-``` 
+```

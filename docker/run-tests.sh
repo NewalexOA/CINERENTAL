@@ -21,4 +21,4 @@ if [ $# -eq 0 ]; then
     exit 1
 else
     python -m pytest "$@" --cov=backend --cov-report=html --cov-report=term-missing
-fi 
+fi
