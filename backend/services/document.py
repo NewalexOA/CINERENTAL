@@ -9,9 +9,10 @@ from typing import Dict, List, Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from backend.exceptions import NotFoundError, StatusTransitionError
 from backend.models.booking import Booking
 from backend.models.document import Document, DocumentStatus, DocumentType
-from backend.repositories.document import DocumentRepository
+from backend.repositories import DocumentRepository
 
 
 class DocumentService:
@@ -57,14 +58,17 @@ class DocumentService:
             Created document
 
         Raises:
-            ValueError: If booking not found
+            NotFoundError: If booking not found
+            DocumentError: If document creation fails
         """
         # Check if booking exists
         if booking_id is not None:
             booking = await self.session.get(Booking, booking_id)
             if not booking:
-                msg = f'Booking with ID {booking_id} not found'
-                raise ValueError(msg)
+                raise NotFoundError(
+                    f'Booking with ID {booking_id} not found',
+                    {'booking_id': booking_id},
+                )
 
         document = Document(
             client_id=client_id,
@@ -99,13 +103,16 @@ class DocumentService:
             Updated document
 
         Raises:
-            ValueError: If document not found
+            NotFoundError: If document not found
+            DocumentError: If document update fails
         """
         # Get document
         document = await self.repository.get(document_id)
         if not document:
-            msg = f'Document with ID {document_id} not found'
-            raise ValueError(msg)
+            raise NotFoundError(
+                f'Document with ID {document_id} not found',
+                {'document_id': document_id},
+            )
 
         # Update fields
         if file_path is not None:
@@ -130,13 +137,16 @@ class DocumentService:
             Updated document
 
         Raises:
-            ValueError: If document not found or status transition not allowed
+            NotFoundError: If document not found
+            StatusTransitionError: If status transition not allowed
         """
         # Get document
         document = await self.repository.get(document_id)
         if not document:
-            msg = f'Document with ID {document_id} not found'
-            raise ValueError(msg)
+            raise NotFoundError(
+                f'Document with ID {document_id} not found',
+                {'document_id': document_id},
+            )
 
         # Check if status transition is allowed
         allowed_transitions: Dict[DocumentStatus, List[DocumentStatus]] = {
@@ -158,8 +168,14 @@ class DocumentService:
         }
 
         if status not in allowed_transitions[document.status]:
-            msg = f'Invalid status transition from {document.status} to {status}'
-            raise ValueError(msg)
+            raise StatusTransitionError(
+                f'Invalid status transition from {document.status} to {status}',
+                current_status=str(document.status),
+                new_status=str(status),
+                allowed_transitions=[
+                    str(s) for s in allowed_transitions[document.status]
+                ],
+            )
 
         # Update status
         document.status = status

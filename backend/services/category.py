@@ -8,8 +8,10 @@ from typing import List, Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from backend.exceptions import ConflictError, NotFoundError, ValidationError
 from backend.models.category import Category
-from backend.repositories.category import CategoryRepository
+from backend.repositories import CategoryRepository
+from backend.schemas.category import CategoryWithEquipmentCount
 
 
 class CategoryService:
@@ -38,20 +40,29 @@ class CategoryService:
             Created category
 
         Raises:
-            ValueError: If category with given name already exists
+            ConflictError: If category with given name already exists
+            NotFoundError: If parent category not found
+            ValidationError: If validation fails
         """
         # Check if category with given name exists
         existing = await self.repository.get_by_name(name)
         if existing:
-            msg = f'Category with name {name} already exists'
-            raise ValueError(msg)
+            raise ConflictError(f'Category with name "{name}" already exists')
 
+        # Validate parent category if provided
+        if parent_id:
+            parent = await self.repository.get(parent_id)
+            if not parent:
+                raise NotFoundError(f'Parent category with ID {parent_id} not found')
+
+        # Create category
         category = Category(
             name=name,
             description=description,
             parent_id=parent_id,
         )
-        return await self.repository.create(category)
+        await self.repository.create(category)
+        return category
 
     async def update_category(
         self,
@@ -60,61 +71,89 @@ class CategoryService:
         description: Optional[str] = None,
         parent_id: Optional[int] = None,
     ) -> Category:
-        """Update equipment category.
+        """Update category.
 
         Args:
             category_id: Category ID
-            name: New category name (optional)
-            description: New category description (optional)
+            name: New name (optional)
+            description: New description (optional)
             parent_id: New parent category ID (optional)
 
         Returns:
             Updated category
 
         Raises:
-            ValueError: If category not found or if new name already exists
+            NotFoundError: If category not found
+            ConflictError: If category with given name already exists
+            ValidationError: If validation fails (e.g. circular reference)
         """
         # Get category
         category = await self.repository.get(category_id)
         if not category:
-            msg = f'Category with ID {category_id} not found'
-            raise ValueError(msg)
+            raise NotFoundError(
+                f'Category with ID {category_id} not found',
+                details={'category_id': category_id},
+            )
 
-        # Check if new name is unique
+        # Check name uniqueness if changing
         if name and name != category.name:
             existing = await self.repository.get_by_name(name)
             if existing:
-                msg = f'Category with name {name} already exists'
-                raise ValueError(msg)
+                raise ConflictError(
+                    f'Category with name "{name}" already exists',
+                    details={'name': name},
+                )
 
-        # Update fields
-        if name is not None:
+        # Validate parent category if changing
+        if parent_id and parent_id != category.parent_id:
+            parent = await self.repository.get(parent_id)
+            if not parent:
+                raise NotFoundError(
+                    f'Parent category with ID {parent_id} not found',
+                    details={'parent_id': parent_id},
+                )
+            # Prevent circular references
+            if parent_id == category_id:
+                raise ValidationError(
+                    'Category cannot be its own parent',
+                    details={'category_id': category_id, 'parent_id': parent_id},
+                )
+
+        # Apply updates
+        if name:
             category.name = name
-        if description is not None:
+        if description:
             category.description = description
-        if parent_id is not None:
+        if parent_id is not None:  # Allow setting to None
             category.parent_id = parent_id
 
-        return await self.repository.update(category)
+        await self.repository.update(category)
+        return category
 
     async def get_categories(self) -> List[Category]:
         """Get all categories.
 
         Returns:
-            List of all categories
+            List of categories
         """
         return await self.repository.get_all()
 
-    async def get_category(self, category_id: int) -> Optional[Category]:
+    async def get_category(self, category_id: int) -> Category:
         """Get category by ID.
 
         Args:
             category_id: Category ID
 
         Returns:
-            Category if found, None otherwise
+            Category
+
+        Raises:
+            NotFoundError: If category not found
         """
-        return await self.repository.get(category_id)
+        category = await self.repository.get(category_id)
+        if not category:
+            raise NotFoundError(f'Category with ID {category_id} not found')
+        return category
 
     async def delete_category(self, category_id: int) -> bool:
         """Delete category.
@@ -123,36 +162,42 @@ class CategoryService:
             category_id: Category ID
 
         Returns:
-            True if category was deleted, False otherwise
+            True if category was deleted
 
         Raises:
-            ValueError: If category has equipment or subcategories
+            NotFoundError: If category not found
+            ConflictError: If category has subcategories or equipment
         """
-        # Check if category has equipment
-        equipment_count = await self.repository.get_equipment_count(category_id)
-        if equipment_count > 0:
-            msg = (
-                f'Cannot delete category {category_id} - '
-                f'it has {equipment_count} equipment items'
+        # Get category
+        category = await self.repository.get(category_id)
+        if not category:
+            raise NotFoundError(
+                f'Category with ID {category_id} not found',
+                details={'category_id': category_id},
             )
-            raise ValueError(msg)
 
-        # Check if category has subcategories
-        subcategories = await self.repository.get_subcategories(category_id)
+        # Check for subcategories
+        subcategories = await self.repository.get_children(category_id)
         if subcategories:
-            msg = (
-                f'Cannot delete category {category_id} - '
-                f'it has {len(subcategories)} subcategories'
+            raise ConflictError(
+                'Cannot delete category with subcategories',
+                details={'subcategories': [c.id for c in subcategories]},
             )
-            raise ValueError(msg)
+
+        # Check for equipment
+        if category.equipment:
+            raise ConflictError(
+                'Cannot delete category with equipment',
+                details={'equipment': [e.id for e in category.equipment]},
+            )
 
         return await self.repository.delete(category_id)
 
     async def search_categories(self, query: str) -> List[Category]:
-        """Search categories by name or description.
+        """Search categories by name.
 
         Args:
-            query: Search query string
+            query: Search query
 
         Returns:
             List of matching categories
@@ -166,3 +211,40 @@ class CategoryService:
             List of categories with equipment count
         """
         return await self.repository.get_all_with_equipment_count()
+
+    async def get_subcategories(self, category_id: int) -> list[Category]:
+        """Get all subcategories of a category.
+
+        Args:
+            category_id: ID of the parent category
+
+        Returns:
+            List of subcategories
+
+        Raises:
+            CategoryNotFoundError: If category not found
+        """
+        category = await self.get_category(category_id)
+        return await self.repository.get_children(category.id)
+
+    async def get_categories_with_equipment_count(
+        self,
+    ) -> list[CategoryWithEquipmentCount]:
+        """Get all categories with equipment count.
+
+        Returns:
+            List of categories with equipment count
+        """
+        categories = await self.repository.get_all_with_equipment_count()
+        return [
+            CategoryWithEquipmentCount(
+                id=category.id,
+                name=category.name,
+                description=category.description,
+                parent_id=category.parent_id,
+                equipment_count=category.equipment_count,
+                created_at=category.created_at,
+                updated_at=category.updated_at,
+            )
+            for category in categories
+        ]

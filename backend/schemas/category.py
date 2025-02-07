@@ -14,8 +14,8 @@ class CategoryBase(BaseModel):
     """Base category schema."""
 
     name: str = Field(..., title='Name', description='Category name')
-    description: str = Field(
-        ..., title='Description', description='Category description'
+    description: Optional[str] = Field(
+        None, title='Description', description='Category description'
     )
 
 

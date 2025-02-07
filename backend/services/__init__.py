@@ -1,6 +1,19 @@
-"""Services package.
+"""Service package.
 
-This package contains business logic services that coordinate between
-repositories and implement complex operations. Each service encapsulates
-domain-specific logic and orchestrates data flow between different layers.
+This package implements business logic for all application features.
 """
+
+from backend.services.booking import BookingService
+from backend.services.category import CategoryService
+from backend.services.client import ClientService
+from backend.services.document import DocumentService
+from backend.services.equipment import EquipmentService
+
+__all__ = [
+    # Business services
+    'BookingService',
+    'CategoryService',
+    'ClientService',
+    'DocumentService',
+    'EquipmentService',
+]

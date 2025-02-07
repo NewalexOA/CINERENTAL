@@ -6,14 +6,20 @@ including inventory management, availability tracking, and equipment status upda
 
 from datetime import datetime
 from decimal import Decimal
-from typing import Dict, List, Optional
+from typing import List, Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from backend.exceptions import (
+    AvailabilityError,
+    ConflictError,
+    NotFoundError,
+    StateError,
+    StatusTransitionError,
+    ValidationError,
+)
 from backend.models.equipment import Equipment, EquipmentStatus
-from backend.repositories.equipment import EquipmentRepository
-from backend.repositories.booking import BookingRepository
-from backend.exceptions import BusinessError
+from backend.repositories import BookingRepository, EquipmentRepository
 
 
 class EquipmentService:
@@ -56,24 +62,29 @@ class EquipmentService:
             Created equipment
 
         Raises:
-            BusinessError: If validation fails
+            ValidationError: If validation fails
+            ConflictError: If equipment with given barcode/serial number exists
         """
         # Validate business rules
         if daily_rate <= 0:
-            raise BusinessError("Daily rate must be positive")
+            raise ValidationError('Daily rate must be positive')
         if replacement_cost <= 0:
-            raise BusinessError("Replacement cost must be positive")
+            raise ValidationError('Replacement cost must be positive')
 
         # Check for duplicate barcode
         existing = await self.repository.get_by_barcode(barcode)
         if existing:
-            raise BusinessError(f"Equipment with barcode {barcode} already exists")
+            raise ConflictError(
+                f'Equipment with barcode {barcode} already exists',
+                details={'barcode': barcode},
+            )
 
         # Check for duplicate serial number
         existing = await self.repository.get_by_serial_number(serial_number)
         if existing:
-            raise BusinessError(
-                f"Equipment with serial number {serial_number} already exists"
+            raise ConflictError(
+                f'Equipment with serial number {serial_number} already exists',
+                details={'serial_number': serial_number},
             )
 
         equipment = Equipment(
@@ -89,21 +100,27 @@ class EquipmentService:
         )
         return await self.repository.create(equipment)
 
-    async def get_equipment(self, equipment_id: int) -> Equipment:
+    async def get_equipment(
+        self, equipment_id: int, include_deleted: bool = False
+    ) -> Equipment:
         """Get equipment by ID.
 
         Args:
             equipment_id: Equipment ID
+            include_deleted: Whether to include soft-deleted equipment
 
         Returns:
             Equipment instance
 
         Raises:
-            BusinessError: If equipment not found
+            NotFoundError: If equipment not found
         """
-        equipment = await self.repository.get(equipment_id)
+        equipment = await self.repository.get(equipment_id, include_deleted)
         if not equipment:
-            raise BusinessError(f"Equipment with ID {equipment_id} not found")
+            raise NotFoundError(
+                f'Equipment with ID {equipment_id} not found',
+                details={'equipment_id': equipment_id},
+            )
         return equipment
 
     async def get_equipment_list(
@@ -129,18 +146,28 @@ class EquipmentService:
             List of equipment items
 
         Raises:
-            BusinessError: If validation fails
+            ValidationError: If validation fails
         """
         # Validate business rules
         if available_from and available_to and available_from >= available_to:
-            raise BusinessError("Start date must be before end date")
+            raise ValidationError(
+                'Start date must be before end date',
+                details={
+                    'available_from': available_from.isoformat(),
+                    'available_to': available_to.isoformat(),
+                },
+            )
 
         if skip < 0:
-            raise BusinessError("Skip must be non-negative")
+            raise ValidationError(
+                'Skip value must be non-negative', details={'skip': skip}
+            )
         if limit <= 0:
-            raise BusinessError("Limit must be positive")
-        if limit > 100:
-            raise BusinessError("Limit cannot exceed 100")
+            raise ValidationError('Limit must be positive', details={'limit': limit})
+        if limit > 1000:
+            raise ValidationError(
+                'Limit cannot exceed 1000', details={'limit': limit, 'max_limit': 1000}
+            )
 
         return await self.repository.get_equipment_list(
             category_id=category_id,
@@ -180,23 +207,32 @@ class EquipmentService:
             Updated equipment
 
         Raises:
-            BusinessError: If equipment not found or validation fails
+            NotFoundError: If equipment not found
+            ValidationError: If validation fails
+            ConflictError: If equipment with given barcode exists
+            StateError: If status transition is invalid
         """
-        try:
-            equipment = await self.get_equipment(equipment_id)
-        except BusinessError:
-            raise BusinessError(f"Equipment with ID {equipment_id} not found")
+        equipment = await self.get_equipment(equipment_id)
 
         # Validate business rules
         if daily_rate is not None and daily_rate <= 0:
-            raise BusinessError("Daily rate must be positive")
+            raise ValidationError(
+                'Daily rate must be positive',
+                details={'daily_rate': daily_rate},
+            )
         if replacement_cost is not None and replacement_cost <= 0:
-            raise BusinessError("Replacement cost must be positive")
+            raise ValidationError(
+                'Replacement cost must be positive',
+                details={'replacement_cost': replacement_cost},
+            )
 
         if barcode is not None:
             existing = await self.repository.get_by_barcode(barcode)
             if existing and existing.id != equipment_id:
-                raise BusinessError(f"Equipment with barcode {barcode} already exists")
+                raise ConflictError(
+                    f'Equipment with barcode {barcode} already exists',
+                    details={'barcode': barcode},
+                )
 
         # Apply updates
         if name is not None:
@@ -214,7 +250,20 @@ class EquipmentService:
         if notes is not None:
             equipment.notes = notes
         if status is not None:
-            await self._validate_status_transition(equipment, status)
+            if status == equipment.status:
+                raise StateError(
+                    f'Equipment is already in {status} status',
+                    details={'current_status': status},
+                )
+            if status == EquipmentStatus.RETIRED:
+                bookings = await self.booking_repository.get_by_equipment(equipment_id)
+                if any(booking.is_active() for booking in bookings):
+                    raise StateError(
+                        'Cannot retire equipment with active bookings',
+                        details={
+                            'active_bookings': [b.id for b in bookings if b.is_active()]
+                        },
+                    )
             equipment.status = status
 
         return await self.repository.update(equipment)
@@ -229,17 +278,28 @@ class EquipmentService:
             True if equipment was deleted
 
         Raises:
-            BusinessError: If equipment not found or has active bookings
+            NotFoundError: If equipment not found or already deleted
+            StateError: If equipment has active bookings
+            ValidationError: If equipment_id is invalid
         """
-        # Check if equipment exists
-        await self.get_equipment(equipment_id)
+        if equipment_id <= 0:
+            raise ValidationError(
+                'Equipment ID must be positive',
+                details={'equipment_id': equipment_id},
+            )
+
+        equipment = await self.get_equipment(equipment_id)
+        bookings = await self.booking_repository.get_by_equipment(equipment.id)
 
         # Check for active bookings
-        bookings = await self.booking_repository.get_by_equipment(equipment_id)
-        if any(booking.is_active() for booking in bookings):
-            raise BusinessError("Cannot delete equipment with active bookings")
+        active_bookings = [b.id for b in bookings if b.is_active()]
+        if active_bookings:
+            raise StateError(
+                'Cannot delete equipment with active bookings',
+                details={'active_bookings': active_bookings},
+            )
 
-        return await self.repository.delete(equipment_id)
+        return await self.repository.delete(equipment.id)
 
     async def search_equipment(self, query: str) -> List[Equipment]:
         """Search equipment by name or description.
@@ -249,13 +309,7 @@ class EquipmentService:
 
         Returns:
             List of matching equipment
-
-        Raises:
-            BusinessError: If query is empty or too short
         """
-        if not query or len(query.strip()) < 3:
-            raise BusinessError("Search query must be at least 3 characters long")
-
         return await self.repository.search(query)
 
     async def get_by_category(self, category_id: int) -> List[Equipment]:
@@ -277,13 +331,7 @@ class EquipmentService:
 
         Returns:
             Equipment if found, None otherwise
-
-        Raises:
-            BusinessError: If barcode is invalid
         """
-        if not barcode or not barcode.strip():
-            raise BusinessError("Barcode cannot be empty")
-
         return await self.repository.get_by_barcode(barcode)
 
     async def change_status(
@@ -301,13 +349,10 @@ class EquipmentService:
             Updated equipment
 
         Raises:
-            BusinessError: If equipment not found or status transition not allowed
+            NotFoundError: If equipment not found
+            StatusTransitionError: If status transition is invalid
         """
-        try:
-            equipment = await self.get_equipment(equipment_id)
-        except BusinessError:
-            raise BusinessError(f"Equipment with ID {equipment_id} not found")
-
+        equipment = await self.get_equipment(equipment_id)
         await self._validate_status_transition(equipment, new_status)
         equipment.status = new_status
         return await self.repository.update(equipment)
@@ -317,46 +362,32 @@ class EquipmentService:
         equipment: Equipment,
         new_status: EquipmentStatus,
     ) -> None:
-        """Validate status transition according to business rules.
+        """Validate equipment status transition.
 
         Args:
-            equipment: Equipment to update
+            equipment: Equipment instance
             new_status: New status
 
         Raises:
-            BusinessError: If transition is not allowed
+            StatusTransitionError: If status transition is invalid
         """
-        allowed_transitions: Dict[EquipmentStatus, List[EquipmentStatus]] = {
-            EquipmentStatus.AVAILABLE: [
-                EquipmentStatus.MAINTENANCE,
-                EquipmentStatus.BROKEN,
-                EquipmentStatus.RENTED,
-            ],
-            EquipmentStatus.MAINTENANCE: [
-                EquipmentStatus.AVAILABLE,
-                EquipmentStatus.BROKEN,
-                EquipmentStatus.RETIRED,
-            ],
-            EquipmentStatus.BROKEN: [
-                EquipmentStatus.MAINTENANCE,
-                EquipmentStatus.RETIRED,
-            ],
-            EquipmentStatus.RETIRED: [],  # No transitions from retired
-            EquipmentStatus.RENTED: [EquipmentStatus.AVAILABLE],
-        }
-
-        # Additional validation for specific transitions
-        if new_status == EquipmentStatus.RETIRED:
-            # Check for active bookings before retiring
-            bookings = await self.booking_repository.get_by_equipment(equipment.id)
-            if any(booking.is_active() for booking in bookings):
-                msg = f"Cannot transition from {equipment.status} to {new_status}"
-                raise BusinessError(f"{msg} with active bookings")
-
-        if new_status not in allowed_transitions.get(equipment.status, []):
-            raise BusinessError(
-                f"Cannot transition from {equipment.status} to {new_status}"
+        if new_status == equipment.status:
+            raise StatusTransitionError(
+                f'Equipment is already in {new_status} status',
+                current_status=str(equipment.status),
+                new_status=str(new_status),
             )
+
+        if new_status == EquipmentStatus.RETIRED:
+            bookings = await self.booking_repository.get_by_equipment(equipment.id)
+            active_bookings = [b.id for b in bookings if b.is_active()]
+            if active_bookings:
+                raise StatusTransitionError(
+                    'Cannot retire equipment with active bookings',
+                    current_status=str(equipment.status),
+                    new_status=str(new_status),
+                    details={'active_bookings': active_bookings},
+                )
 
     async def check_availability(
         self, equipment_id: int, start_date: datetime, end_date: datetime
@@ -369,17 +400,47 @@ class EquipmentService:
             end_date: End date
 
         Returns:
-            True if equipment is available, False otherwise
-        """
-        equipment = await self.repository.get(equipment_id)
-        if not equipment or equipment.status != EquipmentStatus.AVAILABLE:
-            return False
+            True if equipment is available
 
-        return await self.repository.check_availability(
-            equipment_id,
-            start_date,
-            end_date,
+        Raises:
+            NotFoundError: If equipment not found
+            ValidationError: If dates are invalid
+            AvailabilityError: If equipment is not available
+        """
+        equipment = await self.get_equipment(equipment_id)
+
+        if start_date >= end_date:
+            raise ValidationError(
+                'Start date must be before end date',
+                details={
+                    'start_date': start_date.isoformat(),
+                    'end_date': end_date.isoformat(),
+                },
+            )
+
+        if equipment.status != EquipmentStatus.AVAILABLE:
+            raise AvailabilityError(
+                message=f'Equipment is not available (status: {equipment.status})',
+                resource_id=str(equipment_id),
+                resource_type='equipment',
+                details={'current_status': equipment.status},
+            )
+
+        is_available = await self.repository.check_availability(
+            equipment_id, start_date, end_date
         )
+        if not is_available:
+            raise AvailabilityError(
+                message='Equipment is not available for the specified period',
+                resource_id=str(equipment_id),
+                resource_type='equipment',
+                details={
+                    'start_date': start_date.isoformat(),
+                    'end_date': end_date.isoformat(),
+                },
+            )
+
+        return True
 
     async def get_available_equipment(
         self, start_date: datetime, end_date: datetime
@@ -394,3 +455,159 @@ class EquipmentService:
             List of available equipment
         """
         return await self.repository.get_available(start_date, end_date)
+
+    async def get_all(
+        self,
+        status: Optional[EquipmentStatus] = None,
+        skip: int = 0,
+        limit: int = 100,
+    ) -> List[Equipment]:
+        """Get all equipment with optional filtering and pagination.
+
+        Args:
+            status: Filter by equipment status
+            skip: Number of records to skip
+            limit: Maximum number of records to return
+
+        Returns:
+            List of equipment items
+
+        Raises:
+            ValidationError: If validation fails
+        """
+        if skip < 0:
+            raise ValidationError(
+                'Skip value must be non-negative', details={'skip': skip}
+            )
+        if limit < 1:
+            raise ValidationError(
+                'Limit value must be positive', details={'limit': limit}
+            )
+
+        return await self.repository.get_equipment_list(
+            status=status,
+            skip=skip,
+            limit=limit,
+        )
+
+    async def search(self, query: str) -> List[Equipment]:
+        """Search equipment by name or description.
+
+        Args:
+            query: Search query string
+
+        Returns:
+            List of matching equipment items
+
+        Raises:
+            ValidationError: If query is empty
+        """
+        if not query:
+            raise ValidationError('Search query cannot be empty')
+
+        return await self.repository.search(query)
+
+    async def _is_available(
+        self,
+        equipment_id: int,
+        available_from: datetime,
+        available_to: datetime,
+    ) -> bool:
+        """Check if equipment is available for the given time period.
+
+        Args:
+            equipment_id: Equipment ID to check
+            available_from: Start of the period
+            available_to: End of the period
+
+        Returns:
+            True if equipment is available, False otherwise
+        """
+        return await self.repository.check_availability(
+            equipment_id, available_from, available_to
+        )
+
+    async def _is_available_for_update(
+        self,
+        equipment_id: int,
+        booking_id: int,
+        available_from: datetime,
+        available_to: datetime,
+    ) -> bool:
+        """Check if equipment is available for the given time period.
+
+        This check excludes the current booking from availability verification.
+
+        Args:
+            equipment_id: Equipment ID to check
+            booking_id: ID of the current booking to exclude from check
+            available_from: Start of the period
+            available_to: End of the period
+
+        Returns:
+            True if equipment is available, False otherwise
+        """
+        return await self.repository.check_availability(
+            equipment_id, available_from, available_to, exclude_booking_id=booking_id
+        )
+
+    async def _check_availability(
+        self,
+        equipment_id: int,
+        available_from: datetime,
+        available_to: datetime,
+    ) -> None:
+        """Check if equipment is available for the given time period.
+
+        Args:
+            equipment_id: Equipment ID to check
+            available_from: Start of the period
+            available_to: End of the period
+
+        Raises:
+            AvailabilityError: If equipment is not available
+        """
+        if not await self._is_available(equipment_id, available_from, available_to):
+            raise AvailabilityError(
+                message='Equipment is not available for the specified time period',
+                resource_id=str(equipment_id),
+                resource_type='equipment',
+                details={
+                    'available_from': available_from.isoformat(),
+                    'available_to': available_to.isoformat(),
+                },
+            )
+
+    async def _check_availability_for_update(
+        self,
+        equipment_id: int,
+        booking_id: int,
+        available_from: datetime,
+        available_to: datetime,
+    ) -> None:
+        """Check if equipment is available for the given time period.
+
+        This check excludes the current booking from availability verification.
+
+        Args:
+            equipment_id: Equipment ID to check
+            booking_id: ID of the current booking to exclude from check
+            available_from: Start of the period
+            available_to: End of the period
+
+        Raises:
+            AvailabilityError: If equipment is not available
+        """
+        if not await self._is_available_for_update(
+            equipment_id, booking_id, available_from, available_to
+        ):
+            raise AvailabilityError(
+                message='Equipment is not available for the specified time period',
+                resource_id=str(equipment_id),
+                resource_type='equipment',
+                details={
+                    'booking_id': str(booking_id),
+                    'available_from': available_from.isoformat(),
+                    'available_to': available_to.isoformat(),
+                },
+            )

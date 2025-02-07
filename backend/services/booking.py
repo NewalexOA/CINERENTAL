@@ -9,10 +9,23 @@ from typing import List, Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from backend.exceptions import (
+    AvailabilityError,
+    DateError,
+    DurationError,
+    NotFoundError,
+    StateError,
+    StatusTransitionError,
+    ValidationError,
+)
 from backend.models.booking import Booking, BookingStatus, PaymentStatus
 from backend.models.equipment import EquipmentStatus
-from backend.repositories.booking import BookingRepository
-from backend.repositories.equipment import EquipmentRepository
+from backend.repositories import BookingRepository, EquipmentRepository
+
+# Constants for booking validation
+MIN_BOOKING_DURATION = timedelta(days=1)  # Minimum booking duration
+MAX_BOOKING_DURATION = timedelta(days=365)  # Maximum booking duration
+MAX_ADVANCE_DAYS = 365  # Maximum days in advance for booking
 
 
 class BookingService:
@@ -52,30 +65,89 @@ class BookingService:
             Created booking
 
         Raises:
-            ValueError: If equipment is not available for the specified period
-                      or if start date is in the past
-                      or if end date is before start date
-                      or if booking is too far in advance
+            ValidationError: If client_id or equipment_id is not positive
+            DateError: If dates are invalid (past, wrong order)
+            DurationError: If booking duration is invalid
+            NotFoundError: If equipment is not found
+            StateError: If equipment is not available for booking
         """
-        # Validate start date
+        # Validate IDs
+        if client_id <= 0:
+            raise ValidationError('Client ID must be positive')
+        if equipment_id <= 0:
+            raise ValidationError('Equipment ID must be positive')
+
+        # Ensure dates are timezone-aware
+        if start_date.tzinfo is None:
+            start_date = start_date.replace(tzinfo=timezone.utc)
+        if end_date.tzinfo is None:
+            end_date = end_date.replace(tzinfo=timezone.utc)
+
+        # Get current time in UTC
         now = datetime.now(timezone.utc)
+
+        # Validate start date
         if start_date < now:
-            raise ValueError('Start date cannot be in the past')
+            raise DateError(
+                'Start date cannot be in the past',
+                start_date=start_date,
+                end_date=end_date,
+            )
 
         # Validate end date
         if end_date <= start_date:
-            raise ValueError('End date must be after start date')
+            raise DateError(
+                'End date must be after start date',
+                start_date=start_date,
+                end_date=end_date,
+            )
 
-        # Validate booking period
-        max_advance = now + timedelta(days=365)
+        # Validate booking duration
+        duration = end_date - start_date
+        duration_days = duration.days
+        if duration < MIN_BOOKING_DURATION:
+            raise DurationError(
+                f'Booking duration must be at least {MIN_BOOKING_DURATION.days} day(s)',
+                min_days=MIN_BOOKING_DURATION.days,
+                actual_days=duration_days,
+            )
+        if duration > MAX_BOOKING_DURATION:
+            raise DurationError(
+                f'Booking duration cannot exceed {MAX_BOOKING_DURATION.days} days',
+                max_days=MAX_BOOKING_DURATION.days,
+                actual_days=duration_days,
+            )
+
+        # Validate advance booking
+        max_advance = now + timedelta(days=MAX_ADVANCE_DAYS)
         if start_date > max_advance:
-            raise ValueError('Booking too far in advance')
+            raise DateError(
+                'Booking too far in advance',
+                start_date=start_date,
+                details={'max_advance_date': max_advance.isoformat()},
+            )
+
+        # Check if equipment exists
+        equipment = await self.equipment_repository.get(equipment_id)
+        if not equipment:
+            raise NotFoundError(
+                f'Equipment {equipment_id} not found',
+                details={'equipment_id': equipment_id},
+            )
 
         # Check equipment availability
         if not await self.equipment_repository.check_availability(
             equipment_id, start_date, end_date
         ):
-            raise ValueError(f'Equipment {equipment_id} is not available')
+            raise StateError(
+                'Equipment {id} is not available '
+                'for the specified period'.format(id=equipment_id),
+                details={
+                    'equipment_id': equipment_id,
+                    'start_date': start_date.isoformat(),
+                    'end_date': end_date.isoformat(),
+                },
+            )
 
         # Create booking
         booking = Booking(
@@ -114,13 +186,30 @@ class BookingService:
             Updated booking
 
         Raises:
-            ValueError: If booking is not found or new dates overlap with other bookings
+            ValidationError: If booking_id is not positive
+            NotFoundError: If booking is not found
+            DateError: If new dates are invalid
+            StateError: If equipment is not available for new dates
         """
+        if booking_id <= 0:
+            raise ValidationError('Booking ID must be positive')
+
         booking = await self.repository.get(booking_id)
         if not booking:
-            raise ValueError('Booking not found')
+            raise NotFoundError(
+                f'Booking {booking_id} not found',
+                details={'booking_id': booking_id},
+            )
 
         if start_date and end_date:
+            # Validate dates
+            if start_date >= end_date:
+                raise DateError(
+                    'End date must be after start date',
+                    start_date=start_date,
+                    end_date=end_date,
+                )
+
             # Check if new dates overlap with other bookings
             if not await self.equipment_repository.check_availability(
                 booking.equipment_id,
@@ -128,7 +217,15 @@ class BookingService:
                 end_date,
                 exclude_booking_id=booking_id,
             ):
-                raise ValueError(f'Equipment {booking.equipment_id} is not available')
+                raise StateError(
+                    'Equipment {id} is not available '
+                    'for the specified period'.format(id=booking.equipment_id),
+                    details={
+                        'equipment_id': booking.equipment_id,
+                        'start_date': start_date.isoformat(),
+                        'end_date': end_date.isoformat(),
+                    },
+                )
 
         # Update fields if provided
         if start_date:
@@ -146,16 +243,29 @@ class BookingService:
 
         return await self.repository.update(booking)
 
-    async def get_booking(self, booking_id: int) -> Optional[Booking]:
+    async def get_booking(self, booking_id: int) -> Booking:
         """Get booking by ID.
 
         Args:
             booking_id: Booking ID
 
         Returns:
-            Booking if found, None otherwise
+            Booking if found
+
+        Raises:
+            ValidationError: If booking_id is not positive
+            NotFoundError: If booking is not found
         """
-        return await self.repository.get(booking_id)
+        if booking_id <= 0:
+            raise ValidationError('Booking ID must be positive')
+
+        booking = await self.repository.get(booking_id)
+        if not booking:
+            raise NotFoundError(
+                f'Booking {booking_id} not found',
+                details={'booking_id': booking_id},
+            )
+        return booking
 
     async def get_bookings(self) -> List[Booking]:
         """Get all bookings.
@@ -173,7 +283,12 @@ class BookingService:
 
         Returns:
             List of client's bookings
+
+        Raises:
+            ValidationError: If client_id is not positive
         """
+        if client_id <= 0:
+            raise ValidationError('Client ID must be positive')
         return await self.repository.get_by_client(client_id)
 
     async def get_by_equipment(self, equipment_id: int) -> List[Booking]:
@@ -184,7 +299,12 @@ class BookingService:
 
         Returns:
             List of equipment's bookings
+
+        Raises:
+            ValidationError: If equipment_id is not positive
         """
+        if equipment_id <= 0:
+            raise ValidationError('Equipment ID must be positive')
         return await self.repository.get_by_equipment(equipment_id)
 
     async def get_active_for_period(
@@ -198,7 +318,16 @@ class BookingService:
 
         Returns:
             List of active bookings for period
+
+        Raises:
+            DateError: If dates are invalid
         """
+        if start_date >= end_date:
+            raise DateError(
+                'End date must be after start date',
+                start_date=start_date,
+                end_date=end_date,
+            )
         return await self.repository.get_active_for_period(start_date, end_date)
 
     async def get_by_status(self, status: BookingStatus) -> List[Booking]:
@@ -209,7 +338,15 @@ class BookingService:
 
         Returns:
             List of bookings with specified status
+
+        Raises:
+            ValidationError: If status is invalid
         """
+        if not isinstance(status, BookingStatus):
+            raise ValidationError(
+                'Invalid booking status',
+                details={'status': str(status)},
+            )
         return await self.repository.get_by_status(status)
 
     async def get_by_payment_status(self, status: PaymentStatus) -> List[Booking]:
@@ -219,8 +356,16 @@ class BookingService:
             status: Payment status
 
         Returns:
-            List of bookings with specified payment status
+            List of bookings with specified status
+
+        Raises:
+            ValidationError: If status is invalid
         """
+        if not isinstance(status, PaymentStatus):
+            raise ValidationError(
+                'Invalid payment status',
+                details={'status': str(status)},
+            )
         return await self.repository.get_by_payment_status(status)
 
     async def get_overdue(self) -> List[Booking]:
@@ -243,17 +388,19 @@ class BookingService:
             Updated booking
 
         Raises:
-            ValueError: If booking is not found or status transition is invalid
+            NotFoundError: If booking is not found
+            StatusTransitionError: If status transition is invalid
         """
         booking = await self.repository.get(booking_id)
         if not booking:
-            raise ValueError('Booking not found')
+            raise NotFoundError(
+                f'Booking {booking_id} not found', details={'booking_id': booking_id}
+            )
 
         # Define allowed transitions
-        allowed_transitions = {
+        allowed_transitions: dict[BookingStatus, list[BookingStatus]] = {
             BookingStatus.PENDING: [
                 BookingStatus.CONFIRMED,
-                BookingStatus.ACTIVE,
                 BookingStatus.CANCELLED,
             ],
             BookingStatus.CONFIRMED: [
@@ -262,7 +409,6 @@ class BookingService:
             ],
             BookingStatus.ACTIVE: [
                 BookingStatus.COMPLETED,
-                BookingStatus.CANCELLED,
                 BookingStatus.OVERDUE,
             ],
             BookingStatus.COMPLETED: [],
@@ -274,11 +420,13 @@ class BookingService:
         }
 
         allowed = allowed_transitions.get(booking.booking_status, [])
-        if not isinstance(allowed, list):
-            allowed = []
         if status not in allowed:
-            msg = f'Invalid status transition from {booking.booking_status} to {status}'
-            raise ValueError(msg)
+            raise StatusTransitionError(
+                f'Invalid status transition from {booking.booking_status} to {status}',
+                current_status=str(booking.booking_status),
+                new_status=str(status),
+                allowed_transitions=[str(s) for s in allowed],
+            )
 
         booking.booking_status = status
 
@@ -309,29 +457,102 @@ class BookingService:
             Updated booking
 
         Raises:
-            ValueError: If booking is not found or status transition is invalid
+            NotFoundError: If booking is not found
+            StatusTransitionError: If status transition is invalid
         """
         booking = await self.repository.get(booking_id)
         if not booking:
-            raise ValueError('Booking not found')
+            raise NotFoundError(
+                f'Booking {booking_id} not found', details={'booking_id': booking_id}
+            )
 
         # Define allowed transitions
-        allowed_transitions = {
+        allowed_transitions: dict[PaymentStatus, list[PaymentStatus]] = {
             PaymentStatus.PENDING: [PaymentStatus.PARTIAL, PaymentStatus.PAID],
             PaymentStatus.PARTIAL: [PaymentStatus.PAID],
             PaymentStatus.PAID: [],
             PaymentStatus.REFUNDED: [],
+            PaymentStatus.OVERDUE: [PaymentStatus.PAID],
         }
 
         allowed = allowed_transitions.get(booking.payment_status, [])
-        if not isinstance(allowed, list):
-            allowed = []
         if status not in allowed:
-            msg = (
-                f'Invalid payment status transition from '
-                f'{booking.payment_status} to {status}'
+            raise StatusTransitionError(
+                f'Invalid payment status transition from {booking.payment_status} '
+                f'to {status}',
+                current_status=str(booking.payment_status),
+                new_status=str(status),
+                allowed_transitions=[str(s) for s in allowed],
             )
-            raise ValueError(msg)
 
         booking.payment_status = status
         return await self.repository.update(booking)
+
+    async def _check_equipment_availability(
+        self,
+        equipment_ids: list[int],
+        available_from: datetime,
+        available_to: datetime,
+    ) -> None:
+        """Check if all equipment is available for the given time period.
+
+        Args:
+            equipment_ids: List of equipment IDs to check
+            available_from: Start of the period
+            available_to: End of the period
+
+        Raises:
+            AvailabilityError: If any equipment is not available
+        """
+        for equipment_id in equipment_ids:
+            if not await self.equipment_repository.check_availability(
+                equipment_id, available_from, available_to
+            ):
+                raise AvailabilityError(
+                    message='Equipment is not available for the specified time period',
+                    resource_id=str(equipment_id),
+                    resource_type='equipment',
+                    details={
+                        'available_from': available_from.isoformat(),
+                        'available_to': available_to.isoformat(),
+                    },
+                )
+
+    async def _check_equipment_availability_for_update(
+        self,
+        equipment_ids: list[int],
+        booking_id: int,
+        available_from: datetime,
+        available_to: datetime,
+    ) -> None:
+        """Check if all equipment is available for the given time period.
+
+        This check excludes the current booking from availability verification.
+
+        Args:
+            equipment_ids: List of equipment IDs to check
+            booking_id: ID of the current booking to exclude from check
+            available_from: Start of the period
+            available_to: End of the period
+
+        Raises:
+            AvailabilityError: If any equipment is not available
+        """
+        for equipment_id in equipment_ids:
+            is_available = await self.equipment_repository.check_availability(
+                equipment_id,
+                available_from,
+                available_to,
+                exclude_booking_id=booking_id,
+            )
+            if not is_available:
+                raise AvailabilityError(
+                    message='Equipment is not available for the specified time period',
+                    resource_id=str(equipment_id),
+                    resource_type='equipment',
+                    details={
+                        'booking_id': str(booking_id),
+                        'available_from': available_from.isoformat(),
+                        'available_to': available_to.isoformat(),
+                    },
+                )

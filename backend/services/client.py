@@ -5,14 +5,14 @@ including client registration, profile updates, and rental history tracking.
 """
 
 from datetime import datetime, timezone
-from typing import List, Optional, cast
+from typing import List, Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from backend.exceptions import ConflictError, NotFoundError, StatusTransitionError
 from backend.models.booking import Booking
 from backend.models.client import Client, ClientStatus
-from backend.repositories.booking import BookingRepository
-from backend.repositories.client import ClientRepository
+from backend.repositories import BookingRepository, ClientRepository
 
 
 class ClientService:
@@ -55,19 +55,22 @@ class ClientService:
             Created client
 
         Raises:
-            ValueError: If client with given email or phone already exists
+            ConflictError: If client with given email or phone already exists
+            ValidationError: If validation fails
         """
         # Check if client with given email exists
         existing = await self.repository.get_by_email(email)
         if existing:
-            msg = f'Client with email {email} already exists'
-            raise ValueError(msg)
+            raise ConflictError(
+                f'Client with email {email} already exists', {'email': email}
+            )
 
         # Check if client with given phone exists
         existing = await self.repository.get_by_phone(phone)
         if existing:
-            msg = f'Client with phone {phone} already exists'
-            raise ValueError(msg)
+            raise ConflictError(
+                f'Client with phone {phone} already exists', {'phone': phone}
+            )
 
         client = Client(
             first_name=first_name,
@@ -111,27 +114,32 @@ class ClientService:
             Updated client
 
         Raises:
-            ValueError: If client not found or if new email/phone already exists
+            NotFoundError: If client not found
+            ConflictError: If new email/phone already exists
+            ValidationError: If validation fails
         """
         # Get client
         client = await self.repository.get(client_id)
         if not client:
-            msg = f'Client with ID {client_id} not found'
-            raise ValueError(msg)
+            raise NotFoundError(
+                f'Client with ID {client_id} not found', {'client_id': client_id}
+            )
 
         # Check if new email is unique
         if email and email != client.email:
             existing = await self.repository.get_by_email(email)
             if existing:
-                msg = f'Client with email {email} already exists'
-                raise ValueError(msg)
+                raise ConflictError(
+                    f'Client with email {email} already exists', {'email': email}
+                )
 
         # Check if new phone is unique
         if phone and phone != client.phone:
             existing = await self.repository.get_by_phone(phone)
             if existing:
-                msg = f'Client with phone {phone} already exists'
-                raise ValueError(msg)
+                raise ConflictError(
+                    f'Client with phone {phone} already exists', {'phone': phone}
+                )
 
         # Update fields
         if first_name is not None:
@@ -164,13 +172,28 @@ class ClientService:
             Updated client
 
         Raises:
-            ValueError: If client not found
+            NotFoundError: If client not found
+            StatusTransitionError: If status transition is invalid
         """
         # Get client
         client = await self.repository.get(client_id)
         if not client:
-            msg = f'Client with ID {client_id} not found'
-            raise ValueError(msg)
+            raise NotFoundError(
+                f'Client with ID {client_id} not found', {'client_id': client_id}
+            )
+
+        # Check if client has active bookings when trying to block or archive
+        if status in (ClientStatus.BLOCKED, ClientStatus.ARCHIVED):
+            active_bookings = await self.booking_repository.get_active_by_client(
+                client_id
+            )
+            if active_bookings:
+                raise StatusTransitionError(
+                    'Cannot change client status while they have active bookings',
+                    current_status=str(client.status),
+                    new_status=str(status),
+                    details={'active_bookings': [b.id for b in active_bookings]},
+                )
 
         # Update status
         client.status = status
@@ -246,22 +269,24 @@ class ClientService:
         """
         return await self.repository.get_by_status(status)
 
-    async def get_client_bookings(self, client_id: int) -> List[Booking]:
+    async def get_client_bookings(self, client_id: int) -> list[Booking]:
         """Get all bookings for a client.
 
         Args:
-            client_id: Client ID
+            client_id: ID of the client.
 
         Returns:
-            List of client's bookings
+            List of bookings.
 
         Raises:
-            ValueError: If client is not found
+            ClientNotFoundError: If client not found.
         """
         client = await self.repository.get(client_id)
         if not client:
-            raise ValueError('Client not found')
-        return cast(List[Booking], client.bookings)
+            raise NotFoundError(
+                f'Client with ID {client_id} not found', {'client_id': client_id}
+            )
+        return await self.booking_repository.get_by_client(client.id)
 
     async def delete_client(self, client_id: int) -> None:
         """Soft delete client.
@@ -302,3 +327,23 @@ class ClientService:
             List of matching clients
         """
         return await self.repository.search(query, include_deleted=include_deleted)
+
+    async def deactivate(self, client_id: int) -> Client:
+        """Deactivate a client.
+
+        Args:
+            client_id: ID of the client to deactivate
+
+        Returns:
+            Updated client
+
+        Raises:
+            ClientNotFoundError: If client not found
+        """
+        client = await self.repository.get(client_id)
+        if not client:
+            raise NotFoundError(
+                f'Client with ID {client_id} not found', {'client_id': client_id}
+            )
+        client.status = ClientStatus.BLOCKED
+        return await self.repository.update(client)
