@@ -4,13 +4,13 @@ This module defines Pydantic models for equipment data validation,
 including request/response schemas for managing rental items.
 """
 
-from datetime import datetime
 from decimal import Decimal
-from enum import Enum
-from typing import Optional, Annotated
+from typing import Annotated, Optional
 
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field
 from pydantic.functional_validators import BeforeValidator
+
+from backend.models.equipment import EquipmentStatus
 
 
 def validate_decimal(value: str | Decimal) -> Decimal:
@@ -26,55 +26,65 @@ DecimalField = Annotated[
 ]
 
 
-class EquipmentStatus(str, Enum):
-    """Equipment status enumeration."""
-    AVAILABLE = "available"
-    RENTED = "rented"
-    MAINTENANCE = "maintenance"
-    BROKEN = "broken"
-    RETIRED = "retired"
-
-
 class EquipmentBase(BaseModel):
     """Base equipment schema."""
-    name: str = Field(..., min_length=1, max_length=200)
-    description: Optional[str] = Field(None, max_length=1000)
-    barcode: str = Field(..., min_length=1, max_length=100)
-    serial_number: str = Field(..., min_length=1, max_length=100)
-    category_id: int = Field(..., gt=0)
-    daily_rate: DecimalField = Field(..., gt=0)
-    replacement_cost: DecimalField = Field(..., gt=0)
-    notes: Optional[str] = Field(None, max_length=1000)
+
+    name: str = Field(..., title='Name', description='Equipment name')
+    description: str = Field(
+        ..., title='Description', description='Equipment description'
+    )
+    daily_rate: Decimal = Field(
+        ..., title='Daily Rate', description='Daily rental rate'
+    )
+    replacement_cost: Decimal = Field(
+        ..., title='Replacement Cost', description='Cost to replace if damaged'
+    )
+    category_id: int = Field(
+        ..., title='Category ID', description='ID of the equipment category'
+    )
 
 
 class EquipmentCreate(EquipmentBase):
     """Create equipment request schema."""
+
     pass
 
 
 class EquipmentUpdate(BaseModel):
     """Update equipment request schema."""
-    name: Optional[str] = Field(None, min_length=1, max_length=200)
-    description: Optional[str] = Field(None, max_length=1000)
-    barcode: Optional[str] = Field(None, min_length=1, max_length=100)
-    serial_number: Optional[str] = Field(None, min_length=1, max_length=100)
-    category_id: Optional[int] = Field(None, gt=0)
-    daily_rate: Optional[DecimalField] = Field(None, gt=0)
-    replacement_cost: Optional[DecimalField] = Field(None, gt=0)
-    notes: Optional[str] = Field(None, max_length=1000)
-    status: Optional[EquipmentStatus] = None
+
+    name: Optional[str] = Field(None, title='Name', description='Equipment name')
+    description: Optional[str] = Field(
+        None, title='Description', description='Equipment description'
+    )
+    daily_rate: Optional[Decimal] = Field(
+        None, title='Daily Rate', description='Daily rental rate'
+    )
+    replacement_cost: Optional[Decimal] = Field(
+        None, title='Replacement Cost', description='Cost to replace if damaged'
+    )
+    category_id: Optional[int] = Field(
+        None, title='Category ID', description='ID of the equipment category'
+    )
+    status: Optional[EquipmentStatus] = Field(
+        None, title='Status', description='Equipment status'
+    )
 
 
 class EquipmentResponse(EquipmentBase):
     """Equipment response schema."""
-    model_config = ConfigDict(from_attributes=True)
 
     id: int
     status: EquipmentStatus
-    created_at: datetime
-    updated_at: datetime
+    category_name: str
+
+    class Config:
+        """Pydantic configuration."""
+
+        orm_mode = True
 
 
 class EquipmentWithCategory(EquipmentResponse):
     """Equipment response schema with category information."""
+
     category_name: str

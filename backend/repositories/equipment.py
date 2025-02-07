@@ -5,9 +5,10 @@ including inventory tracking, availability status, and maintenance records.
 """
 
 from datetime import datetime
-from typing import List, Optional, Protocol, cast
+from typing import Any, List, Optional, Protocol, Union
+from uuid import UUID
 
-from sqlalchemy import Column, and_, or_, select
+from sqlalchemy import Column, ScalarSelect, and_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import Select
 
@@ -23,15 +24,15 @@ class HasBookingStatus(Protocol):
 
 
 class EquipmentRepository(BaseRepository[Equipment]):
-    """Repository for equipment."""
+    """Repository for managing equipment entities."""
 
     def __init__(self, session: AsyncSession) -> None:
-        """Initialize repository.
+        """Initialize equipment repository.
 
         Args:
             session: SQLAlchemy async session
         """
-        super().__init__(session, Equipment)
+        super().__init__(model=Equipment, session=session)
 
     async def get_by_barcode(self, barcode: str) -> Optional[Equipment]:
         """Get equipment by barcode.
@@ -43,10 +44,7 @@ class EquipmentRepository(BaseRepository[Equipment]):
             Equipment if found, None otherwise
         """
         query = select(Equipment).where(
-            and_(
-                Equipment.barcode == barcode,
-                Equipment.deleted_at.is_(None)
-            )
+            and_(Equipment.barcode == barcode, Equipment.deleted_at.is_(None))
         )
         result = await self.session.execute(query)
         return result.scalar_one_or_none()
@@ -76,10 +74,7 @@ class EquipmentRepository(BaseRepository[Equipment]):
             List of equipment in category
         """
         query = select(Equipment).where(
-            and_(
-                Equipment.category_id == category_id,
-                Equipment.deleted_at.is_(None)
-            )
+            and_(Equipment.category_id == category_id, Equipment.deleted_at.is_(None))
         )
         result = await self.session.execute(query)
         return list(result.scalars().all())
@@ -103,17 +98,19 @@ class EquipmentRepository(BaseRepository[Equipment]):
                     and_(
                         Booking.start_date < end_date,
                         Booking.end_date > start_date,
-                        Booking.booking_status.in_([
-                            BookingStatus.PENDING,
-                            BookingStatus.CONFIRMED,
-                            BookingStatus.ACTIVE,
-                        ]),
+                        Booking.booking_status.in_(
+                            [
+                                BookingStatus.PENDING,
+                                BookingStatus.CONFIRMED,
+                                BookingStatus.ACTIVE,
+                            ]
+                        ),
                     )
                 ),
             )
         )
         result = await self.session.scalars(query)
-        return cast(List[Equipment], list(result.all()))
+        return list(result.all())
 
     async def get_equipment_list(
         self,
@@ -150,7 +147,7 @@ class EquipmentRepository(BaseRepository[Equipment]):
             query = query.where(
                 and_(
                     Equipment.status == EquipmentStatus.AVAILABLE,
-                    Equipment.id.not_in(bookings_subquery)
+                    Equipment.id.not_in(bookings_subquery),
                 )
             )
 
@@ -159,18 +156,16 @@ class EquipmentRepository(BaseRepository[Equipment]):
         return list(result.scalars().all())
 
     def _build_availability_subquery(
-        self,
-        available_from: datetime,
-        available_to: datetime
-    ):
+        self, available_from: datetime, available_to: datetime
+    ) -> ScalarSelect[Any]:
         """Build subquery for checking equipment availability.
 
         Args:
-            available_from: Start date of availability period
-            available_to: End date of availability period
+            available_from: Start date to check availability
+            available_to: End date to check availability
 
         Returns:
-            SQLAlchemy subquery
+            SQLAlchemy scalar subquery for availability check
         """
         return (
             select(Booking.equipment_id)
@@ -180,42 +175,48 @@ class EquipmentRepository(BaseRepository[Equipment]):
                     or_(
                         and_(
                             Booking.start_date <= available_from,
-                            Booking.end_date >= available_from
+                            Booking.end_date >= available_from,
                         ),
                         and_(
                             Booking.start_date <= available_to,
-                            Booking.end_date >= available_to
+                            Booking.end_date >= available_to,
                         ),
                         and_(
                             Booking.start_date >= available_from,
-                            Booking.end_date <= available_to
-                        )
-                    )
+                            Booking.end_date <= available_to,
+                        ),
+                    ),
                 )
             )
             .distinct()
             .scalar_subquery()
         )
 
-    async def search(self, query: str) -> List[Equipment]:
-        """Search equipment by name or description.
+    async def search(
+        self, query_str: str, include_deleted: bool = False
+    ) -> List[Equipment]:
+        """Search for equipment by name, description, barcode, or serial number.
 
         Args:
-            query: Search query string
+            query_str: Search query string
+            include_deleted: Whether to include deleted equipment in search results
 
         Returns:
             List of matching equipment
         """
-        search_query = select(Equipment).where(
-            and_(
-                or_(
-                    Equipment.name.ilike(f"%{query}%"),
-                    Equipment.description.ilike(f"%{query}%")
-                ),
-                Equipment.deleted_at.is_(None)
+        query = select(Equipment).where(
+            or_(
+                Equipment.name.ilike(f'%{query_str}%'),
+                Equipment.description.ilike(f'%{query_str}%'),
+                Equipment.barcode.ilike(f'%{query_str}%'),
+                Equipment.serial_number.ilike(f'%{query_str}%'),
             )
         )
-        result = await self.session.execute(search_query)
+
+        if not include_deleted:
+            query = query.where(Equipment.deleted_at.is_(None))
+
+        result = await self.session.execute(query)
         return list(result.scalars().all())
 
     async def check_availability(
@@ -245,11 +246,13 @@ class EquipmentRepository(BaseRepository[Equipment]):
         query = select(Booking).where(
             and_(
                 Booking.equipment_id == equipment_id,
-                Booking.booking_status.in_([
-                    BookingStatus.PENDING,
-                    BookingStatus.CONFIRMED,
-                    BookingStatus.ACTIVE,
-                ]),
+                Booking.booking_status.in_(
+                    [
+                        BookingStatus.PENDING,
+                        BookingStatus.CONFIRMED,
+                        BookingStatus.ACTIVE,
+                    ]
+                ),
                 or_(
                     and_(
                         Booking.start_date < end_date,
@@ -282,3 +285,28 @@ class EquipmentRepository(BaseRepository[Equipment]):
             select(Equipment).where(Equipment.status == status)
         )
         return list(result.scalars().all())
+
+    async def get(
+        self, id: Union[int, UUID], include_deleted: bool = False
+    ) -> Optional[Equipment]:
+        """Get equipment by ID.
+
+        Args:
+            id: Equipment ID
+            include_deleted: Whether to include deleted equipment
+
+        Returns:
+            Equipment if found, None otherwise
+        """
+        return await super().get(id=id, include_deleted=include_deleted)
+
+    async def delete(self, id: Union[int, UUID]) -> bool:
+        """Delete equipment by ID.
+
+        Args:
+            id: Equipment ID
+
+        Returns:
+            True if equipment was deleted, False otherwise
+        """
+        return await super().delete(id=id)

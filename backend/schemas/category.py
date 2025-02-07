@@ -1,45 +1,54 @@
-"""Category schemas module.
+"""Category schema module.
 
-This module defines Pydantic models for category-related data structures.
-These schemas are used across the application, including API endpoints,
-services, and internal data validation.
+This module defines Pydantic models for category data validation,
+including request/response schemas for managing equipment categories.
 """
 
+from datetime import datetime
 from typing import Optional
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class CategoryBase(BaseModel):
     """Base category schema."""
 
-    name: str
-    description: str
-    parent_id: Optional[int] = None
+    name: str = Field(..., title='Name', description='Category name')
+    description: str = Field(
+        ..., title='Description', description='Category description'
+    )
 
 
 class CategoryCreate(CategoryBase):
-    """Category creation schema."""
+    """Create category request schema."""
 
-    model_config = ConfigDict(from_attributes=True)
+    pass
 
 
 class CategoryUpdate(BaseModel):
-    """Category update schema."""
+    """Update category request schema."""
 
-    name: Optional[str] = None
-    description: Optional[str] = None
-    parent_id: Optional[int] = None
-
-    model_config = ConfigDict(from_attributes=True)
+    name: Optional[str] = Field(None, title='Name', description='Category name')
+    description: Optional[str] = Field(
+        None, title='Description', description='Category description'
+    )
+    parent_id: Optional[int] = Field(
+        None, title='Parent ID', description='Parent category ID'
+    )
 
 
 class CategoryResponse(CategoryBase):
     """Category response schema."""
 
     id: int
+    parent_id: Optional[int]
+    created_at: datetime
+    updated_at: datetime
 
-    model_config = ConfigDict(from_attributes=True)
+    class Config:
+        """Pydantic configuration."""
+
+        orm_mode = True
 
 
 class CategoryWithEquipmentCount(CategoryResponse):
