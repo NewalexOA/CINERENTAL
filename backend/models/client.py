@@ -11,10 +11,10 @@ from sqlalchemy import String
 from sqlalchemy.dialects.postgresql import ENUM
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from backend.models.base import Base, SoftDeleteMixin, TimestampMixin
+from backend.models import Base, SoftDeleteMixin, TimestampMixin
 
 if TYPE_CHECKING:
-    from backend.models.booking import Booking
+    from backend.models import Booking, Document
 
 
 class ClientStatus(str, Enum):
@@ -50,6 +50,7 @@ class Client(TimestampMixin, SoftDeleteMixin, Base):
         status: Client's status
         notes: Optional internal notes
         bookings: Client's bookings relationship
+        documents: Client's documents relationship
     """
 
     __tablename__ = 'clients'
@@ -74,3 +75,4 @@ class Client(TimestampMixin, SoftDeleteMixin, Base):
 
     # Relationships
     bookings: Mapped[List['Booking']] = relationship(back_populates='client')
+    documents: Mapped[List['Document']] = relationship(back_populates='client')

@@ -15,7 +15,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from backend.models import Base, TimestampMixin
 
 if TYPE_CHECKING:
-    from backend.models.booking import Booking
+    from backend.models import Booking, Client
 
 
 class DocumentStatus(str, Enum):
@@ -65,26 +65,43 @@ class Document(TimestampMixin, Base):
 
     Attributes:
         id: Primary key
+        client_id: Reference to client
         booking_id: Reference to booking
-        document_type: Type of document
-        file_path: Path to document file
+        type: Type of document
         status: Document status
+        title: Document title
+        description: Document description
+        file_path: Path to document file
+        file_name: Original file name
+        file_size: File size in bytes
+        mime_type: File MIME type
         notes: Optional notes
         booking: Booking relationship
+        client: Client relationship
     """
 
     __tablename__ = 'documents'
 
     id: Mapped[int] = mapped_column(primary_key=True)
+    client_id: Mapped[int] = mapped_column(
+        ForeignKey('clients.id', ondelete='RESTRICT'),
+        nullable=False,
+        index=True,
+    )
     booking_id: Mapped[int] = mapped_column(
         ForeignKey('bookings.id', ondelete='CASCADE')
     )
-    document_type: Mapped[DocumentType] = mapped_column(
+    type: Mapped[DocumentType] = mapped_column(
         document_type_enum,
         nullable=False,
         index=True,
     )
+    title: Mapped[str] = mapped_column(String(200), nullable=False)
+    description: Mapped[Optional[str]] = mapped_column(String(1000))
     file_path: Mapped[str] = mapped_column(String(500), nullable=False)
+    file_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    file_size: Mapped[int] = mapped_column(nullable=False)
+    mime_type: Mapped[str] = mapped_column(String(100), nullable=False)
     status: Mapped[DocumentStatus] = mapped_column(
         document_status_enum,
         default=DocumentStatus.DRAFT,
@@ -95,3 +112,4 @@ class Document(TimestampMixin, Base):
 
     # Relationships
     booking: Mapped['Booking'] = relationship(back_populates='documents')
+    client: Mapped['Client'] = relationship(back_populates='documents')
