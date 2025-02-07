@@ -11,6 +11,7 @@ from backend.models.category import Category
 from backend.models.client import Client, ClientStatus
 from backend.models.document import Document, DocumentStatus, DocumentType
 from backend.models.equipment import Equipment, EquipmentStatus
+from backend.models.user import User
 
 __all__ = [
     # Base models and mixins
@@ -23,6 +24,7 @@ __all__ = [
     'Client',
     'Booking',
     'Document',
+    'User',
     # Status and type enums
     'BookingStatus',
     'PaymentStatus',
