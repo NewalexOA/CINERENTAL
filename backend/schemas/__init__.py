@@ -10,7 +10,12 @@ from backend.schemas.booking import (
     BookingUpdate,
     PaymentStatus,
 )
-from backend.schemas.category import CategoryCreate, CategoryResponse, CategoryUpdate
+from backend.schemas.category import (
+    CategoryCreate,
+    CategoryResponse,
+    CategoryUpdate,
+    CategoryWithEquipmentCount,
+)
 from backend.schemas.client import (
     ClientCreate,
     ClientResponse,
@@ -40,6 +45,7 @@ __all__ = [
     'CategoryCreate',
     'CategoryResponse',
     'CategoryUpdate',
+    'CategoryWithEquipmentCount',
     'ClientCreate',
     'ClientResponse',
     'ClientStatus',

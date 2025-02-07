@@ -47,7 +47,11 @@ class EquipmentBase(BaseModel):
 class EquipmentCreate(EquipmentBase):
     """Create equipment request schema."""
 
-    pass
+    barcode: str = Field(..., title='Barcode', description='Equipment barcode')
+    serial_number: str = Field(
+        ..., title='Serial Number', description='Equipment serial number'
+    )
+    notes: Optional[str] = Field(None, title='Notes', description='Internal notes')
 
 
 class EquipmentUpdate(BaseModel):

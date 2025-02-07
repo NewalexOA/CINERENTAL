@@ -41,7 +41,7 @@ class CategoryRepository(BaseRepository[Category]):
         """
         stmt = select(Category).where(
             Category.name == name,
-            Category.deleted_at.is_(None),  # type: ignore
+            Category.deleted_at.is_(None),
         )
         result = await self.session.execute(stmt)
         return result.scalar_one_or_none()
@@ -57,7 +57,7 @@ class CategoryRepository(BaseRepository[Category]):
         """
         stmt = select(Category).where(
             Category.parent_id == parent_id,
-            Category.deleted_at.is_(None),  # type: ignore
+            Category.deleted_at.is_(None),
         )
         result = await self.session.execute(stmt)
         return list(result.scalars().all())
@@ -70,7 +70,7 @@ class CategoryRepository(BaseRepository[Category]):
         """
         stmt = select(Category).where(
             Category.parent_id.is_(None),
-            Category.deleted_at.is_(None),  # type: ignore
+            Category.deleted_at.is_(None),
         )
         result = await self.session.execute(stmt)
         return list(result.scalars().all())
@@ -125,7 +125,7 @@ class CategoryRepository(BaseRepository[Category]):
             )
         )
         if not include_deleted:
-            stmt = stmt.where(Category.deleted_at.is_(None))  # type: ignore
+            stmt = stmt.where(Category.deleted_at.is_(None))
         result = await self.session.execute(stmt)
         return list(result.scalars().all())
 
