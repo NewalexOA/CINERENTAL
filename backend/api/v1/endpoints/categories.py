@@ -10,8 +10,9 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from backend.api.dependencies import get_db
 from backend.api.v1.decorators import typed_delete, typed_get, typed_post, typed_put
-from backend.core.database import get_db
+from backend.exceptions import BusinessError
 from backend.schemas.category import (
     CategoryCreate,
     CategoryResponse,
@@ -31,13 +32,13 @@ categories_router: APIRouter = APIRouter()
 )
 async def create_category(
     category: CategoryCreate,
-    session: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ) -> CategoryResponse:
     """Create a new category.
 
     Args:
         category: Category data
-        session: Database session
+        db: Database session
 
     Returns:
         Created category
@@ -45,15 +46,15 @@ async def create_category(
     Raises:
         HTTPException: If category with given name already exists
     """
-    service = CategoryService(session)
     try:
+        service = CategoryService(db)
         db_category = await service.create_category(
             name=category.name,
             description=category.description,
-            parent_id=category.parent_id,
+            parent_id=None,  # Parent categories are not supported yet
         )
         return CategoryResponse.model_validate(db_category)
-    except ValueError as e:
+    except BusinessError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e),
@@ -165,8 +166,8 @@ async def update_category(
             parent_id=category.parent_id,
         )
         return CategoryResponse.model_validate(db_category)
-    except ValueError as e:
-        if str(e).endswith('not found'):
+    except BusinessError as e:
+        if 'not found' in str(e).lower():
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=str(e),
@@ -203,7 +204,7 @@ async def delete_category(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f'Category with ID {category_id} not found',
             )
-    except ValueError as e:
+    except BusinessError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e),
