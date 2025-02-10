@@ -1,101 +1,115 @@
-# Architecture Documentation
+# Архитектурная документация CINERENTAL
 
-## 1. Application Layers
+## 1. Слои приложения
 
-### Presentation Layer (UI)
-- Web interface using Bootstrap
-- Barcode scanner integration components
-- Data input forms and views
+### Слой представления (UI)
+- Веб-интерфейс на основе Bootstrap
+- Компоненты для работы со сканером штрих-кодов
+- Формы ввода данных и представления
 
-### API Layer
-FastAPI is chosen over Django for the following reasons:
-- Asynchronous processing (important for fast scanner response)
-- Automatic data validation
-- Automatic OpenAPI documentation generation
-- Higher performance characteristics
+### API слой
+В качестве основного фреймворка выбран FastAPI по следующим причинам:
+- Асинхронная обработка запросов (важно для быстрого отклика при сканировании)
+- Автоматическая валидация данных через Pydantic
+- Автоматическая генерация OpenAPI документации
+- Высокая производительность
 
-### Service Layer (Business Logic)
-Service components:
-- Booking services
-- Equipment services
-- Client services
-- Pricing calculation service
+### Сервисный слой (Бизнес-логика)
+Реализованы следующие сервисы:
+- BookingService (управление бронированиями)
+- EquipmentService (управление оборудованием)
+- ClientService (управление клиентами)
+- CategoryService (управление категориями)
+- DocumentService (управление документами)
 
-### Repository Layer (Data Access)
-- PostgreSQL repositories
-- Redis caching for frequently accessed data
-- File storage abstraction
+### Слой доступа к данным (Repository)
+- Репозитории PostgreSQL с асинхронным доступом через SQLAlchemy
+- Кеширование часто запрашиваемых данных в Redis
+- Абстракция для работы с файловым хранилищем
 
-## 2. Project Structure
+## 2. Структура проекта
 ```
 cinerental/
 ├── backend/
-│   ├── api/              # FastAPI routes
-│   ├── services/         # Business logic
-│   ├── repositories/     # Database operations
-│   ├── models/          # Pydantic models and ORM models
-│   └── core/            # Configuration, utilities
+│   ├── api/              # FastAPI маршруты и эндпоинты
+│   ├── services/         # Бизнес-логика
+│   ├── repositories/     # Операции с базой данных
+│   ├── models/          # SQLAlchemy и Pydantic модели
+│   └── core/            # Конфигурация и утилиты
 ├── frontend/
-│   ├── static/          # CSS, JS, images
-│   └── templates/       # HTML templates
-├── tests/               # Tests
-└── docker/             # Docker configuration
+│   ├── static/          # CSS, JS, изображения
+│   └── templates/       # HTML шаблоны
+├── tests/               # Тесты
+│   ├── unit/           # Модульные тесты
+│   └── integration/    # Интеграционные тесты
+└── docker/             # Docker конфигурация
 ```
 
-## 3. Design Patterns
+## 3. Используемые паттерны
 
 ### Repository Pattern
-- Abstracts database operations
-- Provides clean interface for data access
-- Allows easy switching between different data sources
+- Абстрагирует операции с базой данных
+- Предоставляет чистый интерфейс для доступа к данным
+- Реализован через базовый класс BaseRepository
 
 ### Service Layer Pattern
-- Encapsulates business logic
-- Coordinates between different repositories
-- Handles transaction management
+- Инкапсулирует бизнес-логику
+- Координирует работу между различными репозиториями
+- Управляет транзакциями
+- Реализован через специализированные сервисные классы
 
-### Factory Pattern
-- Used for object creation
-- Provides flexibility in object instantiation
-- Helps maintain single responsibility principle
+## 4. Интеграция сканера штрих-кодов
+- Специальный API endpoint для обработки сканированных кодов
+- Поддержка режима HID (эмуляция клавиатуры)
+- Быстрый поиск по штрих-коду через индексированные поля
 
-### Strategy Pattern
-- Implements different pricing calculation strategies
-- Allows easy addition of new pricing rules
-- Maintains clean separation of pricing logic
+## 5. Управление данными
+- Миграции базы данных через Alembic
+- ORM: SQLAlchemy для асинхронных операций с базой данных
+- Кеширование в Redis для оптимизации производительности
+- Оптимизированные запросы с использованием индексов
 
-### Observer Pattern
-- Handles equipment status updates
-- Maintains real-time synchronization
-- Manages state changes notifications
+## 6. Масштабируемость
+### Docker контейнеризация
+Отдельные контейнеры для:
+- Backend приложения
+- Frontend статических файлов
+- PostgreSQL базы данных
+- Redis кеша
 
-## 4. Barcode Scanner Integration
-- Dedicated service for scanner input processing
-- WebSocket implementation for real-time status updates
-- HID (keyboard emulation) mode support
+### Требования к производительности
+- Время отклика при сканировании < 1 секунды
+- Оптимизация базы данных для работы с до 10,000 записей
+- Индексированные поля для быстрого поиска по штрих-кодам
 
-## 5. Data Management
-- Database migrations using Alembic
-- ORM: SQLAlchemy for database operations
-- Redis caching for frequently accessed data
-- Optimized queries with proper indexing
+## 7. Безопасность
+- Базовая аутентификация для MVP версии
+- Хеширование паролей
+- Валидация входных данных через Pydantic
+- Настроенная CORS конфигурация
 
-## 6. Scalability
-### Docker Containerization
-Separate containers for:
-- Backend application
-- Frontend static files
-- PostgreSQL database
-- Redis cache
+## 8. Тестирование
+### Модульные тесты
+- Тестирование сервисов
+- Тестирование репозиториев
+- Изолированные тесты бизнес-логики
 
-### Performance Considerations
-- Response time for scanner operations < 1 second
-- Database optimization for up to 10,000 records
-- Indexed fields for fast barcode lookups
+### Интеграционные тесты
+- Тестирование API endpoints
+- Тестирование бизнес-процессов
+- Тестирование граничных случаев
 
-## 7. Security
-- Basic authentication for MVP
-- Password hashing
-- Input validation and sanitization
-- CORS configuration
-- Rate limiting for API endpoints
+### Инфраструктура тестирования
+- Фикстуры для настройки тестового окружения
+- Отдельная тестовая база данных
+- Автоматизированное выполнение через Docker
+
+## 9. Мониторинг и логирование
+- Структурированное логирование
+- Отслеживание ошибок и исключений
+- Мониторинг производительности API
+
+## 10. Развертывание
+- Многостадийные Docker сборки
+- Отдельные конфигурации для разработки и продакшена
+- Скрипты для автоматизации развертывания
