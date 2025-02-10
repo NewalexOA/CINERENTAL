@@ -10,8 +10,8 @@ from typing import List, Optional
 from sqlalchemy import and_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.models.booking import Booking, BookingStatus, PaymentStatus
-from backend.repositories.base import BaseRepository
+from backend.models import Booking, BookingStatus, PaymentStatus
+from backend.repositories import BaseRepository
 
 
 class BookingRepository(BaseRepository[Booking]):

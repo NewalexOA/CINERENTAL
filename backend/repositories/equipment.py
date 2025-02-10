@@ -12,9 +12,8 @@ from sqlalchemy import Column, ScalarSelect, and_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import Select
 
-from backend.models.booking import Booking, BookingStatus
-from backend.models.equipment import Equipment, EquipmentStatus
-from backend.repositories.base import BaseRepository
+from backend.models import Booking, BookingStatus, Equipment, EquipmentStatus
+from backend.repositories import BaseRepository
 
 
 class HasBookingStatus(Protocol):
@@ -42,9 +41,15 @@ class EquipmentRepository(BaseRepository[Equipment]):
 
         Returns:
             Equipment if found, None otherwise
+
+        Note:
+            Search is case-sensitive using regex for exact match
         """
         query = select(Equipment).where(
-            and_(Equipment.barcode == barcode, Equipment.deleted_at.is_(None))
+            and_(
+                Equipment.barcode.op('~')(f'^{barcode}$'),
+                Equipment.deleted_at.is_(None),
+            )
         )
         result = await self.session.execute(query)
         return result.scalar_one_or_none()

@@ -11,9 +11,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import func
 from sqlalchemy.sql.expression import CTE, or_
 
-from backend.models.category import Category
-from backend.models.equipment import Equipment
-from backend.repositories.base import BaseRepository
+from backend.models import Category, Equipment
+from backend.repositories import BaseRepository
 
 
 class CategoryRepository(BaseRepository[Category]):

@@ -12,8 +12,8 @@ from sqlalchemy import and_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import Select, func
 
-from backend.models.document import Document, DocumentStatus, DocumentType
-from backend.repositories.base import BaseRepository
+from backend.models import Document, DocumentStatus, DocumentType
+from backend.repositories import BaseRepository
 
 
 class DocumentRepository(BaseRepository[Document]):
