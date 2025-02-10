@@ -10,8 +10,7 @@ from typing import Dict, List, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.exceptions import NotFoundError, StatusTransitionError
-from backend.models.booking import Booking
-from backend.models.document import Document, DocumentStatus, DocumentType
+from backend.models import Booking, Document, DocumentStatus, DocumentType
 from backend.repositories import DocumentRepository
 
 

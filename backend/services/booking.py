@@ -18,8 +18,7 @@ from backend.exceptions import (
     StatusTransitionError,
     ValidationError,
 )
-from backend.models.booking import Booking, BookingStatus, PaymentStatus
-from backend.models.equipment import EquipmentStatus
+from backend.models import Booking, BookingStatus, EquipmentStatus, PaymentStatus
 from backend.repositories import BookingRepository, EquipmentRepository
 
 # Constants for booking validation
@@ -240,6 +239,9 @@ class BookingService:
             booking.paid_amount = Decimal(str(paid_amount))
         if notes is not None:
             booking.notes = notes
+
+        # Ensure equipment_id is preserved
+        booking.equipment_id = booking.equipment_id
 
         return await self.repository.update(booking)
 

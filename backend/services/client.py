@@ -10,8 +10,7 @@ from typing import List, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.exceptions import ConflictError, NotFoundError, StatusTransitionError
-from backend.models.booking import Booking
-from backend.models.client import Client, ClientStatus
+from backend.models import Booking, Client, ClientStatus
 from backend.repositories import BookingRepository, ClientRepository
 
 

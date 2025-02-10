@@ -9,9 +9,9 @@ from typing import List, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.exceptions import ConflictError, NotFoundError, ValidationError
-from backend.models.category import Category
+from backend.models import Category
 from backend.repositories import CategoryRepository
-from backend.schemas.category import CategoryWithEquipmentCount
+from backend.schemas import CategoryWithEquipmentCount
 
 
 class CategoryService:
