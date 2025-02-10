@@ -10,7 +10,7 @@ from typing import Optional
 
 from pydantic import BaseModel, Field
 
-from backend.models.booking import BookingStatus, PaymentStatus
+from backend.models import BookingStatus, PaymentStatus
 
 
 class BookingBase(BaseModel):

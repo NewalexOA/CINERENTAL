@@ -13,10 +13,10 @@ from pydantic import BaseModel, ConfigDict, Field
 class CategoryBase(BaseModel):
     """Base category schema."""
 
-    name: str = Field(..., title='Name', description='Category name')
-    description: Optional[str] = Field(
-        None, title='Description', description='Category description'
-    )
+    name: str = Field(..., description='Category name')
+    description: Optional[str] = Field(None, description='Category description')
+
+    model_config = ConfigDict(from_attributes=True)
 
 
 class CategoryCreate(CategoryBase):
@@ -28,32 +28,29 @@ class CategoryCreate(CategoryBase):
 class CategoryUpdate(BaseModel):
     """Update category request schema."""
 
-    name: Optional[str] = Field(None, title='Name', description='Category name')
-    description: Optional[str] = Field(
-        None, title='Description', description='Category description'
-    )
-    parent_id: Optional[int] = Field(
-        None, title='Parent ID', description='Parent category ID'
-    )
+    name: Optional[str] = Field(None, description='Category name')
+    description: Optional[str] = Field(None, description='Category description')
+    parent_id: Optional[int] = Field(None, description='Parent category ID')
+
+    model_config = ConfigDict(from_attributes=True)
 
 
 class CategoryResponse(CategoryBase):
     """Category response schema."""
 
-    id: int
-    parent_id: Optional[int]
-    created_at: datetime
-    updated_at: datetime
+    id: int = Field(..., description='Category ID')
+    parent_id: Optional[int] = Field(None, description='Parent category ID')
+    created_at: datetime = Field(..., description='Creation timestamp')
+    updated_at: datetime = Field(..., description='Last update timestamp')
 
-    class Config:
-        """Pydantic configuration."""
-
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class CategoryWithEquipmentCount(CategoryResponse):
     """Category with equipment count schema."""
 
-    equipment_count: int
+    equipment_count: int = Field(
+        ..., description='Number of equipment items in this category'
+    )
 
     model_config = ConfigDict(from_attributes=True)
