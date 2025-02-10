@@ -1,4 +1,5 @@
 """Category API integration tests."""
+
 from typing import Any, Dict, List, TypedDict, cast
 
 from httpx import AsyncClient

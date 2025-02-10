@@ -1,29 +1,34 @@
 """Unit tests for client service."""
 
 from datetime import datetime, timedelta, timezone
+from decimal import Decimal
 
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.models.booking import Booking, BookingStatus
-from backend.models.category import Category
-from backend.models.client import Client, ClientStatus
-from backend.models.equipment import Equipment
-from backend.services.booking import BookingService
-from backend.services.category import CategoryService
-from backend.services.client import ClientService
-from backend.services.equipment import EquipmentService
+from backend.exceptions import ConflictError, NotFoundError
+from backend.models import (
+    Booking,
+    BookingStatus,
+    Category,
+    Client,
+    ClientStatus,
+    Equipment,
+    EquipmentStatus,
+)
+from backend.services import BookingService, CategoryService, ClientService
+from tests.conftest import async_test
 
 
 class TestClientService:
     """Test cases for ClientService."""
 
-    @pytest.fixture  # type: ignore[misc]
+    @pytest.fixture
     async def service(self, db_session: AsyncSession) -> ClientService:
         """Create ClientService instance."""
         return ClientService(db_session)
 
-    @pytest.fixture  # type: ignore[misc]
+    @pytest.fixture
     async def client(self, service: ClientService) -> Client:
         """Create test client."""
         return await service.create_client(
@@ -37,7 +42,7 @@ class TestClientService:
             notes='Test client',
         )
 
-    @pytest.fixture  # type: ignore[misc]
+    @pytest.fixture
     async def category(self, db_session: AsyncSession) -> Category:
         """Create test category."""
         category_service = CategoryService(db_session)
@@ -46,23 +51,35 @@ class TestClientService:
             description='Test Description',
         )
 
-    @pytest.fixture  # type: ignore[misc]
+    @pytest.fixture
     async def equipment(
         self, db_session: AsyncSession, category: Category
     ) -> Equipment:
-        """Create test equipment."""
-        equipment_service = EquipmentService(db_session)
-        return await equipment_service.create_equipment(
+        """Create test equipment.
+
+        Args:
+            db_session: Database session
+            category: Test category
+
+        Returns:
+            Created equipment
+        """
+        equipment = Equipment(
             name='Test Equipment',
             category_id=category.id,
             description='Test Description',
             serial_number='TEST001',
             barcode='TEST001',
-            daily_rate=100.0,
-            replacement_cost=1000.0,
+            daily_rate=Decimal('100.00'),
+            replacement_cost=Decimal('1000.00'),
+            status=EquipmentStatus.AVAILABLE,
         )
+        db_session.add(equipment)
+        await db_session.commit()
+        await db_session.refresh(equipment)
+        return equipment
 
-    @pytest.fixture  # type: ignore[misc]
+    @pytest.fixture
     async def booking(
         self,
         db_session: AsyncSession,
@@ -86,6 +103,7 @@ class TestClientService:
             notes='Test booking',
         )
 
+    @async_test
     async def test_create_client(self, service: ClientService) -> None:
         """Test client creation."""
         # Create client
@@ -112,7 +130,7 @@ class TestClientService:
         assert client.status == ClientStatus.ACTIVE
 
         # Try to create client with existing email
-        with pytest.raises(ValueError, match='Client with email .* already exists'):
+        with pytest.raises(ConflictError, match='Client with email .* already exists'):
             await service.create_client(
                 first_name='Jane',
                 last_name='Smith',
@@ -123,7 +141,7 @@ class TestClientService:
             )
 
         # Try to create client with existing phone
-        with pytest.raises(ValueError, match='Client with phone .* already exists'):
+        with pytest.raises(ConflictError, match='Client with phone .* already exists'):
             await service.create_client(
                 first_name='Jane',
                 last_name='Smith',
@@ -155,6 +173,7 @@ class TestClientService:
         result = await service.get_client(999)
         assert result is None
 
+    @async_test
     async def test_update_client(self, service: ClientService, client: Client) -> None:
         """Test updating a client."""
         # Update client details
@@ -192,23 +211,24 @@ class TestClientService:
             address='888 Other St',
         )
 
-        with pytest.raises(ValueError, match='Client with email .* already exists'):
+        with pytest.raises(ConflictError, match='Client with email .* already exists'):
             await service.update_client(
                 other_client.id,
                 email='john.updated@example.com',  # Email of first client
             )
 
         # Try to update to existing phone
-        with pytest.raises(ValueError, match='Client with phone .* already exists'):
+        with pytest.raises(ConflictError, match='Client with phone .* already exists'):
             await service.update_client(
                 other_client.id,
                 phone='+9999999999',  # Phone of first client
             )
 
         # Test updating non-existent client
-        with pytest.raises(ValueError, match='Client with ID 999 not found'):
+        with pytest.raises(NotFoundError, match='Client with ID 999 not found'):
             await service.update_client(999, first_name='Non-existent')
 
+    @async_test
     async def test_change_status(self, service: ClientService, client: Client) -> None:
         """Test changing client status."""
         # Change status to BLOCKED
@@ -222,7 +242,7 @@ class TestClientService:
         assert updated.status == ClientStatus.ACTIVE
 
         # Test changing status of non-existent client
-        with pytest.raises(ValueError, match='Client with ID 999 not found'):
+        with pytest.raises(NotFoundError, match='Client with ID 999 not found'):
             await service.change_status(999, ClientStatus.BLOCKED)
 
     async def test_get_clients(self, service: ClientService, client: Client) -> None:

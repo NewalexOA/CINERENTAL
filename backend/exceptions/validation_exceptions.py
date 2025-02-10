@@ -6,7 +6,7 @@ This module defines exceptions related to data validation.
 from datetime import datetime
 from typing import Any, Optional
 
-from backend.exceptions.exceptions_base import BusinessError
+from backend.exceptions import BusinessError
 
 
 class ValidationError(BusinessError):

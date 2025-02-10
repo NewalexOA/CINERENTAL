@@ -9,6 +9,7 @@ from typing import Any, Dict
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from backend.exceptions import BusinessError
 from backend.models.booking import Booking, BookingStatus, PaymentStatus
 from backend.models.client import Client
 from backend.models.document import DocumentStatus, DocumentType
@@ -18,7 +19,6 @@ from backend.services.category import CategoryService
 from backend.services.client import ClientService
 from backend.services.document import DocumentService
 from backend.services.equipment import EquipmentService
-from backend.exceptions import BusinessError
 from tests.conftest import async_test
 
 
@@ -566,29 +566,25 @@ class TestEquipmentBusinessRules:
 
         # Can be put into maintenance
         equipment = await equipment_service.change_status(
-            test_equipment.id,
-            EquipmentStatus.MAINTENANCE
+            test_equipment.id, EquipmentStatus.MAINTENANCE
         )
         assert equipment.status == EquipmentStatus.MAINTENANCE
 
         # Can be marked as broken
         equipment = await equipment_service.change_status(
-            equipment.id,
-            EquipmentStatus.BROKEN
+            equipment.id, EquipmentStatus.BROKEN
         )
         assert equipment.status == EquipmentStatus.BROKEN
 
         # Can be fixed and returned to maintenance
         equipment = await equipment_service.change_status(
-            equipment.id,
-            EquipmentStatus.MAINTENANCE
+            equipment.id, EquipmentStatus.MAINTENANCE
         )
         assert equipment.status == EquipmentStatus.MAINTENANCE
 
         # Can be returned to available
         equipment = await equipment_service.change_status(
-            equipment.id,
-            EquipmentStatus.AVAILABLE
+            equipment.id, EquipmentStatus.AVAILABLE
         )
         assert equipment.status == EquipmentStatus.AVAILABLE
 
@@ -605,28 +601,23 @@ class TestEquipmentBusinessRules:
         )
 
         # Cannot retire equipment with active booking
-        error_msg = "Cannot retire equipment with active bookings"
+        error_msg = 'Cannot retire equipment with active bookings'
         with pytest.raises(BusinessError, match=error_msg):
-            await equipment_service.change_status(
-                equipment.id,
-                EquipmentStatus.RETIRED
-            )
+            await equipment_service.change_status(equipment.id, EquipmentStatus.RETIRED)
 
         # Cancel booking
         await booking_service.change_status(booking.id, BookingStatus.CANCELLED)
 
         # Now can retire equipment
         equipment = await equipment_service.change_status(
-            equipment.id,
-            EquipmentStatus.RETIRED
+            equipment.id, EquipmentStatus.RETIRED
         )
         assert equipment.status == EquipmentStatus.RETIRED
 
         # Cannot change status of retired equipment
-        with pytest.raises(BusinessError, match="Cannot transition from"):
+        with pytest.raises(BusinessError, match='Cannot transition from'):
             await equipment_service.change_status(
-                equipment.id,
-                EquipmentStatus.AVAILABLE
+                equipment.id, EquipmentStatus.AVAILABLE
             )
 
     @async_test
@@ -658,7 +649,7 @@ class TestEquipmentBusinessRules:
         )
 
         # Try to create overlapping booking
-        with pytest.raises(BusinessError, match="not available"):
+        with pytest.raises(BusinessError, match='not available'):
             await booking_service.create_booking(
                 client_id=test_client.id,
                 equipment_id=test_equipment.id,
@@ -678,8 +669,7 @@ class TestEquipmentBusinessRules:
 
         # Equipment in maintenance is not available
         await equipment_service.change_status(
-            test_equipment.id,
-            EquipmentStatus.MAINTENANCE
+            test_equipment.id, EquipmentStatus.MAINTENANCE
         )
         is_available = await equipment_service.check_availability(
             test_equipment.id,
@@ -699,38 +689,36 @@ class TestEquipmentBusinessRules:
         equipment_service = services['equipment']
 
         # Cannot update with negative rates
-        with pytest.raises(BusinessError, match="must be positive"):
+        with pytest.raises(BusinessError, match='must be positive'):
             await equipment_service.update_equipment(
-                test_equipment.id,
-                daily_rate=-100.00
+                test_equipment.id, daily_rate=-100.00
             )
 
         # Cannot update with negative replacement cost
-        with pytest.raises(BusinessError, match="must be positive"):
+        with pytest.raises(BusinessError, match='must be positive'):
             await equipment_service.update_equipment(
-                test_equipment.id,
-                replacement_cost=-1000.00
+                test_equipment.id, replacement_cost=-1000.00
             )
 
         # Cannot create duplicate barcode
-        with pytest.raises(BusinessError, match="already exists"):
+        with pytest.raises(BusinessError, match='already exists'):
             await equipment_service.create_equipment(
-                name="Another Equipment",
-                description="Test Description",
+                name='Another Equipment',
+                description='Test Description',
                 category_id=test_equipment.category_id,
                 barcode=test_equipment.barcode,  # Duplicate
-                serial_number="UNIQUE001",
+                serial_number='UNIQUE001',
                 daily_rate=100.00,
                 replacement_cost=1000.00,
             )
 
         # Cannot create duplicate serial number
-        with pytest.raises(BusinessError, match="already exists"):
+        with pytest.raises(BusinessError, match='already exists'):
             await equipment_service.create_equipment(
-                name="Another Equipment",
-                description="Test Description",
+                name='Another Equipment',
+                description='Test Description',
                 category_id=test_equipment.category_id,
-                barcode="UNIQUE001",
+                barcode='UNIQUE001',
                 serial_number=test_equipment.serial_number,  # Duplicate
                 daily_rate=100.00,
                 replacement_cost=1000.00,

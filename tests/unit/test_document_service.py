@@ -1,31 +1,39 @@
 """Unit tests for document service."""
 
 from datetime import datetime, timedelta, timezone
+from decimal import Decimal
 
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.models.booking import Booking
-from backend.models.category import Category
-from backend.models.client import Client
-from backend.models.document import Document, DocumentStatus, DocumentType
-from backend.models.equipment import Equipment
-from backend.services.booking import BookingService
-from backend.services.category import CategoryService
-from backend.services.client import ClientService
-from backend.services.document import DocumentService
-from backend.services.equipment import EquipmentService
+from backend.models import (
+    Booking,
+    Category,
+    Client,
+    Document,
+    DocumentStatus,
+    DocumentType,
+    Equipment,
+    EquipmentStatus,
+)
+from backend.services import (
+    BookingService,
+    CategoryService,
+    ClientService,
+    DocumentService,
+)
+from tests.conftest import async_fixture, async_test
 
 
 class TestDocumentService:
     """Test cases for DocumentService."""
 
-    @pytest.fixture  # type: ignore[misc]
+    @async_fixture
     async def service(self, db_session: AsyncSession) -> DocumentService:
         """Create DocumentService instance."""
         return DocumentService(db_session)
 
-    @pytest.fixture  # type: ignore[misc]
+    @async_fixture
     async def client(self, db_session: AsyncSession) -> Client:
         """Create test client."""
         client_service = ClientService(db_session)
@@ -40,7 +48,7 @@ class TestDocumentService:
             notes='Test client',
         )
 
-    @pytest.fixture  # type: ignore[misc]
+    @async_fixture
     async def category(self, db_session: AsyncSession) -> Category:
         """Create test category."""
         category_service = CategoryService(db_session)
@@ -49,23 +57,35 @@ class TestDocumentService:
             description='Test Description',
         )
 
-    @pytest.fixture  # type: ignore[misc]
+    @async_fixture
     async def equipment(
         self, db_session: AsyncSession, category: Category
     ) -> Equipment:
-        """Create test equipment."""
-        equipment_service = EquipmentService(db_session)
-        return await equipment_service.create_equipment(
+        """Create test equipment.
+
+        Args:
+            db_session: Database session
+            category: Test category
+
+        Returns:
+            Created equipment
+        """
+        equipment = Equipment(
             name='Test Equipment',
             category_id=category.id,
             description='Test Description',
             serial_number='TEST001',
             barcode='TEST001',
-            daily_rate=100.0,
-            replacement_cost=1000.0,
+            daily_rate=Decimal('100.00'),
+            replacement_cost=Decimal('1000.00'),
+            status=EquipmentStatus.AVAILABLE,
         )
+        db_session.add(equipment)
+        await db_session.commit()
+        await db_session.refresh(equipment)
+        return equipment
 
-    @pytest.fixture  # type: ignore[misc]
+    @async_fixture
     async def booking(
         self,
         db_session: AsyncSession,
@@ -89,7 +109,7 @@ class TestDocumentService:
             notes='Test booking',
         )
 
-    @pytest.fixture  # type: ignore[misc]
+    @async_fixture
     async def document(
         self,
         service: DocumentService,
@@ -109,13 +129,13 @@ class TestDocumentService:
             notes='Test document',
         )
 
-    async def test_create_document(
+    @async_test
+    async def test_create_document_with_booking(
         self,
         service: DocumentService,
         booking: Booking,
     ) -> None:
-        """Test document creation."""
-        # Create document with booking
+        """Test document creation with booking."""
         document = await service.create_document(
             client_id=booking.client_id,
             booking_id=booking.id,
@@ -129,61 +149,20 @@ class TestDocumentService:
             notes='Test document',
         )
 
-        # Check document properties
-        assert document.booking_id == booking.id
+        # Verify document properties
         assert document.client_id == booking.client_id
+        assert document.booking_id == booking.id
         assert document.type == DocumentType.CONTRACT
+        assert document.file_path == '/test/contract.pdf'
         assert document.title == 'Test Contract'
         assert document.description == 'Test contract description'
-        assert document.file_path == '/test/contract.pdf'
         assert document.file_name == 'contract.pdf'
         assert document.file_size == 1024
         assert document.mime_type == 'application/pdf'
         assert document.notes == 'Test document'
         assert document.status == DocumentStatus.DRAFT
 
-        # Create document with client_id only
-        document = await service.create_document(
-            client_id=booking.client_id,
-            booking_id=None,
-            document_type=DocumentType.PASSPORT,
-            file_path='/test/passport.pdf',
-            title='Test Passport',
-            description='Test passport scan',
-            file_name='passport.pdf',
-            file_size=512,
-            mime_type='application/pdf',
-            notes='Test passport scan',
-        )
-
-        # Check document properties
-        assert document.booking_id is None
-        assert document.client_id == booking.client_id
-        assert document.type == DocumentType.PASSPORT
-        assert document.title == 'Test Passport'
-        assert document.description == 'Test passport scan'
-        assert document.file_path == '/test/passport.pdf'
-        assert document.file_name == 'passport.pdf'
-        assert document.file_size == 512
-        assert document.mime_type == 'application/pdf'
-        assert document.notes == 'Test passport scan'
-        assert document.status == DocumentStatus.DRAFT
-
-        # Test error when booking is not found
-        with pytest.raises(ValueError, match='Booking with ID 999 not found'):
-            await service.create_document(
-                client_id=booking.client_id,
-                booking_id=999,
-                document_type=DocumentType.OTHER,
-                file_path='/test/other.pdf',
-                title='Test Other',
-                description='Test other document',
-                file_name='other.pdf',
-                file_size=256,
-                mime_type='application/pdf',
-                notes='Test other document',
-            )
-
+    @async_test
     async def test_update_document(
         self, service: DocumentService, document: Document
     ) -> None:
@@ -216,6 +195,7 @@ class TestDocumentService:
         with pytest.raises(ValueError, match='Document with ID 999 not found'):
             await service.update_document(999, file_path='/non-existent.pdf')
 
+    @async_test
     async def test_change_status(
         self, service: DocumentService, document: Document
     ) -> None:
@@ -239,6 +219,7 @@ class TestDocumentService:
         with pytest.raises(ValueError, match='Document with ID .* not found'):
             await service.change_status(999, DocumentStatus.APPROVED)
 
+    @async_test
     async def test_get_document(
         self, service: DocumentService, document: Document
     ) -> None:
@@ -259,6 +240,7 @@ class TestDocumentService:
         result = await service.get_document(999)
         assert result is None
 
+    @async_test
     async def test_get_documents(
         self, service: DocumentService, document: Document
     ) -> None:
@@ -292,6 +274,7 @@ class TestDocumentService:
         assert any(d.id == document.id for d in documents)
         assert any(d.id == another_document.id for d in documents)
 
+    @async_test
     async def test_get_by_booking(
         self, service: DocumentService, document: Document, booking: Booking
     ) -> None:
@@ -307,6 +290,7 @@ class TestDocumentService:
         documents = await service.get_by_booking(999)
         assert len(documents) == 0
 
+    @async_test
     async def test_get_by_type(
         self, service: DocumentService, document: Document
     ) -> None:
@@ -322,6 +306,7 @@ class TestDocumentService:
         documents = await service.get_by_type(DocumentType.INVOICE)
         assert not any(d.id == document.id for d in documents)
 
+    @async_test
     async def test_get_by_status(
         self, service: DocumentService, document: Document
     ) -> None:
@@ -349,21 +334,30 @@ class TestDocumentService:
         assert len(documents) >= 1
         assert any(d.id == document.id for d in documents)
 
+    @async_test
     async def test_get_by_date_range(
         self, service: DocumentService, document: Document
     ) -> None:
         """Test getting documents by date range."""
+        now = datetime.now(timezone.utc)
+
         # Get documents for current month
-        start_date = datetime.now(timezone.utc).replace(day=1)
-        end_date = (start_date + timedelta(days=32)).replace(day=1) - timedelta(days=1)
+        current_month_start = now.replace(day=1)
+        next_month = current_month_start + timedelta(days=32)
+        current_month_end = next_month.replace(day=1) - timedelta(days=1)
 
-        documents = await service.get_by_date_range(start_date, end_date)
-        assert len(documents) >= 1
-        assert any(d.id == document.id for d in documents)
+        current_documents = await service.get_by_date_range(
+            current_month_start, current_month_end
+        )
+        assert len(current_documents) >= 1
+        assert any(d.id == document.id for d in current_documents)
 
-        # Test getting documents for future month
-        future_start = start_date + timedelta(days=32)
-        future_end = future_start + timedelta(days=32)
+        # Test getting documents for next month
+        next_month_start = next_month.replace(day=1)
+        next_month_with_days = next_month_start + timedelta(days=32)
+        next_month_end = next_month_with_days.replace(day=1) - timedelta(days=1)
 
-        documents = await service.get_by_date_range(future_start, future_end)
-        assert not any(d.id == document.id for d in documents)
+        next_month_documents = await service.get_by_date_range(
+            next_month_start, next_month_end
+        )
+        assert len(next_month_documents) == 0

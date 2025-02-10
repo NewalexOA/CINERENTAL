@@ -5,7 +5,7 @@ This module defines exceptions related to resource operations.
 
 from typing import Any, Optional
 
-from backend.exceptions.exceptions_base import BusinessError
+from backend.exceptions import BusinessError
 
 
 class NotFoundError(BusinessError):

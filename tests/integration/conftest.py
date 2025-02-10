@@ -32,15 +32,13 @@ T = TypeVar('T')
 @overload
 def async_fixture(
     func: Callable[P, AsyncGenerator[T, None]],
-) -> Callable[P, AsyncGenerator[T, None]]:
-    ...
+) -> Callable[P, AsyncGenerator[T, None]]: ...
 
 
 @overload
 def async_fixture(
     func: Callable[P, Coroutine[None, None, T]],
-) -> Callable[P, Coroutine[None, None, T]]:
-    ...
+) -> Callable[P, Coroutine[None, None, T]]: ...
 
 
 def async_fixture(
@@ -57,6 +55,7 @@ def async_fixture(
 
     Returns:
         Decorated fixture function with preserved signature and metadata
+
     """
     fixture = pytest_asyncio.fixture(func)
 
@@ -70,6 +69,7 @@ def async_fixture(
 @async_fixture
 async def test_category(db_session: AsyncSession) -> AsyncGenerator[Category, None]:
     """Create test category."""
+
     async def create_category():
         category_service = CategoryService(db_session)
         category = await category_service.create_category(
