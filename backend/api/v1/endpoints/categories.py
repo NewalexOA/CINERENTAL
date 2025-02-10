@@ -10,16 +10,16 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.api.dependencies import get_db
 from backend.api.v1.decorators import typed_delete, typed_get, typed_post, typed_put
+from backend.core.database import get_db
 from backend.exceptions import BusinessError
-from backend.schemas.category import (
+from backend.schemas import (
     CategoryCreate,
     CategoryResponse,
     CategoryUpdate,
     CategoryWithEquipmentCount,
 )
-from backend.services.category import CategoryService
+from backend.services import CategoryService
 
 categories_router: APIRouter = APIRouter()
 
@@ -50,8 +50,8 @@ async def create_category(
         service = CategoryService(db)
         db_category = await service.create_category(
             name=category.name,
-            description=category.description,
-            parent_id=None,  # Parent categories are not supported yet
+            description=category.description or '',
+            parent_id=None,
         )
         return CategoryResponse.model_validate(db_category)
     except BusinessError as e:

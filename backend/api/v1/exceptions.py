@@ -1,5 +1,7 @@
 """Exception handlers for FastAPI."""
 
+from typing import Any
+
 from fastapi import Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
@@ -41,12 +43,23 @@ async def business_exception_handler(
     elif isinstance(exc, DocumentError):
         status_code = status.HTTP_400_BAD_REQUEST
 
+    content: dict[str, Any] = {
+        'detail': str(exc.message),  # Ensure message is a string
+    }
+
+    if exc.details:
+        # Convert any non-serializable values in details to strings
+        serializable_details = {}
+        for key, value in exc.details.items():
+            if isinstance(value, (str, int, float, bool, type(None))):
+                serializable_details[key] = value
+            else:
+                serializable_details[key] = str(value)
+        content['details'] = serializable_details
+
     return JSONResponse(
         status_code=status_code,
-        content={
-            'detail': exc.message,
-            'details': exc.details,
-        },
+        content=content,
     )
 
 
@@ -58,15 +71,26 @@ async def validation_exception_handler(
     Convert validation errors to HTTP 400 Bad Request responses.
     """
     if isinstance(exc, RequestValidationError):
+        errors = exc.errors()
+        # Convert any non-serializable objects in error details to strings
+        for error in errors:
+            if 'ctx' in error and 'error' in error['ctx']:
+                error['ctx']['error'] = str(error['ctx']['error'])
         return JSONResponse(
             status_code=status.HTTP_400_BAD_REQUEST,
-            content={'detail': exc.errors()},
+            content={'detail': errors},
         )
+
+    errors = exc.errors()
+    # Convert any non-serializable objects in error details to strings
+    for error in errors:
+        if 'ctx' in error and 'error' in error['ctx']:
+            error['ctx']['error'] = str(error['ctx']['error'])
 
     return JSONResponse(
         status_code=status.HTTP_400_BAD_REQUEST,
         content={
-            'detail': exc.errors(),
+            'detail': errors,
             'body': exc.model.model_dump() if hasattr(exc, 'model') else None,
         },
     )
