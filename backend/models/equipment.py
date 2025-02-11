@@ -24,11 +24,11 @@ if TYPE_CHECKING:
 class EquipmentStatus(str, Enum):
     """Equipment status enumeration."""
 
-    AVAILABLE = 'available'
-    RENTED = 'rented'
-    MAINTENANCE = 'maintenance'
-    BROKEN = 'broken'
-    RETIRED = 'retired'
+    AVAILABLE = 'AVAILABLE'
+    RENTED = 'RENTED'
+    MAINTENANCE = 'MAINTENANCE'
+    BROKEN = 'BROKEN'
+    RETIRED = 'RETIRED'
 
 
 # Create ENUM type for PostgreSQL
