@@ -10,12 +10,8 @@ rental bookings, as well as managing their status and payment information.
 from fastapi import APIRouter
 
 # , Depends, status
-from fastapi.responses import JSONResponse
-
-from backend.api.v1.decorators import typed_get
 
 # from sqlalchemy.ext.asyncio import AsyncSession
-
 
 # , typed_post
 
@@ -25,23 +21,6 @@ from backend.api.v1.decorators import typed_get
 # from backend.services import BookingService
 
 bookings_router: APIRouter = APIRouter()
-
-
-@typed_get(
-    bookings_router,
-    '/health',
-    response_model=dict[str, str],
-    response_class=JSONResponse,
-    response_model_exclude_none=True,
-)
-async def health_check() -> dict[str, str]:
-    """Health check endpoint.
-
-    Returns:
-        Status message indicating service is running
-    """
-    return {'status': 'Service is running'}
-
 
 # @typed_post(
 #     bookings_router,

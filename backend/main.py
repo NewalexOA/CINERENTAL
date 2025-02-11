@@ -39,6 +39,7 @@ app = FastAPI(
     docs_url=settings.DOCS_URL,
     redoc_url=settings.REDOC_URL,
     lifespan=lifespan,
+    redirect_slashes=False,
 )
 
 # Add exception handlers

@@ -10,7 +10,7 @@ health_router: APIRouter = APIRouter()
 
 @typed_get(
     health_router,
-    '/',
+    '',
     response_model=dict[str, str],
     response_class=JSONResponse,
     response_model_exclude_none=True,
