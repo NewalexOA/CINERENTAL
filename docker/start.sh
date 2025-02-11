@@ -7,6 +7,12 @@
 # Apply migrations
 alembic upgrade head
 
+# Seed test data if environment is development
+if [ "$ENVIRONMENT" = "development" ]; then
+    echo "Seeding test data..."
+    python -m backend.scripts.seed_data
+fi
+
 # Start the application
 exec uvicorn backend.main:app \
     --host 0.0.0.0 \

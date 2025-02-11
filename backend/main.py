@@ -6,6 +6,7 @@ from typing import AsyncGenerator
 from fastapi import FastAPI
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from loguru import logger
 from pydantic import ValidationError
 
 from backend.api.v1.api import api_router
@@ -15,6 +16,7 @@ from backend.api.v1.exceptions import (
 )
 from backend.core.cache import close_redis, init_redis
 from backend.core.config import settings
+from backend.core.logging import configure_logging
 from backend.core.templates import static_files
 from backend.exceptions import BusinessError
 from backend.web.router import web_router
@@ -26,11 +28,16 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     Initialize and cleanup resources.
     """
+    # Configure logging
+    configure_logging()
+    logger.info('Application startup')
+
     # Initialize Redis
     await init_redis()
     yield
     # Cleanup
     await close_redis()
+    logger.info('Application shutdown')
 
 
 app = FastAPI(
