@@ -15,7 +15,9 @@ from backend.api.v1.exceptions import (
 )
 from backend.core.cache import close_redis, init_redis
 from backend.core.config import settings
+from backend.core.templates import static_files
 from backend.exceptions import BusinessError
+from backend.web.router import web_router
 
 
 @asynccontextmanager
@@ -52,9 +54,14 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.CORS_ORIGINS,
     allow_credentials=True,
-    allow_methods=['*'],
+    allow_methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
     allow_headers=['*'],
+    max_age=3600,  # Maximum time to cache preflight requests
 )
 
-# Include API router
+# Mount static files
+app.mount('/static', static_files, name='static')
+
+# Include routers
 app.include_router(api_router, prefix=settings.API_V1_STR)
+app.include_router(web_router)

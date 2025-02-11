@@ -10,6 +10,8 @@ def parse_comma_separated_list(value: str | List[str]) -> List[str]:
     """Parse comma-separated string into list."""
     if isinstance(value, list):
         return value
+    if value == '*':
+        return ['*']
     return [item.strip() for item in value.split(',') if item.strip()]
 
 
