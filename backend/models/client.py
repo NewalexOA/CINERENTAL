@@ -20,9 +20,9 @@ if TYPE_CHECKING:
 class ClientStatus(str, Enum):
     """Client status enumeration."""
 
-    ACTIVE = 'active'
-    BLOCKED = 'blocked'
-    ARCHIVED = 'archived'
+    ACTIVE = 'ACTIVE'
+    BLOCKED = 'BLOCKED'
+    ARCHIVED = 'ARCHIVED'
 
 
 # Create ENUM type for PostgreSQL
