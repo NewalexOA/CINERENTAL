@@ -72,11 +72,19 @@ class BaseRepository(Generic[ModelType]):
 
         Returns:
             Created record
+
+        Raises:
+            SQLAlchemyError: If database operation fails
         """
-        self.session.add(instance)
-        await self.session.flush()
-        await self.session.refresh(instance)
-        return instance
+        try:
+            self.session.add(instance)
+            await self.session.flush()
+            await self.session.commit()
+            await self.session.refresh(instance)
+            return instance
+        except Exception as e:
+            await self.session.rollback()
+            raise e
 
     async def update(self, instance: ModelType) -> ModelType:
         """Update record.
@@ -86,11 +94,19 @@ class BaseRepository(Generic[ModelType]):
 
         Returns:
             Updated record
+
+        Raises:
+            SQLAlchemyError: If database operation fails
         """
-        self.session.add(instance)
-        await self.session.flush()
-        await self.session.refresh(instance)
-        return instance
+        try:
+            self.session.add(instance)
+            await self.session.flush()
+            await self.session.commit()
+            await self.session.refresh(instance)
+            return instance
+        except Exception as e:
+            await self.session.rollback()
+            raise e
 
     async def delete(self, id: Union[int, UUID]) -> bool:
         """Delete record.
@@ -127,13 +143,21 @@ class BaseRepository(Generic[ModelType]):
 
         Returns:
             Deleted record if found, None otherwise
+
+        Raises:
+            SQLAlchemyError: If database operation fails
         """
-        instance = await self.get(id)
-        if instance:
-            instance.deleted_at = datetime.now(timezone.utc)
-            await self.session.flush()
-            await self.session.refresh(instance)
-        return instance
+        try:
+            instance = await self.get(id)
+            if instance:
+                instance.deleted_at = datetime.now(timezone.utc)
+                await self.session.flush()
+                await self.session.commit()
+                await self.session.refresh(instance)
+            return instance
+        except Exception as e:
+            await self.session.rollback()
+            raise e
 
     async def search(
         self,

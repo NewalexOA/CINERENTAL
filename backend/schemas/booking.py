@@ -70,4 +70,4 @@ class BookingResponse(BookingBase):
     class Config:
         """Pydantic configuration."""
 
-        orm_mode = True
+        from_attributes = True
