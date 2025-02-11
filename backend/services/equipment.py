@@ -585,7 +585,14 @@ class EquipmentService:
             skip=skip,
             limit=limit,
         )
-        return [EquipmentResponse.model_validate(e) for e in equipment_list]
+
+        # Load equipment with categories
+        loaded_equipment = []
+        for equipment in equipment_list:
+            loaded = await self._load_equipment_with_category(equipment)
+            loaded_equipment.append(loaded)
+
+        return [EquipmentResponse.model_validate(e) for e in loaded_equipment]
 
     async def search(self, query: str) -> List[EquipmentResponse]:
         """Search equipment by name or description.
