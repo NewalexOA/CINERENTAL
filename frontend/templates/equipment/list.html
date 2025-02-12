@@ -23,14 +23,21 @@
         <div class="col-md-3">
             <select class="form-select" id="categoryFilter">
                 <option value="">Все категории</option>
+                {% for category in categories %}
+                <option value="{{ category.id }}" {% if category.id == current_category_id %}selected{% endif %}>
+                    {{ category.name }}
+                </option>
+                {% endfor %}
             </select>
         </div>
         <div class="col-md-3">
             <select class="form-select" id="statusFilter">
                 <option value="">Все статусы</option>
-                <option value="AVAILABLE">Доступно</option>
-                <option value="RENTED">В аренде</option>
-                <option value="MAINTENANCE">В ремонте</option>
+                <option value="AVAILABLE" {% if current_status == 'AVAILABLE' %}selected{% endif %}>Доступно</option>
+                <option value="RENTED" {% if current_status == 'RENTED' %}selected{% endif %}>В аренде</option>
+                <option value="MAINTENANCE" {% if current_status == 'MAINTENANCE' %}selected{% endif %}>В ремонте</option>
+                <option value="BROKEN" {% if current_status == 'BROKEN' %}selected{% endif %}>Сломано</option>
+                <option value="RETIRED" {% if current_status == 'RETIRED' %}selected{% endif %}>Списано</option>
             </select>
         </div>
     </div>
@@ -141,14 +148,9 @@ async function loadCategories() {
     try {
         const categories = await api.get('/categories');
         const formSelect = document.querySelector('select[name="category_id"]');
-        const filterSelect = document.getElementById('categoryFilter');
-
-        const options = categories.map(category =>
+        formSelect.innerHTML = categories.map(category =>
             `<option value="${category.id}">${category.name}</option>`
         ).join('');
-
-        formSelect.innerHTML = options;
-        filterSelect.innerHTML += options;
     } catch (error) {
         console.error('Error loading categories:', error);
         showToast('Ошибка загрузки категорий', 'danger');
@@ -171,56 +173,56 @@ document.getElementById('addEquipment').addEventListener('click', async () => {
     }
 });
 
-// Handle search
-document.getElementById('searchButton').addEventListener('click', async () => {
+// Handle filters and search
+async function updateEquipmentList() {
     const query = document.getElementById('searchInput').value;
     const categoryId = document.getElementById('categoryFilter').value;
     const status = document.getElementById('statusFilter').value;
 
     try {
-        const params = new URLSearchParams();
-        if (query) params.append('query', query);
-        if (categoryId) params.append('category_id', categoryId);
-        if (status) params.append('status', status);
+        const params = new URLSearchParams(window.location.search);
 
-        const equipment = await api.get(`/equipment?${params.toString()}`);
-        updateEquipmentTable(equipment);
+        // Clear existing filter parameters
+        params.delete('query');
+        params.delete('category_id');
+        params.delete('status');
+
+        // Only add parameters if they have non-empty values
+        if (query.trim()) params.set('query', query);
+        if (categoryId) params.set('category_id', categoryId);
+        if (status) params.set('status', status);
+
+        // Update URL without reloading
+        const newUrl = `${window.location.pathname}${params.toString() ? '?' + params.toString() : ''}`;
+        window.history.pushState({}, '', newUrl);
+
+        // Fetch filtered data
+        const response = await fetch(`/equipment${params.toString() ? '?' + params.toString() : ''}`);
+        const html = await response.text();
+
+        // Extract table content from response
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, 'text/html');
+        const newTable = doc.getElementById('equipmentTable');
+
+        // Update table
+        document.getElementById('equipmentTable').innerHTML = newTable.innerHTML;
     } catch (error) {
-        console.error('Error searching equipment:', error);
-        showToast('Ошибка при поиске', 'danger');
+        console.error('Error updating equipment list:', error);
+        showToast('Ошибка при обновлении списка', 'danger');
+    }
+}
+
+// Add event listeners for filters
+document.getElementById('searchButton').addEventListener('click', updateEquipmentList);
+document.getElementById('categoryFilter').addEventListener('change', updateEquipmentList);
+document.getElementById('statusFilter').addEventListener('change', updateEquipmentList);
+document.getElementById('searchInput').addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+        e.preventDefault();
+        updateEquipmentList();
     }
 });
-
-// Update equipment table
-function updateEquipmentTable(equipment) {
-    const tbody = document.getElementById('equipmentTable');
-    tbody.innerHTML = equipment.map(item => `
-        <tr>
-            <td>
-                <div class="fw-bold">${item.name}</div>
-                <small class="text-muted">${item.description}</small>
-            </td>
-            <td>${item.category_name}</td>
-            <td>${item.barcode}</td>
-            <td>
-                <span class="badge bg-${item.status === 'AVAILABLE' ? 'success' : item.status === 'RENTED' ? 'warning' : 'danger'}">
-                    ${item.status}
-                </span>
-            </td>
-            <td>${item.daily_rate} ₽</td>
-            <td>
-                <div class="btn-group">
-                    <a href="/equipment/${item.id}" class="btn btn-sm btn-outline-primary">
-                        <i class="fas fa-info-circle"></i>
-                    </a>
-                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="copyBarcode('${item.barcode}')">
-                        <i class="fas fa-copy"></i>
-                    </button>
-                </div>
-            </td>
-        </tr>
-    `).join('');
-}
 
 // Copy barcode to clipboard
 function copyBarcode(barcode) {
@@ -233,5 +235,11 @@ function copyBarcode(barcode) {
 
 // Initialize
 loadCategories();
+
+// Apply initial filters from URL
+const urlParams = new URLSearchParams(window.location.search);
+if (urlParams.has('query')) {
+    document.getElementById('searchInput').value = urlParams.get('query');
+}
 </script>
 {% endblock %}

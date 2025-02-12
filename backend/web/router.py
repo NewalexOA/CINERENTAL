@@ -1,6 +1,6 @@
 """Frontend router module."""
 
-from typing import Annotated, List
+from typing import Annotated, List, Optional
 
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse
@@ -9,7 +9,8 @@ from starlette.templating import _TemplateResponse
 
 from backend.core.database import get_db
 from backend.core.templates import templates
-from backend.schemas.equipment import EquipmentResponse
+from backend.models import EquipmentStatus
+from backend.schemas import EquipmentResponse
 from backend.services import CategoryService, EquipmentService
 
 web_router = APIRouter()
@@ -45,18 +46,33 @@ async def index(
 async def equipment_list(
     request: Request,
     db: Annotated[AsyncSession, Depends(get_db)],
+    category_id: Optional[int] = None,
+    status: Optional[EquipmentStatus] = None,
+    query: Optional[str] = None,
 ) -> _TemplateResponse:
     """Render equipment list page.
 
     Args:
         request: FastAPI request
         db: Database session
+        category_id: Optional category filter
+        status: Optional status filter
+        query: Optional search query
 
     Returns:
         _TemplateResponse: Rendered template
     """
     equipment_service = EquipmentService(db)
-    equipment_list = await equipment_service.get_all()
+    category_service = CategoryService(db)
+
+    # Get equipment with filters
+    equipment_list = await equipment_service.get_equipment_list(
+        category_id=category_id,
+        status=status,
+    )
+
+    # Get all categories for filter dropdown
+    categories = await category_service.get_all()
 
     # Transform data for template
     equipment_data = []
@@ -67,7 +83,7 @@ async def equipment_list(
 
         # Handle status display
         status = item_dict['status']
-        item_dict['status'] = status.value if hasattr(status, 'value') else status
+        item_dict['status'] = status.value if status is not None else None
         equipment_data.append(item_dict)
 
     return templates.TemplateResponse(
@@ -75,6 +91,9 @@ async def equipment_list(
         {
             'request': request,
             'equipment_list': equipment_data,
+            'categories': [category.model_dump() for category in categories],
+            'current_category_id': category_id,
+            'current_status': status.value if status else None,
         },
     )
 
