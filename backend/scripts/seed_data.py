@@ -4,6 +4,7 @@ import asyncio
 import logging
 from decimal import Decimal
 
+from faker import Faker
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.core.database import AsyncSessionLocal
@@ -16,6 +17,9 @@ from backend.repositories import (
 )
 
 logger = logging.getLogger(__name__)
+
+# Initialize Faker with Russian locale
+fake = Faker('ru_RU')
 
 
 async def create_categories(session: AsyncSession) -> dict[str, int]:
@@ -499,120 +503,26 @@ async def create_clients(session: AsyncSession) -> None:
         session: Database session
     """
     repository = ClientRepository(session)
-    clients = [
-        Client(
-            first_name='Иван',
-            last_name='Петров',
-            email='ivan.petrov@example.com',
-            phone='+7 (901) 123-45-67',
-            passport_number='4510 123456',
-            address='г. Москва, ул. Тверская, д. 1, кв. 1',
-            company='Киностудия "Мосфильм"',
-            notes='Постоянный клиент, крупные проекты',
-            status=ClientStatus.ACTIVE,
-        ),
-        Client(
-            first_name='Анна',
-            last_name='Сидорова',
-            email='anna.sidorova@example.com',
-            phone='+7 (902) 234-56-78',
-            passport_number='4511 234567',
-            address='г. Санкт-Петербург, Невский пр-т, д. 2, кв. 2',
-            company='Независимый продюсерский центр',
-            notes='Документальные фильмы',
-            status=ClientStatus.ACTIVE,
-        ),
-        Client(
-            first_name='Дмитрий',
-            last_name='Иванов',
-            email='dmitry.ivanov@example.com',
-            phone='+7 (903) 345-67-89',
-            passport_number='4512 345678',
-            address='г. Москва, ул. Арбат, д. 3, кв. 3',
-            company='DI Production',
-            notes='Рекламные съемки',
-            status=ClientStatus.ACTIVE,
-        ),
-        Client(
-            first_name='Елена',
-            last_name='Козлова',
-            email='elena.kozlova@example.com',
-            phone='+7 (904) 456-78-90',
-            passport_number='4513 456789',
-            address='г. Москва, Кутузовский пр-т, д. 4, кв. 4',
-            company='Event Cinema',
-            notes='Свадебные съемки',
-            status=ClientStatus.ACTIVE,
-        ),
-        Client(
-            first_name='Александр',
-            last_name='Новиков',
-            email='alex.novikov@example.com',
-            phone='+7 (905) 567-89-01',
-            passport_number='4514 567890',
-            address='г. Москва, Ленинградский пр-т, д. 5, кв. 5',
-            company='Новиков Продакшн',
-            notes='Музыкальные клипы',
-            status=ClientStatus.ACTIVE,
-        ),
-        Client(
-            first_name='Мария',
-            last_name='Волкова',
-            email='maria.volkova@example.com',
-            phone='+7 (906) 678-90-12',
-            passport_number='4515 678901',
-            address='г. Москва, ул. Новый Арбат, д. 6, кв. 6',
-            company='MV Films',
-            notes='Короткометражные фильмы',
-            status=ClientStatus.ACTIVE,
-        ),
-        Client(
-            first_name='Сергей',
-            last_name='Морозов',
-            email='sergey.morozov@example.com',
-            phone='+7 (907) 789-01-23',
-            passport_number='4516 789012',
-            address='г. Москва, Садовое кольцо, д. 7, кв. 7',
-            company='Morozov Media',
-            notes='Корпоративные фильмы',
-            status=ClientStatus.ACTIVE,
-        ),
-        Client(
-            first_name='Ольга',
-            last_name='Соколова',
-            email='olga.sokolova@example.com',
-            phone='+7 (908) 890-12-34',
-            passport_number='4517 890123',
-            address='г. Москва, Пресненская наб., д. 8, кв. 8',
-            company='Sokolova Production',
-            notes='Телевизионные проекты',
-            status=ClientStatus.ACTIVE,
-        ),
-        Client(
-            first_name='Павел',
-            last_name='Лебедев',
-            email='pavel.lebedev@example.com',
-            phone='+7 (909) 901-23-45',
-            passport_number='4518 901234',
-            address='г. Москва, ул. Остоженка, д. 9, кв. 9',
-            company='Lebedev Studio',
-            notes='Фэшн-съемки',
-            status=ClientStatus.ACTIVE,
-        ),
-        Client(
-            first_name='Наталья',
-            last_name='Кузнецова',
-            email='natalia.kuznetsova@example.com',
-            phone='+7 (910) 012-34-56',
-            passport_number='4519 012345',
-            address='г. Москва, Рублевское ш., д. 10, кв. 10',
-            company='NK Production',
-            notes='Образовательные проекты',
-            status=ClientStatus.ACTIVE,
-        ),
-    ]
 
-    for client in clients:
+    # Create 10 unique clients
+    for _ in range(10):
+        # Generate company name with industry
+        company_types = ['Студия', 'Продакшн', 'Медиа', 'Синема', 'Фильм']
+        company = f'{fake.company()} {fake.random_element(company_types)}'
+
+        # Generate client data
+        client = Client(
+            first_name=fake.first_name(),
+            last_name=fake.last_name(),
+            email=fake.unique.email(),
+            phone=fake.unique.phone_number(),
+            passport_number=fake.unique.numerify(text='#### ######'),
+            address=fake.address(),
+            company=company,
+            notes=fake.text(max_nb_chars=200),
+            status=ClientStatus.ACTIVE,
+        )
+
         created_client = await repository.create(client)
         logger.info(
             'Created client: %s %s (%s)',

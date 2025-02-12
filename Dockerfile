@@ -30,11 +30,11 @@ RUN mkdir -p media && \
     adduser --disabled-password --gecos '' appuser && \
     chown -R appuser:appuser /app
 
+# Make scripts executable
+RUN chmod +x docker/start.sh docker/wait-for-it.sh docker/run-tests.sh
+
 # Switch to non-root user
 USER appuser
 
 # Expose port
 EXPOSE 8000
-
-# Run the application
-CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8000"]

@@ -2,7 +2,7 @@
 
 from typing import Any
 
-from fastapi import Request, status
+from fastapi import Request, Response, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from pydantic import ValidationError as PydanticValidationError
@@ -19,13 +19,17 @@ from backend.exceptions import (
 )
 
 
-async def business_exception_handler(
-    request: Request, exc: BusinessError
-) -> JSONResponse:
+async def business_exception_handler(request: Request, exc: Exception) -> Response:
     """Handle business logic errors.
 
     Maps different types of business errors to appropriate HTTP status codes.
     """
+    if not isinstance(exc, BusinessError):
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content={'detail': str(exc)},
+        )
+
     status_code = status.HTTP_400_BAD_REQUEST
 
     if isinstance(exc, NotFoundError):
@@ -44,11 +48,10 @@ async def business_exception_handler(
         status_code = status.HTTP_400_BAD_REQUEST
 
     content: dict[str, Any] = {
-        'detail': str(exc.message),  # Ensure message is a string
+        'detail': str(exc.message),
     }
 
     if exc.details:
-        # Convert any non-serializable values in details to strings
         serializable_details = {}
         for key, value in exc.details.items():
             if isinstance(value, (str, int, float, bool, type(None))):
@@ -63,16 +66,13 @@ async def business_exception_handler(
     )
 
 
-async def validation_exception_handler(
-    request: Request, exc: PydanticValidationError | RequestValidationError
-) -> JSONResponse:
+async def validation_exception_handler(request: Request, exc: Exception) -> Response:
     """Handle Pydantic and FastAPI validation errors.
 
     Convert validation errors to HTTP 400 Bad Request responses.
     """
-    if isinstance(exc, RequestValidationError):
+    if isinstance(exc, (RequestValidationError, PydanticValidationError)):
         errors = exc.errors()
-        # Convert any non-serializable objects in error details to strings
         for error in errors:
             if 'ctx' in error and 'error' in error['ctx']:
                 error['ctx']['error'] = str(error['ctx']['error'])
@@ -81,16 +81,7 @@ async def validation_exception_handler(
             content={'detail': errors},
         )
 
-    errors = exc.errors()
-    # Convert any non-serializable objects in error details to strings
-    for error in errors:
-        if 'ctx' in error and 'error' in error['ctx']:
-            error['ctx']['error'] = str(error['ctx']['error'])
-
     return JSONResponse(
         status_code=status.HTTP_400_BAD_REQUEST,
-        content={
-            'detail': errors,
-            'body': exc.model.model_dump() if hasattr(exc, 'model') else None,
-        },
+        content={'detail': str(exc)},
     )

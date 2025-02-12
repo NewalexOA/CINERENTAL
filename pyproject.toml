@@ -42,6 +42,15 @@ dev = [
     "pytest-cov>=4.1.0",
     "pytest-asyncio>=0.23.5",
     "httpx>=0.25.1",
+    "faker>=22.6.0",
+]
+
+test = [
+    "pytest>=8.0.0",
+    "pytest-cov>=4.1.0",
+    "pytest-asyncio>=0.23.5",
+    "httpx>=0.25.1",
+    "faker>=22.6.0",
 ]
 
 [tool.setuptools]
@@ -109,3 +118,12 @@ markers = [
     "unit: marks tests as unit tests",
     "integration: marks tests as integration tests",
 ]
+
+[tool.poetry.dependencies]
+faker = "^22.6.0"
+
+[tool.poetry.group.dev.dependencies]
+faker = "^22.6.0"
+
+[tool.poetry.group.test.dependencies]
+faker = "^22.6.0"

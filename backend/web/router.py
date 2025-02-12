@@ -62,8 +62,9 @@ async def equipment_list(
     equipment_data = []
     for item in equipment_list:
         item_dict = item.model_dump()
-        # Handle category name
-        item_dict['category_name'] = item_dict['category']['name']
+        # Handle category name safely
+        category = item_dict.get('category', {})
+        item_dict['category_name'] = category.get('name', 'Без категории')
 
         # Handle status display
         status = item_dict['status']
