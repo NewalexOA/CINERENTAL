@@ -1,0 +1,184 @@
+{% extends "base.html" %}
+
+{% block title %}Оборудование - CINERENTAL{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center">
+            <h1>Оборудование</h1>
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addEquipmentModal">
+                <i class="fas fa-plus"></i> Добавить оборудование
+            </button>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <div class="row g-3">
+                    <!-- Search -->
+                    <div class="col-md-4">
+                        <div class="input-group">
+                            <span class="input-group-text">
+                                <i class="fas fa-search"></i>
+                            </span>
+                            <input type="text" class="form-control" id="searchEquipment" placeholder="Поиск оборудования...">
+                        </div>
+                    </div>
+                    <!-- Category Filter -->
+                    <div class="col-md-3">
+                        <select class="form-select" id="categoryFilter">
+                            <option value="">Все категории</option>
+                        </select>
+                    </div>
+                    <!-- Status Filter -->
+                    <div class="col-md-3">
+                        <select class="form-select" id="statusFilter">
+                            <option value="">Все статусы</option>
+                            <option value="AVAILABLE">Доступно</option>
+                            <option value="RENTED">В аренде</option>
+                            <option value="MAINTENANCE">В ремонте</option>
+                        </select>
+                    </div>
+                    <!-- Sort -->
+                    <div class="col-md-2">
+                        <select class="form-select" id="sortOrder">
+                            <option value="name">По названию</option>
+                            <option value="category">По категории</option>
+                            <option value="status">По статусу</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4" id="equipmentGrid">
+    {% for item in equipment_list %}
+    <div class="col-md-6 col-lg-4">
+        <div class="card h-100">
+            <div class="card-body">
+                <h5 class="card-title">{{ item.name }}</h5>
+                <h6 class="card-subtitle mb-2 text-muted">{{ item.category.name }}</h6>
+                <p class="card-text">{{ item.description }}</p>
+                <div class="mb-3">
+                    <span class="badge bg-{{ item.status | lower }}">
+                        {{ item.status }}
+                    </span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <small class="text-muted">
+                            Штрих-код: {{ item.barcode }}
+                        </small>
+                    </div>
+                    <div>
+                        <a href="/equipment/{{ item.id }}" class="btn btn-outline-primary btn-sm">
+                            <i class="fas fa-info-circle"></i> Подробнее
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Add Equipment Modal -->
+<div class="modal fade" id="addEquipmentModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Добавить оборудование</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addEquipmentForm">
+                    <div class="mb-3">
+                        <label class="form-label">Название</label>
+                        <input type="text" class="form-control" name="name" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Категория</label>
+                        <select class="form-select" name="category_id" required>
+                            <!-- Заполняется через API -->
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Описание</label>
+                        <textarea class="form-control" name="description" rows="3"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Серийный номер</label>
+                        <input type="text" class="form-control" name="serial_number">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Штрих-код</label>
+                        <input type="text" class="form-control" name="barcode">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Дневная ставка</label>
+                        <input type="number" class="form-control" name="daily_rate" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Стоимость замены</label>
+                        <input type="number" class="form-control" name="replacement_cost" required>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                <button type="button" class="btn btn-primary" id="saveEquipment">Сохранить</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Load categories for filter and form
+async function loadCategories() {
+    try {
+        const categories = await api.get('/categories');
+        const filterSelect = document.getElementById('categoryFilter');
+        const formSelect = document.querySelector('select[name="category_id"]');
+
+        const options = categories.map(category =>
+            `<option value="${category.id}">${category.name}</option>`
+        ).join('');
+
+        filterSelect.innerHTML += options;
+        formSelect.innerHTML = options;
+    } catch (error) {
+        console.error('Error loading categories:', error);
+        showToast('Ошибка загрузки категорий', 'danger');
+    }
+}
+
+// Handle equipment form submission
+document.getElementById('saveEquipment').addEventListener('click', async () => {
+    const form = document.getElementById('addEquipmentForm');
+    const formData = new FormData(form);
+    const data = Object.fromEntries(formData.entries());
+
+    try {
+        await api.post('/equipment', data);
+        showToast('Оборудование успешно добавлено', 'success');
+        location.reload();
+    } catch (error) {
+        console.error('Error saving equipment:', error);
+        showToast('Ошибка при сохранении', 'danger');
+    }
+});
+
+// Initialize page
+document.addEventListener('DOMContentLoaded', () => {
+    loadCategories();
+});
+</script>
+{% endblock %}

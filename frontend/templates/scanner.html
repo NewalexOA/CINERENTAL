@@ -1,0 +1,391 @@
+{% extends "base.html" %}
+
+{% block title %}Сканер - CINERENTAL{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <h1>Сканер штрих-кодов</h1>
+        <p class="lead">Сканируйте штрих-коды оборудования для быстрого доступа к информации</p>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <!-- Scanner View -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <div class="scanner-container">
+                    <div class="scanner-status mb-3">
+                        <div class="alert alert-info">
+                            <i class="fas fa-camera"></i> Наведите камеру на штрих-код
+                        </div>
+                    </div>
+                    <div class="scanner-preview mb-3">
+                        <video id="scanner-preview" class="w-100"></video>
+                    </div>
+                    <div class="scanner-controls">
+                        <div class="btn-group w-100">
+                            <button class="btn btn-primary" id="startScanner">
+                                <i class="fas fa-play"></i> Запустить
+                            </button>
+                            <button class="btn btn-danger" id="stopScanner" disabled>
+                                <i class="fas fa-stop"></i> Остановить
+                            </button>
+                            <button class="btn btn-secondary" id="switchCamera">
+                                <i class="fas fa-sync"></i> Сменить камеру
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Scan History -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">История сканирования</h5>
+            </div>
+            <div class="card-body">
+                <div class="list-group list-group-flush" id="scanHistory">
+                    <!-- История сканирования будет добавляться здесь -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <!-- Scan Result -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Результат сканирования</h5>
+            </div>
+            <div class="card-body" id="scanResult">
+                <div class="text-center text-muted py-5">
+                    <i class="fas fa-barcode fa-3x mb-3"></i>
+                    <p>Отсканируйте штрих-код, чтобы увидеть информацию</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Быстрые действия</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <button class="btn btn-outline-primary" id="createBooking" disabled>
+                        <i class="fas fa-calendar-plus"></i> Создать бронирование
+                    </button>
+                    <button class="btn btn-outline-primary" id="updateStatus" disabled>
+                        <i class="fas fa-sync"></i> Обновить статус
+                    </button>
+                    <button class="btn btn-outline-primary" id="viewHistory" disabled>
+                        <i class="fas fa-history"></i> История оборудования
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Update Status Modal -->
+<div class="modal fade" id="updateStatusModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Обновить статус</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="updateStatusForm">
+                    <input type="hidden" name="equipment_id">
+                    <div class="mb-3">
+                        <label class="form-label">Новый статус</label>
+                        <select class="form-select" name="status" required>
+                            <option value="AVAILABLE">Доступно</option>
+                            <option value="RENTED">В аренде</option>
+                            <option value="MAINTENANCE">В ремонте</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Комментарий</label>
+                        <textarea class="form-control" name="notes" rows="3"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                <button type="button" class="btn btn-primary" id="saveStatus">Сохранить</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Equipment History Modal -->
+<div class="modal fade" id="historyModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">История оборудования</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <ul class="nav nav-tabs mb-3" role="tablist">
+                    <li class="nav-item">
+                        <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#statusHistory">
+                            Статусы
+                        </button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#bookingHistory">
+                            Бронирования
+                        </button>
+                    </li>
+                </ul>
+                <div class="tab-content">
+                    <div class="tab-pane fade show active" id="statusHistory">
+                        <div class="timeline">
+                            <!-- История статусов будет добавляться здесь -->
+                        </div>
+                    </div>
+                    <div class="tab-pane fade" id="bookingHistory">
+                        <div class="list-group list-group-flush">
+                            <!-- История бронирований будет добавляться здесь -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let scanner = null;
+let currentEquipment = null;
+
+// Initialize scanner
+async function initScanner() {
+    try {
+        scanner = new BarcodeScanner();
+
+        // Override scanner handlers
+        scanner.onScan = handleScan;
+        scanner.onError = handleError;
+
+        await scanner.initialize('#scanner-preview');
+        updateScannerControls(true);
+    } catch (error) {
+        console.error('Error initializing scanner:', error);
+        showToast('Ошибка инициализации сканера', 'danger');
+    }
+}
+
+// Handle successful scan
+async function handleScan(equipment) {
+    currentEquipment = equipment;
+    updateScanResult(equipment);
+    updateQuickActions(true);
+    addToScanHistory(equipment);
+}
+
+// Handle scan error
+function handleError(error) {
+    showToast(error.message, 'danger');
+    updateScanResult(null);
+    updateQuickActions(false);
+}
+
+// Update scan result display
+function updateScanResult(equipment) {
+    const container = document.getElementById('scanResult');
+
+    if (!equipment) {
+        container.innerHTML = `
+            <div class="text-center text-muted py-5">
+                <i class="fas fa-barcode fa-3x mb-3"></i>
+                <p>Отсканируйте штрих-код, чтобы увидеть информацию</p>
+            </div>
+        `;
+        return;
+    }
+
+    container.innerHTML = `
+        <div class="text-center mb-3">
+            <span class="badge bg-${getStatusColor(equipment.status)} fs-5">
+                ${equipment.status}
+            </span>
+        </div>
+        <h5>${equipment.name}</h5>
+        <p class="text-muted">${equipment.category.name}</p>
+        <div class="mb-3">
+            <small class="d-block"><strong>Серийный номер:</strong> ${equipment.serial_number}</small>
+            <small class="d-block"><strong>Штрих-код:</strong> ${equipment.barcode}</small>
+        </div>
+        <div class="mb-3">
+            <small class="d-block"><strong>Дневная ставка:</strong> ${equipment.daily_rate} ₽</small>
+            <small class="d-block"><strong>Стоимость замены:</strong> ${equipment.replacement_cost} ₽</small>
+        </div>
+        <div class="text-center">
+            <a href="/equipment/${equipment.id}" class="btn btn-sm btn-outline-primary">
+                <i class="fas fa-info-circle"></i> Подробнее
+            </a>
+        </div>
+    `;
+}
+
+// Add scan to history
+function addToScanHistory(equipment) {
+    const container = document.getElementById('scanHistory');
+    const timestamp = moment().format('HH:mm:ss');
+
+    const historyItem = document.createElement('div');
+    historyItem.className = 'list-group-item';
+    historyItem.innerHTML = `
+        <div class="d-flex w-100 justify-content-between align-items-center">
+            <div>
+                <h6 class="mb-1">${equipment.name}</h6>
+                <small class="text-muted">${equipment.category.name}</small>
+            </div>
+            <small class="text-muted">${timestamp}</small>
+        </div>
+    `;
+
+    container.insertBefore(historyItem, container.firstChild);
+}
+
+// Update scanner control buttons
+function updateScannerControls(isInitialized) {
+    document.getElementById('startScanner').disabled = isInitialized;
+    document.getElementById('stopScanner').disabled = !isInitialized;
+    document.getElementById('switchCamera').disabled = !isInitialized;
+}
+
+// Update quick action buttons
+function updateQuickActions(enabled) {
+    document.getElementById('createBooking').disabled = !enabled;
+    document.getElementById('updateStatus').disabled = !enabled;
+    document.getElementById('viewHistory').disabled = !enabled;
+}
+
+// Load equipment history
+async function loadEquipmentHistory(equipmentId) {
+    try {
+        const [statusHistory, bookingHistory] = await Promise.all([
+            api.get(`/equipment/${equipmentId}/timeline`),
+            api.get(`/equipment/${equipmentId}/bookings`)
+        ]);
+
+        // Update status history
+        document.querySelector('#statusHistory .timeline').innerHTML = statusHistory.map(entry => `
+            <div class="timeline-item">
+                <div class="timeline-badge bg-${getStatusColor(entry.status)}">
+                    <i class="fas fa-circle"></i>
+                </div>
+                <div class="timeline-content">
+                    <h6 class="mb-1">${entry.status}</h6>
+                    <small class="text-muted">${formatDate(entry.created_at)}</small>
+                    ${entry.notes ? `<p class="mb-0">${entry.notes}</p>` : ''}
+                </div>
+            </div>
+        `).join('');
+
+        // Update booking history
+        document.querySelector('#bookingHistory .list-group').innerHTML = bookingHistory.map(booking => `
+            <a href="/bookings/${booking.id}" class="list-group-item list-group-item-action">
+                <div class="d-flex w-100 justify-content-between">
+                    <h6 class="mb-1">${booking.client.name}</h6>
+                    <small class="text-muted">${formatDate(booking.start_date)}</small>
+                </div>
+                <p class="mb-1">${formatDateRange(booking.start_date, booking.end_date)}</p>
+                <small class="text-${getStatusColor(booking.status)}">${booking.status}</small>
+            </a>
+        `).join('');
+    } catch (error) {
+        console.error('Error loading equipment history:', error);
+        showToast('Ошибка загрузки истории', 'danger');
+    }
+}
+
+// Event Listeners
+document.getElementById('startScanner').addEventListener('click', () => {
+    scanner.start();
+    updateScannerControls(true);
+});
+
+document.getElementById('stopScanner').addEventListener('click', () => {
+    scanner.stop();
+    updateScannerControls(false);
+});
+
+document.getElementById('switchCamera').addEventListener('click', () => {
+    scanner.switchCamera();
+});
+
+document.getElementById('updateStatus').addEventListener('click', () => {
+    if (currentEquipment) {
+        const form = document.getElementById('updateStatusForm');
+        form.elements.equipment_id.value = currentEquipment.id;
+        form.elements.status.value = currentEquipment.status;
+        new bootstrap.Modal('#updateStatusModal').show();
+    }
+});
+
+document.getElementById('saveStatus').addEventListener('click', async () => {
+    const form = document.getElementById('updateStatusForm');
+    const formData = new FormData(form);
+    const data = Object.fromEntries(formData.entries());
+
+    try {
+        await api.patch(`/equipment/${data.equipment_id}/status`, {
+            status: data.status,
+            notes: data.notes
+        });
+
+        showToast('Статус успешно обновлен', 'success');
+        bootstrap.Modal.getInstance('#updateStatusModal').hide();
+
+        // Refresh equipment data
+        const equipment = await api.get(`/equipment/${data.equipment_id}`);
+        handleScan(equipment);
+    } catch (error) {
+        console.error('Error updating status:', error);
+        showToast('Ошибка при обновлении статуса', 'danger');
+    }
+});
+
+document.getElementById('viewHistory').addEventListener('click', () => {
+    if (currentEquipment) {
+        loadEquipmentHistory(currentEquipment.id);
+        new bootstrap.Modal('#historyModal').show();
+    }
+});
+
+document.getElementById('createBooking').addEventListener('click', () => {
+    if (currentEquipment) {
+        window.location.href = `/bookings/new?equipment=${currentEquipment.id}`;
+    }
+});
+
+// Helper function for status colors
+function getStatusColor(status) {
+    const colors = {
+        'AVAILABLE': 'success',
+        'RENTED': 'warning',
+        'MAINTENANCE': 'danger'
+    };
+    return colors[status] || 'secondary';
+}
+
+// Helper function for date formatting
+function formatDateRange(start, end) {
+    return `${formatDate(start)} - ${formatDate(end)}`;
+}
+
+// Initialize page
+document.addEventListener('DOMContentLoaded', initScanner);
+</script>
+{% endblock %}

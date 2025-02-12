@@ -1,0 +1,468 @@
+{% extends "base.html" %}
+
+{% block title %}Бронирования - CINERENTAL{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center">
+            <h1>Бронирования</h1>
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addBookingModal">
+                <i class="fas fa-plus"></i> Новое бронирование
+            </button>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <div class="row g-3">
+                    <!-- Search -->
+                    <div class="col-md-4">
+                        <div class="input-group">
+                            <span class="input-group-text">
+                                <i class="fas fa-search"></i>
+                            </span>
+                            <input type="text" class="form-control" id="searchBooking" placeholder="Поиск бронирований...">
+                        </div>
+                    </div>
+                    <!-- Date Range -->
+                    <div class="col-md-4">
+                        <div class="input-group">
+                            <span class="input-group-text">
+                                <i class="fas fa-calendar"></i>
+                            </span>
+                            <input type="text" class="form-control" id="dateRange" placeholder="Выберите период">
+                        </div>
+                    </div>
+                    <!-- Status Filter -->
+                    <div class="col-md-4">
+                        <select class="form-select" id="statusFilter">
+                            <option value="">Все статусы</option>
+                            <option value="PENDING">Ожидает подтверждения</option>
+                            <option value="CONFIRMED">Подтверждено</option>
+                            <option value="ACTIVE">Активно</option>
+                            <option value="COMPLETED">Завершено</option>
+                            <option value="CANCELLED">Отменено</option>
+                            <option value="OVERDUE">Просрочено</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Клиент</th>
+                                <th>Оборудование</th>
+                                <th>Период</th>
+                                <th>Статус</th>
+                                <th>Стоимость</th>
+                                <th>Действия</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for booking in bookings %}
+                            <tr>
+                                <td>{{ booking.id }}</td>
+                                <td>
+                                    <a href="/clients/{{ booking.client.id }}" class="text-decoration-none">
+                                        {{ booking.client.name }}
+                                    </a>
+                                </td>
+                                <td>
+                                    <button class="btn btn-link p-0" data-bs-toggle="modal" data-bs-target="#equipmentListModal" data-booking-id="{{ booking.id }}">
+                                        {{ booking.equipment | length }} ед.
+                                    </button>
+                                </td>
+                                <td>
+                                    <div>{{ booking.start_date | date }}</div>
+                                    <small class="text-muted">{{ booking.end_date | date }}</small>
+                                </td>
+                                <td>
+                                    <span class="badge bg-{{ booking.status | lower }}">
+                                        {{ booking.status }}
+                                    </span>
+                                </td>
+                                <td>{{ booking.total_cost }} ₽</td>
+                                <td>
+                                    <div class="btn-group">
+                                        <a href="/bookings/{{ booking.id }}" class="btn btn-sm btn-outline-primary">
+                                            <i class="fas fa-info-circle"></i>
+                                        </a>
+                                        <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#editBookingModal" data-booking-id="{{ booking.id }}">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteBookingModal" data-booking-id="{{ booking.id }}">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Equipment List Modal -->
+<div class="modal fade" id="equipmentListModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Список оборудования</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="list-group list-group-flush" id="equipmentList">
+                    <div class="text-center py-3">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Загрузка...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Booking Modal -->
+<div class="modal fade" id="addBookingModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Новое бронирование</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addBookingForm">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Клиент</label>
+                            <select class="form-select" name="client_id" required>
+                                <!-- Заполняется через API -->
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Период</label>
+                            <input type="text" class="form-control" name="date_range" required>
+                        </div>
+                    </div>
+                    <hr>
+                    <div class="mb-3">
+                        <label class="form-label">Оборудование</label>
+                        <div id="equipmentSelection">
+                            <!-- Заполняется через API -->
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Комментарий</label>
+                        <textarea class="form-control" name="notes" rows="3"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                <button type="button" class="btn btn-primary" id="saveBooking">Сохранить</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Booking Modal -->
+<div class="modal fade" id="editBookingModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Редактировать бронирование</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editBookingForm">
+                    <input type="hidden" name="id">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Клиент</label>
+                            <select class="form-select" name="client_id" required>
+                                <!-- Заполняется через API -->
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Период</label>
+                            <input type="text" class="form-control" name="date_range" required>
+                        </div>
+                    </div>
+                    <hr>
+                    <div class="mb-3">
+                        <label class="form-label">Оборудование</label>
+                        <div id="editEquipmentSelection">
+                            <!-- Заполняется через API -->
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Статус</label>
+                        <select class="form-select" name="status" required>
+                            <option value="PENDING">Ожидает подтверждения</option>
+                            <option value="CONFIRMED">Подтверждено</option>
+                            <option value="ACTIVE">Активно</option>
+                            <option value="COMPLETED">Завершено</option>
+                            <option value="CANCELLED">Отменено</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Комментарий</label>
+                        <textarea class="form-control" name="notes" rows="3"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                <button type="button" class="btn btn-primary" id="updateBooking">Сохранить</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Booking Modal -->
+<div class="modal fade" id="deleteBookingModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Удалить бронирование</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Вы уверены, что хотите удалить это бронирование?</p>
+                <p class="text-danger">Это действие нельзя отменить.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                <button type="button" class="btn btn-danger" id="deleteBooking">Удалить</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Initialize date range picker
+$('#dateRange').daterangepicker({
+    locale: {
+        format: 'DD.MM.YYYY',
+        separator: ' - ',
+        applyLabel: 'Применить',
+        cancelLabel: 'Отмена',
+        fromLabel: 'От',
+        toLabel: 'До',
+        customRangeLabel: 'Произвольный',
+        weekLabel: 'Н',
+        daysOfWeek: ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'],
+        monthNames: ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'],
+        firstDay: 1
+    }
+});
+
+// Load clients for forms
+async function loadClients() {
+    try {
+        const clients = await api.get('/clients');
+        const selects = document.querySelectorAll('select[name="client_id"]');
+
+        const options = clients.map(client =>
+            `<option value="${client.id}">${client.name}</option>`
+        ).join('');
+
+        selects.forEach(select => select.innerHTML = options);
+    } catch (error) {
+        console.error('Error loading clients:', error);
+        showToast('Ошибка загрузки клиентов', 'danger');
+    }
+}
+
+// Load equipment for selection
+async function loadEquipment() {
+    try {
+        const equipment = await api.get('/equipment');
+        const container = document.getElementById('equipmentSelection');
+
+        container.innerHTML = equipment.map(item => `
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" name="equipment_ids[]" value="${item.id}" id="equipment${item.id}">
+                <label class="form-check-label" for="equipment${item.id}">
+                    ${item.name} (${item.category.name})
+                </label>
+            </div>
+        `).join('');
+    } catch (error) {
+        console.error('Error loading equipment:', error);
+        showToast('Ошибка загрузки оборудования', 'danger');
+    }
+}
+
+// Load equipment list for modal
+document.getElementById('equipmentListModal').addEventListener('show.bs.modal', async (event) => {
+    const button = event.relatedTarget;
+    const bookingId = button.dataset.bookingId;
+    const container = document.getElementById('equipmentList');
+
+    try {
+        const booking = await api.get(`/bookings/${bookingId}`);
+
+        container.innerHTML = booking.equipment.map(item => `
+            <div class="list-group-item">
+                <div class="d-flex w-100 justify-content-between">
+                    <h6 class="mb-1">${item.name}</h6>
+                    <small class="text-muted">${item.category.name}</small>
+                </div>
+                <p class="mb-1">
+                    <small>
+                        <span class="me-3">S/N: ${item.serial_number}</span>
+                        <span>Штрих-код: ${item.barcode}</span>
+                    </small>
+                </p>
+            </div>
+        `).join('');
+    } catch (error) {
+        console.error('Error loading equipment list:', error);
+        container.innerHTML = `
+            <div class="alert alert-danger">
+                Ошибка загрузки списка оборудования
+            </div>
+        `;
+    }
+});
+
+// Handle booking form submission
+document.getElementById('saveBooking').addEventListener('click', async () => {
+    const form = document.getElementById('addBookingForm');
+    const formData = new FormData(form);
+    const data = {
+        client_id: formData.get('client_id'),
+        equipment_ids: Array.from(formData.getAll('equipment_ids[]')),
+        notes: formData.get('notes'),
+        ...parseDateRange(formData.get('date_range'))
+    };
+
+    try {
+        await api.post('/bookings', data);
+        showToast('Бронирование успешно создано', 'success');
+        location.reload();
+    } catch (error) {
+        console.error('Error saving booking:', error);
+        showToast('Ошибка при сохранении', 'danger');
+    }
+});
+
+// Handle booking update
+document.getElementById('updateBooking').addEventListener('click', async () => {
+    const form = document.getElementById('editBookingForm');
+    const formData = new FormData(form);
+    const data = {
+        client_id: formData.get('client_id'),
+        equipment_ids: Array.from(formData.getAll('equipment_ids[]')),
+        status: formData.get('status'),
+        notes: formData.get('notes'),
+        ...parseDateRange(formData.get('date_range'))
+    };
+
+    try {
+        await api.put(`/bookings/${formData.get('id')}`, data);
+        showToast('Бронирование успешно обновлено', 'success');
+        location.reload();
+    } catch (error) {
+        console.error('Error updating booking:', error);
+        showToast('Ошибка при обновлении', 'danger');
+    }
+});
+
+// Handle booking deletion
+document.getElementById('deleteBooking').addEventListener('click', async () => {
+    const bookingId = document.querySelector('#deleteBookingModal').dataset.bookingId;
+
+    try {
+        await api.delete(`/bookings/${bookingId}`);
+        showToast('Бронирование успешно удалено', 'success');
+        location.reload();
+    } catch (error) {
+        console.error('Error deleting booking:', error);
+        showToast('Ошибка при удалении', 'danger');
+    }
+});
+
+// Load booking data for editing
+document.getElementById('editBookingModal').addEventListener('show.bs.modal', async (event) => {
+    const button = event.relatedTarget;
+    const bookingId = button.dataset.bookingId;
+
+    try {
+        const booking = await api.get(`/bookings/${bookingId}`);
+        const form = document.getElementById('editBookingForm');
+
+        form.elements.id.value = booking.id;
+        form.elements.client_id.value = booking.client.id;
+        form.elements.date_range.value = formatDateRange(booking.start_date, booking.end_date);
+        form.elements.status.value = booking.status;
+        form.elements.notes.value = booking.notes;
+
+        // Load and check equipment
+        const container = document.getElementById('editEquipmentSelection');
+        const equipment = await api.get('/equipment');
+
+        container.innerHTML = equipment.map(item => `
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" name="equipment_ids[]" value="${item.id}"
+                    id="editEquipment${item.id}" ${booking.equipment.some(e => e.id === item.id) ? 'checked' : ''}>
+                <label class="form-check-label" for="editEquipment${item.id}">
+                    ${item.name} (${item.category.name})
+                </label>
+            </div>
+        `).join('');
+    } catch (error) {
+        console.error('Error loading booking:', error);
+        showToast('Ошибка загрузки данных бронирования', 'danger');
+    }
+});
+
+// Set booking ID for deletion
+document.getElementById('deleteBookingModal').addEventListener('show.bs.modal', (event) => {
+    const button = event.relatedTarget;
+    const bookingId = button.dataset.bookingId;
+    event.target.dataset.bookingId = bookingId;
+});
+
+// Helper function to parse date range
+function parseDateRange(dateRange) {
+    const [start, end] = dateRange.split(' - ');
+    return {
+        start_date: moment(start, 'DD.MM.YYYY').format('YYYY-MM-DD'),
+        end_date: moment(end, 'DD.MM.YYYY').format('YYYY-MM-DD')
+    };
+}
+
+// Helper function to format date range
+function formatDateRange(start, end) {
+    return `${moment(start).format('DD.MM.YYYY')} - ${moment(end).format('DD.MM.YYYY')}`;
+}
+
+// Initialize page
+document.addEventListener('DOMContentLoaded', () => {
+    loadClients();
+    loadEquipment();
+});
+</script>
+{% endblock %}
