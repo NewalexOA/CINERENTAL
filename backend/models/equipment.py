@@ -84,8 +84,8 @@ class Equipment(TimestampMixin, SoftDeleteMixin, Base):
     bookings: Mapped[List['Booking']] = relationship(back_populates='equipment')
 
     @property
-    def category_name(self) -> Optional[str]:
+    def category_name(self) -> str:
         """Get category name."""
         if self.category:
             return self.category.name
-        return None
+        return 'Без категории'
