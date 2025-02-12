@@ -62,11 +62,12 @@ async def equipment_list(
     equipment_data = []
     for item in equipment_list:
         item_dict = item.model_dump()
-        item_dict['category_name'] = (
-            item_dict['category']['name']
-            if item_dict.get('category')
-            else 'Без категории'
-        )
+        # Handle category name
+        item_dict['category_name'] = item_dict['category']['name']
+
+        # Handle status display
+        status = item_dict['status']
+        item_dict['status'] = status.value if hasattr(status, 'value') else status
         equipment_data.append(item_dict)
 
     return templates.TemplateResponse(
