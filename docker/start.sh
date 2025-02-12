@@ -7,10 +7,16 @@
 # Apply migrations
 alembic upgrade head
 
+# Debug output
+echo "Current environment: $ENVIRONMENT"
+
 # Seed test data if environment is development
 if [ "$ENVIRONMENT" = "development" ]; then
     echo "Seeding test data..."
-    python -m backend.scripts.seed_data
+    python -m backend.scripts.seed_data || {
+        echo "Error seeding data"
+        exit 1
+    }
 fi
 
 # Start the application

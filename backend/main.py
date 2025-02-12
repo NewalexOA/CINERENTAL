@@ -1,4 +1,8 @@
-"""Main FastAPI application module."""
+"""Main application module.
+
+This module initializes the FastAPI application, configures CORS middleware,
+and includes API routers. It serves as the entry point for the web application.
+"""
 
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
@@ -7,7 +11,6 @@ from fastapi import FastAPI
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from loguru import logger
-from pydantic import ValidationError
 
 from backend.api.v1.api import api_router
 from backend.api.v1.exceptions import (
@@ -24,51 +27,65 @@ from backend.web.router import web_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
-    """Application lifespan manager.
+    """Application lifespan context manager.
 
-    Initialize and cleanup resources.
+    This context manager handles startup and shutdown events for the application.
+    It ensures proper setup of logging, initialization of resources, and cleanup.
+
+    Args:
+        app: The FastAPI application instance
     """
-    # Configure logging
+    # Setup logging on startup
     configure_logging()
     logger.info('Application startup')
 
-    # Initialize Redis
+    # Initialize resources
     await init_redis()
     yield
-    # Cleanup
+    # Cleanup resources
     await close_redis()
     logger.info('Application shutdown')
 
 
-app = FastAPI(
-    title=settings.PROJECT_NAME,
-    description=settings.PROJECT_DESCRIPTION,
-    version=settings.PROJECT_VERSION,
-    openapi_url=settings.OPENAPI_URL,
-    docs_url=settings.DOCS_URL,
-    redoc_url=settings.REDOC_URL,
-    lifespan=lifespan,
-    redirect_slashes=False,
-)
+def create_app() -> FastAPI:
+    """Create and configure the FastAPI application.
 
-# Add exception handlers
-app.add_exception_handler(BusinessError, business_exception_handler)
-app.add_exception_handler(ValidationError, validation_exception_handler)
-app.add_exception_handler(RequestValidationError, validation_exception_handler)
+    This function creates a new FastAPI instance, configures middleware,
+    exception handlers, and includes routers.
 
-# Set CORS middleware
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=settings.CORS_ORIGINS,
-    allow_credentials=True,
-    allow_methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-    allow_headers=['*'],
-    max_age=3600,  # Maximum time to cache preflight requests
-)
+    Returns:
+        Configured FastAPI application instance
+    """
+    app = FastAPI(
+        title=settings.PROJECT_NAME,
+        version=settings.PROJECT_VERSION,
+        description='CINERENTAL API',
+        docs_url='/api/docs',
+        openapi_url='/api/openapi.json',
+        lifespan=lifespan,
+    )
 
-# Mount static files
-app.mount('/static', static_files, name='static')
+    # Configure CORS
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=settings.CORS_ORIGINS,
+        allow_credentials=True,
+        allow_methods=['*'],
+        allow_headers=['*'],
+    )
 
-# Include routers
-app.include_router(api_router, prefix=settings.API_V1_STR)
-app.include_router(web_router)
+    # Configure exception handlers
+    app.add_exception_handler(BusinessError, business_exception_handler)
+    app.add_exception_handler(RequestValidationError, validation_exception_handler)
+
+    # Mount static files
+    app.mount('/static', static_files, name='static')
+
+    # Include routers
+    app.include_router(api_router, prefix=settings.API_V1_STR)
+    app.include_router(web_router)
+
+    return app
+
+
+app = create_app()
