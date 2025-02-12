@@ -26,6 +26,7 @@ class LogConfig(BaseModel):
 
     LOGGER_NAME: str = 'cinerental'
     CONSOLE_FORMAT: str = (
+        '{time:YYYY-MM-DD HH:mm:ss} | '
         '<level>{level: <8}</level> | '
         '{name:<20} | '
         '<cyan>{function}:{line:<4}</cyan> | '
@@ -46,8 +47,8 @@ class LogConfig(BaseModel):
     formatters: dict = {
         'default': {
             '()': 'uvicorn.logging.DefaultFormatter',
-            'fmt': CONSOLE_FORMAT,
-            'datefmt': '%Y-%m-%d %H:%M:%S',
+            'fmt': '%(message)s',  # Remove timestamp from default formatter
+            'use_colors': True,
         },
     }
     handlers: dict = {
@@ -246,7 +247,7 @@ def should_log(record: Any) -> bool:
             if any(x in msg for x in ['initialize prop', 'setup', 'configure']):
                 return False
 
-        # Skip duplicate database operation logs
+        # Skip duplicate database operation logs from standard logging
         if str(record['name']) == 'logging':
             msg = str(record['message']).lower()
             if msg.startswith(('select', 'begin', 'rollback')):
@@ -262,12 +263,15 @@ def setup_logging_intercept() -> None:
     # Remove all existing handlers
     logging.root.handlers = []
 
+    # Configure SQLAlchemy logging to not include timestamps
+    logging.getLogger('sqlalchemy.engine').handlers = []
+
     # Redirect standard logging to loguru
     logging.basicConfig(
         handlers=[InterceptHandler()],
         level=0,
         force=True,
-        format='%(message)s',
+        format='%(message)s',  # Remove timestamp from format
     )
 
     # Intercept all third-party loggers
@@ -286,7 +290,11 @@ def setup_logging_intercept() -> None:
     # Configure each logger
     for name in loggers:
         logging_logger = logging.getLogger(name)
+        # Remove any existing handlers
+        logging_logger.handlers = []
+        # Add our interceptor
         logging_logger.handlers = [InterceptHandler()]
+        # Prevent propagation to avoid duplicates
         logging_logger.propagate = False
 
 

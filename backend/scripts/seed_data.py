@@ -1,10 +1,10 @@
 """Script for seeding test data into the database."""
 
 import asyncio
-import logging
 from decimal import Decimal
 
 from faker import Faker
+from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.core.database import AsyncSessionLocal
@@ -15,8 +15,6 @@ from backend.repositories import (
     ClientRepository,
     EquipmentRepository,
 )
-
-logger = logging.getLogger(__name__)
 
 # Initialize Faker with Russian locale
 fake = Faker('ru_RU')
