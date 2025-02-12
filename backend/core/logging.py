@@ -3,7 +3,7 @@
 import logging
 import sys
 from pathlib import Path
-from typing import Any, Union
+from typing import Any, Dict, Union
 
 from loguru import logger
 
@@ -11,19 +11,23 @@ from backend.core.config import settings
 
 
 class InterceptHandler(logging.Handler):
-    """Intercept standard logging and redirect to loguru."""
+    """Intercepts standard logging and redirects to loguru."""
 
     def emit(self, record: logging.LogRecord) -> None:
-        """Intercept and emit log record.
+        """Intercept log record and pass to loguru.
 
         Args:
-            record: Log record to emit
+            record: Log record to intercept
         """
+        # Skip uvicorn access logs timestamp
+        if record.name == 'uvicorn.access' and record.getMessage().startswith('20'):
+            return
+
         # Get corresponding Loguru level if it exists
         try:
             level = logger.level(record.levelname).name
         except ValueError:
-            level = str(record.levelno)  # Convert int to str
+            level = str(record.levelno)
 
         # Find caller from where originated the logged message
         frame, depth = logging.currentframe(), 2
@@ -31,18 +35,66 @@ class InterceptHandler(logging.Handler):
             frame = frame.f_back  # type: ignore
             depth += 1
 
-        logger.opt(depth=depth, exception=record.exc_info).log(
-            level, record.getMessage()
-        )
+        # Extract log message without timestamp
+        message = record.getMessage()
+        if message.startswith('20') and ' | ' in message:
+            message = ' | '.join(message.split(' | ')[1:])
+
+        # Pass extra fields from record with safe defaults
+        extra: Dict[str, Any] = {
+            'name': getattr(record, 'name', 'unknown'),
+            'function': getattr(record, 'funcName', 'unknown'),
+            'line': getattr(record, 'lineno', 0),
+            'module': getattr(record, 'module', 'unknown'),
+            'thread_name': getattr(record, 'threadName', 'MainThread'),
+            'process_name': getattr(record, 'processName', 'MainProcess'),
+        }
+
+        logger.opt(
+            depth=depth,
+            exception=record.exc_info,
+        ).bind(
+            **extra
+        ).log(level, message)
 
 
 def setup_logging_intercept() -> None:
     """Intercept all standard logging and redirect to loguru."""
-    logging.basicConfig(handlers=[InterceptHandler()], level=0, force=True)
-    for name in logging.root.manager.loggerDict:
-        if name.startswith(('uvicorn.', 'sqlalchemy.')):
-            logging_logger = logging.getLogger(name)
-            logging_logger.handlers = [InterceptHandler()]
+    # Remove all existing handlers
+    logging.root.handlers = []
+
+    # Redirect standard logging to loguru
+    logging.basicConfig(
+        handlers=[InterceptHandler()],
+        level=0,
+        force=True,
+        format='%(message)s',
+    )
+
+    # Intercept all third-party loggers
+    loggers = [
+        'uvicorn',
+        'uvicorn.access',
+        'uvicorn.error',
+        'uvicorn.asgi',
+        'fastapi',
+        'sqlalchemy.engine',
+        'alembic',
+        'watchfiles',
+        'backend',
+    ]
+
+    # Configure each logger
+    for name in loggers:
+        logging_logger = logging.getLogger(name)
+        # Remove any existing handlers
+        if logging_logger.handlers:
+            for handler in logging_logger.handlers[:]:
+                logging_logger.removeHandler(handler)
+        # Add our interceptor
+        logging_logger.addHandler(InterceptHandler())
+        # Prevent double logging
+        logging_logger.propagate = False
 
 
 def configure_logging(
@@ -55,22 +107,30 @@ def configure_logging(
         sink: Optional log file path
         **kwargs: Additional logging configuration options
     """
-    # Remove default logger
+    # Remove all existing handlers from loguru
     logger.remove()
 
     # Determine log level
     log_level = settings.LOG_LEVEL.upper()
 
-    # Configure console logging
+    # Common log format with safe defaults for extra fields
+    log_format = (
+        '<green>{time:YYYY-MM-DD HH:mm:ss}</green> | '
+        '<level>{level: <8}</level> | '
+        '{extra[name]!s:>20}:{extra[function]!s:>20}:{extra[line]!s:<4} | '
+        '<level>{message}</level>'
+    )
+
+    # Configure console logging with colors
     logger.add(
-        sys.stdout,
+        sys.stderr,
         level=log_level,
-        format=(
-            '<green>{time:YYYY-MM-DD HH:mm:ss}</green> | '
-            '<level>{level: <8}</level> | '
-            '<cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> | '
-            '<level>{message}</level>'
-        ),
+        format=log_format,
+        enqueue=True,  # Thread-safe logging
+        backtrace=True,  # Include exception tracebacks
+        diagnose=True,  # Include diagnostic info
+        catch=True,  # Handle exceptions gracefully
+        colorize=True,  # Enable colorization
         **kwargs,
     )
 
@@ -79,30 +139,38 @@ def configure_logging(
         log_path = Path(sink) if sink else Path('logs/cinerental.log')
         log_path.parent.mkdir(parents=True, exist_ok=True)
 
+        # File format without colors and with safe defaults
+        file_format = (
+            '{time:YYYY-MM-DD HH:mm:ss} | '
+            '{level: <8} | '
+            '{extra[name]!s}:{extra[function]!s}:{extra[line]!s} | '
+            '{message}'
+        )
+
         logger.add(
             str(log_path),
             level=log_level,
-            rotation='1 day',
+            format=file_format,
+            rotation='00:00',  # Rotate at midnight
             retention='1 week',
             compression='zip',
-            format=(
-                '{time:YYYY-MM-DD HH:mm:ss} | '
-                '{level: <8} | '
-                '{name}:{function}:{line} | '
-                '{message}'
-            ),
+            enqueue=True,  # Thread-safe logging
+            backtrace=True,  # Include exception tracebacks
+            diagnose=True,  # Include diagnostic info
+            catch=True,  # Handle exceptions gracefully
+            serialize=True,  # Enable JSON serialization for better parsing
             **kwargs,
         )
 
-    # Set specific log levels for different environments
-    if settings.ENVIRONMENT == 'production':
-        logger.level('DEBUG', False)  # Disable debug logs in production
-        logger.level('INFO', False)  # Only show warning and above in production
-
-    # Intercept standard logging
+    # Setup logging interception after loguru configuration
     setup_logging_intercept()
 
-    logger.info(
+    # Log configuration complete
+    logger.bind(
+        name='backend.core.logging',
+        function='configure_logging',
+        line=0,
+    ).info(
         'Logging configured | Environment: {} | Level: {}',
         settings.ENVIRONMENT,
         log_level,

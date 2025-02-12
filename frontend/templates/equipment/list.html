@@ -3,89 +3,84 @@
 {% block title %}Оборудование - CINERENTAL{% endblock %}
 
 {% block content %}
-<div class="row mb-4">
-    <div class="col-12">
-        <div class="d-flex justify-content-between align-items-center">
-            <h1>Оборудование</h1>
-            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addEquipmentModal">
-                <i class="fas fa-plus"></i> Добавить оборудование
-            </button>
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Оборудование</h1>
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addEquipmentModal">
+            <i class="fas fa-plus"></i> Добавить оборудование
+        </button>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="input-group">
+                <input type="text" class="form-control" id="searchInput" placeholder="Поиск оборудования...">
+                <button class="btn btn-outline-secondary" type="button" id="searchButton">
+                    <i class="fas fa-search"></i>
+                </button>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <select class="form-select" id="categoryFilter">
+                <option value="">Все категории</option>
+            </select>
+        </div>
+        <div class="col-md-3">
+            <select class="form-select" id="statusFilter">
+                <option value="">Все статусы</option>
+                <option value="AVAILABLE">Доступно</option>
+                <option value="RENTED">В аренде</option>
+                <option value="MAINTENANCE">В ремонте</option>
+            </select>
         </div>
     </div>
-</div>
 
-<div class="row mb-4">
-    <div class="col-12">
-        <div class="card">
-            <div class="card-body">
-                <div class="row g-3">
-                    <!-- Search -->
-                    <div class="col-md-4">
-                        <div class="input-group">
-                            <span class="input-group-text">
-                                <i class="fas fa-search"></i>
-                            </span>
-                            <input type="text" class="form-control" id="searchEquipment" placeholder="Поиск оборудования...">
-                        </div>
-                    </div>
-                    <!-- Category Filter -->
-                    <div class="col-md-3">
-                        <select class="form-select" id="categoryFilter">
-                            <option value="">Все категории</option>
-                        </select>
-                    </div>
-                    <!-- Status Filter -->
-                    <div class="col-md-3">
-                        <select class="form-select" id="statusFilter">
-                            <option value="">Все статусы</option>
-                            <option value="AVAILABLE">Доступно</option>
-                            <option value="RENTED">В аренде</option>
-                            <option value="MAINTENANCE">В ремонте</option>
-                        </select>
-                    </div>
-                    <!-- Sort -->
-                    <div class="col-md-2">
-                        <select class="form-select" id="sortOrder">
-                            <option value="name">По названию</option>
-                            <option value="category">По категории</option>
-                            <option value="status">По статусу</option>
-                        </select>
-                    </div>
-                </div>
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Название</th>
+                            <th>Категория</th>
+                            <th>Штрих-код</th>
+                            <th>Статус</th>
+                            <th>Дневная ставка</th>
+                            <th>Действия</th>
+                        </tr>
+                    </thead>
+                    <tbody id="equipmentTable">
+                        {% for item in equipment_list %}
+                        <tr>
+                            <td>
+                                <div class="fw-bold">{{ item.name }}</div>
+                                <small class="text-muted">{{ item.description }}</small>
+                            </td>
+                            <td>{{ item.category_name }}</td>
+                            <td>{{ item.barcode }}</td>
+                            <td>
+                                <span class="badge bg-{{ 'success' if item.status == 'AVAILABLE' else 'warning' if item.status == 'RENTED' else 'danger' }}">
+                                    {{ item.status }}
+                                </span>
+                            </td>
+                            <td>{{ item.daily_rate }} ₽</td>
+                            <td>
+                                <div class="btn-group">
+                                    <a href="/equipment/{{ item.id }}" class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-info-circle"></i>
+                                    </a>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="copyBarcode('{{ item.barcode }}')">
+                                        <i class="fas fa-copy"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>
-</div>
-
-<div class="row g-4" id="equipmentGrid">
-    {% for item in equipment_list %}
-    <div class="col-md-6 col-lg-4">
-        <div class="card h-100">
-            <div class="card-body">
-                <h5 class="card-title">{{ item.name }}</h5>
-                <h6 class="card-subtitle mb-2 text-muted">{{ item.category.name }}</h6>
-                <p class="card-text">{{ item.description }}</p>
-                <div class="mb-3">
-                    <span class="badge bg-{{ item.status | lower }}">
-                        {{ item.status }}
-                    </span>
-                </div>
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <small class="text-muted">
-                            Штрих-код: {{ item.barcode }}
-                        </small>
-                    </div>
-                    <div>
-                        <a href="/equipment/{{ item.id }}" class="btn btn-outline-primary btn-sm">
-                            <i class="fas fa-info-circle"></i> Подробнее
-                        </a>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    {% endfor %}
 </div>
 
 <!-- Add Equipment Modal -->
@@ -105,20 +100,20 @@
                     <div class="mb-3">
                         <label class="form-label">Категория</label>
                         <select class="form-select" name="category_id" required>
-                            <!-- Заполняется через API -->
+                            <!-- Categories will be loaded dynamically -->
                         </select>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Описание</label>
-                        <textarea class="form-control" name="description" rows="3"></textarea>
+                        <textarea class="form-control" name="description" rows="3" required></textarea>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Серийный номер</label>
-                        <input type="text" class="form-control" name="serial_number">
+                        <input type="text" class="form-control" name="serial_number" required>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Штрих-код</label>
-                        <input type="text" class="form-control" name="barcode">
+                        <input type="text" class="form-control" name="barcode" required>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Дневная ставка</label>
@@ -132,7 +127,7 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
-                <button type="button" class="btn btn-primary" id="saveEquipment">Сохранить</button>
+                <button type="button" class="btn btn-primary" id="addEquipment">Добавить</button>
             </div>
         </div>
     </div>
@@ -141,27 +136,27 @@
 
 {% block extra_js %}
 <script>
-// Load categories for filter and form
+// Load categories for add form
 async function loadCategories() {
     try {
         const categories = await api.get('/categories');
-        const filterSelect = document.getElementById('categoryFilter');
         const formSelect = document.querySelector('select[name="category_id"]');
+        const filterSelect = document.getElementById('categoryFilter');
 
         const options = categories.map(category =>
             `<option value="${category.id}">${category.name}</option>`
         ).join('');
 
-        filterSelect.innerHTML += options;
         formSelect.innerHTML = options;
+        filterSelect.innerHTML += options;
     } catch (error) {
         console.error('Error loading categories:', error);
         showToast('Ошибка загрузки категорий', 'danger');
     }
 }
 
-// Handle equipment form submission
-document.getElementById('saveEquipment').addEventListener('click', async () => {
+// Handle equipment creation
+document.getElementById('addEquipment').addEventListener('click', async () => {
     const form = document.getElementById('addEquipmentForm');
     const formData = new FormData(form);
     const data = Object.fromEntries(formData.entries());
@@ -171,14 +166,72 @@ document.getElementById('saveEquipment').addEventListener('click', async () => {
         showToast('Оборудование успешно добавлено', 'success');
         location.reload();
     } catch (error) {
-        console.error('Error saving equipment:', error);
-        showToast('Ошибка при сохранении', 'danger');
+        console.error('Error creating equipment:', error);
+        showToast('Ошибка при создании', 'danger');
     }
 });
 
-// Initialize page
-document.addEventListener('DOMContentLoaded', () => {
-    loadCategories();
+// Handle search
+document.getElementById('searchButton').addEventListener('click', async () => {
+    const query = document.getElementById('searchInput').value;
+    const categoryId = document.getElementById('categoryFilter').value;
+    const status = document.getElementById('statusFilter').value;
+
+    try {
+        const params = new URLSearchParams();
+        if (query) params.append('query', query);
+        if (categoryId) params.append('category_id', categoryId);
+        if (status) params.append('status', status);
+
+        const equipment = await api.get(`/equipment?${params.toString()}`);
+        updateEquipmentTable(equipment);
+    } catch (error) {
+        console.error('Error searching equipment:', error);
+        showToast('Ошибка при поиске', 'danger');
+    }
 });
+
+// Update equipment table
+function updateEquipmentTable(equipment) {
+    const tbody = document.getElementById('equipmentTable');
+    tbody.innerHTML = equipment.map(item => `
+        <tr>
+            <td>
+                <div class="fw-bold">${item.name}</div>
+                <small class="text-muted">${item.description}</small>
+            </td>
+            <td>${item.category_name}</td>
+            <td>${item.barcode}</td>
+            <td>
+                <span class="badge bg-${item.status === 'AVAILABLE' ? 'success' : item.status === 'RENTED' ? 'warning' : 'danger'}">
+                    ${item.status}
+                </span>
+            </td>
+            <td>${item.daily_rate} ₽</td>
+            <td>
+                <div class="btn-group">
+                    <a href="/equipment/${item.id}" class="btn btn-sm btn-outline-primary">
+                        <i class="fas fa-info-circle"></i>
+                    </a>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="copyBarcode('${item.barcode}')">
+                        <i class="fas fa-copy"></i>
+                    </button>
+                </div>
+            </td>
+        </tr>
+    `).join('');
+}
+
+// Copy barcode to clipboard
+function copyBarcode(barcode) {
+    navigator.clipboard.writeText(barcode).then(() => {
+        showToast('Штрих-код скопирован', 'success');
+    }).catch(() => {
+        showToast('Ошибка при копировании', 'danger');
+    });
+}
+
+// Initialize
+loadCategories();
 </script>
 {% endblock %}

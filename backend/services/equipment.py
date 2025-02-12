@@ -580,19 +580,29 @@ class EquipmentService:
                 details={'limit': limit, 'max_limit': 1000},
             )
 
-        equipment_list = await self.repository.get_equipment_list(
-            status=status,
-            skip=skip,
-            limit=limit,
+        # Get equipment with categories in a single query
+        stmt = (
+            select(Equipment)
+            .options(joinedload(Equipment.category))
+            .filter(Equipment.deleted_at.is_(None))
+            .order_by(Equipment.name)
         )
 
-        # Load equipment with categories
-        loaded_equipment = []
-        for equipment in equipment_list:
-            loaded = await self._load_equipment_with_category(equipment)
-            loaded_equipment.append(loaded)
+        if status:
+            stmt = stmt.filter(Equipment.status == status)
 
-        return [EquipmentResponse.model_validate(e) for e in loaded_equipment]
+        stmt = stmt.offset(skip).limit(limit)
+
+        result = await self.session.execute(stmt)
+        equipment_list = result.unique().scalars().all()
+
+        # Transform data for response
+        response_list = []
+        for equipment in equipment_list:
+            equipment_data = EquipmentResponse.model_validate(equipment)
+            response_list.append(equipment_data)
+
+        return response_list
 
     async def search(self, query: str) -> List[EquipmentResponse]:
         """Search equipment by name or description.

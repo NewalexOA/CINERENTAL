@@ -1,6 +1,6 @@
 """Frontend router module."""
 
-from typing import Annotated
+from typing import Annotated, List
 
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse
@@ -10,7 +10,7 @@ from starlette.templating import _TemplateResponse
 from backend.core.database import get_db
 from backend.core.templates import templates
 from backend.schemas.equipment import EquipmentResponse
-from backend.services.equipment import EquipmentService
+from backend.services import CategoryService, EquipmentService
 
 web_router = APIRouter()
 
@@ -58,11 +58,22 @@ async def equipment_list(
     equipment_service = EquipmentService(db)
     equipment_list = await equipment_service.get_all()
 
+    # Transform data for template
+    equipment_data = []
+    for item in equipment_list:
+        item_dict = item.model_dump()
+        item_dict['category_name'] = (
+            item_dict['category']['name']
+            if item_dict.get('category')
+            else 'Без категории'
+        )
+        equipment_data.append(item_dict)
+
     return templates.TemplateResponse(
         'equipment/list.html',
         {
             'request': request,
-            'equipment_list': [item.model_dump() for item in equipment_list],
+            'equipment_list': equipment_data,
         },
     )
 
@@ -141,3 +152,22 @@ async def scanner(request: Request) -> _TemplateResponse:
         'scanner.html',
         {'request': request},
     )
+
+
+@web_router.get('/api/v1/categories')
+async def get_categories(
+    request: Request,
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> List[dict]:
+    """Get all categories.
+
+    Args:
+        request: FastAPI request
+        db: Database session
+
+    Returns:
+        List[dict]: List of categories
+    """
+    category_service = CategoryService(db)
+    categories = await category_service.get_all()
+    return [category.model_dump() for category in categories]

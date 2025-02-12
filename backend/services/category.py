@@ -6,12 +6,13 @@ including hierarchy management and validation of category relationships.
 
 from typing import List, Optional
 
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.exceptions import ConflictError, NotFoundError, ValidationError
 from backend.models import Category
 from backend.repositories import CategoryRepository
-from backend.schemas import CategoryWithEquipmentCount
+from backend.schemas import CategoryResponse, CategoryWithEquipmentCount
 
 
 class CategoryService:
@@ -248,3 +249,34 @@ class CategoryService:
             )
             for category in categories
         ]
+
+    async def get_all(
+        self,
+        parent_id: Optional[int] = None,
+        skip: int = 0,
+        limit: int = 100,
+    ) -> List[CategoryResponse]:
+        """Get all categories with optional filtering and pagination.
+
+        Args:
+            parent_id: Filter by parent category ID
+            skip: Number of records to skip
+            limit: Maximum number of records to return
+
+        Returns:
+            List of categories
+        """
+        stmt = (
+            select(Category)
+            .filter(Category.deleted_at.is_(None))
+            .order_by(Category.name)
+        )
+
+        if parent_id is not None:
+            stmt = stmt.filter(Category.parent_id == parent_id)
+
+        stmt = stmt.offset(skip).limit(limit)
+        result = await self.session.execute(stmt)
+        categories = result.scalars().all()
+
+        return [CategoryResponse.model_validate(c) for c in categories]

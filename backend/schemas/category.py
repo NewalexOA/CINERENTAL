@@ -13,37 +13,33 @@ from pydantic import BaseModel, ConfigDict, Field
 class CategoryBase(BaseModel):
     """Base category schema."""
 
-    name: str = Field(..., description='Category name')
-    description: Optional[str] = Field(None, description='Category description')
-
-    model_config = ConfigDict(from_attributes=True)
+    name: str
+    description: Optional[str] = None
+    parent_id: Optional[int] = None
 
 
 class CategoryCreate(CategoryBase):
-    """Create category request schema."""
+    """Category create schema."""
 
     pass
 
 
 class CategoryUpdate(BaseModel):
-    """Update category request schema."""
+    """Category update schema."""
 
-    name: Optional[str] = Field(None, description='Category name')
-    description: Optional[str] = Field(None, description='Category description')
-    parent_id: Optional[int] = Field(None, description='Parent category ID')
-
-    model_config = ConfigDict(from_attributes=True)
+    name: Optional[str] = None
+    description: Optional[str] = None
+    parent_id: Optional[int] = None
 
 
 class CategoryResponse(CategoryBase):
     """Category response schema."""
 
-    id: int = Field(..., description='Category ID')
-    parent_id: Optional[int] = Field(None, description='Parent category ID')
-    created_at: datetime = Field(..., description='Creation timestamp')
-    updated_at: datetime = Field(..., description='Last update timestamp')
-
     model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    created_at: datetime
+    updated_at: datetime
 
 
 class CategoryWithEquipmentCount(CategoryResponse):
