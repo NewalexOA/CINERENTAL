@@ -5,9 +5,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.models.category import Category
 from backend.services.category import CategoryService
+from tests.conftest import async_fixture, async_test
 
 
-@pytest.fixture  # type: ignore[misc]
+@async_fixture
 async def category_service(db_session: AsyncSession) -> CategoryService:
     """Create category service for tests.
 
@@ -23,6 +24,7 @@ async def category_service(db_session: AsyncSession) -> CategoryService:
 class TestCategoryService:
     """Tests for category service."""
 
+    @async_test
     async def test_create_category(self, category_service: CategoryService) -> None:
         """Test creating a category."""
         category = await category_service.create_category(
@@ -35,6 +37,7 @@ class TestCategoryService:
         assert category.name == 'Test Category'
         assert category.description == 'Test Description'
 
+    @async_test
     async def test_get_category(self, category_service: CategoryService) -> None:
         """Test getting a category."""
         created = await category_service.create_category(
@@ -47,6 +50,7 @@ class TestCategoryService:
         assert result.name == 'Test Category'
         assert result.description == 'Test Description'
 
+    @async_test
     async def test_get_nonexistent_category(
         self,
         category_service: CategoryService,
@@ -55,6 +59,7 @@ class TestCategoryService:
         category = await category_service.get_category(999)
         assert category is None
 
+    @async_test
     async def test_update_category(self, category_service: CategoryService) -> None:
         """Test updating a category."""
         category = await category_service.create_category(
@@ -72,18 +77,20 @@ class TestCategoryService:
         assert updated.name == 'Updated Category'
         assert updated.description == 'Updated Description'
 
+    @async_test
     async def test_update_nonexistent_category(
         self,
         category_service: CategoryService,
     ) -> None:
         """Test updating a nonexistent category."""
-        with pytest.raises(ValueError, match='Category not found'):
+        with pytest.raises(ValueError, match='Category with ID 999 not found'):
             await category_service.update_category(
                 999,
                 name='Updated Category',
                 description='Updated Description',
             )
 
+    @async_test
     async def test_get_categories(self, category_service: CategoryService) -> None:
         """Test getting all categories."""
         await category_service.create_category(
@@ -106,6 +113,7 @@ class TestCategoryService:
         assert categories[1].name == 'Category 2'
         assert categories[2].name == 'Category 3'
 
+    @async_test
     async def test_search_categories(self, category_service: CategoryService) -> None:
         """Test searching categories."""
         await category_service.create_category(
@@ -125,6 +133,7 @@ class TestCategoryService:
         assert len(categories) == 2
         assert all(isinstance(cat, Category) for cat in categories)
 
+    @async_test
     async def test_get_with_equipment_count(
         self,
         category_service: CategoryService,

@@ -1,62 +1,84 @@
 """Booking model module.
 
-This module defines the Booking model representing equipment rental records.
-Each booking links a client with equipment items for a specific time period
-and includes rental terms, status, and payment information.
+This module defines the Booking model representing equipment rental bookings.
+Each booking is associated with a client and equipment item, and tracks
+rental period, payment status, and other booking-related information.
 """
 
 from datetime import datetime
 from decimal import Decimal
 from enum import Enum
+from typing import TYPE_CHECKING, List, Optional
 
-from sqlalchemy import DateTime
-from sqlalchemy import Enum as SQLEnum
-from sqlalchemy import ForeignKey, Numeric, String
+from sqlalchemy import DateTime, ForeignKey, Numeric, String
+from sqlalchemy.dialects.postgresql import ENUM
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from backend.models.base import Base, TimestampMixin
+from backend.models import Base, TimestampMixin
+
+if TYPE_CHECKING:
+    from backend.models.client import Client
+    from backend.models.document import Document
+    from backend.models.equipment import Equipment
 
 
 class BookingStatus(str, Enum):
     """Booking status enumeration."""
 
-    PENDING = 'pending'  # Just created, waiting for confirmation
-    CONFIRMED = 'confirmed'  # Confirmed but not yet started
-    ACTIVE = 'active'  # Equipment is currently rented out
-    COMPLETED = 'completed'  # Equipment returned, all payments made
-    CANCELLED = 'cancelled'  # Booking was cancelled
-    OVERDUE = 'overdue'  # Equipment not returned on time
+    PENDING = 'pending'
+    CONFIRMED = 'confirmed'
+    ACTIVE = 'active'
+    COMPLETED = 'completed'
+    CANCELLED = 'cancelled'
+    OVERDUE = 'overdue'
 
 
 class PaymentStatus(str, Enum):
     """Payment status enumeration."""
 
-    PENDING = 'pending'  # Payment not yet made
-    PARTIAL = 'partial'  # Partial payment received
-    PAID = 'paid'  # Fully paid
-    REFUNDED = 'refunded'  # Payment was refunded
-    OVERDUE = 'overdue'  # Payment is overdue
+    PENDING = 'pending'
+    PARTIAL = 'partial'
+    PAID = 'paid'
+    REFUNDED = 'refunded'
+    OVERDUE = 'overdue'
+
+
+# Create ENUM types for PostgreSQL
+booking_status_enum = ENUM(
+    BookingStatus,
+    name='bookingstatus',
+    create_type=True,
+    values_callable=lambda obj: [e.value for e in obj],
+    metadata=Base.metadata,
+)
+
+payment_status_enum = ENUM(
+    PaymentStatus,
+    name='paymentstatus',
+    create_type=True,
+    values_callable=lambda obj: [e.value for e in obj],
+    metadata=Base.metadata,
+)
 
 
 class Booking(TimestampMixin, Base):
     """Booking model.
 
     Attributes:
-        id: Primary key.
-        client_id: Reference to the client.
-        equipment_id: Reference to the equipment.
-        start_date: Rental start date and time.
-        end_date: Expected return date and time.
-        actual_return_date: Actual return date and time.
-        booking_status: Current booking status.
-        payment_status: Current payment status.
-        total_amount: Total rental amount.
-        paid_amount: Amount already paid.
-        deposit_amount: Security deposit amount.
-        notes: Optional booking notes.
-        client: Client relationship.
-        equipment: Equipment relationship.
-        documents: Related documents relationship.
+        id: Primary key
+        client_id: Reference to client
+        equipment_id: Reference to equipment
+        start_date: Rental start date
+        end_date: Rental end date
+        booking_status: Current booking status
+        payment_status: Current payment status
+        total_amount: Total rental amount
+        deposit_amount: Required deposit amount
+        paid_amount: Amount paid so far
+        notes: Optional booking notes
+        client: Client relationship
+        equipment: Equipment relationship
+        documents: Documents relationship
     """
 
     __tablename__ = 'bookings'
@@ -69,34 +91,37 @@ class Booking(TimestampMixin, Base):
         ForeignKey('equipment.id', ondelete='RESTRICT')
     )
     start_date: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, index=True
+        DateTime(timezone=True), nullable=False
     )
-    end_date: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, index=True
-    )
-    actual_return_date: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    end_date: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     booking_status: Mapped[BookingStatus] = mapped_column(
-        SQLEnum(BookingStatus),
+        booking_status_enum,
         default=BookingStatus.PENDING,
         nullable=False,
         index=True,
     )
     payment_status: Mapped[PaymentStatus] = mapped_column(
-        SQLEnum(PaymentStatus),
+        payment_status_enum,
         default=PaymentStatus.PENDING,
         nullable=False,
         index=True,
     )
     total_amount: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
-    paid_amount: Mapped[Decimal] = mapped_column(
-        Numeric(10, 2), default=0, nullable=False
-    )
     deposit_amount: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
-    notes: Mapped[str | None] = mapped_column(String(1000))
+    paid_amount: Mapped[Decimal] = mapped_column(
+        Numeric(10, 2), nullable=False, default=0
+    )
+    notes: Mapped[Optional[str]] = mapped_column(String(1000))
 
     # Relationships
-    client = relationship('Client', back_populates='bookings')
-    equipment = relationship('Equipment', back_populates='bookings')
-    documents = relationship(
-        'Document', back_populates='booking', cascade='all, delete-orphan'
-    )
+    client: Mapped['Client'] = relationship(back_populates='bookings')
+    equipment: Mapped['Equipment'] = relationship(back_populates='bookings')
+    documents: Mapped[List['Document']] = relationship(back_populates='booking')
+
+    def is_active(self) -> bool:
+        """Check if booking is active.
+
+        Returns:
+            True if booking is active
+        """
+        return self.booking_status == BookingStatus.ACTIVE

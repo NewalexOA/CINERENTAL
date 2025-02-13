@@ -1,0 +1,222 @@
+{% extends "base.html" %}
+
+{% block title %}Главная - CINERENTAL{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <h1 class="display-4 mb-4">Добро пожаловать в CINERENTAL</h1>
+        <p class="lead">Система управления арендой кинооборудования</p>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- Quick Actions -->
+    <div class="col-md-6 col-lg-3">
+        <div class="card h-100">
+            <div class="card-body">
+                <h5 class="card-title">
+                    <i class="fas fa-bolt text-warning"></i> Быстрые действия
+                </h5>
+                <div class="list-group list-group-flush">
+                    <a href="/bookings/new" class="list-group-item list-group-item-action">
+                        <i class="fas fa-plus"></i> Новое бронирование
+                    </a>
+                    <a href="/clients/new" class="list-group-item list-group-item-action">
+                        <i class="fas fa-user-plus"></i> Новый клиент
+                    </a>
+                    <button class="list-group-item list-group-item-action" data-bs-toggle="modal" data-bs-target="#scannerModal">
+                        <i class="fas fa-barcode"></i> Сканировать оборудование
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Bookings -->
+    <div class="col-md-6 col-lg-3">
+        <div class="card h-100">
+            <div class="card-body">
+                <h5 class="card-title">
+                    <i class="fas fa-clock text-info"></i> Последние бронирования
+                </h5>
+                <div class="list-group list-group-flush" id="recentBookings">
+                    <div class="text-center py-3">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Загрузка...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer">
+                <a href="/bookings" class="btn btn-outline-primary btn-sm w-100">
+                    Все бронирования
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Equipment Status -->
+    <div class="col-md-6 col-lg-3">
+        <div class="card h-100">
+            <div class="card-body">
+                <h5 class="card-title">
+                    <i class="fas fa-chart-pie text-success"></i> Статус оборудования
+                </h5>
+                <div id="equipmentStatus">
+                    <div class="text-center py-3">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Загрузка...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer">
+                <a href="/equipment" class="btn btn-outline-primary btn-sm w-100">
+                    Все оборудование
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Today's Returns -->
+    <div class="col-md-6 col-lg-3">
+        <div class="card h-100">
+            <div class="card-body">
+                <h5 class="card-title">
+                    <i class="fas fa-undo text-danger"></i> Возвраты сегодня
+                </h5>
+                <div id="todayReturns">
+                    <div class="text-center py-3">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Загрузка...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer">
+                <a href="/returns" class="btn btn-outline-primary btn-sm w-100">
+                    Все возвраты
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Load recent bookings
+async function loadRecentBookings() {
+    try {
+        const bookings = await api.get('/bookings/recent');
+        const container = document.getElementById('recentBookings');
+
+        if (bookings.length === 0) {
+            container.innerHTML = '<div class="text-center py-3">Нет активных бронирований</div>';
+            return;
+        }
+
+        container.innerHTML = bookings.map(booking => `
+            <a href="/bookings/${booking.id}" class="list-group-item list-group-item-action">
+                <div class="d-flex w-100 justify-content-between">
+                    <h6 class="mb-1">${booking.client.name}</h6>
+                    <small class="text-muted">${formatDate(booking.start_date)}</small>
+                </div>
+                <p class="mb-1">${booking.equipment.length} ед. оборудования</p>
+                <small class="text-${getStatusColor(booking.status)}">${booking.status}</small>
+            </a>
+        `).join('');
+    } catch (error) {
+        console.error('Error loading recent bookings:', error);
+        document.getElementById('recentBookings').innerHTML = `
+            <div class="alert alert-danger">
+                Ошибка загрузки бронирований
+            </div>
+        `;
+    }
+}
+
+// Load equipment status
+async function loadEquipmentStatus() {
+    try {
+        const stats = await api.get('/equipment/stats');
+        const container = document.getElementById('equipmentStatus');
+
+        container.innerHTML = `
+            <div class="list-group list-group-flush">
+                <div class="list-group-item d-flex justify-content-between align-items-center">
+                    Доступно
+                    <span class="badge bg-success rounded-pill">${stats.available}</span>
+                </div>
+                <div class="list-group-item d-flex justify-content-between align-items-center">
+                    В аренде
+                    <span class="badge bg-warning rounded-pill">${stats.rented}</span>
+                </div>
+                <div class="list-group-item d-flex justify-content-between align-items-center">
+                    В ремонте
+                    <span class="badge bg-danger rounded-pill">${stats.maintenance}</span>
+                </div>
+            </div>
+        `;
+    } catch (error) {
+        console.error('Error loading equipment stats:', error);
+        document.getElementById('equipmentStatus').innerHTML = `
+            <div class="alert alert-danger">
+                Ошибка загрузки статистики
+            </div>
+        `;
+    }
+}
+
+// Load today's returns
+async function loadTodayReturns() {
+    try {
+        const returns = await api.get('/bookings/returns/today');
+        const container = document.getElementById('todayReturns');
+
+        if (returns.length === 0) {
+            container.innerHTML = '<div class="text-center py-3">Нет возвратов на сегодня</div>';
+            return;
+        }
+
+        container.innerHTML = returns.map(booking => `
+            <div class="list-group list-group-item-action">
+                <div class="d-flex w-100 justify-content-between">
+                    <h6 class="mb-1">${booking.client.name}</h6>
+                    <small class="text-muted">${formatDate(booking.end_date)}</small>
+                </div>
+                <p class="mb-1">${booking.equipment.length} ед. оборудования</p>
+            </div>
+        `).join('');
+    } catch (error) {
+        console.error('Error loading today returns:', error);
+        document.getElementById('todayReturns').innerHTML = `
+            <div class="alert alert-danger">
+                Ошибка загрузки возвратов
+            </div>
+        `;
+    }
+}
+
+// Helper function for status colors
+function getStatusColor(status) {
+    const colors = {
+        'PENDING': 'warning',
+        'CONFIRMED': 'info',
+        'ACTIVE': 'success',
+        'COMPLETED': 'secondary',
+        'CANCELLED': 'danger',
+        'OVERDUE': 'danger'
+    };
+    return colors[status] || 'secondary';
+}
+
+// Load all data when page loads
+document.addEventListener('DOMContentLoaded', () => {
+    loadRecentBookings();
+    loadEquipmentStatus();
+    loadTodayReturns();
+});
+</script>
+{% endblock %}

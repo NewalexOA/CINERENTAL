@@ -6,25 +6,28 @@ including creating, retrieving, updating, and organizing hierarchical relationsh
 
 from typing import List, Optional
 
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.sql import Select
+from sqlalchemy.sql import func
+from sqlalchemy.sql.expression import CTE, or_
 
-from backend.models.category import Category
-from backend.models.equipment import Equipment
-from backend.repositories.base import BaseRepository
+from backend.models import Category, Equipment
+from backend.repositories import BaseRepository
 
 
 class CategoryRepository(BaseRepository[Category]):
-    """Repository for equipment categories."""
+    """Category repository.
+
+    Provides database operations for managing equipment categories.
+    """
 
     def __init__(self, session: AsyncSession) -> None:
         """Initialize repository.
 
         Args:
-            session: SQLAlchemy async session
+            session: Database session
         """
-        super().__init__(Category, session)
+        super().__init__(session, Category)
 
     async def get_by_name(self, name: str) -> Optional[Category]:
         """Get category by name.
@@ -35,14 +38,15 @@ class CategoryRepository(BaseRepository[Category]):
         Returns:
             Category if found, None otherwise
         """
-        query: Select[tuple[Category]] = select(self.model).where(
-            self.model.name == name
+        stmt = select(Category).where(
+            Category.name == name,
+            Category.deleted_at.is_(None),
         )
-        result = await self.session.execute(query)
+        result = await self.session.execute(stmt)
         return result.scalar_one_or_none()
 
     async def get_children(self, parent_id: int) -> List[Category]:
-        """Get child categories.
+        """Get all child categories.
 
         Args:
             parent_id: Parent category ID
@@ -50,44 +54,25 @@ class CategoryRepository(BaseRepository[Category]):
         Returns:
             List of child categories
         """
-        query: Select[tuple[Category]] = select(self.model).where(
-            self.model.parent_id == parent_id
+        stmt = select(Category).where(
+            Category.parent_id == parent_id,
+            Category.deleted_at.is_(None),
         )
-        result = await self.session.execute(query)
+        result = await self.session.execute(stmt)
         return list(result.scalars().all())
 
     async def get_root_categories(self) -> List[Category]:
-        """Get root categories (without parent).
+        """Get all root categories (without parent).
 
         Returns:
             List of root categories
         """
-        query: Select[tuple[Category]] = select(self.model).where(
-            self.model.parent_id.is_(None)
+        stmt = select(Category).where(
+            Category.parent_id.is_(None),
+            Category.deleted_at.is_(None),
         )
-        result = await self.session.execute(query)
+        result = await self.session.execute(stmt)
         return list(result.scalars().all())
-
-    async def get_full_path(self, category_id: int) -> List[Category]:
-        """Get category path from root to given category.
-
-        Args:
-            category_id: Category ID
-
-        Returns:
-            List of categories from root to given category
-        """
-        path: List[Category] = []
-        current: Optional[Category] = await self.get(category_id)
-
-        while current:
-            path.insert(0, current)
-            if current.parent_id:
-                current = await self.get(current.parent_id)
-            else:
-                break
-
-        return path
 
     async def get_equipment_count(self, category_id: int) -> int:
         """Get number of equipment items in category.
@@ -117,20 +102,29 @@ class CategoryRepository(BaseRepository[Category]):
         """
         return await self.get_children(category_id)
 
-    async def search(self, query: str) -> List[Category]:
+    async def search(
+        self,
+        query: str,
+        include_deleted: bool = False,
+    ) -> List[Category]:
         """Search categories by name or description.
 
         Args:
             query: Search query string
+            include_deleted: Whether to include deleted categories
 
         Returns:
             List of matching categories
         """
-        search_query = f'%{query}%'
-        stmt = select(self.model).where(
-            (self.model.name.ilike(search_query))
-            | (self.model.description.ilike(search_query))
+        query = query.lower()
+        stmt = select(Category).where(
+            or_(
+                func.lower(Category.name).contains(query),
+                func.lower(Category.description).contains(query),
+            )
         )
+        if not include_deleted:
+            stmt = stmt.where(Category.deleted_at.is_(None))
         result = await self.session.execute(stmt)
         return list(result.scalars().all())
 
@@ -138,18 +132,49 @@ class CategoryRepository(BaseRepository[Category]):
         """Get all categories with equipment count.
 
         Returns:
-            List of categories with equipment count
+            List of categories with equipment count, including equipment
+            from subcategories.
         """
-        subquery = (
-            select(Equipment.category_id, func.count().label('equipment_count'))
-            .group_by(Equipment.category_id)
+        # Create recursive CTE to get all subcategories
+        hierarchy: CTE = select(
+            Category.id.label('category_id'),
+            Category.id.label('subcategory_id'),
+        ).cte(recursive=True)
+
+        hierarchy = hierarchy.union_all(
+            select(
+                hierarchy.c.category_id,
+                Category.id.label('subcategory_id'),
+            ).join(
+                Category,
+                Category.parent_id == hierarchy.c.subcategory_id,
+            )
+        )
+
+        # Count equipment in each category and its subcategories
+        equipment_count = (
+            select(
+                hierarchy.c.category_id,
+                func.count(Equipment.id).label('equipment_count'),
+            )
+            .join(
+                Equipment,
+                Equipment.category_id == hierarchy.c.subcategory_id,
+            )
+            .group_by(hierarchy.c.category_id)
             .subquery()
         )
 
+        # Get categories with equipment count
         stmt = select(
-            self.model,
-            func.coalesce(subquery.c.equipment_count, 0).label('equipment_count'),
-        ).outerjoin(subquery, self.model.id == subquery.c.category_id)
+            Category,
+            func.coalesce(equipment_count.c.equipment_count, 0).label(
+                'equipment_count'
+            ),
+        ).outerjoin(
+            equipment_count,
+            Category.id == equipment_count.c.category_id,
+        )
 
         result = await self.session.execute(stmt)
         categories = []

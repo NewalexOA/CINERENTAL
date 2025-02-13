@@ -6,19 +6,30 @@ timestamp tracking and soft delete support.
 """
 
 from backend.models.base import Base, SoftDeleteMixin, TimestampMixin
-from backend.models.booking import Booking
+from backend.models.booking import Booking, BookingStatus, PaymentStatus
 from backend.models.category import Category
-from backend.models.client import Client
-from backend.models.document import Document
-from backend.models.equipment import Equipment
+from backend.models.client import Client, ClientStatus
+from backend.models.document import Document, DocumentStatus, DocumentType
+from backend.models.equipment import Equipment, EquipmentStatus
+from backend.models.user import User
 
 __all__ = [
+    # Base models and mixins
     'Base',
     'TimestampMixin',
     'SoftDeleteMixin',
+    # Entity models
     'Category',
     'Equipment',
     'Client',
     'Booking',
     'Document',
+    'User',
+    # Status and type enums
+    'BookingStatus',
+    'PaymentStatus',
+    'ClientStatus',
+    'DocumentStatus',
+    'DocumentType',
+    'EquipmentStatus',
 ]

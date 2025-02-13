@@ -5,12 +5,13 @@ including contracts, handover acts, and other related documents.
 """
 
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Dict, List, Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.models.document import Document, DocumentStatus, DocumentType
-from backend.repositories.document import DocumentRepository
+from backend.exceptions import NotFoundError, StatusTransitionError
+from backend.models import Booking, Document, DocumentStatus, DocumentType
+from backend.repositories import DocumentRepository
 
 
 class DocumentService:
@@ -27,37 +28,69 @@ class DocumentService:
 
     async def create_document(
         self,
-        booking_id: int,
+        client_id: int,
+        booking_id: Optional[int],
         document_type: DocumentType,
         file_path: str,
+        title: str,
+        description: str,
+        file_name: str,
+        file_size: int,
+        mime_type: str,
         notes: Optional[str] = None,
     ) -> Document:
         """Create new document.
 
         Args:
-            booking_id: Related booking ID
-            document_type: Type of document
+            client_id: Client ID
+            booking_id: Booking ID (optional)
+            document_type: Document type
             file_path: Path to document file
+            title: Document title
+            description: Document description
+            file_name: Document file name
+            file_size: Document file size
+            mime_type: Document MIME type
             notes: Additional notes (optional)
 
         Returns:
             Created document
+
+        Raises:
+            NotFoundError: If booking not found
+            DocumentError: If document creation fails
         """
-        return await self.repository.create(
+        # Check if booking exists
+        if booking_id is not None:
+            booking = await self.session.get(Booking, booking_id)
+            if not booking:
+                raise NotFoundError(
+                    f'Booking with ID {booking_id} not found',
+                    {'booking_id': booking_id},
+                )
+
+        document = Document(
+            client_id=client_id,
             booking_id=booking_id,
-            document_type=document_type,
+            type=document_type,
             file_path=file_path,
-            created_at=datetime.utcnow(),
+            title=title,
+            description=description,
+            file_name=file_name,
+            file_size=file_size,
+            mime_type=mime_type,
             notes=notes,
             status=DocumentStatus.DRAFT,
+            created_at=datetime.now(),
         )
+        return await self.repository.create(document)
 
     async def update_document(
         self,
         document_id: int,
         file_path: Optional[str] = None,
         notes: Optional[str] = None,
-    ) -> Optional[Document]:
+    ) -> Document:
         """Update document details.
 
         Args:
@@ -66,21 +99,33 @@ class DocumentService:
             notes: New notes (optional)
 
         Returns:
-            Updated document if found, None otherwise
-        """
-        update_data: Dict[str, Any] = {}
-        if file_path is not None:
-            update_data['file_path'] = file_path
-        if notes is not None:
-            update_data['notes'] = notes
+            Updated document
 
-        if update_data:
-            return await self.repository.update(document_id, **update_data)
-        return await self.repository.get(document_id)
+        Raises:
+            NotFoundError: If document not found
+            DocumentError: If document update fails
+        """
+        # Get document
+        document = await self.repository.get(document_id)
+        if not document:
+            raise NotFoundError(
+                f'Document with ID {document_id} not found',
+                {'document_id': document_id},
+            )
+
+        # Update fields
+        if file_path is not None:
+            document.file_path = file_path
+        if notes is not None:
+            document.notes = notes
+
+        return await self.repository.update(document)
 
     async def change_status(
-        self, document_id: int, status: DocumentStatus
-    ) -> Optional[Document]:
+        self,
+        document_id: int,
+        status: DocumentStatus,
+    ) -> Document:
         """Change document status.
 
         Args:
@@ -88,9 +133,52 @@ class DocumentService:
             status: New status
 
         Returns:
-            Updated document if found, None otherwise
+            Updated document
+
+        Raises:
+            NotFoundError: If document not found
+            StatusTransitionError: If status transition not allowed
         """
-        return await self.repository.update(document_id, status=status)
+        # Get document
+        document = await self.repository.get(document_id)
+        if not document:
+            raise NotFoundError(
+                f'Document with ID {document_id} not found',
+                {'document_id': document_id},
+            )
+
+        # Check if status transition is allowed
+        allowed_transitions: Dict[DocumentStatus, List[DocumentStatus]] = {
+            DocumentStatus.DRAFT: [
+                DocumentStatus.PENDING,
+                DocumentStatus.UNDER_REVIEW,
+            ],
+            DocumentStatus.PENDING: [
+                DocumentStatus.UNDER_REVIEW,
+                DocumentStatus.APPROVED,
+                DocumentStatus.REJECTED,
+            ],
+            DocumentStatus.UNDER_REVIEW: [
+                DocumentStatus.APPROVED,
+                DocumentStatus.REJECTED,
+            ],
+            DocumentStatus.APPROVED: [],
+            DocumentStatus.REJECTED: [DocumentStatus.PENDING],
+        }
+
+        if status not in allowed_transitions[document.status]:
+            raise StatusTransitionError(
+                f'Invalid status transition from {document.status} to {status}',
+                current_status=str(document.status),
+                new_status=str(status),
+                allowed_transitions=[
+                    str(s) for s in allowed_transitions[document.status]
+                ],
+            )
+
+        # Update status
+        document.status = status
+        return await self.repository.update(document)
 
     async def get_documents(self) -> List[Document]:
         """Get all documents.
@@ -157,3 +245,19 @@ class DocumentService:
             List of documents created within specified date range
         """
         return await self.repository.get_by_date_range(start_date, end_date)
+
+    async def search(
+        self,
+        query_str: str,
+        include_deleted: bool = False,
+    ) -> List[Document]:
+        """Search documents by title or description.
+
+        Args:
+            query_str: Search query string
+            include_deleted: Whether to include deleted documents
+
+        Returns:
+            List of matching documents
+        """
+        return await self.repository.search(query_str, include_deleted=include_deleted)

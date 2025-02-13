@@ -1,44 +1,71 @@
-# Use Python 3.12 slim image
-FROM python:3.12-slim
+# Stage 1: Build dependencies
+FROM python:3.12-slim AS builder
 
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    # Use Yandex mirror for pip packages (faster in Russia)
+    PIP_INDEX_URL=https://mirror.yandex.ru/pypi/simple/ \
+    # Backup mirrors
+    PIP_EXTRA_INDEX_URL=https://pypi.org/simple/
+
+# Set work directory
+WORKDIR /build
+
+# Install build dependencies using Russian mirrors
+RUN echo "deb http://mirror.yandex.ru/debian/ bookworm main" > /etc/apt/sources.list && \
+    echo "deb http://mirror.yandex.ru/debian/ bookworm-updates main" >> /etc/apt/sources.list && \
+    echo "deb http://mirror.yandex.ru/debian-security/ bookworm-security main" >> /etc/apt/sources.list && \
+    apt-get update \
+    && apt-get install -y --no-install-recommends \
+        build-essential \
+        curl \
+        libpq-dev \
+        python3-dev \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy only requirements files
+COPY pyproject.toml requirements.txt ./
+
+# Install dependencies
+RUN pip install --no-cache-dir -r requirements.txt \
+    && pip install --no-cache-dir psycopg2-binary faker
+
+# Stage 2: Runtime
+FROM python:3.12-slim AS runtime
+
+# Set environment variables
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PATH="/app/docker:$PATH"
 
 # Set work directory
 WORKDIR /app
 
-# Install system dependencies
+# Install runtime dependencies
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
-        build-essential \
         curl \
         netcat-traditional \
-        python3-setuptools \
+        libpq-dev \
     && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && adduser --disabled-password --gecos '' appuser \
+    && mkdir -p media \
+    && chown -R appuser:appuser /app
 
-# Create and activate virtual environment
-RUN python -m venv /opt/venv
-ENV PATH="/opt/venv/bin:$PATH"
-
-# Install setuptools first
-RUN pip install --no-cache-dir setuptools wheel
-
-# Copy and install requirements
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-
-# Create media directory and non-root user
-RUN mkdir -p media && \
-    adduser --disabled-password --gecos '' appuser && \
-    chown -R appuser:appuser /app /opt/venv
+# Copy dependencies from builder
+COPY --from=builder /usr/local/lib/python3.12/site-packages /usr/local/lib/python3.12/site-packages
+COPY --from=builder /usr/local/bin /usr/local/bin
 
 # Copy project files
 COPY --chown=appuser:appuser . .
 
-# Install package in development mode
-RUN pip install -e .
+# Make scripts executable
+RUN chmod +x docker/start.sh docker/wait-for.sh docker/run-tests.sh
 
 # Switch to non-root user
 USER appuser
@@ -46,5 +73,6 @@ USER appuser
 # Expose port
 EXPOSE 8000
 
-# Run the application
-CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:8000/api/v1/health || exit 1

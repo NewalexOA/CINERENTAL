@@ -1,0 +1,589 @@
+{
+    "info": {
+        "name": "CineRental API",
+        "description": "API collection for testing CineRental endpoints",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "item": [
+        {
+            "name": "Categories",
+            "description": "Equipment categories management endpoints",
+            "item": [
+                {
+                    "name": "Create Category",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"name\": \"Cameras\",\n    \"description\": \"Professional cinema cameras\",\n    \"parent_id\": null\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/categories/",
+                            "host": ["{{base_url}}"],
+                            "path": ["categories", ""]
+                        },
+                        "description": "Create a new equipment category"
+                    },
+                    "response": [
+                        {
+                            "name": "Success",
+                            "originalRequest": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n    \"name\": \"Cameras\",\n    \"description\": \"Professional cinema cameras\",\n    \"parent_id\": null\n}"
+                                },
+                                "url": {
+                                    "raw": "{{base_url}}/categories/",
+                                    "host": ["{{base_url}}"],
+                                    "path": ["categories", ""]
+                                }
+                            },
+                            "status": "Created",
+                            "code": 201,
+                            "_postman_previewlanguage": "json",
+                            "header": [
+                                {
+                                    "key": "Content-Type",
+                                    "value": "application/json"
+                                }
+                            ],
+                            "body": "{\n    \"id\": 1,\n    \"name\": \"Cameras\",\n    \"description\": \"Professional cinema cameras\",\n    \"parent_id\": null\n}"
+                        }
+                    ]
+                },
+                {
+                    "name": "Get All Categories",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/categories/",
+                            "host": ["{{base_url}}"],
+                            "path": ["categories", ""]
+                        },
+                        "description": "Get list of all categories"
+                    },
+                    "response": [
+                        {
+                            "name": "Success",
+                            "originalRequest": {
+                                "method": "GET",
+                                "header": [],
+                                "url": {
+                                    "raw": "{{base_url}}/categories/",
+                                    "host": ["{{base_url}}"],
+                                    "path": ["categories", ""]
+                                }
+                            },
+                            "status": "OK",
+                            "code": 200,
+                            "_postman_previewlanguage": "json",
+                            "header": [
+                                {
+                                    "key": "Content-Type",
+                                    "value": "application/json"
+                                }
+                            ],
+                            "body": "[\n    {\n        \"id\": 1,\n        \"name\": \"Cameras\",\n        \"description\": \"Professional cinema cameras\",\n        \"parent_id\": null\n    }\n]"
+                        }
+                    ]
+                },
+                {
+                    "name": "Get Category by ID",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/categories/1",
+                            "host": ["{{base_url}}"],
+                            "path": ["categories", "1"]
+                        },
+                        "description": "Get category by its ID"
+                    },
+                    "response": [
+                        {
+                            "name": "Success",
+                            "originalRequest": {
+                                "method": "GET",
+                                "header": [],
+                                "url": {
+                                    "raw": "{{base_url}}/categories/1",
+                                    "host": ["{{base_url}}"],
+                                    "path": ["categories", "1"]
+                                }
+                            },
+                            "status": "OK",
+                            "code": 200,
+                            "_postman_previewlanguage": "json",
+                            "header": [
+                                {
+                                    "key": "Content-Type",
+                                    "value": "application/json"
+                                }
+                            ],
+                            "body": "{\n    \"id\": 1,\n    \"name\": \"Cameras\",\n    \"description\": \"Professional cinema cameras\",\n    \"parent_id\": null\n}"
+                        },
+                        {
+                            "name": "Not Found",
+                            "originalRequest": {
+                                "method": "GET",
+                                "header": [],
+                                "url": {
+                                    "raw": "{{base_url}}/categories/999",
+                                    "host": ["{{base_url}}"],
+                                    "path": ["categories", "999"]
+                                }
+                            },
+                            "status": "Not Found",
+                            "code": 404,
+                            "_postman_previewlanguage": "json",
+                            "header": [
+                                {
+                                    "key": "Content-Type",
+                                    "value": "application/json"
+                                }
+                            ],
+                            "body": "{\n    \"detail\": \"Category with ID 999 not found\"\n}"
+                        }
+                    ]
+                },
+                {
+                    "name": "Update Category",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"name\": \"Video Cameras\",\n    \"description\": \"Professional video cameras\",\n    \"parent_id\": null\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/categories/1",
+                            "host": ["{{base_url}}"],
+                            "path": ["categories", "1"]
+                        },
+                        "description": "Update an existing category"
+                    },
+                    "response": [
+                        {
+                            "name": "Success",
+                            "originalRequest": {
+                                "method": "PUT",
+                                "header": [
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n    \"name\": \"Video Cameras\",\n    \"description\": \"Professional video cameras\",\n    \"parent_id\": null\n}"
+                                },
+                                "url": {
+                                    "raw": "{{base_url}}/categories/1",
+                                    "host": ["{{base_url}}"],
+                                    "path": ["categories", "1"]
+                                }
+                            },
+                            "status": "OK",
+                            "code": 200,
+                            "_postman_previewlanguage": "json",
+                            "header": [
+                                {
+                                    "key": "Content-Type",
+                                    "value": "application/json"
+                                }
+                            ],
+                            "body": "{\n    \"id\": 1,\n    \"name\": \"Video Cameras\",\n    \"description\": \"Professional video cameras\",\n    \"parent_id\": null\n}"
+                        },
+                        {
+                            "name": "Not Found",
+                            "originalRequest": {
+                                "method": "PUT",
+                                "header": [
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n    \"name\": \"Video Cameras\",\n    \"description\": \"Professional video cameras\",\n    \"parent_id\": null\n}"
+                                },
+                                "url": {
+                                    "raw": "{{base_url}}/categories/999",
+                                    "host": ["{{base_url}}"],
+                                    "path": ["categories", "999"]
+                                }
+                            },
+                            "status": "Not Found",
+                            "code": 404,
+                            "_postman_previewlanguage": "json",
+                            "header": [
+                                {
+                                    "key": "Content-Type",
+                                    "value": "application/json"
+                                }
+                            ],
+                            "body": "{\n    \"detail\": \"Category with ID 999 not found\"\n}"
+                        }
+                    ]
+                },
+                {
+                    "name": "Delete Category",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/categories/1",
+                            "host": ["{{base_url}}"],
+                            "path": ["categories", "1"]
+                        },
+                        "description": "Delete a category"
+                    },
+                    "response": [
+                        {
+                            "name": "Success",
+                            "originalRequest": {
+                                "method": "DELETE",
+                                "header": [],
+                                "url": {
+                                    "raw": "{{base_url}}/categories/1",
+                                    "host": ["{{base_url}}"],
+                                    "path": ["categories", "1"]
+                                }
+                            },
+                            "status": "No Content",
+                            "code": 204
+                        },
+                        {
+                            "name": "Not Found",
+                            "originalRequest": {
+                                "method": "DELETE",
+                                "header": [],
+                                "url": {
+                                    "raw": "{{base_url}}/categories/999",
+                                    "host": ["{{base_url}}"],
+                                    "path": ["categories", "999"]
+                                }
+                            },
+                            "status": "Not Found",
+                            "code": 404,
+                            "_postman_previewlanguage": "json",
+                            "header": [
+                                {
+                                    "key": "Content-Type",
+                                    "value": "application/json"
+                                }
+                            ],
+                            "body": "{\n    \"detail\": \"Category with ID 999 not found\"\n}"
+                        }
+                    ]
+                },
+                {
+                    "name": "Get Categories with Equipment Count",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/categories/with-equipment-count",
+                            "host": ["{{base_url}}"],
+                            "path": ["categories", "with-equipment-count"]
+                        },
+                        "description": "Get list of categories with equipment count"
+                    },
+                    "response": [
+                        {
+                            "name": "Success",
+                            "originalRequest": {
+                                "method": "GET",
+                                "header": [],
+                                "url": {
+                                    "raw": "{{base_url}}/categories/with-equipment-count",
+                                    "host": ["{{base_url}}"],
+                                    "path": ["categories", "with-equipment-count"]
+                                }
+                            },
+                            "status": "OK",
+                            "code": 200,
+                            "_postman_previewlanguage": "json",
+                            "header": [
+                                {
+                                    "key": "Content-Type",
+                                    "value": "application/json"
+                                }
+                            ],
+                            "body": "[\n    {\n        \"id\": 1,\n        \"name\": \"Video Cameras\",\n        \"description\": \"Professional video cameras\",\n        \"parent_id\": null,\n        \"equipment_count\": 0\n    }\n]"
+                        }
+                    ]
+                },
+                {
+                    "name": "Search Categories",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/categories/search/camera",
+                            "host": ["{{base_url}}"],
+                            "path": ["categories", "search", "camera"]
+                        },
+                        "description": "Search categories by name or description"
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Equipment",
+            "description": "Equipment management endpoints",
+            "item": [
+                {
+                    "name": "Create Equipment",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"name\": \"Sony FX6\",\n    \"description\": \"Professional cinema camera\",\n    \"category_id\": 1,\n    \"barcode\": \"CAM-001\",\n    \"serial_number\": \"SN12345\",\n    \"daily_rate\": 299.99,\n    \"replacement_cost\": 5999.99\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/equipment/",
+                            "host": ["{{base_url}}"],
+                            "path": ["equipment", ""]
+                        },
+                        "description": "Create new equipment"
+                    }
+                },
+                {
+                    "name": "Get Equipment List",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/equipment/",
+                            "host": ["{{base_url}}"],
+                            "path": ["equipment", ""]
+                        },
+                        "description": "Get list of all equipment"
+                    }
+                },
+                {
+                    "name": "Get Equipment by ID",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/equipment/1",
+                            "host": ["{{base_url}}"],
+                            "path": ["equipment", "1"]
+                        },
+                        "description": "Get equipment by its ID"
+                    }
+                },
+                {
+                    "name": "Update Equipment",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"name\": \"Sony FX6 Updated\",\n    \"description\": \"Updated description\",\n    \"daily_rate\": 349.99,\n    \"replacement_cost\": 6999.99,\n    \"notes\": \"Recently serviced\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/equipment/1",
+                            "host": ["{{base_url}}"],
+                            "path": ["equipment", "1"]
+                        },
+                        "description": "Update equipment details"
+                    }
+                },
+                {
+                    "name": "Delete Equipment",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/equipment/1",
+                            "host": ["{{base_url}}"],
+                            "path": ["equipment", "1"]
+                        },
+                        "description": "Delete equipment"
+                    }
+                },
+                {
+                    "name": "Change Equipment Status",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"status\": \"MAINTENANCE\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/equipment/1/status",
+                            "host": ["{{base_url}}"],
+                            "path": ["equipment", "1", "status"]
+                        },
+                        "description": "Change equipment status"
+                    }
+                },
+                {
+                    "name": "Check Equipment Availability",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/equipment/1/availability?start_date=2024-03-01T00:00:00Z&end_date=2024-03-05T00:00:00Z",
+                            "host": ["{{base_url}}"],
+                            "path": ["equipment", "1", "availability"],
+                            "query": [
+                                {
+                                    "key": "start_date",
+                                    "value": "2024-03-01T00:00:00Z"
+                                },
+                                {
+                                    "key": "end_date",
+                                    "value": "2024-03-05T00:00:00Z"
+                                }
+                            ]
+                        },
+                        "description": "Check equipment availability for specific dates"
+                    }
+                },
+                {
+                    "name": "Search Equipment",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/equipment/search/sony",
+                            "host": ["{{base_url}}"],
+                            "path": ["equipment", "search", "sony"]
+                        },
+                        "description": "Search equipment by name or description"
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Bookings",
+            "description": "Equipment booking management endpoints",
+            "item": [
+                {
+                    "name": "Create Booking",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"client_id\": 1,\n    \"equipment_id\": 1,\n    \"start_date\": \"2024-03-01T00:00:00Z\",\n    \"end_date\": \"2024-03-05T00:00:00Z\",\n    \"total_amount\": 1499.95,\n    \"deposit_amount\": 599.99\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/bookings/",
+                            "host": ["{{base_url}}"],
+                            "path": ["bookings", ""]
+                        },
+                        "description": "Create new equipment booking"
+                    }
+                },
+                {
+                    "name": "Get Booking List",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/bookings/",
+                            "host": ["{{base_url}}"],
+                            "path": ["bookings", ""]
+                        },
+                        "description": "Get list of all bookings"
+                    }
+                },
+                {
+                    "name": "Get Booking by ID",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/bookings/1",
+                            "host": ["{{base_url}}"],
+                            "path": ["bookings", "1"]
+                        },
+                        "description": "Get booking by its ID"
+                    }
+                },
+                {
+                    "name": "Update Booking Status",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"status\": \"COMPLETED\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/bookings/1/status",
+                            "host": ["{{base_url}}"],
+                            "path": ["bookings", "1", "status"]
+                        },
+                        "description": "Update booking status"
+                    }
+                },
+                {
+                    "name": "Cancel Booking",
+                    "request": {
+                        "method": "PUT",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/bookings/1/cancel",
+                            "host": ["{{base_url}}"],
+                            "path": ["bookings", "1", "cancel"]
+                        },
+                        "description": "Cancel an existing booking"
+                    }
+                }
+            ]
+        }
+    ]
+}

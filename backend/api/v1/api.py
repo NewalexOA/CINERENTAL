@@ -9,10 +9,12 @@ from backend.api.v1.endpoints import (
     clients,
     documents,
     equipment,
+    health,
 )
 
 api_router = APIRouter()
 
+api_router.include_router(health.health_router, prefix='/health', tags=['Health'])
 api_router.include_router(auth.auth_router, prefix='/auth', tags=['Authentication'])
 api_router.include_router(
     equipment.equipment_router, prefix='/equipment', tags=['Equipment']

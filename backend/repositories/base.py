@@ -1,51 +1,54 @@
 """Base repository module."""
 
-from typing import Any, Generic, List, Optional, Protocol, Type, TypeVar, Union, cast
+from datetime import datetime, timezone
+from typing import Generic, List, Optional, Type, TypeVar, Union
 from uuid import UUID
 
-from sqlalchemy import Column, delete, select, update
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.sql import Select
 
-from backend.models.base import Base
-
-
-class HasId(Protocol):
-    """Protocol for models with id attribute."""
-
-    id: Union[Column[int], Column[UUID]]
-
+from backend.models import Base
 
 ModelType = TypeVar('ModelType', bound=Base)
 
 
 class BaseRepository(Generic[ModelType]):
-    """Base repository with common CRUD operations."""
+    """Base repository class.
+
+    This class provides basic CRUD operations for models.
+    """
 
     model: Type[ModelType]
-    session: AsyncSession
 
-    def __init__(self, model: Type[ModelType], session: AsyncSession) -> None:
+    def __init__(self, session: AsyncSession, model: Type[ModelType]) -> None:
         """Initialize repository.
 
         Args:
-            model: SQLAlchemy model class
             session: SQLAlchemy async session
+            model: SQLAlchemy model class
         """
-        self.model = model
         self.session = session
+        self.model = model
 
-    async def get(self, id: Union[int, UUID]) -> Optional[ModelType]:
+    async def get(
+        self,
+        id: Union[int, UUID],
+        include_deleted: bool = False,
+    ) -> Optional[ModelType]:
         """Get entity by ID.
 
         Args:
             id: Entity ID
+            include_deleted: Whether to include deleted entities
 
         Returns:
             Entity if found, None otherwise
         """
-        model = cast(Type[HasId], self.model)
-        query: Select[tuple[ModelType]] = select(self.model).where(model.id == id)
+        conditions = [self.model.id == id]
+        if not include_deleted:
+            conditions.append(self.model.deleted_at.is_(None))
+
+        query = select(self.model).where(*conditions)
         result = await self.session.execute(query)
         return result.scalar_one_or_none()
 
@@ -55,57 +58,66 @@ class BaseRepository(Generic[ModelType]):
         Returns:
             List of entities
         """
-        query: Select[tuple[ModelType]] = select(self.model)
+        query = select(self.model).where(
+            self.model.deleted_at.is_(None),
+        )
         result = await self.session.execute(query)
         return list(result.scalars().all())
 
-    async def create(self, **kwargs: Any) -> ModelType:
-        """Create new entity.
+    async def create(self, instance: ModelType) -> ModelType:
+        """Create new record.
 
         Args:
-            **kwargs: Entity attributes
+            instance: Model instance to create
 
         Returns:
-            Created entity
-        """
-        entity = self.model(**kwargs)
-        self.session.add(entity)
-        await self.session.commit()
-        await self.session.refresh(entity)
-        return entity
+            Created record
 
-    async def update(self, id: Union[int, UUID], **kwargs: Any) -> Optional[ModelType]:
-        """Update entity by ID.
+        Raises:
+            SQLAlchemyError: If database operation fails
+        """
+        try:
+            self.session.add(instance)
+            await self.session.flush()
+            await self.session.commit()
+            await self.session.refresh(instance)
+            return instance
+        except Exception as e:
+            await self.session.rollback()
+            raise e
+
+    async def update(self, instance: ModelType) -> ModelType:
+        """Update record.
 
         Args:
-            id: Entity ID
-            **kwargs: Attributes to update
+            instance: Model instance to update
 
         Returns:
-            Updated entity if found, None otherwise
+            Updated record
+
+        Raises:
+            SQLAlchemyError: If database operation fails
         """
-        model = cast(Type[HasId], self.model)
-        query = (
-            update(self.model)
-            .where(model.id == id)
-            .values(**kwargs)
-            .returning(self.model)
-        )
-        result = await self.session.execute(query)
-        await self.session.commit()
-        return result.scalar_one_or_none()
+        try:
+            self.session.add(instance)
+            await self.session.flush()
+            await self.session.commit()
+            await self.session.refresh(instance)
+            return instance
+        except Exception as e:
+            await self.session.rollback()
+            raise e
 
     async def delete(self, id: Union[int, UUID]) -> bool:
-        """Delete entity by ID.
+        """Delete record.
 
         Args:
-            id: Entity ID
+            id: Record ID
 
         Returns:
-            True if entity was deleted, False otherwise
+            True if record was deleted, False otherwise
         """
-        model = cast(Type[HasId], self.model)
-        query = delete(self.model).where(model.id == id)
+        query = delete(self.model).where(self.model.id == id)
         result = await self.session.execute(query)
         await self.session.commit()
         return result.rowcount > 0
@@ -119,7 +131,49 @@ class BaseRepository(Generic[ModelType]):
         Returns:
             True if entity exists, False otherwise
         """
-        model = cast(Type[HasId], self.model)
-        query = select(model.id).where(model.id == id)
+        query = select(self.model.id).where(self.model.id == id)
         result = await self.session.execute(query)
         return result.scalar_one_or_none() is not None
+
+    async def soft_delete(self, id: Union[int, UUID]) -> Optional[ModelType]:
+        """Soft delete record.
+
+        Args:
+            id: Record ID
+
+        Returns:
+            Deleted record if found, None otherwise
+
+        Raises:
+            SQLAlchemyError: If database operation fails
+        """
+        try:
+            instance = await self.get(id)
+            if instance:
+                instance.deleted_at = datetime.now(timezone.utc)
+                await self.session.flush()
+                await self.session.commit()
+                await self.session.refresh(instance)
+            return instance
+        except Exception as e:
+            await self.session.rollback()
+            raise e
+
+    async def search(
+        self,
+        query_str: str,
+        include_deleted: bool = False,
+    ) -> List[ModelType]:
+        """Search entities.
+
+        Args:
+            query_str: Search query string
+            include_deleted: Whether to include deleted entities
+
+        Returns:
+            List of matching entities
+
+        Raises:
+            NotImplementedError: If not implemented by child class
+        """
+        raise NotImplementedError

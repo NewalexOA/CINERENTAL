@@ -4,15 +4,15 @@ This module provides database operations for managing client records,
 including registration, profile updates, and rental history tracking.
 """
 
+from datetime import datetime, timezone
 from typing import List, Optional, cast
 
-from sqlalchemy import or_, select
+from sqlalchemy import and_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.sql import Select
+from sqlalchemy.sql import Select, func
 
-from backend.models.booking import Booking, BookingStatus
-from backend.models.client import Client, ClientStatus
-from backend.repositories.base import BaseRepository
+from backend.models import Booking, BookingStatus, Client, ClientStatus
+from backend.repositories import BaseRepository
 
 
 class ClientRepository(BaseRepository[Client]):
@@ -24,7 +24,7 @@ class ClientRepository(BaseRepository[Client]):
         Args:
             session: SQLAlchemy async session
         """
-        super().__init__(Client, session)
+        super().__init__(session, Client)
 
     async def get_by_email(self, email: str) -> Optional[Client]:
         """Get client by email.
@@ -52,25 +52,33 @@ class ClientRepository(BaseRepository[Client]):
         result = await self.session.scalar(query)
         return cast(Optional[Client], result)
 
-    async def search(self, query_str: str) -> List[Client]:
-        """Search clients by name, email, or phone.
+    async def search(
+        self,
+        query_str: str,
+        include_deleted: bool = False,
+    ) -> List[Client]:
+        """Search clients by name, email or phone.
 
         Args:
-            query_str: Search query
+            query_str: Search query string
+            include_deleted: Whether to include deleted clients
 
         Returns:
             List of matching clients
         """
-        query: Select = select(self.model).where(
+        query = query_str.lower()
+        stmt = select(self.model).where(
             or_(
-                self.model.first_name.ilike(f'%{query_str}%'),
-                self.model.last_name.ilike(f'%{query_str}%'),
-                self.model.email.ilike(f'%{query_str}%'),
-                self.model.phone.ilike(f'%{query_str}%'),
+                func.lower(self.model.first_name).contains(query),
+                func.lower(self.model.last_name).contains(query),
+                func.lower(self.model.email).contains(query),
+                func.lower(self.model.phone).contains(query),
             )
         )
-        result = await self.session.scalars(query)
-        return list(result.all())
+        if not include_deleted:
+            stmt = stmt.where(self.model.deleted_at.is_(None))
+        result = await self.session.execute(stmt)
+        return list(result.scalars().all())
 
     async def get_with_active_bookings(self, client_id: int) -> Optional[Client]:
         """Get client with active bookings.
@@ -81,12 +89,11 @@ class ClientRepository(BaseRepository[Client]):
         Returns:
             Client with active bookings if found, None otherwise
         """
-        statuses = [BookingStatus.PENDING, BookingStatus.ACTIVE]
         query: Select = (
             select(self.model)
             .where(self.model.id == client_id)
             .join(self.model.bookings)
-            .where(Booking.booking_status.in_(statuses))
+            .where(Booking.booking_status == BookingStatus.ACTIVE)
         )
         result = await self.session.scalar(query)
         return cast(Optional[Client], result)
@@ -97,10 +104,16 @@ class ClientRepository(BaseRepository[Client]):
         Returns:
             List of clients with overdue bookings
         """
+        now = datetime.now(timezone.utc)
         query: Select = (
             select(self.model)
             .join(self.model.bookings)
-            .where(Booking.booking_status == BookingStatus.OVERDUE)
+            .where(
+                and_(
+                    Booking.booking_status == BookingStatus.ACTIVE,
+                    Booking.end_date < now,
+                )
+            )
             .distinct()
         )
         result = await self.session.scalars(query)
