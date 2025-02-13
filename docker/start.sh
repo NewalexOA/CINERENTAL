@@ -1,8 +1,8 @@
 #!/bin/bash
 
 # Wait for dependencies
-./docker/wait-for-it.sh db 5432
-./docker/wait-for-it.sh redis 6379
+./docker/wait-for.sh postgres db 5432
+./docker/wait-for.sh redis redis 6379
 
 # Apply migrations
 alembic upgrade head

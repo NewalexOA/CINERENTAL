@@ -3,10 +3,10 @@ set -e
 
 # Wait for services to be ready
 echo "Waiting for PostgreSQL..."
-./docker/wait-for-it.sh test_db 5432
+./docker/wait-for.sh postgres test_db 5432
 
 echo "Waiting for Redis..."
-./docker/wait-for-it.sh redis 6379
+./docker/wait-for.sh redis redis 6379
 
 # Run migrations on test database
 echo "Running migrations..."

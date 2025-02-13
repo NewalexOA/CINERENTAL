@@ -35,9 +35,11 @@ ENV/
 
 # Project specific
 .env
-.env.*
+.env.local
+.env.*.local
 !.env.example
-*.log
+!.env.test
+!.env.production
 logs/
 media/
 
