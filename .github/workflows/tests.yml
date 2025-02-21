@@ -18,15 +18,16 @@ jobs:
 
       - name: Create cache directory with correct permissions
         run: |
-          mkdir -p .pytest_cache
-          chmod 777 .pytest_cache
+          mkdir -p .pytest_cache htmlcov
+          chmod 777 .pytest_cache htmlcov
 
       - name: Build and run tests
         run: |
           docker compose build
           docker compose run --rm \
             -v "$(pwd)/.pytest_cache:/app/.pytest_cache" \
-            test sh -c "cd /app && pytest tests/ -v --cov=backend --cov-report=xml"
+            -v "$(pwd)/htmlcov:/app/htmlcov" \
+            test tests/ -v --cov=backend --cov-report=xml
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
