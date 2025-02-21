@@ -14,10 +14,14 @@
     <div class="row mb-4">
         <div class="col-md-6">
             <div class="input-group">
-                <input type="text" class="form-control" id="searchInput" placeholder="Поиск оборудования...">
-                <button class="btn btn-outline-secondary" type="button" id="searchButton">
-                    <i class="fas fa-search"></i>
-                </button>
+                <input type="text"
+                       class="form-control"
+                       id="searchInput"
+                       placeholder="Поиск по названию, описанию, штрих-коду или серийному номеру..."
+                       minlength="3">
+                <div id="search-spinner" class="spinner-border spinner-border-sm d-none" role="status">
+                    <span class="visually-hidden">Поиск...</span>
+                </div>
             </div>
         </div>
         <div class="col-md-3">
@@ -173,57 +177,6 @@ document.getElementById('addEquipment').addEventListener('click', async () => {
     }
 });
 
-// Handle filters and search
-async function updateEquipmentList() {
-    const query = document.getElementById('searchInput').value;
-    const categoryId = document.getElementById('categoryFilter').value;
-    const status = document.getElementById('statusFilter').value;
-
-    try {
-        const params = new URLSearchParams(window.location.search);
-
-        // Clear existing filter parameters
-        params.delete('query');
-        params.delete('category_id');
-        params.delete('status');
-
-        // Only add parameters if they have non-empty values
-        if (query.trim()) params.set('query', query);
-        if (categoryId) params.set('category_id', categoryId);
-        if (status) params.set('status', status);
-
-        // Update URL without reloading
-        const newUrl = `${window.location.pathname}${params.toString() ? '?' + params.toString() : ''}`;
-        window.history.pushState({}, '', newUrl);
-
-        // Fetch filtered data
-        const response = await fetch(`/equipment${params.toString() ? '?' + params.toString() : ''}`);
-        const html = await response.text();
-
-        // Extract table content from response
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(html, 'text/html');
-        const newTable = doc.getElementById('equipmentTable');
-
-        // Update table
-        document.getElementById('equipmentTable').innerHTML = newTable.innerHTML;
-    } catch (error) {
-        console.error('Error updating equipment list:', error);
-        showToast('Ошибка при обновлении списка', 'danger');
-    }
-}
-
-// Add event listeners for filters
-document.getElementById('searchButton').addEventListener('click', updateEquipmentList);
-document.getElementById('categoryFilter').addEventListener('change', updateEquipmentList);
-document.getElementById('statusFilter').addEventListener('change', updateEquipmentList);
-document.getElementById('searchInput').addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') {
-        e.preventDefault();
-        updateEquipmentList();
-    }
-});
-
 // Copy barcode to clipboard
 function copyBarcode(barcode) {
     navigator.clipboard.writeText(barcode).then(() => {
@@ -236,10 +189,9 @@ function copyBarcode(barcode) {
 // Initialize
 loadCategories();
 
-// Apply initial filters from URL
-const urlParams = new URLSearchParams(window.location.search);
-if (urlParams.has('query')) {
-    document.getElementById('searchInput').value = urlParams.get('query');
+// Initialize equipment search
+if (document.getElementById('searchInput')) {
+    equipmentSearch.init();
 }
 </script>
 {% endblock %}

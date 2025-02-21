@@ -4,6 +4,18 @@
 const API_BASE_URL = '/api/v1';
 
 // Utility functions
+const debounce = (func, wait) => {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+};
+
 const formatDate = (date) => {
     return new Date(date).toLocaleDateString('ru-RU', {
         year: 'numeric',
@@ -208,6 +220,74 @@ const initDateRangePicker = (element, options = {}) => {
     return new daterangepicker(element, defaultOptions);
 };
 
+// Equipment search functionality
+const equipmentSearch = {
+    init() {
+        const searchInput = document.querySelector('#searchInput');
+        const searchSpinner = document.querySelector('#search-spinner');
+        const initialEquipment = [...document.getElementById('equipmentTable').children];
+
+        searchInput.addEventListener('input', debounce(async (e) => {
+            const query = e.target.value.trim();
+            console.log('Search query:', query);  // Debug log
+
+            if (query.length < 3) {
+                // Restore initial table state for short queries
+                const table = document.getElementById('equipmentTable');
+                table.innerHTML = '';
+                initialEquipment.forEach(row => table.appendChild(row.cloneNode(true)));
+                return;
+            }
+
+            searchSpinner.classList.remove('d-none');
+            try {
+                console.log('Search URL:', API_BASE_URL + `/equipment/search/${encodeURIComponent(query)}`);  // Debug log
+                const results = await api.get(`/equipment/search/${encodeURIComponent(query)}`);
+                console.log('Search results:', results);  // Debug log
+
+                // Update table with results
+                const table = document.getElementById('equipmentTable');
+                if (!table) {
+                    console.error('Table element not found');  // Debug log
+                    return;
+                }
+
+                table.innerHTML = results.map(item => `
+                    <tr>
+                        <td>
+                            <div class="fw-bold">${item.name}</div>
+                            <small class="text-muted">${item.description || ''}</small>
+                        </td>
+                        <td>${item.category_name || 'Без категории'}</td>
+                        <td>${item.barcode}</td>
+                        <td>
+                            <span class="badge bg-${item.status === 'AVAILABLE' ? 'success' : item.status === 'RENTED' ? 'warning' : 'danger'}">
+                                ${item.status}
+                            </span>
+                        </td>
+                        <td>${formatCurrency(item.daily_rate)}</td>
+                        <td>
+                            <div class="btn-group">
+                                <a href="/equipment/${item.id}" class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-info-circle"></i>
+                                </a>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="copyBarcode('${item.barcode}')">
+                                    <i class="fas fa-copy"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `).join('');
+            } catch (error) {
+                console.error('Search error:', error);  // Debug log
+                showToast('Ошибка при поиске оборудования', 'danger');
+            } finally {
+                searchSpinner.classList.add('d-none');
+            }
+        }, 300));
+    }
+};
+
 // Document ready handler
 document.addEventListener('DOMContentLoaded', () => {
     // Initialize tooltips
@@ -217,4 +297,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initialize popovers
     const popoverTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="popover"]'));
     popoverTriggerList.map(popoverTriggerEl => new bootstrap.Popover(popoverTriggerEl));
+
+    // Initialize equipment search
+    if (document.getElementById('searchInput')) {
+        equipmentSearch.init();
+    }
 });
