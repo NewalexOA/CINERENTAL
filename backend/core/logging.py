@@ -366,3 +366,26 @@ def configure_logging(
         settings.ENVIRONMENT,
         log_config.LOG_LEVEL,
     )
+
+
+def format_record(record: Dict[str, Any]) -> str:
+    """Format log record as string."""
+    return (
+        f"{record.get('time', '')} | "
+        f"{record.get('level', '')} | "
+        f"{record.get('message', '')}"
+    )
+
+
+def serialize_record(record: Dict[str, Any]) -> Dict[str, Any]:
+    """Serialize log record to dict."""
+    return {
+        'time': record.get('time'),
+        'level': record.get('level'),
+        'message': record.get('message'),
+    }
+
+
+def patched_emit(record: Dict[str, Any]) -> None:
+    """Patch emit function."""
+    logger.bind(**record).info('')
