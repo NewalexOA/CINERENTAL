@@ -1,6 +1,6 @@
 """Frontend router module."""
 
-from typing import Annotated, List, Optional
+from typing import Annotated, Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse
@@ -178,7 +178,7 @@ async def scanner(request: Request) -> _TemplateResponse:
 async def get_categories(
     request: Request,
     db: Annotated[AsyncSession, Depends(get_db)],
-) -> List[dict]:
+) -> List[Dict[str, Any]]:
     """Get all categories.
 
     Args:
@@ -186,7 +186,7 @@ async def get_categories(
         db: Database session
 
     Returns:
-        List[dict]: List of categories
+        List[Dict[str, Any]]: List of categories
     """
     category_service = CategoryService(db)
     categories = await category_service.get_all()

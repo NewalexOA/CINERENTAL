@@ -161,7 +161,7 @@ async def get_equipment(
     try:
         service = EquipmentService(db)
         equipment = await service.get_equipment(equipment_id)
-        return EquipmentResponse.model_validate(equipment)
+        return EquipmentResponse.model_validate(equipment.__dict__)
     except NotFoundError:
         raise HTTPException(
             status_code=http_status.HTTP_404_NOT_FOUND,
@@ -213,7 +213,7 @@ async def update_equipment(
             serial_number=equipment.serial_number,
             status=equipment.status,
         )
-        return EquipmentResponse.model_validate(updated)
+        return EquipmentResponse.model_validate(updated.__dict__)
     except NotFoundError:
         raise HTTPException(
             status_code=http_status.HTTP_404_NOT_FOUND,
@@ -288,7 +288,7 @@ async def get_equipment_by_barcode(
                 f'Equipment with barcode {barcode} not found',
                 details={'barcode': barcode},
             )
-        return EquipmentResponse.model_validate(equipment)
+        return EquipmentResponse.model_validate(equipment.__dict__)
     except BusinessError as e:
         if isinstance(e, NotFoundError):
             raise HTTPException(
@@ -333,7 +333,7 @@ async def change_equipment_status(
     try:
         service = EquipmentService(db)
         equipment = await service.change_status(equipment_id, status)
-        return EquipmentResponse.model_validate(equipment)
+        return EquipmentResponse.model_validate(equipment.__dict__)
     except NotFoundError:
         raise HTTPException(
             status_code=http_status.HTTP_404_NOT_FOUND,

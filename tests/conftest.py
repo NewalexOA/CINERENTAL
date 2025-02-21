@@ -131,7 +131,7 @@ TEST_DATABASE_URL = (
 )
 
 
-@pytest_asyncio.fixture(scope='session')
+@pytest.fixture(scope='session')
 async def create_test_database() -> None:
     """Create test database if it doesn't exist."""
     sys_conn = await asyncpg.connect(
@@ -166,6 +166,8 @@ async def engine(create_test_database) -> AsyncGenerator[AsyncEngine, None]:
         echo=False,
         future=True,
         pool_pre_ping=True,
+        pool_use_lifo=True,
+        max_overflow=10,
     )
 
     async with engine.begin() as conn:

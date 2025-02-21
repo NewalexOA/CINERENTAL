@@ -5,7 +5,7 @@ including registration, profile updates, and rental history tracking.
 """
 
 from datetime import datetime, timezone
-from typing import List, Optional, cast
+from typing import List, Optional, Tuple
 
 from sqlalchemy import and_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -35,9 +35,9 @@ class ClientRepository(BaseRepository[Client]):
         Returns:
             Client if found, None otherwise
         """
-        query: Select = select(self.model).where(self.model.email == email)
-        result = await self.session.scalar(query)
-        return cast(Optional[Client], result)
+        query = select(self.model).where(self.model.email == email)
+        result = await self.session.scalar(query)  # type: Optional[Client]
+        return result
 
     async def get_by_phone(self, phone: str) -> Optional[Client]:
         """Get client by phone number.
@@ -48,9 +48,9 @@ class ClientRepository(BaseRepository[Client]):
         Returns:
             Client if found, None otherwise
         """
-        query: Select = select(self.model).where(self.model.phone == phone)
-        result = await self.session.scalar(query)
-        return cast(Optional[Client], result)
+        query = select(self.model).where(self.model.phone == phone)
+        result = await self.session.scalar(query)  # type: Optional[Client]
+        return result
 
     async def search(
         self,
@@ -67,7 +67,7 @@ class ClientRepository(BaseRepository[Client]):
             List of matching clients
         """
         query = query_str.lower()
-        stmt = select(self.model).where(
+        stmt: Select[Tuple[Client]] = select(self.model).where(
             or_(
                 func.lower(self.model.first_name).contains(query),
                 func.lower(self.model.last_name).contains(query),
@@ -89,14 +89,14 @@ class ClientRepository(BaseRepository[Client]):
         Returns:
             Client with active bookings if found, None otherwise
         """
-        query: Select = (
+        query = (
             select(self.model)
             .where(self.model.id == client_id)
             .join(self.model.bookings)
             .where(Booking.booking_status == BookingStatus.ACTIVE)
         )
-        result = await self.session.scalar(query)
-        return cast(Optional[Client], result)
+        result = await self.session.scalar(query)  # type: Optional[Client]
+        return result
 
     async def get_with_overdue_bookings(self) -> List[Client]:
         """Get clients with overdue bookings.
@@ -105,7 +105,7 @@ class ClientRepository(BaseRepository[Client]):
             List of clients with overdue bookings
         """
         now = datetime.now(timezone.utc)
-        query: Select = (
+        query: Select[Tuple[Client]] = (
             select(self.model)
             .join(self.model.bookings)
             .where(
@@ -128,6 +128,8 @@ class ClientRepository(BaseRepository[Client]):
         Returns:
             List of clients with specified status
         """
-        query: Select = select(self.model).where(self.model.status == status)
+        query: Select[Tuple[Client]] = select(self.model).where(
+            self.model.status == status
+        )
         result = await self.session.scalars(query)
         return list(result.all())

@@ -6,7 +6,7 @@ and other rental-related files.
 """
 
 from datetime import datetime
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 from sqlalchemy import and_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -36,7 +36,9 @@ class DocumentRepository(BaseRepository[Document]):
         Returns:
             List of documents
         """
-        query: Select = select(self.model).where(self.model.booking_id == booking_id)
+        query: Select[Tuple[Document]] = select(self.model).where(
+            self.model.booking_id == booking_id
+        )
         result = await self.session.scalars(query)
         return list(result.all())
 
@@ -49,7 +51,9 @@ class DocumentRepository(BaseRepository[Document]):
         Returns:
             List of documents
         """
-        query: Select = select(self.model).where(self.model.client_id == client_id)
+        query: Select[Tuple[Document]] = select(self.model).where(
+            self.model.client_id == client_id
+        )
         result = await self.session.scalars(query)
         return list(result.all())
 
@@ -75,7 +79,7 @@ class DocumentRepository(BaseRepository[Document]):
         if end_date:
             conditions.append(self.model.created_at <= end_date)
 
-        query: Select = select(self.model).where(and_(*conditions))
+        query: Select[Tuple[Document]] = select(self.model).where(and_(*conditions))
         result = await self.session.scalars(query)
         return list(result.all())
 
@@ -94,7 +98,7 @@ class DocumentRepository(BaseRepository[Document]):
             List of matching documents
         """
         query = query_str.lower()
-        stmt = select(self.model).where(
+        stmt: Select[Tuple[Document]] = select(self.model).where(
             or_(
                 func.lower(self.model.title).contains(query),
                 func.lower(self.model.description).contains(query),
@@ -114,7 +118,9 @@ class DocumentRepository(BaseRepository[Document]):
         Returns:
             List of documents
         """
-        query: Select = select(self.model).where(self.model.status == status)
+        query: Select[Tuple[Document]] = select(self.model).where(
+            self.model.status == status
+        )
         result = await self.session.scalars(query)
         return list(result.all())
 
@@ -130,7 +136,7 @@ class DocumentRepository(BaseRepository[Document]):
         Returns:
             List of documents
         """
-        query: Select = select(self.model).where(
+        query: Select[Tuple[Document]] = select(self.model).where(
             and_(
                 self.model.created_at >= start_date,
                 self.model.created_at <= end_date,
