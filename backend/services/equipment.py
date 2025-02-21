@@ -610,9 +610,9 @@ class EquipmentService:
             List of matching equipment
 
         Raises:
-            ValidationError: If query is empty
+            ValidationError: If query is empty or contains only whitespace
         """
-        if not query:
+        if not query or query.isspace():
             raise ValidationError('Search query cannot be empty')
 
         equipment_list = await self.repository.search(query)
