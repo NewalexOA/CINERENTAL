@@ -1,0 +1,25 @@
+version: 2
+updates:
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    target-branch: "develop"
+    labels:
+      - "dependencies"
+      - "python"
+    commit-message:
+      prefix: "chore"
+      include: "scope"
+    open-pull-requests-limit: 10
+    pull-request-branch-name:
+      separator: "/"
+    reviewers:
+      - "NewalexOA"
+    assignees:
+      - "NewalexOA"
+    auto-merge: true
+    auto-merge-conditions:
+      - "status-success=continuous-integration/jenkins/pr-merge"
+      - "review-count>=1"
+      - "approved"
