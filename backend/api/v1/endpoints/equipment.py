@@ -71,18 +71,46 @@ async def get_equipment_list(
     limit: int = Query(100, gt=0, le=1000),
     status: Optional[EquipmentStatus] = None,
     category_id: Optional[int] = None,
+    query: Optional[str] = None,
     db: AsyncSession = Depends(get_db),
 ) -> List[EquipmentResponse]:
-    """Get list of equipment."""
+    """Get list of equipment with optional filtering and search.
+
+    Args:
+        skip: Number of records to skip
+        limit: Maximum number of records to return
+        status: Filter by equipment status
+        category_id: Filter by category ID
+        query: Search query for name, description, barcode, or serial number
+        db: Database session
+
+    Returns:
+        List of equipment items
+    """
     try:
         service = EquipmentService(db)
-        equipment_list = await service.get_equipment_list(
-            skip=skip,
-            limit=limit,
-            status=status,
-            category_id=category_id,
-        )
-        return [EquipmentResponse.model_validate(e) for e in equipment_list]
+
+        # If search query is provided and long enough, use search
+        if query and len(query) >= 3:
+            equipment_list = await service.search(query)
+            # Apply additional filters after search
+            if status:
+                equipment_list = [e for e in equipment_list if e.status == status]
+            if category_id:
+                equipment_list = [
+                    e for e in equipment_list if e.category_id == category_id
+                ]
+            # Apply pagination
+            return equipment_list[skip : skip + limit]
+        else:
+            # Use regular list with filters
+            equipment_list = await service.get_equipment_list(
+                skip=skip,
+                limit=limit,
+                status=status,
+                category_id=category_id,
+            )
+            return equipment_list
     except BusinessError as e:
         raise HTTPException(
             status_code=http_status.HTTP_400_BAD_REQUEST,
@@ -237,44 +265,6 @@ async def get_equipment_by_barcode(
                 status_code=http_status.HTTP_404_NOT_FOUND,
                 detail=str(e),
             ) from e
-        raise HTTPException(
-            status_code=http_status.HTTP_400_BAD_REQUEST,
-            detail=str(e),
-        ) from e
-
-
-@typed_get(
-    equipment_router,
-    '/search/{query}',
-    response_model=List[EquipmentResponse],
-)
-async def search_equipment(
-    query: str,
-    db: AsyncSession = Depends(get_db),
-) -> List[EquipmentResponse]:
-    """Search equipment by name, description, barcode, or serial number.
-
-    Args:
-        query: Search query
-        db: Database session
-
-    Returns:
-        List of matching equipment
-
-    Raises:
-        HTTPException: If query is too short
-    """
-    if len(query) < 3:
-        raise HTTPException(
-            status_code=http_status.HTTP_400_BAD_REQUEST,
-            detail='Search query must be at least 3 characters long',
-        )
-
-    try:
-        service = EquipmentService(db)
-        equipment_list = await service.search(query)
-        return [EquipmentResponse.model_validate(e) for e in equipment_list]
-    except BusinessError as e:
         raise HTTPException(
             status_code=http_status.HTTP_400_BAD_REQUEST,
             detail=str(e),
