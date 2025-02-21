@@ -460,10 +460,11 @@ class EquipmentService:
         # Check if status transition is valid
         if not self._is_valid_status_transition(equipment.status, new_status):
             raise StateError(
-                f'Cannot transition from {equipment.status} to {new_status}',
+                f'Cannot transition from {equipment.status.value} to '
+                f'{new_status.value}',
                 details={
-                    'current_status': equipment.status,
-                    'new_status': new_status,
+                    'current_status': equipment.status.value,
+                    'new_status': new_status.value,
                 },
             )
 
