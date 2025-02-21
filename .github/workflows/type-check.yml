@@ -18,4 +18,4 @@ jobs:
       - name: Build and run type check
         run: |
           docker compose build
-          docker compose run --rm web mypy backend/ --strict
+          docker compose run --rm web sh -c "cd /app && mypy backend/ --strict"
