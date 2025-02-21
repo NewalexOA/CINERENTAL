@@ -224,31 +224,63 @@ const initDateRangePicker = (element, options = {}) => {
 const equipmentSearch = {
     init() {
         const searchInput = document.querySelector('#searchInput');
+        const categoryFilter = document.querySelector('#categoryFilter');
+        const statusFilter = document.querySelector('#statusFilter');
         const searchSpinner = document.querySelector('#search-spinner');
         const initialEquipment = [...document.getElementById('equipmentTable').children];
 
-        searchInput.addEventListener('input', debounce(async (e) => {
-            const query = e.target.value.trim();
-            console.log('Search query:', query);  // Debug log
+        // Get initial values from URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const initialQuery = urlParams.get('query') || '';
+        const initialCategory = urlParams.get('category_id') || '';
+        const initialStatus = urlParams.get('status') || '';
 
-            if (query.length < 3) {
-                // Restore initial table state for short queries
-                const table = document.getElementById('equipmentTable');
-                table.innerHTML = '';
-                initialEquipment.forEach(row => table.appendChild(row.cloneNode(true)));
-                return;
-            }
+        // Set initial values
+        searchInput.value = initialQuery;
+        categoryFilter.value = initialCategory;
+        statusFilter.value = initialStatus;
+
+        const updateResults = debounce(async () => {
+            const query = searchInput.value.trim();
+            const category = categoryFilter.value;
+            const status = statusFilter.value;
 
             searchSpinner.classList.remove('d-none');
             try {
-                console.log('Search URL:', API_BASE_URL + `/equipment/search/${encodeURIComponent(query)}`);  // Debug log
-                const results = await api.get(`/equipment/search/${encodeURIComponent(query)}`);
-                console.log('Search results:', results);  // Debug log
+                const params = new URLSearchParams();
 
-                // Update table with results
+                // Добавляем поисковый запрос если он достаточной длины
+                if (query.length >= 3) {
+                    params.append('query', query);
+                }
+
+                // Добавляем фильтры
+                if (category) {
+                    params.append('category_id', category);
+                }
+                if (status) {
+                    params.append('status', status);
+                }
+
+                // Формируем URL с параметрами
+                const url = params.toString() ? `/equipment?${params.toString()}` : '/equipment';
+
+                // Update browser URL without reloading the page
+                const newUrl = params.toString() ? `?${params.toString()}` : window.location.pathname;
+                window.history.replaceState({}, '', newUrl);
+
+                console.log('Request URL:', API_BASE_URL + url);
+                const results = await api.get(url);
+                console.log('Results:', results);
+
                 const table = document.getElementById('equipmentTable');
                 if (!table) {
-                    console.error('Table element not found');  // Debug log
+                    console.error('Table element not found');
+                    return;
+                }
+
+                if (results.length === 0) {
+                    table.innerHTML = '<tr><td colspan="6" class="text-center">Ничего не найдено</td></tr>';
                     return;
                 }
 
@@ -279,12 +311,20 @@ const equipmentSearch = {
                     </tr>
                 `).join('');
             } catch (error) {
-                console.error('Search error:', error);  // Debug log
+                console.error('Search error:', error);
                 showToast('Ошибка при поиске оборудования', 'danger');
             } finally {
                 searchSpinner.classList.add('d-none');
             }
-        }, 300));
+        }, 300);
+
+        // Add event listeners
+        searchInput.addEventListener('input', updateResults);
+        categoryFilter.addEventListener('change', updateResults);
+        statusFilter.addEventListener('change', updateResults);
+
+        // Load initial data
+        updateResults();
     }
 };
 

@@ -36,7 +36,7 @@
         </div>
         <div class="col-md-3">
             <select class="form-select" id="statusFilter">
-                <option value="">Все статусы</option>
+                <option value="" selected>Все статусы</option>
                 <option value="AVAILABLE" {% if current_status == 'AVAILABLE' %}selected{% endif %}>Доступно</option>
                 <option value="RENTED" {% if current_status == 'RENTED' %}selected{% endif %}>В аренде</option>
                 <option value="MAINTENANCE" {% if current_status == 'MAINTENANCE' %}selected{% endif %}>В ремонте</option>
