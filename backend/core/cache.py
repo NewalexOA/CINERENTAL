@@ -1,13 +1,13 @@
 """Redis cache initialization module."""
 
-from typing import Any, Optional
+from typing import Optional, Union
 
 from redis.asyncio import Redis, from_url
 
 from backend.core.config import settings
 
 # Create Redis client
-redis: Optional[Redis[Any]] = None
+redis: Optional[Redis[Union[str, bytes]]] = None
 
 
 async def init_redis() -> None:
@@ -20,7 +20,7 @@ async def init_redis() -> None:
     )
 
 
-async def get_redis() -> Redis[Any]:
+async def get_redis() -> Redis[Union[str, bytes]]:
     """Get Redis client.
 
     Returns:
