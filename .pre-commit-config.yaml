@@ -46,4 +46,4 @@ repos:
           - sqlalchemy[mypy]
           - pydantic
         exclude: ^migrations/
-        args: [--explicit-package-bases]
+        args: [--explicit-package-bases, --strict]
