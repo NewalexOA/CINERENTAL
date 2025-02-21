@@ -5,7 +5,7 @@ including inventory tracking, availability status, and maintenance records.
 """
 
 from datetime import datetime
-from typing import Any, List, Optional, Protocol, Union
+from typing import Any, List, Optional, Protocol, TypeVar, Union
 from uuid import UUID
 
 from sqlalchemy import Column, ScalarSelect, and_, or_, select
@@ -14,6 +14,8 @@ from sqlalchemy.sql import Select
 
 from backend.models import Booking, BookingStatus, Equipment, EquipmentStatus
 from backend.repositories import BaseRepository
+
+T = TypeVar('T')
 
 
 class HasBookingStatus(Protocol):
@@ -45,7 +47,7 @@ class EquipmentRepository(BaseRepository[Equipment]):
         Note:
             Search is case-sensitive using regex for exact match
         """
-        query = select(Equipment).where(
+        query: Select[tuple[Equipment]] = select(Equipment).where(
             and_(
                 Equipment.barcode.op('~')(f'^{barcode}$'),
                 Equipment.deleted_at.is_(None),
@@ -63,7 +65,7 @@ class EquipmentRepository(BaseRepository[Equipment]):
         Returns:
             Equipment if found, None otherwise
         """
-        query: Select = select(self.model).where(
+        query: Select[tuple[Equipment]] = select(self.model).where(
             self.model.serial_number == serial_number
         )
         result: Optional[Equipment] = await self.session.scalar(query)
@@ -78,7 +80,7 @@ class EquipmentRepository(BaseRepository[Equipment]):
         Returns:
             List of equipment in category
         """
-        query = select(Equipment).where(
+        query: Select[tuple[Equipment]] = select(Equipment).where(
             and_(Equipment.category_id == category_id, Equipment.deleted_at.is_(None))
         )
         result = await self.session.execute(query)

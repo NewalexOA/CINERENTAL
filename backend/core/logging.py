@@ -44,21 +44,21 @@ class LogConfig(BaseModel):
     # Logging config
     version: int = 1
     disable_existing_loggers: bool = True
-    formatters: dict = {
+    formatters: Dict[str, Dict[str, Any]] = {
         'default': {
             '()': 'uvicorn.logging.DefaultFormatter',
             'fmt': '%(message)s',  # Remove timestamp from default formatter
             'use_colors': True,
         },
     }
-    handlers: dict = {
+    handlers: Dict[str, Dict[str, Any]] = {
         'default': {
             'formatter': 'default',
             'class': 'logging.StreamHandler',
             'stream': 'ext://sys.stderr',
         },
     }
-    loggers: dict = {
+    loggers: Dict[str, Dict[str, Any]] = {
         LOGGER_NAME: {'handlers': ['default'], 'level': LOG_LEVEL, 'propagate': False},
         'uvicorn': {'handlers': ['default'], 'level': LOG_LEVEL, 'propagate': False},
         'fastapi': {'handlers': ['default'], 'level': LOG_LEVEL, 'propagate': False},
