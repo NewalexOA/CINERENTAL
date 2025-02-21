@@ -53,7 +53,6 @@ async def create_equipment(
             serial_number=equipment.serial_number,
             daily_rate=float(equipment.daily_rate),
             replacement_cost=float(equipment.replacement_cost),
-            notes=equipment.notes,
         )
     except BusinessError as e:
         raise HTTPException(
@@ -154,7 +153,6 @@ async def update_equipment(
             ),
             barcode=equipment.barcode,
             serial_number=equipment.serial_number,
-            notes=equipment.notes,
             status=equipment.status,
         )
         return EquipmentResponse.model_validate(updated)

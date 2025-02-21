@@ -122,7 +122,7 @@ class EquipmentService:
         )
         db_equipment = await self.repository.create(equipment)
         loaded_equipment = await self._load_equipment_with_category(db_equipment)
-        return EquipmentResponse.model_validate(loaded_equipment)
+        return EquipmentResponse.model_validate(loaded_equipment.__dict__)
 
     async def get_equipment(
         self, equipment_id: int, include_deleted: bool = False
@@ -216,7 +216,7 @@ class EquipmentService:
             loaded = await self._load_equipment_with_category(equipment)
             loaded_equipment.append(loaded)
 
-        return [EquipmentResponse.model_validate(e) for e in loaded_equipment]
+        return [EquipmentResponse.model_validate(e.__dict__) for e in loaded_equipment]
 
     async def update_equipment(
         self,
@@ -408,7 +408,7 @@ class EquipmentService:
             List of matching equipment
         """
         equipment_list = await self.repository.search(query)
-        return [EquipmentResponse.model_validate(e) for e in equipment_list]
+        return [EquipmentResponse.model_validate(e.__dict__) for e in equipment_list]
 
     async def get_by_category(self, category_id: int) -> List[EquipmentResponse]:
         """Get equipment by category.
@@ -420,7 +420,7 @@ class EquipmentService:
             List of equipment in category
         """
         equipment_list = await self.repository.get_by_category(category_id)
-        return [EquipmentResponse.model_validate(e) for e in equipment_list]
+        return [EquipmentResponse.model_validate(e.__dict__) for e in equipment_list]
 
     async def get_by_barcode(self, barcode: str) -> Optional[EquipmentResponse]:
         """Get equipment by barcode.
@@ -433,7 +433,7 @@ class EquipmentService:
         """
         equipment = await self.repository.get_by_barcode(barcode)
         if equipment:
-            return EquipmentResponse.model_validate(equipment)
+            return EquipmentResponse.model_validate(equipment.__dict__)
         return None
 
     async def change_status(
@@ -546,7 +546,7 @@ class EquipmentService:
             List of available equipment
         """
         equipment_list = await self.repository.get_available(start_date, end_date)
-        return [EquipmentResponse.model_validate(e) for e in equipment_list]
+        return [EquipmentResponse.model_validate(e.__dict__) for e in equipment_list]
 
     async def get_all(
         self,
@@ -597,12 +597,7 @@ class EquipmentService:
         equipment_list = result.unique().scalars().all()
 
         # Transform data for response
-        response_list = []
-        for equipment in equipment_list:
-            equipment_data = EquipmentResponse.model_validate(equipment)
-            response_list.append(equipment_data)
-
-        return response_list
+        return [EquipmentResponse.model_validate(e.__dict__) for e in equipment_list]
 
     async def search(self, query: str) -> List[EquipmentResponse]:
         """Search equipment by name or description.
@@ -620,7 +615,14 @@ class EquipmentService:
             raise ValidationError('Search query cannot be empty')
 
         equipment_list = await self.repository.search(query)
-        return [EquipmentResponse.model_validate(e) for e in equipment_list]
+
+        # Load equipment with categories
+        loaded_equipment = []
+        for equipment in equipment_list:
+            loaded = await self._load_equipment_with_category(equipment)
+            loaded_equipment.append(loaded)
+
+        return [EquipmentResponse.model_validate(e.__dict__) for e in loaded_equipment]
 
     async def _is_available(
         self,

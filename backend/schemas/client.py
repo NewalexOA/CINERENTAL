@@ -7,7 +7,7 @@ including request/response schemas for user registration and profile management.
 from datetime import datetime
 from typing import Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from backend.models.client import ClientStatus
 
@@ -61,7 +61,4 @@ class ClientResponse(ClientBase):
     created_at: datetime
     updated_at: datetime
 
-    class Config:
-        """Pydantic configuration."""
-
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
