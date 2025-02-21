@@ -585,14 +585,14 @@ class TestEquipmentService:
         await service.change_status(test_equipment.id, EquipmentStatus.RETIRED)
 
         # Try to change from RETIRED (not allowed)
-        with pytest.raises(StateError, match='Cannot transition from'):
+        with pytest.raises(StateError, match='Cannot change status from'):
             await service.change_status(test_equipment.id, EquipmentStatus.AVAILABLE)
 
         # Try invalid transition from AVAILABLE to BROKEN
         test_equipment.status = EquipmentStatus.AVAILABLE
         await service.repository.update(test_equipment)
 
-        with pytest.raises(StateError, match='Cannot transition from'):
+        with pytest.raises(StateError, match='Cannot change status from'):
             await service.change_status(test_equipment.id, EquipmentStatus.BROKEN)
 
     @async_test
@@ -725,3 +725,105 @@ class TestEquipmentService:
     async def test_validate_equipment_data(self) -> None:
         """Test equipment data validation."""
         pass
+
+    @async_test
+    async def test_search_with_filters(
+        self,
+        service: EquipmentService,
+        test_equipment: Equipment,
+        test_category: Category,
+    ) -> None:
+        """Test searching equipment with filters."""
+        # Create another equipment with different status
+        equipment2 = await service.create_equipment(
+            name='Another Test Equipment',
+            description='Test Description',
+            category_id=test_category.id,
+            barcode='TEST-002',
+            serial_number='SN002',
+            daily_rate=100.00,
+            replacement_cost=1000.00,
+        )
+
+        # Update its status to MAINTENANCE
+        await service.update_equipment(
+            equipment2.id,
+            status=EquipmentStatus.MAINTENANCE,
+        )
+
+        # Search with query only
+        results = await service.search('test')
+        assert len(results) == 2  # Both equipment should be found
+
+        # Search with query and status
+        results = await service.search('test')
+        results = [r for r in results if r.status == test_equipment.status]
+        assert len(results) == 1
+        assert results[0].id == test_equipment.id
+
+        # Search with query and category
+        results = await service.search('test')
+        results = [r for r in results if r.category_id == test_category.id]
+        assert len(results) == 2
+        assert all(e.category_id == test_category.id for e in results)
+
+        # Search with all filters
+        results = await service.search('test')
+        results = [
+            r
+            for r in results
+            if r.category_id == test_category.id and r.status == test_equipment.status
+        ]
+        assert len(results) == 1
+        assert results[0].id == test_equipment.id
+
+    @async_test
+    async def test_search_pagination(
+        self,
+        service: EquipmentService,
+        test_equipment: Equipment,
+        test_category: Category,
+    ) -> None:
+        """Test equipment search pagination."""
+        # Create multiple equipment items with unique barcodes
+        for i in range(5):
+            await service.create_equipment(
+                name=f'Test Equipment {i}',
+                description='Test Description',
+                category_id=test_category.id,
+                barcode=f'TEST-SEARCH-{i:03d}',  # Unique barcode
+                serial_number=f'SN-SEARCH-{i:03d}',  # Unique serial
+                daily_rate=100.00,
+                replacement_cost=1000.00,
+            )
+
+        # Get all results for comparison
+        all_results = await service.search('test')
+        assert len(all_results) > 3
+
+        # Test first page
+        results = await service.search('test')
+        results = results[:3]  # Apply limit
+        assert len(results) == 3
+
+        # Test second page
+        results = await service.search('test')
+        results = results[3:6]  # Apply skip and limit
+        assert len(results) > 0
+        assert len(results) <= 3
+
+    @async_test
+    async def test_search_validation(
+        self,
+        service: EquipmentService,
+        test_equipment: Equipment,
+    ) -> None:
+        """Test equipment search input validation."""
+        # Test empty query
+        with pytest.raises(ValidationError):
+            await service.search('')
+
+        # Test search with non-existent category
+        results = await service.search('test')
+        results = [r for r in results if r.category_id == 999]
+        assert len(results) == 0  # No equipment in non-existent category

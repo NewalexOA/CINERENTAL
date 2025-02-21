@@ -4,6 +4,18 @@
 const API_BASE_URL = '/api/v1';
 
 // Utility functions
+const debounce = (func, wait) => {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+};
+
 const formatDate = (date) => {
     return new Date(date).toLocaleDateString('ru-RU', {
         year: 'numeric',
@@ -208,6 +220,114 @@ const initDateRangePicker = (element, options = {}) => {
     return new daterangepicker(element, defaultOptions);
 };
 
+// Equipment search functionality
+const equipmentSearch = {
+    init() {
+        const searchInput = document.querySelector('#searchInput');
+        const categoryFilter = document.querySelector('#categoryFilter');
+        const statusFilter = document.querySelector('#statusFilter');
+        const searchSpinner = document.querySelector('#search-spinner');
+        const initialEquipment = [...document.getElementById('equipmentTable').children];
+
+        // Get initial values from URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const initialQuery = urlParams.get('query') || '';
+        const initialCategory = urlParams.get('category_id') || '';
+        const initialStatus = urlParams.get('status') || '';
+
+        // Set initial values
+        searchInput.value = initialQuery;
+        categoryFilter.value = initialCategory;
+        statusFilter.value = initialStatus;
+
+        const updateResults = debounce(async () => {
+            const query = searchInput.value.trim();
+            const category = categoryFilter.value;
+            const status = statusFilter.value;
+
+            searchSpinner.classList.remove('d-none');
+            try {
+                const params = new URLSearchParams();
+
+                // Добавляем поисковый запрос если он достаточной длины
+                if (query.length >= 3) {
+                    params.append('query', query);
+                }
+
+                // Добавляем фильтры
+                if (category) {
+                    params.append('category_id', category);
+                }
+                if (status) {
+                    params.append('status', status);
+                }
+
+                // Формируем URL с параметрами
+                const url = params.toString() ? `/equipment?${params.toString()}` : '/equipment';
+
+                // Update browser URL without reloading the page
+                const newUrl = params.toString() ? `?${params.toString()}` : window.location.pathname;
+                window.history.replaceState({}, '', newUrl);
+
+                console.log('Request URL:', API_BASE_URL + url);
+                const results = await api.get(url);
+                console.log('Results:', results);
+
+                const table = document.getElementById('equipmentTable');
+                if (!table) {
+                    console.error('Table element not found');
+                    return;
+                }
+
+                if (results.length === 0) {
+                    table.innerHTML = '<tr><td colspan="6" class="text-center">Ничего не найдено</td></tr>';
+                    return;
+                }
+
+                table.innerHTML = results.map(item => `
+                    <tr>
+                        <td>
+                            <div class="fw-bold">${item.name}</div>
+                            <small class="text-muted">${item.description || ''}</small>
+                        </td>
+                        <td>${item.category_name || 'Без категории'}</td>
+                        <td>${item.barcode}</td>
+                        <td>
+                            <span class="badge bg-${item.status === 'AVAILABLE' ? 'success' : item.status === 'RENTED' ? 'warning' : 'danger'}">
+                                ${item.status}
+                            </span>
+                        </td>
+                        <td>${formatCurrency(item.daily_rate)}</td>
+                        <td>
+                            <div class="btn-group">
+                                <a href="/equipment/${item.id}" class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-info-circle"></i>
+                                </a>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="copyBarcode('${item.barcode}')">
+                                    <i class="fas fa-copy"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `).join('');
+            } catch (error) {
+                console.error('Search error:', error);
+                showToast('Ошибка при поиске оборудования', 'danger');
+            } finally {
+                searchSpinner.classList.add('d-none');
+            }
+        }, 300);
+
+        // Add event listeners
+        searchInput.addEventListener('input', updateResults);
+        categoryFilter.addEventListener('change', updateResults);
+        statusFilter.addEventListener('change', updateResults);
+
+        // Load initial data
+        updateResults();
+    }
+};
+
 // Document ready handler
 document.addEventListener('DOMContentLoaded', () => {
     // Initialize tooltips
@@ -217,4 +337,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initialize popovers
     const popoverTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="popover"]'));
     popoverTriggerList.map(popoverTriggerEl => new bootstrap.Popover(popoverTriggerEl));
+
+    // Initialize equipment search
+    if (document.getElementById('searchInput')) {
+        equipmentSearch.init();
+    }
 });

@@ -382,3 +382,69 @@ def test_dates() -> Dict[str, datetime]:
         'future_date': base_date + timedelta(days=4),
         'far_future_date': base_date + timedelta(days=30),
     }
+
+
+@pytest_asyncio.fixture
+async def equipment_with_special_chars(
+    db_session: AsyncSession,
+    test_category: Category,
+) -> Equipment:
+    """Create equipment with special characters."""
+    equipment = Equipment(
+        name="Test <script>alert('XSS')</script> Equipment",
+        description="Test equipment with !@#$%^&*() special chars ' OR '1'='1",
+        barcode='DROP TABLE equipment;--',
+        serial_number='Test & Equipment',
+        category_id=test_category.id,
+        status=EquipmentStatus.AVAILABLE,
+        daily_rate=Decimal('100.00'),
+        replacement_cost=Decimal('1000.00'),
+    )
+    db_session.add(equipment)
+    await db_session.commit()
+    await db_session.refresh(equipment)
+    return equipment
+
+
+@pytest_asyncio.fixture
+async def equipment_with_long_strings(
+    db_session: AsyncSession,
+    test_category: Category,
+) -> Equipment:
+    """Create equipment with very long strings."""
+    equipment = Equipment(
+        name='A' * 200,  # Maximum length for name
+        description='B' * 1000,  # Maximum length for description
+        barcode='C' * 100,  # Maximum length for barcode
+        serial_number='D' * 100,  # Maximum length for serial number
+        category_id=test_category.id,
+        status=EquipmentStatus.AVAILABLE,
+        daily_rate=Decimal('100.00'),
+        replacement_cost=Decimal('1000.00'),
+    )
+    db_session.add(equipment)
+    await db_session.commit()
+    await db_session.refresh(equipment)
+    return equipment
+
+
+@pytest_asyncio.fixture
+async def equipment_with_unicode(
+    db_session: AsyncSession,
+    test_category: Category,
+) -> Equipment:
+    """Create equipment with Unicode characters."""
+    equipment = Equipment(
+        name='Тестовое оборудование 测试设备 テスト機器',
+        description='Описание テスト-001 测试说明',
+        barcode='バーコード-001',
+        serial_number='シリアル-001',
+        category_id=test_category.id,
+        status=EquipmentStatus.AVAILABLE,
+        daily_rate=Decimal('100.00'),
+        replacement_cost=Decimal('1000.00'),
+    )
+    db_session.add(equipment)
+    await db_session.commit()
+    await db_session.refresh(equipment)
+    return equipment

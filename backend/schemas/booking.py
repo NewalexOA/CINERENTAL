@@ -8,7 +8,7 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from backend.models import BookingStatus, PaymentStatus
 
@@ -30,6 +30,13 @@ class BookingBase(BaseModel):
     )
     total_amount: Decimal = Field(
         ..., title='Total Amount', description='Total amount for the booking'
+    )
+
+    model_config = ConfigDict(
+        from_attributes=True,
+        ser_json_bytes='utf8',
+        ser_json_timedelta='iso8601',
+        validate_default=True,
     )
 
 
@@ -55,6 +62,13 @@ class BookingUpdate(BaseModel):
         None, title='Payment Status', description='Payment status'
     )
 
+    model_config = ConfigDict(
+        from_attributes=True,
+        ser_json_bytes='utf8',
+        ser_json_timedelta='iso8601',
+        validate_default=True,
+    )
+
 
 class BookingResponse(BookingBase):
     """Booking response schema."""
@@ -67,7 +81,9 @@ class BookingResponse(BookingBase):
     equipment_name: str
     client_name: str
 
-    class Config:
-        """Pydantic configuration."""
-
-        from_attributes = True
+    model_config = ConfigDict(
+        from_attributes=True,
+        ser_json_bytes='utf8',
+        ser_json_timedelta='iso8601',
+        validate_default=True,
+    )

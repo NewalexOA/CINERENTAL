@@ -7,7 +7,7 @@ including request/response schemas for managing rental documents.
 from datetime import datetime
 from typing import Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from backend.models.document import DocumentStatus, DocumentType
 
@@ -52,7 +52,4 @@ class DocumentResponse(DocumentBase):
     created_at: datetime
     updated_at: datetime
 
-    class Config:
-        """Pydantic configuration."""
-
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)

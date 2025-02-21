@@ -10,7 +10,6 @@ from typing import Dict, List, Optional, Set
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import joinedload
 
 from backend.exceptions import (
     AvailabilityError,
@@ -18,7 +17,6 @@ from backend.exceptions import (
     ConflictError,
     NotFoundError,
     StateError,
-    StatusTransitionError,
     ValidationError,
 )
 from backend.models import Equipment, EquipmentStatus
@@ -48,11 +46,7 @@ class EquipmentService:
         Returns:
             Equipment instance with loaded category
         """
-        stmt = (
-            select(Equipment)
-            .options(joinedload(Equipment.category))
-            .filter(Equipment.id == equipment.id)
-        )
+        stmt = select(Equipment).filter(Equipment.id == equipment.id)
         result = await self.session.execute(stmt)
         loaded_equipment = result.unique().scalar_one()
         return loaded_equipment
@@ -122,7 +116,7 @@ class EquipmentService:
         )
         db_equipment = await self.repository.create(equipment)
         loaded_equipment = await self._load_equipment_with_category(db_equipment)
-        return EquipmentResponse.model_validate(loaded_equipment)
+        return EquipmentResponse.model_validate(loaded_equipment.__dict__)
 
     async def get_equipment(
         self, equipment_id: int, include_deleted: bool = False
@@ -216,7 +210,7 @@ class EquipmentService:
             loaded = await self._load_equipment_with_category(equipment)
             loaded_equipment.append(loaded)
 
-        return [EquipmentResponse.model_validate(e) for e in loaded_equipment]
+        return [EquipmentResponse.model_validate(e.__dict__) for e in loaded_equipment]
 
     async def update_equipment(
         self,
@@ -320,10 +314,15 @@ class EquipmentService:
 
             # Validate status transition
             if not self._is_valid_status_transition(equipment.status, status):
-                raise StatusTransitionError(
-                    equipment.status,  # current_status
-                    status,  # new_status
-                    f'Invalid status transition from {equipment.status} to {status}',
+                current = equipment.status.value
+                target = status.value
+                raise StateError(
+                    f'Cannot change status from {current} to {target}',
+                    details={
+                        'current_status': current,
+                        'new_status': target,
+                        'message': f'Cannot change status from {current} to {target}',
+                    },
                 )
 
             equipment.status = status
@@ -408,7 +407,7 @@ class EquipmentService:
             List of matching equipment
         """
         equipment_list = await self.repository.search(query)
-        return [EquipmentResponse.model_validate(e) for e in equipment_list]
+        return [EquipmentResponse.model_validate(e.__dict__) for e in equipment_list]
 
     async def get_by_category(self, category_id: int) -> List[EquipmentResponse]:
         """Get equipment by category.
@@ -420,7 +419,7 @@ class EquipmentService:
             List of equipment in category
         """
         equipment_list = await self.repository.get_by_category(category_id)
-        return [EquipmentResponse.model_validate(e) for e in equipment_list]
+        return [EquipmentResponse.model_validate(e.__dict__) for e in equipment_list]
 
     async def get_by_barcode(self, barcode: str) -> Optional[EquipmentResponse]:
         """Get equipment by barcode.
@@ -433,7 +432,7 @@ class EquipmentService:
         """
         equipment = await self.repository.get_by_barcode(barcode)
         if equipment:
-            return EquipmentResponse.model_validate(equipment)
+            return EquipmentResponse.model_validate(equipment.__dict__)
         return None
 
     async def change_status(
@@ -459,11 +458,14 @@ class EquipmentService:
 
         # Check if status transition is valid
         if not self._is_valid_status_transition(equipment.status, new_status):
+            current = equipment.status.value
+            target = new_status.value
             raise StateError(
-                f'Cannot transition from {equipment.status} to {new_status}',
+                f'Cannot change status from {current} to {target}',
                 details={
-                    'current_status': equipment.status,
-                    'new_status': new_status,
+                    'current_status': current,
+                    'new_status': target,
+                    'message': f'Cannot change status from {current} to {target}',
                 },
             )
 
@@ -546,7 +548,7 @@ class EquipmentService:
             List of available equipment
         """
         equipment_list = await self.repository.get_available(start_date, end_date)
-        return [EquipmentResponse.model_validate(e) for e in equipment_list]
+        return [EquipmentResponse.model_validate(e.__dict__) for e in equipment_list]
 
     async def get_all(
         self,
@@ -583,7 +585,6 @@ class EquipmentService:
         # Get equipment with categories in a single query
         stmt = (
             select(Equipment)
-            .options(joinedload(Equipment.category))
             .filter(Equipment.deleted_at.is_(None))
             .order_by(Equipment.name)
         )
@@ -597,12 +598,7 @@ class EquipmentService:
         equipment_list = result.unique().scalars().all()
 
         # Transform data for response
-        response_list = []
-        for equipment in equipment_list:
-            equipment_data = EquipmentResponse.model_validate(equipment)
-            response_list.append(equipment_data)
-
-        return response_list
+        return [EquipmentResponse.model_validate(e.__dict__) for e in equipment_list]
 
     async def search(self, query: str) -> List[EquipmentResponse]:
         """Search equipment by name or description.
@@ -614,13 +610,20 @@ class EquipmentService:
             List of matching equipment
 
         Raises:
-            ValidationError: If query is empty
+            ValidationError: If query is empty or contains only whitespace
         """
-        if not query:
+        if not query or query.isspace():
             raise ValidationError('Search query cannot be empty')
 
         equipment_list = await self.repository.search(query)
-        return [EquipmentResponse.model_validate(e) for e in equipment_list]
+
+        # Load equipment with categories
+        loaded_equipment = []
+        for equipment in equipment_list:
+            loaded = await self._load_equipment_with_category(equipment)
+            loaded_equipment.append(loaded)
+
+        return [EquipmentResponse.model_validate(e.__dict__) for e in loaded_equipment]
 
     async def _is_available(
         self,

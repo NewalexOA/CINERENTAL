@@ -51,6 +51,7 @@ RUN apt-get update \
         curl \
         netcat-traditional \
         libpq-dev \
+        postgresql-client \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* \
     && adduser --disabled-password --gecos '' appuser \

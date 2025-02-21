@@ -14,7 +14,14 @@ echo "Waiting for $service_type ($host:$port)..."
 
 case "$service_type" in
   "postgres")
-    until pg_isready -h "$host" -p "$port" -U postgres >/dev/null 2>&1; do
+    # Export PostgreSQL environment variables
+    export PGHOST="$host"
+    export PGPORT="$port"
+    export PGUSER="${POSTGRES_USER:-postgres}"
+    export PGPASSWORD="${POSTGRES_PASSWORD:-postgres}"
+    export PGDATABASE="${POSTGRES_DB:-cinerental}"
+
+    until pg_isready >/dev/null 2>&1; do
       [ "$elapsed" -gt "$timeout" ] && echo "Timeout waiting for PostgreSQL" && exit 1
       echo "PostgreSQL is unavailable - sleeping"
       sleep 1
