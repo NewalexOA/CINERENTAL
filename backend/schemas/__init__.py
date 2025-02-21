@@ -3,12 +3,15 @@
 This package defines Pydantic models for request/response validation.
 """
 
+from backend.models.booking import BookingStatus, PaymentStatus
+from backend.models.client import ClientStatus
+from backend.models.document import DocumentStatus, DocumentType
+from backend.models.equipment import EquipmentStatus
 from backend.schemas.booking import (
+    BookingBase,
     BookingCreate,
     BookingResponse,
-    BookingStatus,
     BookingUpdate,
-    PaymentStatus,
 )
 from backend.schemas.category import (
     CategoryCreate,
@@ -17,46 +20,51 @@ from backend.schemas.category import (
     CategoryWithEquipmentCount,
 )
 from backend.schemas.client import (
+    ClientBase,
     ClientCreate,
     ClientResponse,
-    ClientStatus,
     ClientUpdate,
 )
 from backend.schemas.document import (
+    DocumentBase,
     DocumentCreate,
     DocumentResponse,
-    DocumentStatus,
-    DocumentType,
     DocumentUpdate,
 )
 from backend.schemas.equipment import (
+    EquipmentBase,
     EquipmentCreate,
     EquipmentResponse,
-    EquipmentStatus,
     EquipmentUpdate,
+    EquipmentWithCategory,
 )
 
 __all__ = [
+    'BookingStatus',
+    'PaymentStatus',
+    'ClientStatus',
+    'DocumentStatus',
+    'DocumentType',
+    'EquipmentStatus',
+    'BookingBase',
     'BookingCreate',
     'BookingResponse',
-    'BookingStatus',
     'BookingUpdate',
-    'PaymentStatus',
+    'ClientBase',
+    'ClientCreate',
+    'ClientResponse',
+    'ClientUpdate',
+    'DocumentBase',
+    'DocumentCreate',
+    'DocumentResponse',
+    'DocumentUpdate',
+    'EquipmentBase',
+    'EquipmentCreate',
+    'EquipmentResponse',
+    'EquipmentUpdate',
+    'EquipmentWithCategory',
     'CategoryCreate',
     'CategoryResponse',
     'CategoryUpdate',
     'CategoryWithEquipmentCount',
-    'ClientCreate',
-    'ClientResponse',
-    'ClientStatus',
-    'ClientUpdate',
-    'DocumentCreate',
-    'DocumentResponse',
-    'DocumentStatus',
-    'DocumentType',
-    'DocumentUpdate',
-    'EquipmentCreate',
-    'EquipmentResponse',
-    'EquipmentStatus',
-    'EquipmentUpdate',
 ]
