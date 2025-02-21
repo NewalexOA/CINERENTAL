@@ -342,10 +342,10 @@ async def change_equipment_status(
     except StateError as e:
         raise HTTPException(
             status_code=http_status.HTTP_400_BAD_REQUEST,
-            detail=str(e),
+            detail=e.details.get('message', str(e)),
         ) from e
     except BusinessError as e:
         raise HTTPException(
             status_code=http_status.HTTP_400_BAD_REQUEST,
-            detail=str(e),
+            detail=e.details.get('message', str(e)),
         ) from e

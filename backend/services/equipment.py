@@ -10,7 +10,6 @@ from typing import Dict, List, Optional, Set
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import joinedload
 
 from backend.exceptions import (
     AvailabilityError,
@@ -18,7 +17,6 @@ from backend.exceptions import (
     ConflictError,
     NotFoundError,
     StateError,
-    StatusTransitionError,
     ValidationError,
 )
 from backend.models import Equipment, EquipmentStatus
@@ -48,11 +46,7 @@ class EquipmentService:
         Returns:
             Equipment instance with loaded category
         """
-        stmt = (
-            select(Equipment)
-            .options(joinedload(Equipment.category))
-            .filter(Equipment.id == equipment.id)
-        )
+        stmt = select(Equipment).filter(Equipment.id == equipment.id)
         result = await self.session.execute(stmt)
         loaded_equipment = result.unique().scalar_one()
         return loaded_equipment
@@ -320,10 +314,15 @@ class EquipmentService:
 
             # Validate status transition
             if not self._is_valid_status_transition(equipment.status, status):
-                raise StatusTransitionError(
-                    equipment.status,  # current_status
-                    status,  # new_status
-                    f'Invalid status transition from {equipment.status} to {status}',
+                current = equipment.status.value
+                target = status.value
+                raise StateError(
+                    f'Cannot change status from {current} to {target}',
+                    details={
+                        'current_status': current,
+                        'new_status': target,
+                        'message': f'Cannot change status from {current} to {target}',
+                    },
                 )
 
             equipment.status = status
@@ -459,12 +458,14 @@ class EquipmentService:
 
         # Check if status transition is valid
         if not self._is_valid_status_transition(equipment.status, new_status):
+            current = equipment.status.value
+            target = new_status.value
             raise StateError(
-                f'Cannot transition from {equipment.status.value} to '
-                f'{new_status.value}',
+                f'Cannot change status from {current} to {target}',
                 details={
-                    'current_status': equipment.status.value,
-                    'new_status': new_status.value,
+                    'current_status': current,
+                    'new_status': target,
+                    'message': f'Cannot change status from {current} to {target}',
                 },
             )
 
@@ -584,7 +585,6 @@ class EquipmentService:
         # Get equipment with categories in a single query
         stmt = (
             select(Equipment)
-            .options(joinedload(Equipment.category))
             .filter(Equipment.deleted_at.is_(None))
             .order_by(Equipment.name)
         )
