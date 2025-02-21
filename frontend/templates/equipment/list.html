@@ -13,13 +13,13 @@
 
     <div class="row mb-4">
         <div class="col-md-6">
-            <div class="input-group">
+            <div class="position-relative">
                 <input type="text"
-                       class="form-control"
+                       class="form-control rounded"
                        id="searchInput"
                        placeholder="Поиск по названию, описанию, штрих-коду или серийному номеру..."
                        minlength="3">
-                <div id="search-spinner" class="spinner-border spinner-border-sm d-none" role="status">
+                <div id="search-spinner" class="spinner-border spinner-border-sm d-none text-primary position-absolute" style="right: 10px; top: 50%; transform: translateY(-50%)" role="status">
                     <span class="visually-hidden">Поиск...</span>
                 </div>
             </div>
