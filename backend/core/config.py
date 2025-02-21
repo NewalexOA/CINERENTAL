@@ -58,7 +58,8 @@ class Settings(BaseSettings):
 
     # File Storage
     UPLOAD_DIR: str = './media'
-    MAX_UPLOAD_SIZE: int = 10485760  # Hardcoded value for now
+
+    MAX_UPLOAD_SIZE: int = 10485760
 
     @field_validator('ALLOWED_HOSTS', 'CORS_ORIGINS')
     @classmethod
