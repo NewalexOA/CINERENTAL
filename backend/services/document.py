@@ -148,31 +148,33 @@ class DocumentService:
             )
 
         # Check if status transition is allowed
-        allowed_transitions: Dict[DocumentStatus, List[DocumentStatus]] = {
-            DocumentStatus.DRAFT: [
-                DocumentStatus.PENDING,
-                DocumentStatus.UNDER_REVIEW,
+        allowed_transitions: Dict[str, List[str]] = {
+            DocumentStatus.DRAFT.value: [
+                DocumentStatus.PENDING.value,
+                DocumentStatus.UNDER_REVIEW.value,
             ],
-            DocumentStatus.PENDING: [
-                DocumentStatus.UNDER_REVIEW,
-                DocumentStatus.APPROVED,
-                DocumentStatus.REJECTED,
+            DocumentStatus.PENDING.value: [
+                DocumentStatus.UNDER_REVIEW.value,
+                DocumentStatus.APPROVED.value,
+                DocumentStatus.REJECTED.value,
             ],
-            DocumentStatus.UNDER_REVIEW: [
-                DocumentStatus.APPROVED,
-                DocumentStatus.REJECTED,
+            DocumentStatus.UNDER_REVIEW.value: [
+                DocumentStatus.APPROVED.value,
+                DocumentStatus.REJECTED.value,
             ],
-            DocumentStatus.APPROVED: [],
-            DocumentStatus.REJECTED: [DocumentStatus.PENDING],
+            DocumentStatus.APPROVED.value: [],
+            DocumentStatus.REJECTED.value: [DocumentStatus.PENDING.value],
         }
 
-        if status not in allowed_transitions[document.status]:
+        current_status = document.status.value
+        new_status = status.value
+        if new_status not in allowed_transitions[current_status]:
             raise StatusTransitionError(
-                f'Invalid status transition from {document.status} to {status}',
-                current_status=str(document.status),
-                new_status=str(status),
+                f'Invalid status transition from {current_status} to {new_status}',
+                current_status=current_status,
+                new_status=new_status,
                 allowed_transitions=[
-                    str(s) for s in allowed_transitions[document.status]
+                    str(s) for s in allowed_transitions[current_status]
                 ],
             )
 

@@ -400,34 +400,36 @@ class BookingService:
             )
 
         # Define allowed transitions
-        allowed_transitions: dict[BookingStatus, list[BookingStatus]] = {
-            BookingStatus.PENDING: [
-                BookingStatus.CONFIRMED,
-                BookingStatus.CANCELLED,
+        allowed_transitions: dict[str, list[str]] = {
+            BookingStatus.PENDING.value: [
+                BookingStatus.CONFIRMED.value,
+                BookingStatus.CANCELLED.value,
             ],
-            BookingStatus.CONFIRMED: [
-                BookingStatus.ACTIVE,
-                BookingStatus.CANCELLED,
+            BookingStatus.CONFIRMED.value: [
+                BookingStatus.ACTIVE.value,
+                BookingStatus.CANCELLED.value,
             ],
-            BookingStatus.ACTIVE: [
-                BookingStatus.COMPLETED,
-                BookingStatus.OVERDUE,
+            BookingStatus.ACTIVE.value: [
+                BookingStatus.COMPLETED.value,
+                BookingStatus.OVERDUE.value,
             ],
-            BookingStatus.COMPLETED: [],
-            BookingStatus.CANCELLED: [],
-            BookingStatus.OVERDUE: [
-                BookingStatus.COMPLETED,
-                BookingStatus.CANCELLED,
+            BookingStatus.COMPLETED.value: [],
+            BookingStatus.CANCELLED.value: [],
+            BookingStatus.OVERDUE.value: [
+                BookingStatus.COMPLETED.value,
+                BookingStatus.CANCELLED.value,
             ],
         }
 
-        allowed = allowed_transitions.get(booking.booking_status, [])
-        if status not in allowed:
+        current_status = booking.booking_status.value
+        new_status = status.value
+        allowed = allowed_transitions.get(current_status, [])
+        if new_status not in allowed:
             raise StatusTransitionError(
-                f'Invalid status transition from {booking.booking_status} to {status}',
-                current_status=str(booking.booking_status),
-                new_status=str(status),
-                allowed_transitions=[str(s) for s in allowed],
+                f'Invalid status transition from {current_status} to {new_status}',
+                current_status=current_status,
+                new_status=new_status,
+                allowed_transitions=allowed,
             )
 
         booking.booking_status = status
@@ -469,22 +471,27 @@ class BookingService:
             )
 
         # Define allowed transitions
-        allowed_transitions: dict[PaymentStatus, list[PaymentStatus]] = {
-            PaymentStatus.PENDING: [PaymentStatus.PARTIAL, PaymentStatus.PAID],
-            PaymentStatus.PARTIAL: [PaymentStatus.PAID],
-            PaymentStatus.PAID: [],
-            PaymentStatus.REFUNDED: [],
-            PaymentStatus.OVERDUE: [PaymentStatus.PAID],
+        allowed_transitions: dict[str, list[str]] = {
+            PaymentStatus.PENDING.value: [
+                PaymentStatus.PARTIAL.value,
+                PaymentStatus.PAID.value,
+            ],
+            PaymentStatus.PARTIAL.value: [PaymentStatus.PAID.value],
+            PaymentStatus.PAID.value: [],
+            PaymentStatus.REFUNDED.value: [],
+            PaymentStatus.OVERDUE.value: [PaymentStatus.PAID.value],
         }
 
-        allowed = allowed_transitions.get(booking.payment_status, [])
-        if status not in allowed:
+        current_status = booking.payment_status.value
+        new_status = status.value
+        allowed = allowed_transitions.get(current_status, [])
+        if new_status not in allowed:
             raise StatusTransitionError(
-                f'Invalid payment status transition from {booking.payment_status} '
-                f'to {status}',
-                current_status=str(booking.payment_status),
-                new_status=str(status),
-                allowed_transitions=[str(s) for s in allowed],
+                f'Invalid payment status transition from {current_status} '
+                f'to {new_status}',
+                current_status=current_status,
+                new_status=new_status,
+                allowed_transitions=allowed,
             )
 
         booking.payment_status = status

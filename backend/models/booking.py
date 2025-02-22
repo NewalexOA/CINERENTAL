@@ -25,22 +25,22 @@ if TYPE_CHECKING:
 class BookingStatus(str, Enum):
     """Booking status enumeration."""
 
-    PENDING = 'pending'
-    CONFIRMED = 'confirmed'
-    ACTIVE = 'active'
-    COMPLETED = 'completed'
-    CANCELLED = 'cancelled'
-    OVERDUE = 'overdue'
+    PENDING = 'PENDING'
+    CONFIRMED = 'CONFIRMED'
+    ACTIVE = 'ACTIVE'
+    COMPLETED = 'COMPLETED'
+    CANCELLED = 'CANCELLED'
+    OVERDUE = 'OVERDUE'
 
 
 class PaymentStatus(str, Enum):
     """Payment status enumeration."""
 
-    PENDING = 'pending'
-    PARTIAL = 'partial'
-    PAID = 'paid'
-    REFUNDED = 'refunded'
-    OVERDUE = 'overdue'
+    PENDING = 'PENDING'
+    PARTIAL = 'PARTIAL'
+    PAID = 'PAID'
+    REFUNDED = 'REFUNDED'
+    OVERDUE = 'OVERDUE'
 
 
 # Create ENUM types for PostgreSQL
