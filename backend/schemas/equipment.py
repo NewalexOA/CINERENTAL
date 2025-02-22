@@ -77,6 +77,8 @@ class EquipmentResponse(EquipmentBase):
         """Check if equipment is available for rent."""
         return self.status == EquipmentStatus.AVAILABLE
 
+    model_config = ConfigDict(from_attributes=True)
+
 
 class EquipmentWithCategory(EquipmentResponse):
     """Equipment with category details."""

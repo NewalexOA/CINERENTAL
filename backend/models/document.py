@@ -21,25 +21,25 @@ if TYPE_CHECKING:
 class DocumentStatus(str, Enum):
     """Document status enumeration."""
 
-    DRAFT = 'draft'
-    PENDING = 'pending'
-    UNDER_REVIEW = 'under_review'
-    APPROVED = 'approved'
-    REJECTED = 'rejected'
-    EXPIRED = 'expired'
-    CANCELLED = 'cancelled'
+    DRAFT = 'DRAFT'
+    PENDING = 'PENDING'
+    UNDER_REVIEW = 'UNDER_REVIEW'
+    APPROVED = 'APPROVED'
+    REJECTED = 'REJECTED'
+    EXPIRED = 'EXPIRED'
+    CANCELLED = 'CANCELLED'
 
 
 class DocumentType(str, Enum):
     """Document type enumeration."""
 
-    CONTRACT = 'contract'
-    INVOICE = 'invoice'
-    RECEIPT = 'receipt'
-    PASSPORT = 'passport'
-    DAMAGE_REPORT = 'damage_report'
-    INSURANCE = 'insurance'
-    OTHER = 'other'
+    CONTRACT = 'CONTRACT'
+    INVOICE = 'INVOICE'
+    RECEIPT = 'RECEIPT'
+    PASSPORT = 'PASSPORT'
+    DAMAGE_REPORT = 'DAMAGE_REPORT'
+    INSURANCE = 'INSURANCE'
+    OTHER = 'OTHER'
 
 
 # Create ENUM types for PostgreSQL

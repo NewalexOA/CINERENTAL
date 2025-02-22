@@ -45,13 +45,31 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 # Set work directory
 WORKDIR /app
 
-# Install runtime dependencies
+# Install runtime dependencies and Playwright system dependencies
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         curl \
         netcat-traditional \
         libpq-dev \
         postgresql-client \
+        # Playwright dependencies
+        libnss3 \
+        libnspr4 \
+        libatk1.0-0 \
+        libatk-bridge2.0-0 \
+        libcups2 \
+        libdrm2 \
+        libdbus-1-3 \
+        libxkbcommon0 \
+        libxcomposite1 \
+        libxdamage1 \
+        libxfixes3 \
+        libxrandr2 \
+        libgbm1 \
+        libpango-1.0-0 \
+        libcairo2 \
+        libasound2 \
+        libatspi2.0-0 \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* \
     && adduser --disabled-password --gecos '' appuser \
@@ -65,11 +83,14 @@ COPY --from=builder /usr/local/bin /usr/local/bin
 # Copy project files
 COPY --chown=appuser:appuser . .
 
-# Make scripts executable
-RUN chmod +x docker/start.sh docker/wait-for.sh docker/run-tests.sh
-
 # Switch to non-root user
 USER appuser
+
+# Install Playwright browsers
+RUN playwright install chromium
+
+# Make scripts executable
+RUN chmod +x docker/start.sh docker/wait-for.sh docker/run-tests.sh
 
 # Expose port
 EXPOSE 8000

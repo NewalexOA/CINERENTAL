@@ -17,9 +17,9 @@ case "$service_type" in
     # Export PostgreSQL environment variables
     export PGHOST="$host"
     export PGPORT="$port"
-    export PGUSER="${POSTGRES_USER:-postgres}"
-    export PGPASSWORD="${POSTGRES_PASSWORD:-postgres}"
-    export PGDATABASE="${POSTGRES_DB:-cinerental}"
+    export PGUSER="${POSTGRES_USER}"
+    export PGPASSWORD="${POSTGRES_PASSWORD}"
+    export PGDATABASE="${POSTGRES_DB}"
 
     until pg_isready >/dev/null 2>&1; do
       [ "$elapsed" -gt "$timeout" ] && echo "Timeout waiting for PostgreSQL" && exit 1
