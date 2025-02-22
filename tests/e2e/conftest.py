@@ -10,8 +10,13 @@ import requests
 import uvicorn
 from alembic import command
 from alembic.config import Config
-from asgiref.typing import ASGIApplication
-from playwright.async_api import APIRequestContext, BrowserContext, Page, Playwright
+from playwright.async_api import (
+    APIRequestContext,
+    Browser,
+    BrowserContext,
+    Page,
+    async_playwright,
+)
 from requests.exceptions import RequestException
 from sqlalchemy import create_engine
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, create_async_engine
@@ -62,15 +67,21 @@ def wait_for_app(url: str, timeout: int = 30, interval: int = 1) -> bool:
     return False
 
 
-def run_app(app: ASGIApplication) -> None:
+def run_app() -> None:
     """Run the FastAPI application."""
-    uvicorn.run(app, host='127.0.0.1', port=8000, log_level='error')
+    uvicorn.run(
+        fastapi_app, host='127.0.0.1', port=8000, log_level='info', use_colors=False
+    )
 
 
 @pytest.fixture(scope='session')
-def event_loop() -> Generator[asyncio.AbstractEventLoop, None, None]:
+def event_loop():
     """Create event loop for tests."""
-    loop = asyncio.get_event_loop_policy().new_event_loop()
+    try:
+        loop = asyncio.get_event_loop()
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
     yield loop
     loop.close()
 
@@ -158,22 +169,38 @@ def setup_test_env(event_loop) -> Generator[None, None, None]:
     # Initialize database first
     init_test_db()
 
-    # Then start the application
-    base_url = 'http://127.0.0.1:8000'
-    proc = multiprocessing.Process(target=run_app, args=(fastapi_app,))
+    # Start the FastAPI application in a separate process
+    proc = multiprocessing.Process(target=run_app, daemon=True)
     proc.start()
 
     # Wait for the application to be ready
-    if not wait_for_app(base_url):
-        proc.terminate()
-        proc.join()
-        msg = 'Application failed to start or critical endpoints are not accessible'
-        pytest.fail(msg)
+    max_retries = 30
+    retry = 0
+    while retry < max_retries:
+        try:
+            response = requests.get('http://127.0.0.1:8000/api/v1/health')
+            if response.status_code == 200:
+                break
+        except requests.exceptions.ConnectionError:
+            retry += 1
+            time.sleep(1)
+
+    if retry == max_retries:
+        if proc.is_alive():
+            proc.terminate()
+            proc.join(timeout=5)
+            if proc.is_alive():
+                proc.kill()
+        raise RuntimeError('Failed to start the application')
 
     yield
 
-    proc.terminate()
-    proc.join()
+    # Cleanup
+    if proc.is_alive():
+        proc.terminate()
+        proc.join(timeout=5)
+        if proc.is_alive():
+            proc.kill()
 
 
 @pytest.fixture
@@ -250,18 +277,22 @@ def anyio_backend() -> str:
 
 
 @pytest.fixture(scope='session')
-async def browser_context(
-    playwright: Playwright, browser_type_launch_args: Dict
-) -> AsyncGenerator[BrowserContext, None]:
+async def browser() -> AsyncGenerator[Browser, None]:
+    """Create browser for tests."""
+    async with async_playwright() as p:
+        browser = await p.chromium.launch(
+            args=['--no-sandbox', '--disable-setuid-sandbox'], headless=True
+        )
+        yield browser
+        await browser.close()
+
+
+@pytest.fixture
+async def browser_context(browser: Browser) -> AsyncGenerator[BrowserContext, None]:
     """Create browser context for tests."""
-    browser = await playwright.chromium.launch(**browser_type_launch_args)
-    context = await browser.new_context(
-        viewport={'width': 1920, 'height': 1080},
-        locale='en-US',
-    )
+    context = await browser.new_context()
     yield context
     await context.close()
-    await browser.close()
 
 
 @pytest.fixture
