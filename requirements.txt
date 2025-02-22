@@ -4,6 +4,7 @@ uvicorn[standard]==0.24.0
 python-multipart==0.0.18
 asgiref==3.7.2
 
+
 # Database
 sqlalchemy==2.0.25
 alembic==1.13.1
