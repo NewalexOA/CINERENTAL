@@ -1,0 +1,373 @@
+{% extends "base.html" %}
+
+{% block title %}{{ equipment.name }} - CINERENTAL{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="/equipment">Оборудование</a></li>
+                <li class="breadcrumb-item active">{{ equipment.name }}</li>
+            </ol>
+        </nav>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card mb-4">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <div>
+                        <h1 class="card-title mb-1">{{ equipment.name }}</h1>
+                        <h6 class="card-subtitle text-muted">{{ equipment.category.name }}</h6>
+                    </div>
+                    <div>
+                        <span class="badge bg-{{ equipment.status | lower }} fs-6">
+                            {{ equipment.status }}
+                        </span>
+                    </div>
+                </div>
+
+                <p class="card-text">{{ equipment.description }}</p>
+
+                <div class="row g-3">
+                    <div class="col-sm-6">
+                        <div class="card bg-light">
+                            <div class="card-body">
+                                <h6 class="card-title">Серийный номер</h6>
+                                <p class="card-text">{{ equipment.serial_number }}</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6">
+                        <div class="card bg-light">
+                            <div class="card-body">
+                                <h6 class="card-title">Штрих-код</h6>
+                                <p class="card-text">{{ equipment.barcode }}</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6">
+                        <div class="card bg-light">
+                            <div class="card-body">
+                                <h6 class="card-title">Дневная ставка</h6>
+                                <p class="card-text">{{ equipment.daily_rate }} ₽</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6">
+                        <div class="card bg-light">
+                            <div class="card-body">
+                                <h6 class="card-title">Стоимость замены</h6>
+                                <p class="card-text">{{ equipment.replacement_cost }} ₽</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer">
+                <div class="btn-group">
+                    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#editEquipmentModal">
+                        <i class="fas fa-edit"></i> Редактировать
+                    </button>
+                    <button class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteEquipmentModal">
+                        <i class="fas fa-trash"></i> Удалить
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Booking History -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">История бронирований</h5>
+            </div>
+            <div class="card-body" id="bookingHistory">
+                <div class="text-center py-3">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Загрузка...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <!-- Status Timeline -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Статус</h5>
+            </div>
+            <div class="card-body" id="statusTimeline">
+                <div class="text-center py-3">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Загрузка...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Notes -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Заметки</h5>
+            </div>
+            <div class="card-body">
+                <form id="notesForm">
+                    <div class="mb-3">
+                        <textarea class="form-control" rows="3" id="notes">{{ equipment.notes }}</textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Сохранить заметки</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Equipment Modal -->
+<div class="modal fade" id="editEquipmentModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Редактировать оборудование</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editEquipmentForm">
+                    <div class="mb-3">
+                        <label class="form-label">Название</label>
+                        <input type="text" class="form-control" name="name" value="{{ equipment.name }}" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Категория</label>
+                        <select class="form-select" name="category_id" required>
+                            <!-- Заполняется через API -->
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Описание</label>
+                        <textarea class="form-control" name="description" rows="3">{{ equipment.description }}</textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Серийный номер</label>
+                        <input type="text" class="form-control" name="serial_number" value="{{ equipment.serial_number }}">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Штрих-код</label>
+                        <input type="text" class="form-control" name="barcode" value="{{ equipment.barcode }}">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Дневная ставка</label>
+                        <input type="number" class="form-control" name="daily_rate" value="{{ equipment.daily_rate }}" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Стоимость замены</label>
+                        <input type="number" class="form-control" name="replacement_cost" value="{{ equipment.replacement_cost }}" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Статус</label>
+                        <select class="form-select" name="status" required>
+                            <option value="AVAILABLE" {% if equipment.status == 'AVAILABLE' %}selected{% endif %}>Доступно</option>
+                            <option value="RENTED" {% if equipment.status == 'RENTED' %}selected{% endif %}>В аренде</option>
+                            <option value="MAINTENANCE" {% if equipment.status == 'MAINTENANCE' %}selected{% endif %}>В ремонте</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                <button type="button" class="btn btn-primary" id="updateEquipment">Сохранить</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Equipment Modal -->
+<div class="modal fade" id="deleteEquipmentModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Удалить оборудование</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Вы уверены, что хотите удалить оборудование "{{ equipment.name }}"?</p>
+                <p class="text-danger">Это действие нельзя отменить.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                <button type="button" class="btn btn-danger" id="deleteEquipment">Удалить</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script
+    data-equipment-id="{{ equipment.id }}"
+    data-category-id="{{ equipment.category.id }}"
+>
+// Initialize equipment data from data attributes
+const scriptTag = document.currentScript;
+const EQUIPMENT_DATA = {
+    id: parseInt(scriptTag.dataset.equipmentId, 10),
+    categoryId: parseInt(scriptTag.dataset.categoryId, 10)
+};
+
+// Load categories for edit form
+async function loadCategories() {
+    try {
+        const categories = await api.get('/categories');
+        const formSelect = document.querySelector('select[name="category_id"]');
+
+        formSelect.innerHTML = categories.map(category =>
+            `<option value="${category.id}" ${category.id === EQUIPMENT_DATA.categoryId ? 'selected' : ''}>
+                ${category.name}
+            </option>`
+        ).join('');
+    } catch (error) {
+        console.error('Error loading categories:', error);
+        showToast('Ошибка загрузки категорий', 'danger');
+    }
+}
+
+// Load booking history
+async function loadBookingHistory() {
+    try {
+        const bookings = await api.get(`/equipment/${EQUIPMENT_DATA.id}/bookings`);
+        const container = document.getElementById('bookingHistory');
+
+        if (bookings.length === 0) {
+            container.innerHTML = '<div class="text-center py-3">Нет истории бронирований</div>';
+            return;
+        }
+
+        container.innerHTML = `
+            <div class="list-group list-group-flush">
+                ${bookings.map(booking => `
+                    <a href="/bookings/${booking.id}" class="list-group-item list-group-item-action">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h6 class="mb-1">${booking.client.name}</h6>
+                            <small class="text-muted">${formatDate(booking.start_date)}</small>
+                        </div>
+                        <p class="mb-1">${formatDateRange(booking.start_date, booking.end_date)}</p>
+                        <small class="text-${getStatusColor(booking.status)}">${booking.status}</small>
+                    </a>
+                `).join('')}
+            </div>
+        `;
+    } catch (error) {
+        console.error('Error loading booking history:', error);
+        document.getElementById('bookingHistory').innerHTML = `
+            <div class="alert alert-danger">
+                Ошибка загрузки истории бронирований
+            </div>
+        `;
+    }
+}
+
+// Load status timeline
+async function loadStatusTimeline() {
+    try {
+        const timeline = await api.get(`/equipment/${EQUIPMENT_DATA.id}/timeline`);
+        const container = document.getElementById('statusTimeline');
+
+        if (timeline.length === 0) {
+            container.innerHTML = '<div class="text-center py-3">Нет истории изменений</div>';
+            return;
+        }
+
+        container.innerHTML = `
+            <div class="timeline">
+                ${timeline.map(entry => `
+                    <div class="timeline-item">
+                        <div class="timeline-badge bg-${getStatusColor(entry.status)}">
+                            <i class="fas fa-circle"></i>
+                        </div>
+                        <div class="timeline-content">
+                            <h6 class="mb-1">${entry.status}</h6>
+                            <small class="text-muted">${formatDate(entry.created_at)}</small>
+                            ${entry.notes ? `<p class="mb-0">${entry.notes}</p>` : ''}
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+    } catch (error) {
+        console.error('Error loading status timeline:', error);
+        document.getElementById('statusTimeline').innerHTML = `
+            <div class="alert alert-danger">
+                Ошибка загрузки истории статусов
+            </div>
+        `;
+    }
+}
+
+// Handle equipment update
+document.getElementById('updateEquipment').addEventListener('click', async () => {
+    const form = document.getElementById('editEquipmentForm');
+    const formData = new FormData(form);
+    const data = Object.fromEntries(formData.entries());
+
+    try {
+        await api.put(`/equipment/${EQUIPMENT_DATA.id}`, data);
+        showToast('Оборудование успешно обновлено', 'success');
+        location.reload();
+    } catch (error) {
+        console.error('Error updating equipment:', error);
+        showToast('Ошибка при обновлении', 'danger');
+    }
+});
+
+// Handle equipment deletion
+document.getElementById('deleteEquipment').addEventListener('click', async () => {
+    try {
+        await api.delete(`/equipment/${EQUIPMENT_DATA.id}`);
+        showToast('Оборудование успешно удалено', 'success');
+        window.location.href = '/equipment';
+    } catch (error) {
+        console.error('Error deleting equipment:', error);
+        showToast('Ошибка при удалении', 'danger');
+    }
+});
+
+// Handle notes update
+document.getElementById('notesForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const notes = document.getElementById('notes').value;
+
+    try {
+        await api.patch(`/equipment/${EQUIPMENT_DATA.id}/notes`, { notes });
+        showToast('Заметки успешно сохранены', 'success');
+    } catch (error) {
+        console.error('Error saving notes:', error);
+        showToast('Ошибка при сохранении заметок', 'danger');
+    }
+});
+
+// Helper function for status colors
+function getStatusColor(status) {
+    const colors = {
+        'AVAILABLE': 'success',
+        'RENTED': 'warning',
+        'MAINTENANCE': 'danger'
+    };
+    return colors[status] || 'secondary';
+}
+
+// Helper function for date formatting
+function formatDateRange(start, end) {
+    return `${formatDate(start)} - ${formatDate(end)}`;
+}
+
+// Initialize page
+document.addEventListener('DOMContentLoaded', () => {
+    loadCategories();
+    loadBookingHistory();
+    loadStatusTimeline();
+});
+</script>
+{% endblock %}

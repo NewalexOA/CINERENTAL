@@ -1,0 +1,197 @@
+{% extends "base.html" %}
+
+{% block title %}Оборудование - CINERENTAL{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Оборудование</h1>
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addEquipmentModal">
+            <i class="fas fa-plus"></i> Добавить оборудование
+        </button>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="position-relative">
+                <input type="text"
+                       class="form-control rounded"
+                       id="searchInput"
+                       placeholder="Поиск по названию, описанию, штрих-коду или серийному номеру..."
+                       minlength="3">
+                <div id="search-spinner" class="spinner-border spinner-border-sm d-none text-primary position-absolute" style="right: 10px; top: 50%; transform: translateY(-50%)" role="status">
+                    <span class="visually-hidden">Поиск...</span>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <select class="form-select" id="categoryFilter">
+                <option value="">Все категории</option>
+                {% for category in categories %}
+                <option value="{{ category.id }}" {% if category.id == current_category_id %}selected{% endif %}>
+                    {{ category.name }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-3">
+            <select class="form-select" id="statusFilter">
+                <option value="" selected>Все статусы</option>
+                <option value="AVAILABLE" {% if current_status == 'AVAILABLE' %}selected{% endif %}>Доступно</option>
+                <option value="RENTED" {% if current_status == 'RENTED' %}selected{% endif %}>В аренде</option>
+                <option value="MAINTENANCE" {% if current_status == 'MAINTENANCE' %}selected{% endif %}>В ремонте</option>
+                <option value="BROKEN" {% if current_status == 'BROKEN' %}selected{% endif %}>Сломано</option>
+                <option value="RETIRED" {% if current_status == 'RETIRED' %}selected{% endif %}>Списано</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Название</th>
+                            <th>Категория</th>
+                            <th>Штрих-код</th>
+                            <th>Статус</th>
+                            <th>Дневная ставка</th>
+                            <th>Действия</th>
+                        </tr>
+                    </thead>
+                    <tbody id="equipmentTable">
+                        {% for item in equipment_list %}
+                        <tr>
+                            <td>
+                                <div class="fw-bold">{{ item.name }}</div>
+                                <small class="text-muted">{{ item.description }}</small>
+                            </td>
+                            <td>{{ item.category_name }}</td>
+                            <td>{{ item.barcode }}</td>
+                            <td>
+                                <span class="badge bg-{{ 'success' if item.status == 'AVAILABLE' else 'warning' if item.status == 'RENTED' else 'danger' }}">
+                                    {{ item.status }}
+                                </span>
+                            </td>
+                            <td>{{ item.daily_rate }} ₽</td>
+                            <td>
+                                <div class="btn-group">
+                                    <a href="/equipment/{{ item.id }}" class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-info-circle"></i>
+                                    </a>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="copyBarcode('{{ item.barcode }}')">
+                                        <i class="fas fa-copy"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Equipment Modal -->
+<div class="modal fade" id="addEquipmentModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Добавить оборудование</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addEquipmentForm">
+                    <div class="mb-3">
+                        <label class="form-label">Название</label>
+                        <input type="text" class="form-control" name="name" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Категория</label>
+                        <select class="form-select" name="category_id" required>
+                            <!-- Categories will be loaded dynamically -->
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Описание</label>
+                        <textarea class="form-control" name="description" rows="3" required></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Серийный номер</label>
+                        <input type="text" class="form-control" name="serial_number" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Штрих-код</label>
+                        <input type="text" class="form-control" name="barcode" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Дневная ставка</label>
+                        <input type="number" class="form-control" name="daily_rate" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Стоимость замены</label>
+                        <input type="number" class="form-control" name="replacement_cost" required>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                <button type="button" class="btn btn-primary" id="addEquipment">Добавить</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Load categories for add form
+async function loadCategories() {
+    try {
+        const categories = await api.get('/categories');
+        const formSelect = document.querySelector('select[name="category_id"]');
+        formSelect.innerHTML = categories.map(category =>
+            `<option value="${category.id}">${category.name}</option>`
+        ).join('');
+    } catch (error) {
+        console.error('Error loading categories:', error);
+        showToast('Ошибка загрузки категорий', 'danger');
+    }
+}
+
+// Handle equipment creation
+document.getElementById('addEquipment').addEventListener('click', async () => {
+    const form = document.getElementById('addEquipmentForm');
+    const formData = new FormData(form);
+    const data = Object.fromEntries(formData.entries());
+
+    try {
+        await api.post('/equipment', data);
+        showToast('Оборудование успешно добавлено', 'success');
+        location.reload();
+    } catch (error) {
+        console.error('Error creating equipment:', error);
+        showToast('Ошибка при создании', 'danger');
+    }
+});
+
+// Copy barcode to clipboard
+function copyBarcode(barcode) {
+    navigator.clipboard.writeText(barcode).then(() => {
+        showToast('Штрих-код скопирован', 'success');
+    }).catch(() => {
+        showToast('Ошибка при копировании', 'danger');
+    });
+}
+
+// Initialize
+loadCategories();
+
+// Initialize equipment search
+if (document.getElementById('searchInput')) {
+    equipmentSearch.init();
+}
+</script>
+{% endblock %}

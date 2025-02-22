@@ -1,0 +1,224 @@
+/* Modern minimalist styles for CINERENTAL */
+
+/* Custom variables */
+:root {
+  --primary-color: #1a1a1a;
+  --secondary-color: #666666;
+  --accent-color: #0066cc;
+  --success-color: #2d9c3f;
+  --warning-color: #cc8800;
+  --danger-color: #cc2f2f;
+  --background-color: #ffffff;
+  --surface-color: #f8f9fa;
+  --border-color: #e6e6e6;
+  --text-primary: #1a1a1a;
+  --text-secondary: #666666;
+}
+
+/* Base styles */
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  line-height: 1.6;
+  color: var(--text-primary);
+  background-color: var(--background-color);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Navigation */
+.navbar {
+  background-color: var(--background-color);
+  border-bottom: 1px solid var(--border-color);
+  padding: 1rem 0;
+}
+
+.navbar-brand {
+  font-weight: 600;
+  color: var(--primary-color) !important;
+  letter-spacing: -0.5px;
+}
+
+.nav-link {
+  color: var(--text-secondary) !important;
+  font-weight: 500;
+  padding: 0.5rem 1rem !important;
+}
+
+.nav-link:hover {
+  color: var(--accent-color) !important;
+}
+
+/* Cards */
+.card {
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  box-shadow: none;
+  transition: border-color 0.2s ease-in-out;
+}
+
+.card:hover {
+  border-color: var(--accent-color);
+  transform: none;
+}
+
+.card-title {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 1.25rem;
+  color: var(--text-primary);
+}
+
+/* Buttons */
+.btn {
+  font-weight: 500;
+  padding: 0.625rem 1.25rem;
+  border-radius: 6px;
+  transition: all 0.2s ease-in-out;
+}
+
+.btn-primary {
+  background-color: var(--accent-color);
+  border-color: var(--accent-color);
+}
+
+.btn-primary:hover {
+  background-color: var(--accent-color);
+  opacity: 0.9;
+}
+
+.btn-outline-light {
+  border-color: var(--border-color);
+  color: var(--text-primary);
+}
+
+.btn-outline-light:hover {
+  background-color: var(--surface-color);
+  border-color: var(--border-color);
+  color: var(--text-primary);
+}
+
+/* Forms */
+.form-control {
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 0.625rem 1rem;
+}
+
+.form-control:focus {
+  border-color: var(--accent-color);
+  box-shadow: 0 0 0 2px rgba(0, 102, 204, 0.1);
+}
+
+/* Tables */
+.table {
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+}
+
+.table thead th {
+  background-color: var(--surface-color);
+  border-bottom: 1px solid var(--border-color);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+/* Status badges */
+.badge {
+  font-weight: 500;
+  padding: 0.4em 0.8em;
+  border-radius: 4px;
+}
+
+.badge-available {
+  background-color: var(--success-color);
+  color: white;
+}
+
+.badge-rented {
+  background-color: var(--warning-color);
+  color: white;
+}
+
+.badge-maintenance {
+  background-color: var(--danger-color);
+  color: white;
+}
+
+/* List groups */
+.list-group-item {
+  border-color: var(--border-color);
+  padding: 1rem;
+}
+
+.list-group-item-action:hover {
+  background-color: var(--surface-color);
+}
+
+/* Scanner integration */
+.scanner-container {
+  background-color: var(--surface-color);
+  padding: 2rem;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+}
+
+.scanner-status {
+  font-weight: 500;
+  color: var(--text-secondary);
+  margin-bottom: 1rem;
+}
+
+/* Modal */
+.modal-content {
+  border: none;
+  border-radius: 12px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+}
+
+.modal-header {
+  border-bottom: 1px solid var(--border-color);
+  padding: 1.5rem;
+}
+
+.modal-body {
+  padding: 1.5rem;
+}
+
+.modal-title {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+/* Alerts */
+.alert {
+  border: none;
+  border-radius: 6px;
+}
+
+/* Footer */
+.footer {
+  border-top: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  padding: 2rem 0;
+}
+
+/* Utilities */
+.text-muted {
+  color: var(--text-secondary) !important;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .container {
+    padding-left: 1.25rem;
+    padding-right: 1.25rem;
+  }
+
+  .card {
+    margin-bottom: 1rem;
+  }
+
+  .table-responsive {
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+  }
+}

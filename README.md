@@ -1,7 +1,21 @@
 # CINERENTAL - Cinema Equipment Rental Management System
 
+[![Python](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/downloads/release/python-3120/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.104.1-009688.svg?logo=fastapi)](https://fastapi.tiangolo.com)
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+[![Imports: isort](https://img.shields.io/badge/%20imports-isort-%231674b1?style=flat&labelColor=ef8336)](https://pycqa.github.io/isort/)
+[![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit)](https://github.com/pre-commit/pre-commit)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 ## Description
 CINERENTAL is a comprehensive system for managing cinema equipment rentals. It allows managers to control equipment availability, handle bookings, and track equipment returns efficiently.
+
+## Documentation
+- [Project Architecture](docs/architecture.md) - Detailed system architecture and design decisions
+- [Development Plan](docs/development_plan.md) - Current development status and roadmap
+- [Code Style Guide](docs/code_style.md) - Coding standards and best practices
+- [Project Structure](docs/project_structure.md) - Detailed explanation of project organization
+- [Technical Requirements](docs/техническое_задание.md) - Project specifications and requirements
 
 ## Features
 - Equipment management with hierarchical categories
@@ -21,17 +35,27 @@ CINERENTAL is a comprehensive system for managing cinema equipment rentals. It a
 ## Project Structure
 ```
 cinerental/
-├── backend/
-│   ├── api/              # FastAPI routes
-│   ├── services/         # Business logic
-│   ├── repositories/     # Database operations
-│   ├── models/          # Pydantic models and ORM models
-│   └── core/            # Configuration, utilities
-├── frontend/
-│   ├── static/          # CSS, JS, images
-│   └── templates/       # HTML templates
-├── tests/               # Tests
-└── docker/             # Docker configuration
+├── backend/             # Backend application
+│   ├── api/            # API endpoints and routers
+│   │   └── v1/        # API version 1
+│   ├── core/          # Core functionality and config
+│   ├── models/        # Database models
+│   ├── schemas/       # Pydantic schemas
+│   ├── services/      # Business logic layer
+│   └── repositories/  # Database access layer
+├── docs/              # Project documentation
+│   ├── architecture.md       # System architecture
+│   ├── code_style.md        # Coding standards
+│   ├── development_plan.md  # Development roadmap
+│   └── project_structure.md # Project organization
+├── frontend/          # Frontend application
+│   ├── static/       # Static assets (CSS, JS, images)
+│   └── templates/    # Jinja2 HTML templates
+├── tests/            # Test suite
+│   ├── unit/        # Unit tests
+│   └── integration/ # Integration tests
+├── docker/          # Docker configuration files
+└── requirements.txt # Python dependencies
 ```
 
 ## Prerequisites
@@ -39,6 +63,52 @@ cinerental/
 - Python 3.10+
 - PostgreSQL 14+
 - Redis 6+
+
+## Environment Variables
+
+### Database Settings
+- `POSTGRES_USER` - PostgreSQL username (default: postgres)
+- `POSTGRES_PASSWORD` - PostgreSQL password (default: postgres)
+- `POSTGRES_DB` - Database name (default: cinerental)
+- `POSTGRES_SERVER` - Database host (default: db)
+
+### Redis Settings
+- `REDIS_HOST` - Redis host (default: redis)
+- `REDIS_PASSWORD` - Redis password (optional)
+
+### Application Settings
+- `SECRET_KEY` - Secret key for JWT tokens and security
+- `DEBUG` - Enable debug mode (default: false)
+- `WORKERS_COUNT` - Number of uvicorn workers (default: 1)
+- `LOG_LEVEL` - Logging level (default: info)
+
+### Security Settings
+- `ALLOWED_HOSTS` - Comma-separated list of allowed hosts
+- `CORS_ORIGINS` - Comma-separated list of allowed CORS origins
+
+## Development
+
+1. Clone the repository
+2. Copy `.env.example` to `.env` and adjust values
+3. Run development server:
+```bash
+docker compose up
+```
+
+## Testing
+
+Run tests with coverage report:
+```bash
+docker compose up test
+```
+
+## Production
+
+1. Copy `.env.example` to `.env.production` and set secure values
+2. Build and run production services:
+```bash
+docker compose -f docker-compose.prod.yml up -d
+```
 
 ## Installation
 1. Clone the repository:
@@ -80,15 +150,10 @@ cinerental/
    ```
 
 ## Development
-- Follow PEP 8 style guide
+- Follow [Code Style Guide](docs/code_style.md)
 - Use pre-commit hooks
 - Write tests for new features
 - Update documentation
 
 ## Testing
-```bash
-pytest
 ```
-
-## License
-[MIT License](LICENSE) 
