@@ -10,6 +10,7 @@ echo "Waiting for Redis..."
 
 # Run migrations on test database
 echo "Running migrations..."
+export PYTHONPATH=/app
 alembic upgrade head
 
 # Run tests with coverage
