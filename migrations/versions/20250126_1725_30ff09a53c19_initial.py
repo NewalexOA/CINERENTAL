@@ -24,6 +24,45 @@ def upgrade() -> None:
     # Create pg_trgm extension for search functionality
     op.execute('CREATE EXTENSION IF NOT EXISTS pg_trgm')
 
+    # Create users table
+    op.create_table(
+        'users',
+        sa.Column('id', sa.Integer(), nullable=False),
+        sa.Column('email', sa.String(length=255), nullable=False),
+        sa.Column('hashed_password', sa.String(length=255), nullable=False),
+        sa.Column(
+            'is_active',
+            sa.Boolean(),
+            nullable=False,
+            server_default=sa.text('true'),
+        ),
+        sa.Column(
+            'is_superuser',
+            sa.Boolean(),
+            nullable=False,
+            server_default=sa.text('false'),
+        ),
+        sa.Column('full_name', sa.String(length=255), nullable=True),
+        sa.Column(
+            'created_at',
+            sa.DateTime(timezone=True),
+            server_default=sa.text('now()'),
+            nullable=False,
+        ),
+        sa.Column(
+            'updated_at',
+            sa.DateTime(timezone=True),
+            server_default=sa.text('now()'),
+            nullable=False,
+        ),
+        sa.Column('deleted_at', sa.DateTime(timezone=True), nullable=True),
+        sa.PrimaryKeyConstraint('id'),
+    )
+    op.create_index(op.f('ix_users_email'), 'users', ['email'], unique=True)
+    op.create_index(op.f('ix_users_created_at'), 'users', ['created_at'], unique=False)
+    op.create_index(op.f('ix_users_updated_at'), 'users', ['updated_at'], unique=False)
+    op.create_index(op.f('ix_users_deleted_at'), 'users', ['deleted_at'], unique=False)
+
     op.create_table(
         'categories',
         sa.Column('id', sa.Integer(), nullable=False),
@@ -205,6 +244,7 @@ def upgrade() -> None:
             server_default=sa.text('now()'),
             nullable=False,
         ),
+        sa.Column('deleted_at', sa.DateTime(timezone=True), nullable=True),
         sa.ForeignKeyConstraint(['client_id'], ['clients.id'], ondelete='RESTRICT'),
         sa.ForeignKeyConstraint(
             ['equipment_id'], ['equipment.id'], ondelete='RESTRICT'
@@ -354,4 +394,9 @@ def downgrade() -> None:
     op.drop_index(op.f('ix_categories_name'), table_name='categories')
     op.drop_index(op.f('ix_categories_created_at'), table_name='categories')
     op.drop_table('categories')
+    op.drop_index(op.f('ix_users_deleted_at'), table_name='users')
+    op.drop_index(op.f('ix_users_updated_at'), table_name='users')
+    op.drop_index(op.f('ix_users_created_at'), table_name='users')
+    op.drop_index(op.f('ix_users_email'), table_name='users')
+    op.drop_table('users')
     # ### end Alembic commands ###
