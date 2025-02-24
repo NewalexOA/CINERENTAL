@@ -475,8 +475,13 @@ class EquipmentService:
                 equipment_id
             )
             if active_bookings:
+                error_msg = (
+                    'Cannot retire equipment with active bookings'
+                    if new_status == EquipmentStatus.RETIRED
+                    else 'Cannot change status of equipment with active bookings'
+                )
                 raise BusinessError(
-                    'Cannot change status of equipment with active bookings',
+                    error_msg,
                     details={
                         'equipment_id': equipment_id,
                         'active_bookings': len(active_bookings),
