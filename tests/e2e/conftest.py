@@ -208,7 +208,7 @@ async def engine() -> AsyncGenerator[AsyncEngine, None]:
     """Create database engine for tests."""
     engine = create_async_engine(
         TEST_DATABASE_URL,
-        echo=True,  # Enable SQL logging
+        echo=False,  # Disable SQL logging
         future=True,
     )
 
