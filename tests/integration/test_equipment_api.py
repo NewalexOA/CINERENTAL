@@ -1,13 +1,23 @@
 """Equipment API integration tests."""
 
 from datetime import datetime, timedelta
-from decimal import Decimal
+from typing import TypedDict, cast
 
+from fastapi import status as http_status
 from httpx import AsyncClient
 
 from backend.models import Category, Client, Equipment
 from backend.models.equipment import EquipmentStatus
 from tests.conftest import async_test
+
+
+class EquipmentResponse(TypedDict):
+    """Equipment response type."""
+
+    name: str
+    barcode: str
+    daily_rate: str
+    status: str
 
 
 @async_test
@@ -29,11 +39,11 @@ async def test_create_equipment(
 
     response = await async_client.post('/api/v1/equipment/', json=data)
     assert response.status_code == 201
-    result = response.json()
+    result = cast(EquipmentResponse, response.json())
 
     assert result['name'] == data['name']
     assert result['barcode'] == data['barcode']
-    assert Decimal(str(result['daily_rate'])) == Decimal(str(data['daily_rate']))
+    assert str(result['daily_rate']) == data['daily_rate']
     assert result['status'] == EquipmentStatus.AVAILABLE
 
 
@@ -225,32 +235,45 @@ async def test_search_equipment(
 
 
 @async_test
-async def test_create_equipment_invalid_rate(
-    async_client: AsyncClient,
-    test_category: Category,
-) -> None:
-    """Test creating equipment with invalid rate."""
-    data = {
-        'name': 'Test Equipment',
-        'description': 'Test Description',
-        'serial_number': 'TEST001',
-        'barcode': 'TEST001',
-        'category_id': test_category.id,
-        'daily_rate': '-100.00',
-        'replacement_cost': '1000.00',
-    }
+async def test_get_equipment_list_invalid_pagination(async_client: AsyncClient) -> None:
+    """Test get equipment list with invalid pagination parameters."""
+    response = await async_client.get('/api/v1/equipment/?skip=-1&limit=0')
+    assert response.status_code == http_status.HTTP_422_UNPROCESSABLE_ENTITY
+    errors = response.json()['detail']
+    assert any(e['msg'] == 'Input should be greater than or equal to 0' for e in errors)
 
-    response = await async_client.post('/api/v1/equipment/', json=data)
-    assert response.status_code == 400
-    assert 'must be greater than 0' in response.json()['detail']
+    response = await async_client.get('/api/v1/equipment/?skip=0&limit=0')
+    assert response.status_code == http_status.HTTP_422_UNPROCESSABLE_ENTITY
+    errors = response.json()['detail']
+    assert any(e['msg'] == 'Input should be greater than 0' for e in errors)
+
+    response = await async_client.get('/api/v1/equipment/?skip=0&limit=1001')
+    assert response.status_code == http_status.HTTP_422_UNPROCESSABLE_ENTITY
+    errors = response.json()['detail']
+    assert any(e['msg'] == 'Input should be less than or equal to 1000' for e in errors)
 
 
 @async_test
-async def test_get_equipment_list_invalid_pagination(async_client: AsyncClient) -> None:
-    """Test getting equipment list with invalid pagination."""
-    response = await async_client.get('/api/v1/equipment/?page=0&size=0')
-    assert response.status_code == 400
-    assert 'greater than 0' in response.json()['detail']
+async def test_create_equipment_invalid_rate(async_client: AsyncClient) -> None:
+    """Test create equipment with invalid daily rate."""
+    data = {
+        'name': 'Test Equipment',
+        'description': 'Test Description',
+        'barcode': '123456789',
+        'serial_number': 'SN123',
+        'daily_rate': '0',
+        'replacement_cost': '100',
+        'category_id': 1,
+    }
+    response = await async_client.post('/api/v1/equipment/', json=data)
+    assert response.status_code == http_status.HTTP_400_BAD_REQUEST
+    assert response.json()['detail'] == 'Daily rate must be greater than 0'
+
+    data['daily_rate'] = '100'
+    data['replacement_cost'] = '0'
+    response = await async_client.post('/api/v1/equipment/', json=data)
+    assert response.status_code == http_status.HTTP_400_BAD_REQUEST
+    assert response.json()['detail'] == 'Replacement cost must be greater than 0'
 
 
 @async_test
