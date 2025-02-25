@@ -57,18 +57,30 @@ jobs:
         run: |
           docker compose run --rm --no-deps --entrypoint "alembic" test upgrade head
 
-      - name: Create pytest cache directory with proper permissions
-        run: |
-          docker compose run --rm --no-deps --entrypoint "mkdir" test -p /app/.pytest_cache
-          docker compose run --rm --no-deps --entrypoint "chmod" test 777 /app/.pytest_cache
-
       - name: Run tests
         run: |
+          # Выводим информацию о структуре проекта для отладки
+          echo "=== Структура директории /app ==="
+          docker compose run --rm --no-deps --entrypoint "ls" test -la /app
+
+          echo "=== Проверка наличия директории tests ==="
+          docker compose run --rm --no-deps --entrypoint "ls" test -la /app/tests || echo "Директория tests не найдена"
+
           # Выводим список тестовых файлов для отладки
-          docker compose run --rm --no-deps --entrypoint "find" test /app/tests -type f -name "test_*.py" | sort
+          echo "=== Поиск тестовых файлов ==="
+          docker compose run --rm --no-deps --entrypoint "find" test /app -type f -name "test_*.py" | sort
+
+          # Создаем тестовый файл для проверки работы pytest
+          echo "=== Создание тестового файла ==="
+          docker compose run --rm --no-deps --entrypoint "sh" test -c "mkdir -p /tmp/tests && echo 'def test_dummy(): assert True' > /tmp/tests/test_dummy.py"
+
+          # Запускаем тесты с созданным тестовым файлом
+          echo "=== Запуск тестов с тестовым файлом ==="
+          docker compose run --rm --no-deps -e PYTHONVERBOSE=1 -e PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 test /tmp/tests/ -v --no-header -p no:cacheprovider
 
           # Используем команду согласно документации с дополнительными опциями для отладки
-          docker compose run --rm --no-deps -e PYTHONVERBOSE=1 test tests/ -v --no-header -p no:cacheprovider
+          echo "=== Запуск основных тестов ==="
+          docker compose run --rm --no-deps -e PYTHONVERBOSE=1 -e PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 test tests/ -v --no-header -p no:cacheprovider
 
       - name: Copy coverage report from container
         if: success()
