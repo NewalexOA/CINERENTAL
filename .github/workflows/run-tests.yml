@@ -63,8 +63,8 @@ jobs:
 
       - name: Run tests
         run: |
-          # Запускаем тесты, используя entrypoint сервиса test
-          docker compose run --rm test tests/ -v
+          # Явно запускаем pytest, переопределяя entrypoint
+          docker compose run --rm --entrypoint "python" test -m pytest tests/ -v --cov=backend --cov-report=html --cov-report=term
 
       - name: Copy coverage report from container
         if: success()
