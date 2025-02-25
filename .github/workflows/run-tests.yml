@@ -61,19 +61,19 @@ jobs:
         run: |
           docker compose run --rm test bash -c "mkdir -p /app/.pytest_cache && chmod 777 /app/.pytest_cache"
 
-      - name: Create test script
-        run: |
-          cat > run_tests.sh << 'EOF'
-          #!/bin/bash
-          cd /app
-          export PYTHONPATH=/app
-          python -m pytest tests/ -v --cov=backend --cov-report=html --cov-report=term
-          EOF
-          chmod +x run_tests.sh
-
       - name: Run tests
         run: |
-          docker compose run --rm -v $(pwd)/run_tests.sh:/run_tests.sh test bash /run_tests.sh
+          # Создаем скрипт внутри контейнера и выполняем его
+          docker compose run --rm test bash -c "
+            echo '#!/bin/bash
+            cd /app
+            export PYTHONPATH=/app
+            find tests/ -type f -name \"test_*.py\" || echo \"No test files found\"
+            python -m pytest tests/ -v --cov=backend --cov-report=html --cov-report=term
+            ' > /tmp/run_tests.sh &&
+            chmod +x /tmp/run_tests.sh &&
+            /tmp/run_tests.sh
+          "
 
       - name: Copy coverage report from container
         if: success()
