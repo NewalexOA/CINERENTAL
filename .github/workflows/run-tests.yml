@@ -47,7 +47,7 @@ jobs:
           # Ensure wait-for.sh is executable
           chmod +x docker/wait-for.sh
 
-          # Wait for PostgreSQL (using docker exec instead of docker compose run)
+          # Wait for PostgreSQL
           docker compose run --rm test bash -c "timeout 60s bash -c 'until pg_isready -h test_db -p 5432 -U postgres; do sleep 1; done'"
 
           # Wait for Redis
@@ -57,9 +57,14 @@ jobs:
         run: |
           docker compose run --rm test alembic upgrade head
 
+      - name: Create pytest cache directory with proper permissions
+        run: |
+          docker compose run --rm test bash -c "mkdir -p /app/.pytest_cache && chmod 777 /app/.pytest_cache"
+
       - name: Run tests
         run: |
-          docker compose run --rm test python -m pytest tests/ --cov=backend --cov-report=html --cov-report=term
+          # Запускаем тесты, используя entrypoint сервиса test
+          docker compose run --rm test tests/ -v
 
       - name: Copy coverage report from container
         if: success()
