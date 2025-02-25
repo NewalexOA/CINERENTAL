@@ -174,7 +174,7 @@ class BookingService:
         paid_amount: Optional[float] = None,
         notes: Optional[str] = None,
     ) -> Booking:
-        """Update booking details.
+        """Update booking.
 
         Args:
             booking_id: Booking ID
@@ -200,7 +200,7 @@ class BookingService:
         booking = await self.repository.get(booking_id)
         if not booking:
             raise NotFoundError(
-                f'Booking {booking_id} not found',
+                f'Booking with ID {booking_id} not found',
                 details={'booking_id': booking_id},
             )
 
