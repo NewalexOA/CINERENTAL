@@ -99,8 +99,14 @@ async def get_categories_with_equipment_count(
         List of categories with equipment count
     """
     service = CategoryService(session)
-    categories = await service.get_with_equipment_count()
-    return [CategoryWithEquipmentCount.model_validate(cat) for cat in categories]
+    try:
+        categories = await service.get_with_equipment_count()
+        return [CategoryWithEquipmentCount.model_validate(c) for c in categories]
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e),
+        )
 
 
 @typed_get(
