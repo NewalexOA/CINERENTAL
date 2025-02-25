@@ -172,6 +172,16 @@ async def update_category(
             parent_id=category.parent_id,
         )
         return CategoryResponse.model_validate(db_category)
+    except ValueError as e:
+        if 'not found' in str(e).lower():
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=str(e),
+            ) from e
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        ) from e
     except BusinessError as e:
         if 'not found' in str(e).lower():
             raise HTTPException(

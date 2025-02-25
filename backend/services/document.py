@@ -91,7 +91,7 @@ class DocumentService:
         file_path: Optional[str] = None,
         notes: Optional[str] = None,
     ) -> Document:
-        """Update document details.
+        """Update document.
 
         Args:
             document_id: Document ID
@@ -102,16 +102,13 @@ class DocumentService:
             Updated document
 
         Raises:
-            NotFoundError: If document not found
+            ValueError: If document not found
             DocumentError: If document update fails
         """
         # Get document
         document = await self.repository.get(document_id)
         if not document:
-            raise NotFoundError(
-                f'Document with ID {document_id} not found',
-                {'document_id': document_id},
-            )
+            raise ValueError(f'Document with ID {document_id} not found')
 
         # Update fields
         if file_path is not None:
@@ -136,16 +133,13 @@ class DocumentService:
             Updated document
 
         Raises:
-            NotFoundError: If document not found
+            ValueError: If document not found
             StatusTransitionError: If status transition not allowed
         """
         # Get document
         document = await self.repository.get(document_id)
         if not document:
-            raise NotFoundError(
-                f'Document with ID {document_id} not found',
-                {'document_id': document_id},
-            )
+            raise ValueError(f'Document with ID {document_id} not found')
 
         # Check if status transition is allowed
         if not self._is_valid_status_transition(document.status, status):
