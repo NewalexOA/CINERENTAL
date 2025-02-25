@@ -68,8 +68,10 @@ jobs:
             echo '#!/bin/bash
             cd /app
             export PYTHONPATH=/app
+            echo \"Listing test files:\"
             find tests/ -type f -name \"test_*.py\" || echo \"No test files found\"
-            python -m pytest tests/ -v --cov=backend --cov-report=html --cov-report=term
+            echo \"Running pytest:\"
+            python -m pytest tests/ -v --no-header -p no:cacheprovider --cov=backend --cov-report=html --cov-report=term
             ' > /tmp/run_tests.sh &&
             chmod +x /tmp/run_tests.sh &&
             /tmp/run_tests.sh
