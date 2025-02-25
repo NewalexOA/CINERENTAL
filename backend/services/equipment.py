@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 from decimal import Decimal
 from typing import Dict, List, Optional, Set
 
-from sqlalchemy import and_, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.exceptions import (
@@ -19,7 +19,7 @@ from backend.exceptions import (
     StateError,
     ValidationError,
 )
-from backend.models import Booking, BookingStatus, Equipment, EquipmentStatus
+from backend.models import Booking, Equipment, EquipmentStatus
 from backend.repositories import BookingRepository, EquipmentRepository
 from backend.schemas import EquipmentResponse
 
@@ -151,7 +151,7 @@ class EquipmentService:
         query: Optional[str] = None,
         available_from: Optional[datetime] = None,
         available_to: Optional[datetime] = None,
-    ) -> List[Equipment]:
+    ) -> List[EquipmentResponse]:
         """Get list of equipment with optional filtering.
 
         Args:
@@ -164,7 +164,7 @@ class EquipmentService:
             available_to: Filter by availability end date
 
         Returns:
-            List of equipment items
+            List of equipment items as EquipmentResponse objects
 
         Raises:
             BusinessError: If validation fails
@@ -185,54 +185,21 @@ class EquipmentService:
         if available_to and available_to.tzinfo is None:
             available_to = available_to.replace(tzinfo=timezone.utc)
 
-        # Use the repository's search method with filters
-        if query:
-            # If query is provided, use search with post-filtering
-            equipment_list = await self.repository.search(query)
+        # Get equipment list using repository
+        equipment_list = await self.repository.get_list(
+            skip=skip,
+            limit=limit,
+            status=status,
+            category_id=category_id,
+            query=query,
+            available_from=available_from,
+            available_to=available_to,
+        )
 
-            # Apply additional filters
-            if status:
-                equipment_list = [e for e in equipment_list if e.status == status]
-            if category_id:
-                equipment_list = [
-                    e for e in equipment_list if e.category_id == category_id
-                ]
-
-            # Apply pagination
-            return equipment_list[skip : skip + limit]
-        else:
-            # Use direct filtering from repository
-            stmt = select(Equipment)
-
-            if status:
-                stmt = stmt.where(Equipment.status == status)
-            if category_id:
-                stmt = stmt.where(Equipment.category_id == category_id)
-
-            # Add date filtering if both dates are provided
-            if available_from and available_to:
-                # Get equipment IDs that are not booked during the specified period
-                booked_equipment = (
-                    select(Booking.equipment_id)
-                    .where(
-                        and_(
-                            Booking.start_date < available_to,
-                            Booking.end_date > available_from,
-                            Booking.booking_status.in_(
-                                [
-                                    BookingStatus.CONFIRMED,
-                                    BookingStatus.ACTIVE,
-                                ]
-                            ),
-                        )
-                    )
-                    .distinct()
-                )
-                stmt = stmt.where(~Equipment.id.in_(booked_equipment))
-
-            stmt = stmt.offset(skip).limit(limit)
-            result = await self.session.execute(stmt)
-            return list(result.scalars().all())
+        # Convert to EquipmentResponse objects
+        return [
+            EquipmentResponse.model_validate(equipment) for equipment in equipment_list
+        ]
 
     async def update_equipment(
         self,
