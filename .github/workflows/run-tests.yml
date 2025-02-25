@@ -61,10 +61,19 @@ jobs:
         run: |
           docker compose run --rm test bash -c "mkdir -p /app/.pytest_cache && chmod 777 /app/.pytest_cache"
 
+      - name: Create test script
+        run: |
+          cat > run_tests.sh << 'EOF'
+          #!/bin/bash
+          cd /app
+          export PYTHONPATH=/app
+          python -m pytest tests/ -v --cov=backend --cov-report=html --cov-report=term
+          EOF
+          chmod +x run_tests.sh
+
       - name: Run tests
         run: |
-          # Используем bash для запуска pytest с явным указанием конфигурационного файла
-          docker compose run --rm --entrypoint "bash" test -c "cd /app && PYTHONPATH=/app python -m pytest tests/ -v --cov=backend --cov-report=html --cov-report=term -c pytest.ini"
+          docker compose run --rm -v $(pwd)/run_tests.sh:/run_tests.sh test bash /run_tests.sh
 
       - name: Copy coverage report from container
         if: success()
