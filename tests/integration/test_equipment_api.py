@@ -5,9 +5,11 @@ from typing import TypedDict, cast
 
 from fastapi import status as http_status
 from httpx import AsyncClient
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.models import Category, Client, Equipment
 from backend.models.equipment import EquipmentStatus
+from backend.services.booking import BookingService
 from tests.conftest import async_test
 
 
@@ -332,16 +334,23 @@ async def test_delete_equipment_with_bookings(
     async_client: AsyncClient,
     test_equipment: Equipment,
     test_client: Client,
+    db_session: AsyncSession,
 ) -> None:
     """Test deleting equipment with active bookings."""
-    # Create a booking for the equipment
-    booking_data = {
-        'equipment_id': test_equipment.id,
-        'client_id': test_client.id,
-        'start_date': (datetime.now() + timedelta(days=1)).isoformat(),
-        'end_date': (datetime.now() + timedelta(days=2)).isoformat(),
-    }
-    await async_client.post('/api/v1/bookings/', json=booking_data)
+    # Create a booking for the equipment directly using the service
+    booking_service = BookingService(db_session)
+    start_date = datetime.now() + timedelta(days=1)
+    end_date = start_date + timedelta(days=2)
+
+    await booking_service.create_booking(
+        client_id=test_client.id,
+        equipment_id=test_equipment.id,
+        start_date=start_date,
+        end_date=end_date,
+        total_amount=100.0,
+        deposit_amount=50.0,
+        notes='Test booking',
+    )
 
     # Try to delete the equipment
     response = await async_client.delete(f'/api/v1/equipment/{test_equipment.id}')
