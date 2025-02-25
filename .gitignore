@@ -39,7 +39,7 @@ ENV/
 .env.*.local
 !.env.example
 !.env.test
-!.env.production
+.env.production
 logs/
 media/
 

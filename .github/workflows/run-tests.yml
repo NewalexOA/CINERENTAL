@@ -1,0 +1,83 @@
+name: Run Tests
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  test:
+    name: Run Tests in Docker
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Cache Docker layers
+        uses: actions/cache@v4
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-buildx-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-
+
+      - name: Create .env file
+        run: |
+          echo "ENVIRONMENT=testing" > .env
+          echo "POSTGRES_USER=postgres" >> .env
+          echo "POSTGRES_PASSWORD=postgres" >> .env
+          echo "POSTGRES_DB=cinerental_test" >> .env
+          echo "POSTGRES_HOST_AUTH_METHOD=trust" >> .env
+          echo "SECRET_KEY=test-secret-key" >> .env
+          echo "DEBUG=false" >> .env
+          echo "TESTING=1" >> .env
+
+      - name: Build and start containers
+        run: |
+          docker compose build test test_db redis
+          docker compose up -d test_db redis
+
+      - name: Wait for services to be ready
+        run: |
+          # Ensure wait-for.sh is executable
+          chmod +x docker/wait-for.sh
+
+          # Wait for PostgreSQL (using docker exec instead of docker compose run)
+          docker compose run --rm test bash -c "timeout 60s bash -c 'until pg_isready -h test_db -p 5432 -U postgres; do sleep 1; done'"
+
+          # Wait for Redis
+          docker compose run --rm test bash -c "timeout 60s bash -c 'until redis-cli -h redis ping; do sleep 1; done'"
+
+      - name: Run migrations
+        run: |
+          docker compose run --rm test alembic upgrade head
+
+      - name: Run tests
+        run: |
+          docker compose run --rm test python -m pytest tests/ --cov=backend --cov-report=html --cov-report=term
+
+      - name: Copy coverage report from container
+        if: success()
+        run: |
+          # Create directory for coverage reports
+          mkdir -p coverage
+
+          # Copy HTML coverage report from container to host
+          docker compose run --rm --entrypoint "bash -c" test "cp -r htmlcov /app/coverage/ || echo 'No htmlcov directory found'"
+
+      - name: Upload coverage report as artifact
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage/htmlcov
+          retention-days: 7
+
+      - name: Stop containers
+        if: always()
+        run: docker compose down

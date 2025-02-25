@@ -102,6 +102,43 @@ Run tests with coverage report:
 docker compose up test
 ```
 
+## CI/CD with GitHub Actions
+
+This project uses GitHub Actions for continuous integration:
+
+### Automated Workflows
+
+1. **Run Tests** - Runs all tests in Docker containers when code is pushed to `main` or `develop` branches
+   - Builds test containers
+   - Runs tests with PostgreSQL and Redis in containers
+   - Generates and uploads test coverage reports as GitHub artifacts
+
+2. **Code Quality** - Checks code quality when code is pushed to `main` or `develop` branches
+   - Runs Black for code formatting
+   - Runs isort for import sorting
+   - Runs flake8 for code style
+   - Runs mypy for type checking
+
+3. **Build Docker Image** - Builds and tests Docker image
+   - Builds Docker image with optimized layers
+   - Verifies the image works correctly
+   - Creates and uploads instructions for local deployment
+
+### Local Development
+
+For local development, you can use Docker Compose:
+
+```bash
+# Start all services in development mode with auto-reload
+docker compose up
+
+# Run in detached mode
+docker compose up -d
+
+# Run tests
+docker compose up test
+```
+
 ## Production
 
 1. Copy `.env.example` to `.env.production` and set secure values
