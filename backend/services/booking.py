@@ -20,6 +20,7 @@ from backend.exceptions import (
 )
 from backend.models import Booking, BookingStatus, EquipmentStatus, PaymentStatus
 from backend.repositories import BookingRepository, EquipmentRepository
+from backend.services.equipment import EquipmentService
 
 # Constants for booking validation
 MIN_BOOKING_DURATION = timedelta(days=1)  # Minimum booking duration
@@ -38,6 +39,7 @@ class BookingService:
         """
         self.repository = BookingRepository(db_session)
         self.equipment_repository = EquipmentRepository(db_session)
+        self.equipment_service = EquipmentService(db_session)
 
     async def create_booking(
         self,
@@ -64,101 +66,103 @@ class BookingService:
             Created booking
 
         Raises:
-            ValidationError: If client_id or equipment_id is not positive
-            DateError: If dates are invalid (past, wrong order)
-            DurationError: If booking duration is invalid
+            ValueError: If any validation fails
             NotFoundError: If equipment is not found
-            StateError: If equipment is not available for booking
         """
-        # Validate IDs
-        if client_id <= 0:
-            raise ValidationError('Client ID must be positive')
-        if equipment_id <= 0:
-            raise ValidationError('Equipment ID must be positive')
+        try:
+            # Validate IDs
+            if client_id <= 0:
+                raise ValidationError('Client ID must be positive')
+            if equipment_id <= 0:
+                raise ValidationError('Equipment ID must be positive')
 
-        # Ensure dates are timezone-aware
-        if start_date.tzinfo is None:
-            start_date = start_date.replace(tzinfo=timezone.utc)
-        if end_date.tzinfo is None:
-            end_date = end_date.replace(tzinfo=timezone.utc)
+            # Ensure dates are timezone-aware
+            if start_date.tzinfo is None:
+                start_date = start_date.replace(tzinfo=timezone.utc)
+            if end_date.tzinfo is None:
+                end_date = end_date.replace(tzinfo=timezone.utc)
 
-        # Get current time in UTC
-        now = datetime.now(timezone.utc)
+            # Get current time in UTC
+            now = datetime.now(timezone.utc)
 
-        # Validate start date
-        if start_date < now:
-            raise DateError(
-                'Start date cannot be in the past',
+            # Validate start date
+            if start_date < now:
+                raise DateError(
+                    'Start date cannot be in the past',
+                    start_date=start_date,
+                    end_date=end_date,
+                )
+
+            # Validate end date
+            if end_date <= start_date:
+                raise DateError(
+                    'End date must be after start date',
+                    start_date=start_date,
+                    end_date=end_date,
+                )
+
+            # Validate booking duration
+            duration = end_date - start_date
+            duration_days = duration.days
+            if duration < MIN_BOOKING_DURATION:
+                raise DurationError(
+                    'Booking duration must be at least '
+                    f'{MIN_BOOKING_DURATION.days} day(s)',
+                    min_days=MIN_BOOKING_DURATION.days,
+                    actual_days=duration_days,
+                )
+            if duration > MAX_BOOKING_DURATION:
+                raise DurationError(
+                    f'Booking duration cannot exceed {MAX_BOOKING_DURATION.days} days',
+                    max_days=MAX_BOOKING_DURATION.days,
+                    actual_days=duration_days,
+                )
+
+            # Validate advance booking
+            max_advance = now + timedelta(days=MAX_ADVANCE_DAYS)
+            if start_date > max_advance:
+                raise DateError(
+                    'Booking too far in advance',
+                    start_date=start_date,
+                    details={'max_advance_date': max_advance.isoformat()},
+                )
+
+            # Check if equipment exists
+            equipment = await self.equipment_repository.get(equipment_id)
+            if not equipment:
+                raise NotFoundError(
+                    f'Equipment {equipment_id} not found',
+                    details={'equipment_id': equipment_id},
+                )
+
+            # Check equipment availability
+            if not await self.equipment_repository.check_availability(
+                equipment_id, start_date, end_date
+            ):
+                raise StateError(
+                    'Equipment {id} is not available '
+                    'for the specified period'.format(id=equipment_id),
+                    details={
+                        'equipment_id': equipment_id,
+                        'start_date': start_date.isoformat(),
+                        'end_date': end_date.isoformat(),
+                    },
+                )
+
+            # Create booking
+            booking = Booking(
+                client_id=client_id,
+                equipment_id=equipment_id,
                 start_date=start_date,
                 end_date=end_date,
+                total_amount=Decimal(str(total_amount)),
+                deposit_amount=Decimal(str(deposit_amount)),
+                notes=notes,
             )
-
-        # Validate end date
-        if end_date <= start_date:
-            raise DateError(
-                'End date must be after start date',
-                start_date=start_date,
-                end_date=end_date,
-            )
-
-        # Validate booking duration
-        duration = end_date - start_date
-        duration_days = duration.days
-        if duration < MIN_BOOKING_DURATION:
-            raise DurationError(
-                f'Booking duration must be at least {MIN_BOOKING_DURATION.days} day(s)',
-                min_days=MIN_BOOKING_DURATION.days,
-                actual_days=duration_days,
-            )
-        if duration > MAX_BOOKING_DURATION:
-            raise DurationError(
-                f'Booking duration cannot exceed {MAX_BOOKING_DURATION.days} days',
-                max_days=MAX_BOOKING_DURATION.days,
-                actual_days=duration_days,
-            )
-
-        # Validate advance booking
-        max_advance = now + timedelta(days=MAX_ADVANCE_DAYS)
-        if start_date > max_advance:
-            raise DateError(
-                'Booking too far in advance',
-                start_date=start_date,
-                details={'max_advance_date': max_advance.isoformat()},
-            )
-
-        # Check if equipment exists
-        equipment = await self.equipment_repository.get(equipment_id)
-        if not equipment:
-            raise NotFoundError(
-                f'Equipment {equipment_id} not found',
-                details={'equipment_id': equipment_id},
-            )
-
-        # Check equipment availability
-        if not await self.equipment_repository.check_availability(
-            equipment_id, start_date, end_date
-        ):
-            raise StateError(
-                'Equipment {id} is not available '
-                'for the specified period'.format(id=equipment_id),
-                details={
-                    'equipment_id': equipment_id,
-                    'start_date': start_date.isoformat(),
-                    'end_date': end_date.isoformat(),
-                },
-            )
-
-        # Create booking
-        booking = Booking(
-            client_id=client_id,
-            equipment_id=equipment_id,
-            start_date=start_date,
-            end_date=end_date,
-            total_amount=Decimal(str(total_amount)),
-            deposit_amount=Decimal(str(deposit_amount)),
-            notes=notes,
-        )
-        return await self.repository.create(booking)
+            return await self.repository.create(booking)
+        except (ValidationError, DateError, DurationError, StateError) as e:
+            # Convert domain-specific errors to ValueError for compatibility
+            raise ValueError(str(e)) from e
 
     async def update_booking(
         self,
@@ -379,72 +383,103 @@ class BookingService:
         now = datetime.now(timezone.utc)
         return await self.repository.get_overdue(now)
 
-    async def change_status(self, booking_id: int, status: BookingStatus) -> Booking:
+    async def change_status(
+        self,
+        booking_id: int,
+        new_status: BookingStatus,
+    ) -> Booking:
         """Change booking status.
 
         Args:
             booking_id: Booking ID
-            status: New status
+            new_status: New booking status
 
         Returns:
             Updated booking
 
         Raises:
-            NotFoundError: If booking is not found
-            StatusTransitionError: If status transition is invalid
+            NotFoundError: If booking not found
+            StatusTransitionError: If status transition is not allowed
+            StateError: If booking cannot be activated without payment
         """
         booking = await self.repository.get(booking_id)
         if not booking:
-            raise NotFoundError(
-                f'Booking {booking_id} not found', details={'booking_id': booking_id}
-            )
+            raise NotFoundError(f'Booking with ID {booking_id} not found')
 
-        # Define allowed transitions
-        allowed_transitions: dict[str, list[str]] = {
-            BookingStatus.PENDING.value: [
-                BookingStatus.CONFIRMED.value,
-                BookingStatus.CANCELLED.value,
+        # Check if status transition is allowed
+        allowed_transitions: dict[BookingStatus, list[BookingStatus]] = {
+            BookingStatus.PENDING: [
+                BookingStatus.CONFIRMED,
+                BookingStatus.CANCELLED,
+                BookingStatus.ACTIVE,  # Allow direct activation for quick bookings
             ],
-            BookingStatus.CONFIRMED.value: [
-                BookingStatus.ACTIVE.value,
-                BookingStatus.CANCELLED.value,
+            BookingStatus.CONFIRMED: [
+                BookingStatus.ACTIVE,
+                BookingStatus.CANCELLED,
             ],
-            BookingStatus.ACTIVE.value: [
-                BookingStatus.COMPLETED.value,
-                BookingStatus.OVERDUE.value,
+            BookingStatus.ACTIVE: [
+                BookingStatus.COMPLETED,
+                BookingStatus.OVERDUE,
+                BookingStatus.CANCELLED,
             ],
-            BookingStatus.COMPLETED.value: [],
-            BookingStatus.CANCELLED.value: [],
-            BookingStatus.OVERDUE.value: [
-                BookingStatus.COMPLETED.value,
-                BookingStatus.CANCELLED.value,
+            BookingStatus.COMPLETED: [],  # Terminal state
+            BookingStatus.CANCELLED: [],  # Terminal state
+            BookingStatus.OVERDUE: [
+                BookingStatus.COMPLETED,
+                BookingStatus.CANCELLED,
             ],
         }
 
-        current_status = booking.booking_status.value
-        new_status = status.value
-        allowed = allowed_transitions.get(current_status, [])
+        current_status = booking.booking_status
+        if current_status not in allowed_transitions:
+            allowed = []
+        else:
+            allowed = allowed_transitions[current_status]
+
         if new_status not in allowed:
+            msg = f'Invalid status transition from {current_status} to {new_status}'
             raise StatusTransitionError(
-                f'Invalid status transition from {current_status} to {new_status}',
+                msg,
                 current_status=current_status,
                 new_status=new_status,
-                allowed_transitions=allowed,
             )
 
-        booking.booking_status = status
+        # Additional validation for specific transitions
+        if new_status == BookingStatus.ACTIVE:
+            # Check payment status
+            if booking.payment_status != PaymentStatus.PAID:
+                raise StateError('Cannot activate booking without payment')
 
-        # Update equipment status based on booking status
-        if status == BookingStatus.ACTIVE:
+            # Check equipment availability
             equipment = await self.equipment_repository.get(booking.equipment_id)
-            if equipment:
-                equipment.status = EquipmentStatus.RENTED
-                await self.equipment_repository.update(equipment)
-        elif status in [BookingStatus.COMPLETED, BookingStatus.CANCELLED]:
-            equipment = await self.equipment_repository.get(booking.equipment_id)
-            if equipment:
-                equipment.status = EquipmentStatus.AVAILABLE
-                await self.equipment_repository.update(equipment)
+            if not equipment or equipment.status not in [
+                EquipmentStatus.AVAILABLE,
+                EquipmentStatus.RENTED,
+            ]:
+                raise StateError('Equipment is not available for booking')
+
+            # Check for overlapping bookings
+            is_available = await self.equipment_repository.check_availability(
+                equipment.id,
+                booking.start_date,
+                booking.end_date,
+                exclude_booking_id=booking.id,
+            )
+            if not is_available:
+                raise StateError('Equipment is already booked for this period')
+
+        booking.booking_status = new_status
+
+        if new_status == BookingStatus.ACTIVE:
+            await self.equipment_service.change_status(
+                booking.equipment_id,
+                EquipmentStatus.RENTED,
+            )
+        elif new_status in [BookingStatus.COMPLETED, BookingStatus.CANCELLED]:
+            await self.equipment_service.change_status(
+                booking.equipment_id,
+                EquipmentStatus.AVAILABLE,
+            )
 
         return await self.repository.update(booking)
 

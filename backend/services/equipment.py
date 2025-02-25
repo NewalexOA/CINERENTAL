@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 from decimal import Decimal
 from typing import Dict, List, Optional, Set
 
-from sqlalchemy import select
+from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.exceptions import (
@@ -19,7 +19,7 @@ from backend.exceptions import (
     StateError,
     ValidationError,
 )
-from backend.models import Equipment, EquipmentStatus
+from backend.models import Booking, BookingStatus, Equipment, EquipmentStatus
 from backend.repositories import BookingRepository, EquipmentRepository
 from backend.schemas import EquipmentResponse
 
@@ -144,73 +144,95 @@ class EquipmentService:
 
     async def get_equipment_list(
         self,
-        category_id: Optional[int] = None,
-        status: Optional[EquipmentStatus] = None,
-        available_from: Optional[datetime] = None,
-        available_to: Optional[datetime] = None,
         skip: int = 0,
         limit: int = 100,
-    ) -> List[EquipmentResponse]:
-        """Get equipment list with optional filtering and pagination.
+        status: Optional[EquipmentStatus] = None,
+        category_id: Optional[int] = None,
+        query: Optional[str] = None,
+        available_from: Optional[datetime] = None,
+        available_to: Optional[datetime] = None,
+    ) -> List[Equipment]:
+        """Get list of equipment with optional filtering.
 
         Args:
-            category_id: Filter by category ID
+            skip: Number of items to skip
+            limit: Maximum number of items to return
             status: Filter by equipment status
+            category_id: Filter by category ID
+            query: Search query
             available_from: Filter by availability start date
             available_to: Filter by availability end date
-            skip: Number of records to skip
-            limit: Maximum number of records to return
 
         Returns:
             List of equipment items
 
         Raises:
-            ValidationError: If validation fails
+            BusinessError: If validation fails
         """
-        # Validate business rules
-        if available_from and available_to:
-            # Convert to UTC if not already
-            if available_from.tzinfo is None:
-                available_from = available_from.replace(tzinfo=timezone.utc)
-            if available_to.tzinfo is None:
-                available_to = available_to.replace(tzinfo=timezone.utc)
+        # Validate dates if both are provided
+        if available_from and available_to and available_from >= available_to:
+            raise BusinessError(
+                'Start date must be before end date',
+                details={
+                    'available_from': available_from.isoformat(),
+                    'available_to': available_to.isoformat(),
+                },
+            )
 
-            if available_from >= available_to:
-                raise ValidationError(
-                    'Start date must be before end date',
-                    details={
-                        'available_from': available_from.isoformat(),
-                        'available_to': available_to.isoformat(),
-                    },
+        # Ensure dates are timezone-aware
+        if available_from and available_from.tzinfo is None:
+            available_from = available_from.replace(tzinfo=timezone.utc)
+        if available_to and available_to.tzinfo is None:
+            available_to = available_to.replace(tzinfo=timezone.utc)
+
+        # Use the repository's search method with filters
+        if query:
+            # If query is provided, use search with post-filtering
+            equipment_list = await self.repository.search(query)
+
+            # Apply additional filters
+            if status:
+                equipment_list = [e for e in equipment_list if e.status == status]
+            if category_id:
+                equipment_list = [
+                    e for e in equipment_list if e.category_id == category_id
+                ]
+
+            # Apply pagination
+            return equipment_list[skip : skip + limit]
+        else:
+            # Use direct filtering from repository
+            stmt = select(Equipment)
+
+            if status:
+                stmt = stmt.where(Equipment.status == status)
+            if category_id:
+                stmt = stmt.where(Equipment.category_id == category_id)
+
+            # Add date filtering if both dates are provided
+            if available_from and available_to:
+                # Get equipment IDs that are not booked during the specified period
+                booked_equipment = (
+                    select(Booking.equipment_id)
+                    .where(
+                        and_(
+                            Booking.start_date < available_to,
+                            Booking.end_date > available_from,
+                            Booking.booking_status.in_(
+                                [
+                                    BookingStatus.CONFIRMED,
+                                    BookingStatus.ACTIVE,
+                                ]
+                            ),
+                        )
+                    )
+                    .distinct()
                 )
+                stmt = stmt.where(~Equipment.id.in_(booked_equipment))
 
-        if skip < 0:
-            raise ValidationError(
-                'Skip value must be non-negative', details={'skip': skip}
-            )
-        if limit <= 0:
-            raise ValidationError('Limit must be positive', details={'limit': limit})
-        if limit > 1000:
-            raise ValidationError(
-                'Limit cannot exceed 1000', details={'limit': limit, 'max_limit': 1000}
-            )
-
-        equipment_list = await self.repository.get_equipment_list(
-            category_id=category_id,
-            status=status,
-            available_from=available_from,
-            available_to=available_to,
-            skip=skip,
-            limit=limit,
-        )
-
-        # Load equipment with categories
-        loaded_equipment = []
-        for equipment in equipment_list:
-            loaded = await self._load_equipment_with_category(equipment)
-            loaded_equipment.append(loaded)
-
-        return [EquipmentResponse.model_validate(e) for e in loaded_equipment]
+            stmt = stmt.offset(skip).limit(limit)
+            result = await self.session.execute(stmt)
+            return list(result.scalars().all())
 
     async def update_equipment(
         self,
@@ -356,6 +378,7 @@ class EquipmentService:
                 EquipmentStatus.AVAILABLE.value,
                 EquipmentStatus.BROKEN.value,
                 EquipmentStatus.MAINTENANCE.value,
+                EquipmentStatus.RETIRED.value,
             },
             EquipmentStatus.MAINTENANCE.value: {
                 EquipmentStatus.AVAILABLE.value,
@@ -395,7 +418,8 @@ class EquipmentService:
                 details={'equipment_id': equipment_id},
             )
 
-        return await self.repository.delete(equipment.id)
+        deleted_equipment = await self.repository.soft_delete(equipment.id)
+        return deleted_equipment is not None
 
     async def search_equipment(self, query: str) -> List[EquipmentResponse]:
         """Search equipment by name or description.
@@ -605,11 +629,16 @@ class EquipmentService:
         # Transform data for response
         return [EquipmentResponse.model_validate(e) for e in equipment_list]
 
-    async def search(self, query: str) -> List[EquipmentResponse]:
+    async def search(
+        self,
+        query: str,
+        include_deleted: bool = False,
+    ) -> List[Equipment]:
         """Search equipment by name or description.
 
         Args:
             query: Search query
+            include_deleted: Whether to include deleted equipment in search results
 
         Returns:
             List of matching equipment
@@ -620,7 +649,7 @@ class EquipmentService:
         if not query or query.isspace():
             raise ValidationError('Search query cannot be empty')
 
-        equipment_list = await self.repository.search(query)
+        equipment_list = await self.repository.search(query, include_deleted)
 
         # Load equipment with categories
         loaded_equipment = []
@@ -628,7 +657,7 @@ class EquipmentService:
             loaded = await self._load_equipment_with_category(equipment)
             loaded_equipment.append(loaded)
 
-        return [EquipmentResponse.model_validate(e) for e in loaded_equipment]
+        return loaded_equipment
 
     async def _is_available(
         self,
@@ -750,3 +779,23 @@ class EquipmentService:
                     'available_to': available_to.isoformat(),
                 },
             )
+
+    async def get_equipment_bookings(self, equipment_id: int) -> List[Booking]:
+        """Get equipment bookings.
+
+        Args:
+            equipment_id: Equipment ID
+
+        Returns:
+            List of bookings
+
+        Raises:
+            NotFoundError: If equipment not found
+        """
+        # Check if equipment exists
+        await self.get_equipment(equipment_id)
+
+        # Query bookings directly
+        query = select(Booking).where(Booking.equipment_id == equipment_id)
+        result = await self.session.execute(query)
+        return list(result.scalars().all())
