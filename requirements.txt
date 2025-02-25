@@ -11,7 +11,7 @@ alembic==1.13.1
 psycopg2-binary==2.9.9
 asyncpg==0.29.0
 redis==5.0.1
-greenlet==3.0.3
+greenlet==3.1.1
 
 # Data validation
 pydantic==2.5.1
