@@ -1,6 +1,6 @@
 """Frontend router module."""
 
-from typing import Annotated, Any, Dict, List, Optional
+from typing import Annotated, Any, Dict, List, Optional, TypeVar
 
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse
@@ -15,7 +15,17 @@ from backend.services import CategoryService, EquipmentService
 
 web_router = APIRouter()
 
+# Type variables for route handlers
+T = TypeVar('T')
+R = TypeVar('R')
 
+
+def typed_route(route_handler: T) -> T:
+    """Add typing to route handlers to satisfy mypy."""
+    return route_handler
+
+
+@typed_route
 @web_router.get('/', response_class=HTMLResponse)
 async def index(
     request: Request,
@@ -42,6 +52,7 @@ async def index(
     )
 
 
+@typed_route
 @web_router.get('/equipment', response_class=HTMLResponse)
 async def equipment_list(
     request: Request,
@@ -77,7 +88,8 @@ async def equipment_list(
     # Transform data for template
     equipment_data = []
     for item in equipment_list:
-        item_dict = item.model_dump()
+        equipment_response = EquipmentResponse.model_validate(item.__dict__)
+        item_dict = equipment_response.model_dump()
         # Use category_name directly from EquipmentResponse
         item_dict['category_name'] = item_dict.get('category_name', 'Без категории')
 
@@ -98,6 +110,7 @@ async def equipment_list(
     )
 
 
+@typed_route
 @web_router.get('/equipment/{equipment_id}', response_class=HTMLResponse)
 async def equipment_detail(
     request: Request,
@@ -126,6 +139,7 @@ async def equipment_detail(
     )
 
 
+@typed_route
 @web_router.get('/clients', response_class=HTMLResponse)
 async def clients_list(request: Request) -> _TemplateResponse:
     """Render clients list page.
@@ -142,6 +156,7 @@ async def clients_list(request: Request) -> _TemplateResponse:
     )
 
 
+@typed_route
 @web_router.get('/bookings', response_class=HTMLResponse)
 async def bookings_list(request: Request) -> _TemplateResponse:
     """Render bookings list page.
@@ -158,6 +173,7 @@ async def bookings_list(request: Request) -> _TemplateResponse:
     )
 
 
+@typed_route
 @web_router.get('/scanner', response_class=HTMLResponse)
 async def scanner(request: Request) -> _TemplateResponse:
     """Render scanner page.
@@ -174,6 +190,7 @@ async def scanner(request: Request) -> _TemplateResponse:
     )
 
 
+@typed_route
 @web_router.get('/api/v1/categories')
 async def get_categories(
     request: Request,

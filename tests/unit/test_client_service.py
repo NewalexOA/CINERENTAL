@@ -15,6 +15,7 @@ from backend.models import (
     ClientStatus,
     Equipment,
     EquipmentStatus,
+    PaymentStatus,
 )
 from backend.services import BookingService, CategoryService, ClientService
 from tests.conftest import async_test
@@ -306,13 +307,23 @@ class TestClientService:
         db_session: AsyncSession,
     ) -> None:
         """Test getting client with active bookings."""
-        # Initially booking is PENDING
+        # Initially client has no active bookings
         result = await service.get_with_active_bookings(client.id)
         assert result is None
 
         # Change booking status to CONFIRMED first
         booking_service = BookingService(db_session)
         await booking_service.change_status(booking.id, BookingStatus.CONFIRMED)
+
+        # Set payment status to PAID before activating
+        await booking_service.update_booking(
+            booking_id=booking.id,
+            paid_amount=float(booking.total_amount),
+        )
+        await booking_service.change_payment_status(
+            booking_id=booking.id,
+            status=PaymentStatus.PAID,
+        )
 
         # Then change to ACTIVE
         await booking_service.change_status(booking.id, BookingStatus.ACTIVE)
@@ -330,27 +341,32 @@ class TestClientService:
         db_session: AsyncSession,
     ) -> None:
         """Test getting clients with overdue bookings."""
-        # Initially booking is not overdue
+        # Initially client has no overdue bookings
         clients = await service.get_with_overdue_bookings()
         assert not any(c.id == client.id for c in clients)
 
-        # Make booking overdue
-        booking_service = BookingService(db_session)
-        past_start = datetime.now(timezone.utc) - timedelta(days=5)
-        past_end = datetime.now(timezone.utc) - timedelta(days=2)
-        await booking_service.update_booking(
-            booking.id,
-            start_date=past_start,
-            end_date=past_end,
-        )
-
         # Change booking status to CONFIRMED first
+        booking_service = BookingService(db_session)
         await booking_service.change_status(booking.id, BookingStatus.CONFIRMED)
+
+        # Set payment status to PAID before activating
+        await booking_service.update_booking(
+            booking_id=booking.id,
+            paid_amount=float(booking.total_amount),
+        )
+        await booking_service.change_payment_status(
+            booking_id=booking.id,
+            status=PaymentStatus.PAID,
+        )
 
         # Then change to ACTIVE
         await booking_service.change_status(booking.id, BookingStatus.ACTIVE)
 
-        # Now client should be in the list
+        # Manually set end_date to past date to make it overdue
+        booking.end_date = datetime.now(timezone.utc) - timedelta(days=1)
+        await booking_service.repository.update(booking)
+
+        # Now client should be in the list of clients with overdue bookings
         clients = await service.get_with_overdue_bookings()
         assert len(clients) >= 1
         assert any(c.id == client.id for c in clients)

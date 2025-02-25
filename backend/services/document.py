@@ -5,7 +5,7 @@ including contracts, handover acts, and other related documents.
 """
 
 from datetime import datetime
-from typing import Dict, List, Optional
+from typing import List, Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -91,7 +91,7 @@ class DocumentService:
         file_path: Optional[str] = None,
         notes: Optional[str] = None,
     ) -> Document:
-        """Update document details.
+        """Update document.
 
         Args:
             document_id: Document ID
@@ -102,16 +102,13 @@ class DocumentService:
             Updated document
 
         Raises:
-            NotFoundError: If document not found
+            ValueError: If document not found
             DocumentError: If document update fails
         """
         # Get document
         document = await self.repository.get(document_id)
         if not document:
-            raise NotFoundError(
-                f'Document with ID {document_id} not found',
-                {'document_id': document_id},
-            )
+            raise ValueError(f'Document with ID {document_id} not found')
 
         # Update fields
         if file_path is not None:
@@ -136,51 +133,75 @@ class DocumentService:
             Updated document
 
         Raises:
-            NotFoundError: If document not found
+            ValueError: If document not found
             StatusTransitionError: If status transition not allowed
         """
         # Get document
         document = await self.repository.get(document_id)
         if not document:
-            raise NotFoundError(
-                f'Document with ID {document_id} not found',
-                {'document_id': document_id},
-            )
+            raise ValueError(f'Document with ID {document_id} not found')
 
         # Check if status transition is allowed
-        allowed_transitions: Dict[str, List[str]] = {
-            DocumentStatus.DRAFT.value: [
-                DocumentStatus.PENDING.value,
-                DocumentStatus.UNDER_REVIEW.value,
-            ],
-            DocumentStatus.PENDING.value: [
-                DocumentStatus.UNDER_REVIEW.value,
-                DocumentStatus.APPROVED.value,
-                DocumentStatus.REJECTED.value,
-            ],
-            DocumentStatus.UNDER_REVIEW.value: [
-                DocumentStatus.APPROVED.value,
-                DocumentStatus.REJECTED.value,
-            ],
-            DocumentStatus.APPROVED.value: [],
-            DocumentStatus.REJECTED.value: [DocumentStatus.PENDING.value],
-        }
-
-        current_status = document.status.value
-        new_status = status.value
-        if new_status not in allowed_transitions[current_status]:
+        if not self._is_valid_status_transition(document.status, status):
             raise StatusTransitionError(
-                f'Invalid status transition from {current_status} to {new_status}',
-                current_status=current_status,
-                new_status=new_status,
-                allowed_transitions=[
-                    str(s) for s in allowed_transitions[current_status]
-                ],
+                f'Invalid status transition from {document.status} to {status}',
+                document.status,
+                status,
             )
 
         # Update status
         document.status = status
         return await self.repository.update(document)
+
+    def _is_valid_status_transition(
+        self,
+        current_status: DocumentStatus,
+        new_status: DocumentStatus,
+    ) -> bool:
+        """Check if status transition is valid.
+
+        Args:
+            current_status: Current document status
+            new_status: New document status
+
+        Returns:
+            True if transition is valid, False otherwise
+        """
+        allowed_transitions: dict[DocumentStatus, list[DocumentStatus]] = {
+            DocumentStatus.DRAFT: [
+                DocumentStatus.PENDING,
+            ],
+            DocumentStatus.PENDING: [
+                DocumentStatus.UNDER_REVIEW,
+                DocumentStatus.APPROVED,
+                DocumentStatus.REJECTED,
+            ],
+            DocumentStatus.UNDER_REVIEW: [
+                DocumentStatus.APPROVED,
+                DocumentStatus.REJECTED,
+                DocumentStatus.PENDING,
+            ],
+            DocumentStatus.APPROVED: [
+                DocumentStatus.REJECTED,
+                DocumentStatus.EXPIRED,
+                DocumentStatus.CANCELLED,
+            ],
+            DocumentStatus.REJECTED: [
+                DocumentStatus.DRAFT,
+                DocumentStatus.PENDING,
+                DocumentStatus.CANCELLED,
+            ],
+            DocumentStatus.EXPIRED: [
+                DocumentStatus.CANCELLED,
+            ],
+            DocumentStatus.CANCELLED: [],
+        }
+
+        if current_status == new_status:
+            return True
+
+        transitions = allowed_transitions.get(current_status, [])
+        return new_status in transitions
 
     async def get_documents(self) -> List[Document]:
         """Get all documents.

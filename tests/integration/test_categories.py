@@ -91,7 +91,7 @@ async def test_get_categories_with_equipment_count(
     test_category: Category,
 ) -> None:
     """Test getting categories with equipment count."""
-    response = await async_client.get('/api/v1/categories/with_equipment_count')
+    response = await async_client.get('/api/v1/categories/with-equipment-count')
     assert response.status_code == 200
     data = cast(List[CategoryWithCount], response.json())
     assert len(data) >= 1

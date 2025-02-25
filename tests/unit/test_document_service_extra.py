@@ -1,10 +1,24 @@
 """Additional unit tests for document service."""
 
+from dataclasses import dataclass
+
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.models import Booking, DocumentType
+from backend.models import Client, DocumentStatus, DocumentType
 from backend.services import DocumentService
 from tests.conftest import async_fixture, async_test
+
+
+@dataclass
+class TestCase:
+    """Test case data structure."""
+
+    doc_type: DocumentType
+    path: str
+    title: str
+    description: str
+    file_name: str
+    notes: str
 
 
 class TestDocumentServiceExtra:
@@ -16,61 +30,55 @@ class TestDocumentServiceExtra:
         return DocumentService(db_session)
 
     @async_test
-    async def test_create_document_without_booking_client_id(
+    async def test_create_document_without_booking(
         self,
-        service: DocumentService,
-        booking: Booking,
+        document_service: DocumentService,
+        test_client: Client,
     ) -> None:
-        """Test document creation without booking - client ID check."""
-        document = await service.create_document(
-            client_id=booking.client_id,
-            booking_id=None,
-            document_type=DocumentType.PASSPORT,
-            file_path='/test/passport.pdf',
-            title='Test Passport',
-            description='Test passport scan',
-            file_name='passport.pdf',
-            file_size=2048,
-            mime_type='application/pdf',
-        )
-        assert document.client_id == booking.client_id
+        """Test creating document without booking."""
+        # Define test cases
+        test_cases = [
+            TestCase(
+                doc_type=DocumentType.CONTRACT,
+                path='/test/contract.pdf',
+                title='Test Contract',
+                description='Test contract description',
+                file_name='contract.pdf',
+                notes='Test contract',
+            ),
+            TestCase(
+                doc_type=DocumentType.INVOICE,
+                path='/test/invoice.pdf',
+                title='Test Invoice',
+                description='Test invoice description',
+                file_name='invoice.pdf',
+                notes='Test invoice',
+            ),
+        ]
 
-    @async_test
-    async def test_create_document_without_booking_null_booking(
-        self,
-        service: DocumentService,
-        booking: Booking,
-    ) -> None:
-        """Test document creation without booking - null booking check."""
-        document = await service.create_document(
-            client_id=booking.client_id,
-            booking_id=None,
-            document_type=DocumentType.PASSPORT,
-            file_path='/test/passport.pdf',
-            title='Test Passport',
-            description='Test passport scan',
-            file_name='passport.pdf',
-            file_size=2048,
-            mime_type='application/pdf',
-        )
-        assert document.booking_id is None
+        for case in test_cases:
+            # Create document
+            document = await document_service.create_document(
+                client_id=test_client.id,
+                booking_id=None,
+                document_type=case.doc_type,
+                file_path=case.path,
+                title=case.title,
+                description=case.description,
+                file_name=case.file_name,
+                file_size=1024,
+                mime_type='application/pdf',
+                notes=case.notes,
+            )
 
-    @async_test
-    async def test_create_document_without_booking_type(
-        self,
-        service: DocumentService,
-        booking: Booking,
-    ) -> None:
-        """Test document creation without booking - document type check."""
-        document = await service.create_document(
-            client_id=booking.client_id,
-            booking_id=None,
-            document_type=DocumentType.PASSPORT,
-            file_path='/test/passport.pdf',
-            title='Test Passport',
-            description='Test passport scan',
-            file_name='passport.pdf',
-            file_size=2048,
-            mime_type='application/pdf',
-        )
-        assert document.type == DocumentType.PASSPORT
+            # Basic assertions
+            assert document.client_id == test_client.id
+            assert document.booking_id is None
+            assert document.type == case.doc_type
+            assert document.status == DocumentStatus.DRAFT
+
+            # File-related assertions
+            assert document.file_path == case.path
+            assert document.title == case.title
+            assert document.description == case.description
+            assert document.file_name == case.file_name

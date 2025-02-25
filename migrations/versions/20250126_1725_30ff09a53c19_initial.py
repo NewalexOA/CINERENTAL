@@ -321,7 +321,7 @@ def upgrade() -> None:
             server_default=sa.text('now()'),
             nullable=False,
         ),
-        sa.ForeignKeyConstraint(['booking_id'], ['bookings.id'], ondelete='SET NULL'),
+        sa.ForeignKeyConstraint(['booking_id'], ['bookings.id'], ondelete='CASCADE'),
         sa.ForeignKeyConstraint(['client_id'], ['clients.id'], ondelete='RESTRICT'),
         sa.PrimaryKeyConstraint('id'),
     )

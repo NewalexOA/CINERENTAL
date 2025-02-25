@@ -5,7 +5,7 @@ It provides routes for adding, updating, and retrieving equipment items,
 including their specifications, availability, and rental rates.
 """
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -15,9 +15,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from backend.api.v1.decorators import typed_delete, typed_get, typed_post, typed_put
 from backend.core.database import get_db
 from backend.exceptions import BusinessError, NotFoundError, StateError
-from backend.models import EquipmentStatus
+from backend.models import BookingStatus, EquipmentStatus
 from backend.schemas import EquipmentCreate, EquipmentResponse, EquipmentUpdate
-from backend.services import EquipmentService
+from backend.services import BookingService, EquipmentService
 
 equipment_router: APIRouter = APIRouter()
 
@@ -45,6 +45,18 @@ async def create_equipment(
         HTTPException: If equipment with given barcode already exists
     """
     try:
+        # Validate rates
+        if float(equipment.daily_rate) <= 0:
+            raise HTTPException(
+                status_code=http_status.HTTP_400_BAD_REQUEST,
+                detail='Daily rate must be greater than 0',
+            )
+        if float(equipment.replacement_cost) <= 0:
+            raise HTTPException(
+                status_code=http_status.HTTP_400_BAD_REQUEST,
+                detail='Replacement cost must be greater than 0',
+            )
+
         service = EquipmentService(db)
         return await service.create_equipment(
             name=equipment.name,
@@ -68,84 +80,129 @@ async def create_equipment(
     response_model=List[EquipmentResponse],
 )
 async def get_equipment_list(
-    skip: int = Query(0, ge=0),
-    limit: int = Query(100, gt=0, le=1000),
-    status: Optional[str] = None,
+    skip: Optional[int] = Query(0),
+    limit: Optional[int] = Query(100),
+    status: Optional[EquipmentStatus] = None,
     category_id: Optional[int] = None,
     query: Optional[str] = None,
     available_from: Optional[datetime] = None,
     available_to: Optional[datetime] = None,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    min_rate: Optional[str] = None,
+    max_rate: Optional[str] = None,
     db: AsyncSession = Depends(get_db),
 ) -> List[EquipmentResponse]:
-    """Get list of equipment with optional filtering and search.
-
-    Args:
-        skip: Number of records to skip
-        limit: Maximum number of records to return
-        status: Filter by equipment status
-        category_id: Filter by category ID
-        query: Search query for name, description, barcode, or serial number
-        available_from: Filter by availability start date
-        available_to: Filter by availability end date
-        db: Database session
-
-    Returns:
-        List of equipment items
-    """
+    """Get list of equipment with optional filtering."""
     try:
-        # Validate dates if both are provided
-        if available_from and available_to and available_from >= available_to:
-            raise BusinessError(
-                'Start date must be before end date',
-                details={
-                    'available_from': available_from.isoformat(),
-                    'available_to': available_to.isoformat(),
-                },
+        # Validate pagination parameters manually to ensure 422 status code
+        if skip is None or skip < 0:
+            raise HTTPException(
+                status_code=http_status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=[
+                    {
+                        'loc': ['query', 'skip'],
+                        'msg': 'Input should be greater than or equal to 0',
+                        'type': 'value_error',
+                    }
+                ],
+            )
+        if limit is None or limit <= 0:
+            raise HTTPException(
+                status_code=http_status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=[
+                    {
+                        'loc': ['query', 'limit'],
+                        'msg': 'Input should be greater than 0',
+                        'type': 'value_error',
+                    }
+                ],
+            )
+        if limit > 1000:
+            raise HTTPException(
+                status_code=http_status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=[
+                    {
+                        'loc': ['query', 'limit'],
+                        'msg': 'Input should be less than or equal to 1000',
+                        'type': 'value_error',
+                    }
+                ],
             )
 
-        service = EquipmentService(db)
+        # Validate date parameters
+        if start_date or end_date:
+            try:
+                if start_date:
+                    available_from = datetime.fromisoformat(start_date)
+                if end_date:
+                    available_to = datetime.fromisoformat(end_date)
+                if available_from and available_to and available_from >= available_to:
+                    raise HTTPException(
+                        status_code=http_status.HTTP_400_BAD_REQUEST,
+                        detail='Start date must be before end date',
+                    )
+            except ValueError:
+                raise HTTPException(
+                    status_code=http_status.HTTP_400_BAD_REQUEST,
+                    detail='Invalid date format. Use ISO format (YYYY-MM-DDTHH:MM:SS)',
+                )
 
-        # Convert status string to enum if provided
-        equipment_status = EquipmentStatus(status) if status else None
+        # Validate rate parameters
+        min_rate_float = None
+        max_rate_float = None
 
-        # If search query is provided and long enough, use search
-        if query and len(query) >= 3:
-            equipment_list = await service.search(query)
-            # Apply additional filters after search
-            if equipment_status:
-                filtered_list = [
-                    e for e in equipment_list if e.status == equipment_status
-                ]
-                equipment_list = filtered_list
-            if category_id:
-                filtered_list = [
-                    e for e in equipment_list if e.category_id == category_id
-                ]
-                equipment_list = filtered_list
-            # Apply pagination
-            return equipment_list[skip : skip + limit]
-        else:
-            # Use regular list with filters
-            equipment_list = await service.get_equipment_list(
-                skip=skip,
-                limit=limit,
-                status=equipment_status,
-                category_id=category_id,
-                available_from=available_from,
-                available_to=available_to,
+        # Validate query parameter length
+        if query and len(query) > 255:
+            raise HTTPException(
+                status_code=http_status.HTTP_400_BAD_REQUEST,
+                detail='Search query is too long. Maximum length is 255 characters.',
             )
-            return equipment_list
-    except ValueError as e:
-        status_values = [s.value for s in EquipmentStatus]
-        raise HTTPException(
-            status_code=http_status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=f'Invalid status value: {status}. Must be one of: {status_values}',
-        ) from e
+
+        if min_rate or max_rate:
+            try:
+                if min_rate:
+                    min_rate_float = float(min_rate)
+                    if min_rate_float < 0:
+                        raise ValueError('Minimum rate cannot be negative')
+                if max_rate:
+                    max_rate_float = float(max_rate)
+                    if max_rate_float < 0:
+                        raise ValueError('Maximum rate cannot be negative')
+                if (
+                    min_rate_float
+                    and max_rate_float
+                    and min_rate_float > max_rate_float
+                ):
+                    raise ValueError('Minimum rate cannot be greater than maximum rate')
+            except ValueError as e:
+                raise HTTPException(
+                    status_code=http_status.HTTP_400_BAD_REQUEST,
+                    detail=f'Invalid rate format: {str(e)}',
+                )
+
+        # Get equipment list
+        equipment_service = EquipmentService(db)
+        equipment_list = await equipment_service.get_equipment_list(
+            skip=skip,
+            limit=limit,
+            status=status,
+            category_id=category_id,
+            query=query,
+            available_from=available_from,
+            available_to=available_to,
+        )
+        return [EquipmentResponse.model_validate(e.__dict__) for e in equipment_list]
     except BusinessError as e:
         raise HTTPException(
             status_code=http_status.HTTP_400_BAD_REQUEST,
             detail=str(e),
-        ) from e
+        )
+    except NotFoundError as e:
+        raise HTTPException(
+            status_code=http_status.HTTP_404_NOT_FOUND,
+            detail=str(e),
+        )
 
 
 @typed_get(
@@ -184,46 +241,116 @@ async def update_equipment(
     equipment: EquipmentUpdate,
     db: AsyncSession = Depends(get_db),
 ) -> EquipmentResponse:
-    """Update equipment.
-
-    Args:
-        equipment_id: Equipment ID
-        equipment: Updated equipment data
-        db: Database session
-
-    Returns:
-        Updated equipment
-
-    Raises:
-        HTTPException: If equipment not found or validation error
-    """
+    """Update equipment by ID."""
     try:
+        # Validate rate and replacement cost
+        if equipment.daily_rate is not None and float(equipment.daily_rate) <= 0:
+            raise HTTPException(
+                status_code=http_status.HTTP_400_BAD_REQUEST,
+                detail='Daily rate must be greater than 0',
+            )
+        if (
+            equipment.replacement_cost is not None
+            and float(equipment.replacement_cost) <= 0
+        ):
+            raise HTTPException(
+                status_code=http_status.HTTP_400_BAD_REQUEST,
+                detail='Replacement cost must be greater than 0',
+            )
+
         service = EquipmentService(db)
-        updated = await service.update_equipment(
-            equipment_id,
-            name=equipment.name,
-            description=equipment.description,
-            daily_rate=float(equipment.daily_rate) if equipment.daily_rate else None,
-            replacement_cost=(
-                float(equipment.replacement_cost)
-                if equipment.replacement_cost
-                else None
-            ),
-            barcode=equipment.barcode,
-            serial_number=equipment.serial_number,
-            status=equipment.status,
-        )
-        return EquipmentResponse.model_validate(updated.__dict__)
-    except NotFoundError:
-        raise HTTPException(
-            status_code=http_status.HTTP_404_NOT_FOUND,
-            detail='Equipment not found',
-        )
-    except BusinessError as e:
+
+        # Get current equipment to check status transition
+        if equipment.status is not None:
+            current_equipment = await service.get_equipment(equipment_id)
+
+            # Validate status transition
+            if current_equipment.status != equipment.status:
+                # Check if transition is valid
+                if equipment.status == EquipmentStatus.RENTED:
+                    # Check if equipment is available for rent
+                    is_available = await service.check_availability(
+                        equipment_id,
+                        datetime.now(),
+                        datetime.now() + timedelta(days=1),
+                    )
+                    if not is_available:
+                        raise HTTPException(
+                            status_code=http_status.HTTP_400_BAD_REQUEST,
+                            detail=(
+                                'Invalid status transition: '
+                                'Equipment is not available for rent'
+                            ),
+                        )
+
+                # Add other status transition validations as needed
+                if (
+                    current_equipment.status == EquipmentStatus.MAINTENANCE
+                    and equipment.status == EquipmentStatus.RENTED
+                ):
+                    raise HTTPException(
+                        status_code=http_status.HTTP_400_BAD_REQUEST,
+                        detail=(
+                            'Invalid status transition: '
+                            'Cannot rent equipment under maintenance'
+                        ),
+                    )
+
+                # Validate that equipment can only be marked as RENTED through a booking
+                if equipment.status == EquipmentStatus.RENTED:
+                    raise HTTPException(
+                        status_code=http_status.HTTP_400_BAD_REQUEST,
+                        detail=(
+                            'Invalid status transition: '
+                            'Equipment can only be rented through a booking'
+                        ),
+                    )
+
+        # Update equipment
+        try:
+            # Convert model to dict and update equipment
+            equipment_data = equipment.model_dump(exclude_unset=True)
+
+            daily_rate_value = None
+            if (
+                'daily_rate' in equipment_data
+                and equipment_data['daily_rate'] is not None
+            ):
+                daily_rate_value = float(equipment_data['daily_rate'])
+
+            replacement_cost_value = None
+            if (
+                'replacement_cost' in equipment_data
+                and equipment_data['replacement_cost'] is not None
+            ):
+                replacement_cost_value = float(equipment_data['replacement_cost'])
+
+            updated_equipment = await service.update_equipment(
+                equipment_id,
+                name=equipment_data.get('name'),
+                description=equipment_data.get('description'),
+                daily_rate=daily_rate_value,
+                replacement_cost=replacement_cost_value,
+                barcode=equipment_data.get('barcode'),
+                serial_number=equipment_data.get('serial_number'),
+                status=equipment_data.get('status'),
+            )
+            return EquipmentResponse.model_validate(updated_equipment.__dict__)
+        except NotFoundError as e:
+            raise HTTPException(
+                status_code=http_status.HTTP_404_NOT_FOUND,
+                detail=str(e),
+            )
+        except BusinessError as e:
+            raise HTTPException(
+                status_code=http_status.HTTP_400_BAD_REQUEST,
+                detail=str(e),
+            )
+    except ValueError as e:
         raise HTTPException(
             status_code=http_status.HTTP_400_BAD_REQUEST,
-            detail=str(e),
-        ) from e
+            detail=f'Invalid data: {str(e)}',
+        )
 
 
 @typed_delete(
@@ -235,28 +362,42 @@ async def delete_equipment(
     equipment_id: int,
     db: AsyncSession = Depends(get_db),
 ) -> None:
-    """Delete equipment.
-
-    Args:
-        equipment_id: Equipment ID
-        db: Database session
-
-    Raises:
-        HTTPException: If equipment not found or has active bookings
-    """
+    """Delete equipment by ID."""
     try:
-        service = EquipmentService(db)
-        await service.delete_equipment(equipment_id)
-    except NotFoundError:
+        # Check if equipment has active bookings
+        booking_service = BookingService(db)
+        bookings = await booking_service.get_by_equipment(equipment_id)
+
+        # Filter for active, pending, or confirmed bookings
+        active_bookings = [
+            b
+            for b in bookings
+            if b.booking_status
+            in [BookingStatus.ACTIVE, BookingStatus.PENDING, BookingStatus.CONFIRMED]
+        ]
+
+        if active_bookings:
+            raise HTTPException(
+                status_code=http_status.HTTP_400_BAD_REQUEST,
+                detail=(
+                    f'Equipment with ID {equipment_id} has active bookings '
+                    'and cannot be deleted'
+                ),
+            )
+
+        # If no active bookings, proceed with deletion
+        equipment_service = EquipmentService(db)
+        await equipment_service.delete_equipment(equipment_id)
+    except NotFoundError as e:
         raise HTTPException(
             status_code=http_status.HTTP_404_NOT_FOUND,
-            detail='Equipment not found',
+            detail=str(e),
         )
     except BusinessError as e:
         raise HTTPException(
             status_code=http_status.HTTP_400_BAD_REQUEST,
             detail=str(e),
-        ) from e
+        )
 
 
 @typed_get(
