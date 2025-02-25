@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.api.v1.decorators import typed_delete, typed_get, typed_post, typed_put
 from backend.core.database import get_db
-from backend.exceptions import BusinessError
+from backend.exceptions import BusinessError, NotFoundError
 from backend.schemas import (
     CategoryCreate,
     CategoryResponse,
@@ -99,8 +99,14 @@ async def get_categories_with_equipment_count(
         List of categories with equipment count
     """
     service = CategoryService(session)
-    categories = await service.get_with_equipment_count()
-    return [CategoryWithEquipmentCount.model_validate(cat) for cat in categories]
+    try:
+        categories = await service.get_with_equipment_count()
+        return [CategoryWithEquipmentCount.model_validate(c) for c in categories]
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e),
+        )
 
 
 @typed_get(
@@ -166,6 +172,16 @@ async def update_category(
             parent_id=category.parent_id,
         )
         return CategoryResponse.model_validate(db_category)
+    except ValueError as e:
+        if 'not found' in str(e).lower():
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=str(e),
+            ) from e
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        ) from e
     except BusinessError as e:
         if 'not found' in str(e).lower():
             raise HTTPException(
@@ -204,6 +220,11 @@ async def delete_category(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f'Category with ID {category_id} not found',
             )
+    except NotFoundError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e),
+        ) from e
     except BusinessError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

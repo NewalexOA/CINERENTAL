@@ -10,8 +10,10 @@ from uuid import UUID
 
 from sqlalchemy import Column, ScalarSelect, and_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import joinedload
 from sqlalchemy.sql import Select
 
+from backend.exceptions import BusinessError
 from backend.models import Booking, BookingStatus, Equipment, EquipmentStatus
 from backend.repositories import BaseRepository
 
@@ -244,30 +246,31 @@ class EquipmentRepository(BaseRepository[Equipment]):
         Returns:
             True if equipment is available, False otherwise
         """
-        # First check if equipment exists and is available
+        # First check if equipment exists and is in a valid status
         equipment = await self.get(equipment_id)
-        if not equipment or equipment.status != EquipmentStatus.AVAILABLE:
+        if not equipment:
+            return False
+
+        valid_equipment_statuses = [EquipmentStatus.AVAILABLE, EquipmentStatus.RENTED]
+        if equipment.status not in valid_equipment_statuses:
             return False
 
         # Then check for overlapping bookings
+        booking_statuses = [BookingStatus.CONFIRMED, BookingStatus.ACTIVE]
         query = select(Booking).where(
             and_(
                 Booking.equipment_id == equipment_id,
-                Booking.booking_status.in_(
-                    [
-                        BookingStatus.PENDING,
-                        BookingStatus.CONFIRMED,
-                        BookingStatus.ACTIVE,
-                    ]
-                ),
+                Booking.booking_status.in_(booking_statuses),
                 or_(
+                    # Existing booking overlaps with requested period
                     and_(
                         Booking.start_date < end_date,
                         Booking.end_date > start_date,
                     ),
+                    # Requested period is within existing booking
                     and_(
-                        Booking.start_date >= start_date,
-                        Booking.start_date < end_date,
+                        Booking.start_date <= start_date,
+                        Booking.end_date >= end_date,
                     ),
                 ),
             )
@@ -277,7 +280,23 @@ class EquipmentRepository(BaseRepository[Equipment]):
             query = query.where(Booking.id != exclude_booking_id)
 
         result = await self.session.execute(query)
-        return not bool(result.scalar_one_or_none())
+        overlapping_booking = result.scalar_one_or_none()
+
+        # Equipment is available if:
+        # 1. It's in AVAILABLE status and has no overlapping bookings
+        # 2. It's in RENTED status but the overlapping booking is
+        # the one we're excluding
+
+        if equipment.status == EquipmentStatus.AVAILABLE:
+            return overlapping_booking is None
+
+        # For RENTED status
+        has_valid_booking = (
+            exclude_booking_id
+            and overlapping_booking
+            and overlapping_booking.id == exclude_booking_id
+        )
+        return overlapping_booking is None or bool(has_valid_booking)
 
     async def get_by_status(self, status: EquipmentStatus) -> List[Equipment]:
         """Get equipment by status.
@@ -317,3 +336,81 @@ class EquipmentRepository(BaseRepository[Equipment]):
             True if equipment was deleted, False otherwise
         """
         return await super().delete(id=id)
+
+    async def get_bookings(self, equipment_id: int) -> List[Booking]:
+        """Get equipment bookings.
+
+        Args:
+            equipment_id: Equipment ID
+
+        Returns:
+            List of bookings
+        """
+        query = (
+            select(Booking)
+            .where(Booking.equipment_id == equipment_id)
+            .options(joinedload(Booking.equipment))
+        )
+        result = await self.session.execute(query)
+        return list(result.scalars().all())
+
+    async def get_list(
+        self,
+        skip: int = 0,
+        limit: int = 100,
+        status: Optional[EquipmentStatus] = None,
+        category_id: Optional[int] = None,
+        query: Optional[str] = None,
+        available_from: Optional[datetime] = None,
+        available_to: Optional[datetime] = None,
+    ) -> List[Equipment]:
+        """Get list of equipment with optional filtering and search."""
+        try:
+            stmt = select(Equipment)
+
+            if status:
+                stmt = stmt.where(Equipment.status == status)
+            if category_id:
+                stmt = stmt.where(Equipment.category_id == category_id)
+            if query:
+                search_pattern = f'%{query}%'
+                stmt = stmt.where(
+                    or_(
+                        Equipment.name.ilike(search_pattern),
+                        Equipment.description.ilike(search_pattern),
+                        Equipment.barcode.ilike(search_pattern),
+                        Equipment.serial_number.ilike(search_pattern),
+                    )
+                )
+
+            # Add date filtering if both dates are provided
+            if available_from and available_to:
+                # Get equipment IDs that are not booked during the specified period
+                booked_equipment = (
+                    select(Booking.equipment_id)
+                    .where(
+                        and_(
+                            Booking.start_date < available_to,
+                            Booking.end_date > available_from,
+                            Booking.booking_status.in_(
+                                [
+                                    BookingStatus.PENDING,
+                                    BookingStatus.CONFIRMED,
+                                    BookingStatus.ACTIVE,
+                                ]
+                            ),
+                        )
+                    )
+                    .distinct()
+                )
+                stmt = stmt.where(~Equipment.id.in_(booked_equipment))
+
+            stmt = stmt.offset(skip).limit(limit)
+            result = await self.session.execute(stmt)
+            return list(result.scalars().all())
+
+        except Exception as e:
+            raise BusinessError(
+                'Failed to get equipment list',
+                details={'error': str(e)},
+            ) from e

@@ -9,7 +9,9 @@ from typing import Any, Dict
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.exceptions import BusinessError
+from backend.exceptions.exceptions_base import BusinessError
+from backend.exceptions.resource_exceptions import AvailabilityError
+from backend.exceptions.state_exceptions import StateError, StatusTransitionError
 from backend.models.booking import Booking, BookingStatus, PaymentStatus
 from backend.models.client import Client
 from backend.models.document import DocumentStatus, DocumentType
@@ -19,11 +21,11 @@ from backend.services.category import CategoryService
 from backend.services.client import ClientService
 from backend.services.document import DocumentService
 from backend.services.equipment import EquipmentService
-from tests.conftest import async_test
+from tests.conftest import async_fixture, async_test
 
 
-@pytest.fixture
-def services(
+@async_fixture
+async def services(
     db_session: AsyncSession,
 ) -> Dict[str, Any]:
     """Create services for testing."""
@@ -368,7 +370,7 @@ class TestBookingLifecycle:
         )
 
         # Try to create booking for equipment in maintenance
-        with pytest.raises(ValueError):
+        with pytest.raises(AvailabilityError):
             await booking_service.create_booking(
                 client_id=test_client.id,
                 equipment_id=test_equipment.id,
@@ -399,10 +401,21 @@ class TestBookingLifecycle:
         booking = await booking_service.change_status(
             booking.id, BookingStatus.CONFIRMED
         )
+
+        # Set payment status to PAID before activating
+        await booking_service.update_booking(
+            booking.id,
+            paid_amount=300.0,  # Full payment
+        )
+        await booking_service.change_payment_status(
+            booking.id,
+            PaymentStatus.PAID,
+        )
+
         booking = await booking_service.change_status(booking.id, BookingStatus.ACTIVE)
 
         # Cannot retire equipment with active booking
-        with pytest.raises(ValueError):
+        with pytest.raises(BusinessError):
             await equipment_service.change_status(
                 test_equipment.id,
                 EquipmentStatus.RETIRED,
@@ -529,11 +542,11 @@ class TestDocumentLifecycle:
         )
 
         # Try invalid transitions
-        with pytest.raises(ValueError):
+        with pytest.raises(StatusTransitionError):
             # Cannot go directly from DRAFT to APPROVED
             await document_service.change_status(document.id, DocumentStatus.APPROVED)
 
-        with pytest.raises(ValueError):
+        with pytest.raises(StatusTransitionError):
             # Cannot go directly from DRAFT to REJECTED
             await document_service.change_status(document.id, DocumentStatus.REJECTED)
 
@@ -542,7 +555,7 @@ class TestDocumentLifecycle:
             document.id, DocumentStatus.PENDING
         )
 
-        with pytest.raises(ValueError):
+        with pytest.raises(StatusTransitionError):
             # Cannot go back to DRAFT
             await document_service.change_status(document.id, DocumentStatus.DRAFT)
 
@@ -615,7 +628,8 @@ class TestEquipmentBusinessRules:
         assert equipment.status == EquipmentStatus.RETIRED
 
         # Cannot change status of retired equipment
-        with pytest.raises(BusinessError, match='Cannot transition from'):
+        error_msg = 'Cannot change status from RETIRED to AVAILABLE'
+        with pytest.raises(StateError, match=error_msg):
             await equipment_service.change_status(
                 equipment.id, EquipmentStatus.AVAILABLE
             )
@@ -634,12 +648,10 @@ class TestEquipmentBusinessRules:
         # Equipment is available initially
         assert test_equipment.status == EquipmentStatus.AVAILABLE
 
-        # Create overlapping bookings
+        # Create first booking
         start_date = datetime.now(timezone.utc) + timedelta(days=1)
         end_date = start_date + timedelta(days=3)
-
-        # Create first booking
-        await booking_service.create_booking(
+        booking = await booking_service.create_booking(
             client_id=test_client.id,
             equipment_id=test_equipment.id,
             start_date=start_date,
@@ -648,8 +660,11 @@ class TestEquipmentBusinessRules:
             deposit_amount=200.00,
         )
 
+        # Confirm the booking to make it affect availability
+        await booking_service.change_status(booking.id, BookingStatus.CONFIRMED)
+
         # Try to create overlapping booking
-        with pytest.raises(BusinessError, match='not available'):
+        with pytest.raises(AvailabilityError, match='not available'):
             await booking_service.create_booking(
                 client_id=test_client.id,
                 equipment_id=test_equipment.id,
@@ -667,12 +682,25 @@ class TestEquipmentBusinessRules:
         )
         assert not is_available
 
+        # Create a new equipment for testing maintenance status
+        new_equipment = Equipment(
+            name='Test Equipment for Maintenance',
+            description='Test equipment for maintenance status',
+            serial_number='TEST-MAINT-001',
+            barcode='BARCODE-MAINT-001',
+            daily_rate=100.00,
+            replacement_cost=1000.00,
+            category_id=test_equipment.category_id,
+            status=EquipmentStatus.AVAILABLE,
+        )
+        new_equipment = await services['equipment'].repository.create(new_equipment)
+
         # Equipment in maintenance is not available
         await equipment_service.change_status(
-            test_equipment.id, EquipmentStatus.MAINTENANCE
+            new_equipment.id, EquipmentStatus.MAINTENANCE
         )
         is_available = await equipment_service.check_availability(
-            test_equipment.id,
+            new_equipment.id,
             start_date + timedelta(days=7),  # Even for future dates
             end_date + timedelta(days=7),
         )

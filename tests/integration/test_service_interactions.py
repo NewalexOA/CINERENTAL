@@ -9,6 +9,7 @@ from typing import Any, Dict
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from backend.exceptions.resource_exceptions import AvailabilityError
 from backend.models.booking import BookingStatus, PaymentStatus
 from backend.models.client import Client
 from backend.models.document import DocumentStatus, DocumentType
@@ -189,7 +190,7 @@ class TestEquipmentAvailability:
 
         # Act
         # Create first booking
-        await services['booking'].create_booking(
+        booking = await services['booking'].create_booking(
             client_id=test_client.id,
             equipment_id=test_equipment.id,
             start_date=start_date,
@@ -198,9 +199,12 @@ class TestEquipmentAvailability:
             deposit_amount=deposit_amount,
         )
 
+        # Confirm the booking to make it affect availability
+        await services['booking'].change_status(booking.id, BookingStatus.CONFIRMED)
+
         # Try to create overlapping booking
         with pytest.raises(
-            ValueError,
+            AvailabilityError,
             match=f'Equipment {test_equipment.id} is not available',
         ):
             await services['booking'].create_booking(

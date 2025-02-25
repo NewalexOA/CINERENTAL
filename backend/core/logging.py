@@ -62,7 +62,7 @@ class LogConfig(BaseModel):
         LOGGER_NAME: {'handlers': ['default'], 'level': LOG_LEVEL, 'propagate': False},
         'uvicorn': {'handlers': ['default'], 'level': LOG_LEVEL, 'propagate': False},
         'fastapi': {'handlers': ['default'], 'level': LOG_LEVEL, 'propagate': False},
-        'sqlalchemy': {'handlers': ['default'], 'level': LOG_LEVEL, 'propagate': False},
+        'sqlalchemy': {'handlers': ['default'], 'level': 'WARNING', 'propagate': False},
         'alembic': {'handlers': ['default'], 'level': LOG_LEVEL, 'propagate': False},
     }
 
@@ -244,13 +244,26 @@ def should_log(record: Any) -> bool:
         # Skip SQLAlchemy initialization logs
         if str(record['name']).startswith('sqlalchemy'):
             msg = str(record['message']).lower()
-            if any(x in msg for x in ['initialize prop', 'setup', 'configure']):
+            if any(
+                x in msg
+                for x in [
+                    'initialize prop',
+                    'setup',
+                    'configure',
+                    'select',
+                    'begin',
+                    'rollback',
+                    'commit',
+                    'cached',
+                    'generated in',
+                ]
+            ):
                 return False
 
         # Skip duplicate database operation logs from standard logging
         if str(record['name']) == 'logging':
             msg = str(record['message']).lower()
-            if msg.startswith(('select', 'begin', 'rollback')):
+            if msg.startswith(('select', 'begin', 'rollback', 'commit')):
                 return False
 
         return True

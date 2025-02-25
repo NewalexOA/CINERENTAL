@@ -88,8 +88,10 @@ class Document(TimestampMixin, Base):
         nullable=False,
         index=True,
     )
-    booking_id: Mapped[int] = mapped_column(
-        ForeignKey('bookings.id', ondelete='CASCADE')
+    booking_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey('bookings.id', ondelete='CASCADE'),
+        nullable=True,
+        index=True,
     )
     type: Mapped[DocumentType] = mapped_column(
         document_type_enum,

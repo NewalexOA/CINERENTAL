@@ -2,11 +2,14 @@
 
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
+from typing import Dict
 
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.exceptions import BusinessError, StateError, ValidationError
+from backend.exceptions.exceptions_base import BusinessError
+from backend.exceptions.state_exceptions import StateError
+from backend.exceptions.validation_exceptions import ValidationError
 from backend.models import (
     Booking,
     BookingStatus,
@@ -516,18 +519,18 @@ class TestEquipmentService:
     async def test_get_equipment_invalid_dates(
         self,
         service: EquipmentService,
-        test_dates: dict[str, datetime],
+        test_dates: Dict[str, datetime],
     ) -> None:
         """Test getting equipment with invalid dates."""
         # End date before start date
-        with pytest.raises(ValidationError, match='Start date must be before end date'):
+        with pytest.raises(BusinessError, match='Start date must be before end date'):
             await service.get_equipment_list(
                 available_from=test_dates['end_date'],
                 available_to=test_dates['start_date'],
             )
 
         # Same dates
-        with pytest.raises(ValidationError, match='Start date must be before end date'):
+        with pytest.raises(BusinessError, match='Start date must be before end date'):
             await service.get_equipment_list(
                 available_from=test_dates['start_date'],
                 available_to=test_dates['start_date'],
