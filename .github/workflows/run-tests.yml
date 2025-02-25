@@ -55,7 +55,7 @@ jobs:
 
       - name: Run migrations
         run: |
-          docker compose run --rm test alembic upgrade head
+          docker compose run --rm --no-deps --entrypoint "alembic" test upgrade head
 
       - name: Create pytest cache directory with proper permissions
         run: |
@@ -64,8 +64,11 @@ jobs:
 
       - name: Run tests
         run: |
-          # Используем команду согласно документации
-          docker compose run --rm --no-deps -e PYTHONVERBOSE=1 test tests/ -v
+          # Выводим список тестовых файлов для отладки
+          docker compose run --rm --no-deps --entrypoint "find" test /app/tests -type f -name "test_*.py" | sort
+
+          # Используем команду согласно документации с дополнительными опциями для отладки
+          docker compose run --rm --no-deps -e PYTHONVERBOSE=1 test tests/ -v --no-header -p no:cacheprovider
 
       - name: Copy coverage report from container
         if: success()
