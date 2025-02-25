@@ -139,9 +139,10 @@ class BookingService:
             if not await self.equipment_repository.check_availability(
                 equipment_id, start_date, end_date
             ):
-                raise StateError(
-                    'Equipment {id} is not available '
-                    'for the specified period'.format(id=equipment_id),
+                raise AvailabilityError(
+                    message=f'Equipment {equipment_id} is not available',
+                    resource_id=str(equipment_id),
+                    resource_type='equipment',
                     details={
                         'equipment_id': equipment_id,
                         'start_date': start_date.isoformat(),
@@ -160,9 +161,17 @@ class BookingService:
                 notes=notes,
             )
             return await self.repository.create(booking)
-        except (ValidationError, DateError, DurationError, StateError) as e:
+        except (
+            ValidationError,
+            DateError,
+            DurationError,
+            StateError,
+        ) as e:
             # Convert domain-specific errors to ValueError for compatibility
             raise ValueError(str(e)) from e
+        except AvailabilityError:
+            # Re-raise AvailabilityError without converting
+            raise
 
     async def update_booking(
         self,
@@ -193,61 +202,72 @@ class BookingService:
             NotFoundError: If booking is not found
             DateError: If new dates are invalid
             StateError: If equipment is not available for new dates
+            ValueError: If any validation fails
         """
-        if booking_id <= 0:
-            raise ValidationError('Booking ID must be positive')
+        try:
+            if booking_id <= 0:
+                raise ValidationError('Booking ID must be positive')
 
-        booking = await self.repository.get(booking_id)
-        if not booking:
-            raise NotFoundError(
-                f'Booking with ID {booking_id} not found',
-                details={'booking_id': booking_id},
-            )
-
-        if start_date and end_date:
-            # Validate dates
-            if start_date >= end_date:
-                raise DateError(
-                    'End date must be after start date',
-                    start_date=start_date,
-                    end_date=end_date,
+            booking = await self.repository.get(booking_id)
+            if not booking:
+                raise NotFoundError(
+                    f'Booking with ID {booking_id} not found',
+                    details={'booking_id': booking_id},
                 )
 
-            # Check if new dates overlap with other bookings
-            if not await self.equipment_repository.check_availability(
-                booking.equipment_id,
-                start_date,
-                end_date,
-                exclude_booking_id=booking_id,
-            ):
-                raise StateError(
-                    'Equipment {id} is not available '
-                    'for the specified period'.format(id=booking.equipment_id),
-                    details={
-                        'equipment_id': booking.equipment_id,
-                        'start_date': start_date.isoformat(),
-                        'end_date': end_date.isoformat(),
-                    },
-                )
+            if start_date and end_date:
+                # Validate dates
+                if start_date >= end_date:
+                    raise DateError(
+                        'End date must be after start date',
+                        start_date=start_date,
+                        end_date=end_date,
+                    )
 
-        # Update fields if provided
-        if start_date:
-            booking.start_date = start_date
-        if end_date:
-            booking.end_date = end_date
-        if total_amount is not None:
-            booking.total_amount = Decimal(str(total_amount))
-        if deposit_amount is not None:
-            booking.deposit_amount = Decimal(str(deposit_amount))
-        if paid_amount is not None:
-            booking.paid_amount = Decimal(str(paid_amount))
-        if notes is not None:
-            booking.notes = notes
+                # Check if new dates overlap with other bookings
+                if not await self.equipment_repository.check_availability(
+                    booking.equipment_id,
+                    start_date,
+                    end_date,
+                    exclude_booking_id=booking_id,
+                ):
+                    raise AvailabilityError(
+                        message=f'Equipment {booking.equipment_id} is not available',
+                        resource_id=str(booking.equipment_id),
+                        resource_type='equipment',
+                        details={
+                            'equipment_id': booking.equipment_id,
+                            'start_date': start_date.isoformat(),
+                            'end_date': end_date.isoformat(),
+                        },
+                    )
 
-        # Ensure equipment_id is preserved
-        booking.equipment_id = booking.equipment_id
+            # Update fields if provided
+            if start_date:
+                booking.start_date = start_date
+            if end_date:
+                booking.end_date = end_date
+            if total_amount is not None:
+                booking.total_amount = Decimal(str(total_amount))
+            if deposit_amount is not None:
+                booking.deposit_amount = Decimal(str(deposit_amount))
+            if paid_amount is not None:
+                booking.paid_amount = Decimal(str(paid_amount))
+            if notes is not None:
+                booking.notes = notes
 
-        return await self.repository.update(booking)
+            # Ensure equipment_id is preserved
+            booking.equipment_id = booking.equipment_id
+
+            return await self.repository.update(booking)
+        except (ValidationError, DateError, StateError) as e:
+            # Do not convert domain-specific errors to ValueError
+            if isinstance(e, NotFoundError):
+                raise
+            raise e
+        except AvailabilityError:
+            # Re-raise AvailabilityError without converting
+            raise
 
     async def get_booking(self, booking_id: int) -> Booking:
         """Get booking by ID.
@@ -268,7 +288,7 @@ class BookingService:
         booking = await self.repository.get(booking_id)
         if not booking:
             raise NotFoundError(
-                f'Booking {booking_id} not found',
+                f'Booking with ID {booking_id} not found',
                 details={'booking_id': booking_id},
             )
         return booking
@@ -502,7 +522,8 @@ class BookingService:
         booking = await self.repository.get(booking_id)
         if not booking:
             raise NotFoundError(
-                f'Booking {booking_id} not found', details={'booking_id': booking_id}
+                f'Booking with ID {booking_id} not found',
+                details={'booking_id': booking_id},
             )
 
         # Define allowed transitions
