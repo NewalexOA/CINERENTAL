@@ -47,11 +47,11 @@ jobs:
           # Ensure wait-for.sh is executable
           chmod +x docker/wait-for.sh
 
-          # Wait for PostgreSQL
-          docker compose run --rm test bash -c "timeout 60s bash -c 'until pg_isready -h test_db -p 5432 -U postgres; do sleep 1; done'"
+          # Wait for PostgreSQL using wait-for.sh
+          docker compose run --rm --no-deps --entrypoint "./docker/wait-for.sh" test postgres test_db 5432
 
-          # Wait for Redis
-          docker compose run --rm test bash -c "timeout 60s bash -c 'until redis-cli -h redis ping; do sleep 1; done'"
+          # Wait for Redis using wait-for.sh
+          docker compose run --rm --no-deps --entrypoint "./docker/wait-for.sh" test redis redis 6379
 
       - name: Run migrations
         run: |
