@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.api.v1.decorators import typed_delete, typed_get, typed_post, typed_put
 from backend.core.database import get_db
-from backend.exceptions import BusinessError
+from backend.exceptions import BusinessError, NotFoundError
 from backend.schemas import (
     CategoryCreate,
     CategoryResponse,
@@ -210,6 +210,11 @@ async def delete_category(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f'Category with ID {category_id} not found',
             )
+    except NotFoundError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e),
+        ) from e
     except BusinessError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
