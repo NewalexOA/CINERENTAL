@@ -59,7 +59,8 @@ jobs:
 
       - name: Create pytest cache directory with proper permissions
         run: |
-          docker compose run --rm test bash -c "mkdir -p /app/.pytest_cache && chmod 777 /app/.pytest_cache"
+          docker compose run --rm --no-deps --entrypoint "mkdir" test -p /app/.pytest_cache
+          docker compose run --rm --no-deps --entrypoint "chmod" test 777 /app/.pytest_cache
 
       - name: Run tests
         run: |
@@ -73,7 +74,7 @@ jobs:
           mkdir -p coverage
 
           # Copy HTML coverage report from container to host
-          docker compose run --rm --entrypoint "bash -c" test "cp -r htmlcov /app/coverage/ || echo 'No htmlcov directory found'"
+          docker compose run --rm --no-deps --entrypoint "sh" test -c "cp -r htmlcov /app/coverage/ 2>/dev/null || echo 'No htmlcov directory found'"
 
       - name: Upload coverage report as artifact
         if: success()
