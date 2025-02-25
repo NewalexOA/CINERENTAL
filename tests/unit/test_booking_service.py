@@ -308,11 +308,11 @@ class TestBookingService:
         self,
         booking_service: BookingService,
         booking: Booking,
-        client: Client,
+        test_client: Client,
     ) -> None:
         """Test getting bookings by client."""
         # Get bookings for client
-        bookings = await booking_service.get_by_client(client.id)
+        bookings = await booking_service.get_by_client(test_client.id)
 
         # Check that the list contains our booking
         assert len(bookings) >= 1
@@ -320,7 +320,7 @@ class TestBookingService:
 
         # Check that all bookings belong to the client
         for b in bookings:
-            assert b.client_id == client.id
+            assert b.client_id == test_client.id
 
         # Test getting bookings for non-existent client
         result = await booking_service.get_by_client(999)
@@ -331,11 +331,11 @@ class TestBookingService:
         self,
         booking_service: BookingService,
         booking: Booking,
-        equipment: Equipment,
+        test_equipment: Equipment,
     ) -> None:
         """Test getting bookings by equipment."""
         # Get bookings for equipment
-        bookings = await booking_service.get_by_equipment(equipment.id)
+        bookings = await booking_service.get_by_equipment(test_equipment.id)
 
         # Check that the list contains our booking
         assert len(bookings) >= 1
@@ -343,7 +343,7 @@ class TestBookingService:
 
         # Check that all bookings are for the equipment
         for b in bookings:
-            assert b.equipment_id == equipment.id
+            assert b.equipment_id == test_equipment.id
 
         # Test getting bookings for non-existent equipment
         result = await booking_service.get_by_equipment(999)

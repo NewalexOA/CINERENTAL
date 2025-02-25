@@ -9,7 +9,8 @@ from typing import Any, Dict
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.exceptions import BusinessError
+from backend.exceptions.exceptions_base import BusinessError
+from backend.exceptions.state_exceptions import StateError
 from backend.models.booking import Booking, BookingStatus, PaymentStatus
 from backend.models.client import Client
 from backend.models.document import DocumentStatus, DocumentType
@@ -19,11 +20,11 @@ from backend.services.category import CategoryService
 from backend.services.client import ClientService
 from backend.services.document import DocumentService
 from backend.services.equipment import EquipmentService
-from tests.conftest import async_test
+from tests.conftest import async_fixture, async_test
 
 
-@pytest.fixture
-def services(
+@async_fixture
+async def services(
     db_session: AsyncSession,
 ) -> Dict[str, Any]:
     """Create services for testing."""
@@ -615,7 +616,8 @@ class TestEquipmentBusinessRules:
         assert equipment.status == EquipmentStatus.RETIRED
 
         # Cannot change status of retired equipment
-        with pytest.raises(BusinessError, match='Cannot transition from'):
+        error_msg = 'Cannot change status from RETIRED to AVAILABLE'
+        with pytest.raises(StateError, match=error_msg):
             await equipment_service.change_status(
                 equipment.id, EquipmentStatus.AVAILABLE
             )
