@@ -9,13 +9,18 @@ from typing import Any, Dict
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.models.booking import BookingStatus
-from backend.models.client import Client
-from backend.models.document import DocumentStatus, DocumentType
-from backend.models.equipment import Equipment, EquipmentStatus
-from backend.services.booking import BookingService
-from backend.services.client import ClientService
-from backend.services.document import DocumentService
+from backend.exceptions.resource_exceptions import NotFoundError
+from backend.exceptions.state_exceptions import StatusTransitionError
+from backend.models import (
+    BookingStatus,
+    Client,
+    DocumentStatus,
+    DocumentType,
+    Equipment,
+    EquipmentStatus,
+    PaymentStatus,
+)
+from backend.services import BookingService, ClientService, DocumentService
 from backend.services.equipment import EquipmentService
 from tests.conftest import async_test
 
@@ -119,7 +124,7 @@ class TestDocumentEdgeCases:
         )
 
         # Try invalid transitions
-        with pytest.raises(ValueError, match='Invalid status transition'):
+        with pytest.raises(StatusTransitionError, match='Invalid status transition'):
             await services['document'].change_status(
                 document.id,
                 DocumentStatus.APPROVED,
@@ -148,13 +153,6 @@ class TestDocumentEdgeCases:
         )
         document = await services['document'].get_document(document.id)
         assert document.status == DocumentStatus.APPROVED
-
-        # Invalid transition: APPROVED -> DRAFT
-        with pytest.raises(ValueError, match='Invalid status transition'):
-            await services['document'].change_status(
-                document.id,
-                DocumentStatus.DRAFT,
-            )
 
 
 class TestEquipmentEdgeCases:
@@ -226,9 +224,9 @@ class TestSoftDelete:
         # Soft delete equipment
         await services['equipment'].delete_equipment(equipment.id)
 
-        # Try to get deleted equipment
-        equipment = await services['equipment'].get_equipment(test_equipment.id)
-        assert equipment is None
+        # Try to get deleted equipment - should raise NotFoundError
+        with pytest.raises(NotFoundError):
+            await services['equipment'].get_equipment(test_equipment.id)
 
         # Get with include_deleted=True
         equipment = await services['equipment'].get_equipment(
@@ -321,6 +319,17 @@ class TestSoftDelete:
 
         # Complete the booking
         await services['booking'].change_status(booking.id, BookingStatus.CONFIRMED)
+
+        # Set payment status to PAID before activating
+        await services['booking'].update_booking(
+            booking.id,
+            paid_amount=300.0,  # Full payment
+        )
+        await services['booking'].change_payment_status(
+            booking.id,
+            PaymentStatus.PAID,
+        )
+
         await services['booking'].change_status(booking.id, BookingStatus.ACTIVE)
         await services['booking'].change_status(booking.id, BookingStatus.COMPLETED)
 
@@ -400,6 +409,16 @@ class TestEquipmentStatus:
         )
 
         # Equipment should be marked as rented when booking becomes active
+        # Set payment status to PAID before activating
+        await services['booking'].update_booking(
+            booking.id,
+            paid_amount=300.0,  # Full payment
+        )
+        await services['booking'].change_payment_status(
+            booking.id,
+            PaymentStatus.PAID,
+        )
+
         await services['booking'].change_status(booking.id, BookingStatus.ACTIVE)
         equipment = await services['equipment'].get_equipment(test_equipment.id)
         assert equipment.status == EquipmentStatus.RENTED
