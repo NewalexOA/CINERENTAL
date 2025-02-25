@@ -9,7 +9,7 @@ from typing import Any, Dict
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.exceptions.resource_exceptions import NotFoundError
+from backend.exceptions.resource_exceptions import AvailabilityError, NotFoundError
 from backend.exceptions.state_exceptions import StatusTransitionError
 from backend.models import (
     BookingStatus,
@@ -444,7 +444,7 @@ class TestEquipmentStatus:
 
         # Try to book equipment in maintenance
         with pytest.raises(
-            ValueError,
+            AvailabilityError,
             match=f'Equipment {test_equipment.id} is not available',
         ):
             await services['booking'].create_booking(
@@ -464,7 +464,7 @@ class TestEquipmentStatus:
 
         # Try to book broken equipment
         with pytest.raises(
-            ValueError,
+            AvailabilityError,
             match=f'Equipment {test_equipment.id} is not available',
         ):
             await services['booking'].create_booking(
@@ -484,7 +484,7 @@ class TestEquipmentStatus:
 
         # Try to book retired equipment
         with pytest.raises(
-            ValueError,
+            AvailabilityError,
             match=f'Equipment {test_equipment.id} is not available',
         ):
             await services['booking'].create_booking(

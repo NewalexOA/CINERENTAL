@@ -10,6 +10,7 @@ import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.exceptions.exceptions_base import BusinessError
+from backend.exceptions.resource_exceptions import AvailabilityError
 from backend.exceptions.state_exceptions import StateError, StatusTransitionError
 from backend.models.booking import Booking, BookingStatus, PaymentStatus
 from backend.models.client import Client
@@ -369,7 +370,7 @@ class TestBookingLifecycle:
         )
 
         # Try to create booking for equipment in maintenance
-        with pytest.raises(ValueError):
+        with pytest.raises(AvailabilityError):
             await booking_service.create_booking(
                 client_id=test_client.id,
                 equipment_id=test_equipment.id,
@@ -663,7 +664,7 @@ class TestEquipmentBusinessRules:
         await booking_service.change_status(booking.id, BookingStatus.CONFIRMED)
 
         # Try to create overlapping booking
-        with pytest.raises(ValueError, match='not available'):
+        with pytest.raises(AvailabilityError, match='not available'):
             await booking_service.create_booking(
                 client_id=test_client.id,
                 equipment_id=test_equipment.id,

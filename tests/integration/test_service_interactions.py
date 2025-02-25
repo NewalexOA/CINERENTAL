@@ -190,7 +190,7 @@ class TestEquipmentAvailability:
 
         # Act
         # Create first booking
-        await services['booking'].create_booking(
+        booking = await services['booking'].create_booking(
             client_id=test_client.id,
             equipment_id=test_equipment.id,
             start_date=start_date,
@@ -198,6 +198,9 @@ class TestEquipmentAvailability:
             total_amount=total_amount,
             deposit_amount=deposit_amount,
         )
+
+        # Confirm the booking to make it affect availability
+        await services['booking'].change_status(booking.id, BookingStatus.CONFIRMED)
 
         # Try to create overlapping booking
         with pytest.raises(
