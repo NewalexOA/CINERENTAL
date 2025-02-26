@@ -1,60 +1,55 @@
-[build-system]
-requires = ["setuptools>=61.0"]
-build-backend = "setuptools.build_meta"
-
-[project]
+[tool.poetry]
 name = "cinerental"
 version = "0.1.0"
 description = "Equipment rental management system"
-authors = [
-    { name = "Alexey Anashkin", email = "dev.anashkin@gmail.com" }
-]
-license = { text = "MIT" }
-requires-python = ">=3.12"
-dependencies = [
-    "fastapi>=0.109.0",
-    "uvicorn[standard]>=0.27.0",
-    "sqlalchemy[asyncio]>=2.0.25",
-    "alembic>=1.13.1",
-    "pydantic>=2.5.3",
-    "pydantic-settings>=2.1.0",
-    "redis[hiredis]>=5.0.1",
-    "asyncpg>=0.29.0",
-    "python-jose[cryptography]>=3.3.0",
-    "passlib[bcrypt]>=1.7.4",
-    "python-multipart>=0.0.6",
-    "jinja2>=3.1.2",
-    "aiofiles>=23.2.1",
-    "loguru>=0.7.2",
-]
+authors = ["Alexey Anashkin <dev.anashkin@gmail.com>"]
+license = "MIT"
+packages = [{include = "backend"}]
+readme = "README.md"
 
-[project.optional-dependencies]
-dev = [
-    "black>=24.1.0",
-    "isort>=5.13.2",
-    "flake8>=7.0.0",
-    "mypy>=1.8.0",
-    "pre-commit>=3.6.0",
-    "types-redis>=4.6.0.20240106",
-    "types-passlib>=1.7.7.20240106",
-    "types-python-jose>=3.3.4.20240106",
-    "pytest>=8.0.0",
-    "pytest-cov>=4.1.0",
-    "pytest-asyncio>=0.23.5",
-    "httpx>=0.25.1",
-    "faker>=22.6.0",
-]
+[tool.poetry.dependencies]
+python = ">=3.12,<4.0"
+fastapi = "^0.109.0"
+uvicorn = {extras = ["standard"], version = "^0.27.0"}
+sqlalchemy = {extras = ["asyncio"], version = "^2.0.25"}
+alembic = "^1.13.1"
+pydantic = "^2.5.3"
+pydantic-settings = "^2.1.0"
+redis = {extras = ["hiredis"], version = "^5.0.1"}
+asyncpg = "^0.29.0"
+python-jose = {extras = ["cryptography"], version = "^3.3.0"}
+passlib = {extras = ["bcrypt"], version = "^1.7.4"}
+python-multipart = "^0.0.6"
+jinja2 = "^3.1.2"
+aiofiles = "^23.2.1"
+loguru = "^0.7.2"
+faker = "^22.6.0"
 
-test = [
-    "pytest>=8.0.0",
-    "pytest-cov>=4.1.0",
-    "pytest-asyncio>=0.23.5",
-    "httpx>=0.25.1",
-    "faker>=22.6.0",
-]
+[tool.poetry.group.dev.dependencies]
+black = "^24.1.0"
+isort = "^5.13.2"
+flake8 = "^7.0.0"
+mypy = "^1.8.0"
+pre-commit = "^3.6.0"
+types-redis = "^4.6.0.20240106"
+types-passlib = "^1.7.7.20240106"
+types-python-jose = "^3.3.4.20240106"
+pytest = "^8.0.0"
+pytest-cov = "^4.1.0"
+pytest-asyncio = "^0.23.5"
+httpx = "^0.25.1"
+faker = "^22.6.0"
 
-[tool.setuptools]
-packages = ["backend"]
+[tool.poetry.group.test.dependencies]
+pytest = "^8.0.0"
+pytest-cov = "^4.1.0"
+pytest-asyncio = "^0.23.5"
+httpx = "^0.25.1"
+faker = "^22.6.0"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
 
 [tool.black]
 line-length = 88
@@ -113,17 +108,9 @@ addopts = "--import-mode=importlib"
 filterwarnings = [
     "ignore::DeprecationWarning",
     "ignore::UserWarning",
+    "ignore::PendingDeprecationWarning:starlette.formparsers",
 ]
 markers = [
     "unit: marks tests as unit tests",
     "integration: marks tests as integration tests",
 ]
-
-[tool.poetry.dependencies]
-faker = "^22.6.0"
-
-[tool.poetry.group.dev.dependencies]
-faker = "^22.6.0"
-
-[tool.poetry.group.test.dependencies]
-faker = "^22.6.0"

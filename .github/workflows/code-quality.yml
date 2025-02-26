@@ -1,0 +1,46 @@
+name: Code Quality
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  lint:
+    name: Lint and Type Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install black==24.1.0 isort==5.13.2 flake8==7.0.0 mypy==1.8.0
+          pip install flake8-docstrings flake8-quotes
+          pip install types-redis types-passlib types-python-jose
+          pip install -r requirements.txt
+
+      - name: Run Black
+        run: |
+          black --check --diff --skip-string-normalization backend tests
+
+      - name: Run isort
+        run: |
+          isort --check --diff --profile black --line-length 88 backend tests
+
+      - name: Run flake8
+        run: |
+          flake8 --config=.flake8 backend tests
+
+      - name: Run mypy
+        run: |
+          mypy --config-file=mypy.ini backend
