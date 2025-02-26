@@ -59,6 +59,10 @@ jobs:
 
       - name: Run tests
         run: |
+          # Create directory for coverage reports
+          mkdir -p $(pwd)/coverage/htmlcov
+          chmod -R 777 $(pwd)/coverage
+
           cat > run_tests_ci.sh << 'EOF'
           #!/bin/bash
           set -e
@@ -83,40 +87,24 @@ jobs:
           python -m pytest tests/integration/ -v --no-header -p no:cacheprovider || echo "Integration tests failed"
 
           echo "Starting e2e tests..."
-          python -m pytest tests/e2e/ -v --no-header -p no:cacheprovider || echo "E2E tests failed"
+          python -m pytest tests/e2e/ -v --no-header -p no:cacheprovider || echo "E2e tests failed"
 
           echo "Starting coverage tests..."
-          mkdir -p /tmp/coverage
-          COVERAGE_FILE=/tmp/coverage/.coverage python -m pytest tests/ -v --no-header -p no:cacheprovider --cov=backend --cov-report=html:/tmp/coverage/htmlcov --cov-report=term
+          COVERAGE_FILE=/coverage/.coverage python -m pytest tests/ -v --no-header -p no:cacheprovider --cov=backend --cov-report=html:/coverage/htmlcov --cov-report=term
           EOF
 
           chmod +x run_tests_ci.sh
 
-          docker compose run --rm --no-deps -v $(pwd)/run_tests_ci.sh:/tmp/run_tests_ci.sh --entrypoint "bash" test /tmp/run_tests_ci.sh
+          # Run tests with mounted coverage directory
+          docker compose run --rm --no-deps -v $(pwd)/run_tests_ci.sh:/tmp/run_tests_ci.sh -v $(pwd)/coverage:/coverage --entrypoint "bash" test /tmp/run_tests_ci.sh
 
-      - name: Copy coverage report from container
+      - name: List coverage files
         if: success()
         run: |
-          # Create directory for coverage reports
-          mkdir -p coverage
-
-          # Get container ID
-          CONTAINER_ID=$(docker compose ps -q test)
-
-          # Start the container if it's not running
-          if [ -z "$CONTAINER_ID" ] || [ "$(docker inspect -f '{{.State.Running}}' $CONTAINER_ID 2>/dev/null)" != "true" ]; then
-            echo "Starting test container..."
-            docker compose up -d test
-            CONTAINER_ID=$(docker compose ps -q test)
-          fi
-
-          # Copy HTML coverage report from container to host using docker cp
-          echo "Copying coverage report from container $CONTAINER_ID..."
-          docker cp $CONTAINER_ID:/tmp/coverage/htmlcov ./coverage/ || echo "Failed to copy coverage report"
-
-          # List copied files for debugging
           echo "Contents of coverage directory:"
           ls -la ./coverage/
+          echo "Contents of htmlcov directory:"
+          ls -la ./coverage/htmlcov/ || echo "htmlcov directory not found"
 
       - name: Upload coverage report as artifact
         if: success()
@@ -125,6 +113,7 @@ jobs:
           name: coverage-report
           path: coverage/htmlcov
           retention-days: 7
+          if-no-files-found: warn
 
       - name: Stop containers
         if: always()
