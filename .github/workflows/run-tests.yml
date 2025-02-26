@@ -42,6 +42,14 @@ jobs:
           docker compose build test test_db redis
           docker compose up -d test_db redis
 
+      # Temp fix for https://github.com/docker/build-push-action/issues/252
+      - name: Move cache
+        run: |
+          if [ -d "/tmp/.buildx-cache-new" ]; then
+            rm -rf /tmp/.buildx-cache
+            mv /tmp/.buildx-cache-new /tmp/.buildx-cache
+          fi
+
       - name: Wait for services to be ready
         run: |
           # Ensure wait-for.sh is executable
@@ -97,14 +105,6 @@ jobs:
 
           # Run tests with mounted coverage directory
           docker compose run --rm --no-deps -v $(pwd)/run_tests_ci.sh:/tmp/run_tests_ci.sh -v $(pwd)/coverage:/coverage --entrypoint "bash" test /tmp/run_tests_ci.sh
-
-      - name: List coverage files
-        if: success()
-        run: |
-          echo "Contents of coverage directory:"
-          ls -la ./coverage/
-          echo "Contents of htmlcov directory:"
-          ls -la ./coverage/htmlcov/ || echo "htmlcov directory not found"
 
       - name: Upload coverage report as artifact
         if: success()
