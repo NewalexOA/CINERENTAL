@@ -86,7 +86,8 @@ jobs:
           python -m pytest tests/e2e/ -v --no-header -p no:cacheprovider || echo "E2E tests failed"
 
           echo "Starting coverage tests..."
-          python -m pytest tests/ -v --no-header -p no:cacheprovider --cov=backend --cov-report=html --cov-report=term
+          mkdir -p /tmp/coverage
+          python -m pytest tests/ -v --no-header -p no:cacheprovider --cov=backend --cov-report=html:/tmp/coverage/htmlcov --cov-report=term --cov-data-file=/tmp/coverage/.coverage
           EOF
 
           chmod +x run_tests_ci.sh
@@ -100,7 +101,7 @@ jobs:
           mkdir -p coverage
 
           # Copy HTML coverage report from container to host
-          docker compose run --rm --no-deps --entrypoint "sh" test -c "cp -r htmlcov /app/coverage/ 2>/dev/null || echo 'No htmlcov directory found'"
+          docker compose run --rm --no-deps --entrypoint "sh" test -c "cp -r /tmp/coverage/htmlcov /app/coverage/ 2>/dev/null || echo 'No htmlcov directory found'"
 
       - name: Upload coverage report as artifact
         if: success()
