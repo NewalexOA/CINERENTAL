@@ -1,0 +1,114 @@
+name: Run Tests
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  test:
+    name: Run Tests in Docker
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Cache Docker layers
+        uses: actions/cache@v4
+        with:
+          path: ~/.docker
+          key: ${{ runner.os }}-docker-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-docker-
+
+      - name: Create .env file
+        run: |
+          echo "ENVIRONMENT=testing" > .env
+          echo "POSTGRES_USER=postgres" >> .env
+          echo "POSTGRES_PASSWORD=postgres" >> .env
+          echo "POSTGRES_DB=cinerental_test" >> .env
+          echo "POSTGRES_HOST_AUTH_METHOD=trust" >> .env
+          echo "SECRET_KEY=test-secret-key" >> .env
+          echo "DEBUG=false" >> .env
+          echo "TESTING=1" >> .env
+
+      - name: Build and start containers
+        run: |
+          docker compose build test test_db redis
+          docker compose up -d test_db redis
+
+      - name: Wait for services to be ready
+        run: |
+          # Ensure wait-for.sh is executable
+          chmod +x docker/wait-for.sh
+
+          # Wait for PostgreSQL using wait-for.sh
+          docker compose run --rm --no-deps --entrypoint "./docker/wait-for.sh" test postgres test_db 5432
+
+          # Wait for Redis using wait-for.sh
+          docker compose run --rm --no-deps --entrypoint "./docker/wait-for.sh" test redis redis 6379
+
+      - name: Run migrations
+        run: |
+          docker compose run --rm --no-deps --entrypoint "alembic" test upgrade head
+
+      - name: Run tests
+        run: |
+          # Create directory for coverage reports
+          mkdir -p $(pwd)/coverage/htmlcov
+          chmod -R 777 $(pwd)/coverage
+
+          cat > run_tests_ci.sh << 'EOF'
+          #!/bin/bash
+          set -e
+
+          if [ ! -d "/app/tests" ]; then
+            echo "Directory tests not found"
+            exit 1
+          fi
+
+          TEST_FILES=$(find /app -type f -name "test_*.py" | sort)
+          if [ -z "$TEST_FILES" ]; then
+            echo "No test files found!"
+            exit 1
+          fi
+
+          cd /app
+
+          echo "Starting unit tests..."
+          python -m pytest tests/unit/ -v --no-header -p no:cacheprovider || echo "Unit tests failed"
+
+          echo "Starting integration tests..."
+          python -m pytest tests/integration/ -v --no-header -p no:cacheprovider || echo "Integration tests failed"
+
+          echo "Starting e2e tests..."
+          python -m pytest tests/e2e/ -v --no-header -p no:cacheprovider || echo "E2e tests failed"
+
+          echo "Starting coverage tests..."
+          COVERAGE_FILE=/coverage/.coverage python -m pytest tests/ -v --no-header -p no:cacheprovider --cov=backend --cov-report=html:/coverage/htmlcov --cov-report=term
+          EOF
+
+          chmod +x run_tests_ci.sh
+
+          # Run tests with mounted coverage directory
+          docker compose run --rm --no-deps -v $(pwd)/run_tests_ci.sh:/tmp/run_tests_ci.sh -v $(pwd)/coverage:/coverage --entrypoint "bash" test /tmp/run_tests_ci.sh
+
+      - name: Upload coverage report as artifact
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage/htmlcov
+          retention-days: 7
+          if-no-files-found: warn
+
+      - name: Stop containers
+        if: always()
+        run: |
+          echo "Stopping all containers..."
+          docker compose down -v
