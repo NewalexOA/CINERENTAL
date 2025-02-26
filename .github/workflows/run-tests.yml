@@ -100,8 +100,23 @@ jobs:
           # Create directory for coverage reports
           mkdir -p coverage
 
-          # Copy HTML coverage report from container to host
-          docker compose run --rm --no-deps --entrypoint "sh" test -c "cp -r /tmp/coverage/htmlcov /app/coverage/ 2>/dev/null || echo 'No htmlcov directory found'"
+          # Get container ID
+          CONTAINER_ID=$(docker compose ps -q test)
+
+          # Start the container if it's not running
+          if [ -z "$CONTAINER_ID" ] || [ "$(docker inspect -f '{{.State.Running}}' $CONTAINER_ID 2>/dev/null)" != "true" ]; then
+            echo "Starting test container..."
+            docker compose up -d test
+            CONTAINER_ID=$(docker compose ps -q test)
+          fi
+
+          # Copy HTML coverage report from container to host using docker cp
+          echo "Copying coverage report from container $CONTAINER_ID..."
+          docker cp $CONTAINER_ID:/tmp/coverage/htmlcov ./coverage/ || echo "Failed to copy coverage report"
+
+          # List copied files for debugging
+          echo "Contents of coverage directory:"
+          ls -la ./coverage/
 
       - name: Upload coverage report as artifact
         if: success()
@@ -113,4 +128,6 @@ jobs:
 
       - name: Stop containers
         if: always()
-        run: docker compose down
+        run: |
+          echo "Stopping all containers..."
+          docker compose down -v
