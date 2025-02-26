@@ -87,7 +87,7 @@ jobs:
 
           echo "Starting coverage tests..."
           mkdir -p /tmp/coverage
-          python -m pytest tests/ -v --no-header -p no:cacheprovider --cov=backend --cov-report=html:/tmp/coverage/htmlcov --cov-report=term --cov-data-file=/tmp/coverage/.coverage
+          COVERAGE_FILE=/tmp/coverage/.coverage python -m pytest tests/ -v --no-header -p no:cacheprovider --cov=backend --cov-report=html:/tmp/coverage/htmlcov --cov-report=term
           EOF
 
           chmod +x run_tests_ci.sh
