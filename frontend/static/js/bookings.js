@@ -675,7 +675,7 @@ const bookingManager = {
      */
     changeBookingStatus: async function(bookingId, status) {
         try {
-            await api.put(`/bookings/${bookingId}/status`, { status: status });
+            await api.put(`/bookings/${bookingId}/status`, { booking_status: status });
             showToast('Статус бронирования успешно изменен', 'success');
             location.reload();
         } catch (error) {
