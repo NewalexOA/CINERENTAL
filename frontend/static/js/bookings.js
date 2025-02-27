@@ -482,7 +482,7 @@ const bookingManager = {
             const endDate = moment(booking.end_date).format('DD.MM.YYYY');
 
             // Create status badge
-            const statusClass = this.getStatusClass(booking.booking_status);
+            const statusClass = this.getStatusClass(booking.status);
             const paymentStatusClass = this.getPaymentStatusClass(booking.payment_status);
 
             row.innerHTML = `
@@ -494,7 +494,7 @@ const bookingManager = {
                 <td>${booking.client_name}</td>
                 <td>${booking.equipment_name}</td>
                 <td>${startDate} - ${endDate}</td>
-                <td><span class="badge bg-${statusClass}">${booking.booking_status}</span></td>
+                <td><span class="badge bg-${statusClass}">${booking.status}</span></td>
                 <td><span class="badge bg-${paymentStatusClass}">${booking.payment_status}</span></td>
                 <td>
                     <div class="d-flex gap-1">

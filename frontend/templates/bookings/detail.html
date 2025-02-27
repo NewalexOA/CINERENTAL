@@ -29,8 +29,8 @@
                 <div class="row mb-3">
                     <div class="col-md-6">
                         <h6>Статус</h6>
-                        <span class="badge {% if booking.booking_status == 'PENDING' %}bg-warning{% elif booking.booking_status == 'CONFIRMED' %}bg-info{% elif booking.booking_status == 'ACTIVE' %}bg-primary{% elif booking.booking_status == 'COMPLETED' %}bg-success{% elif booking.booking_status == 'CANCELLED' %}bg-danger{% else %}bg-secondary{% endif %}">
-                            {{ booking.booking_status }}
+                        <span class="badge {% if booking.status == 'PENDING' %}bg-warning{% elif booking.status == 'CONFIRMED' %}bg-info{% elif booking.status == 'ACTIVE' %}bg-primary{% elif booking.status == 'COMPLETED' %}bg-success{% elif booking.status == 'CANCELLED' %}bg-danger{% else %}bg-secondary{% endif %}">
+                            {{ booking.status }}
                         </span>
                     </div>
                     <div class="col-md-6">
@@ -218,11 +218,11 @@
                     <div class="mb-3">
                         <label class="form-label">Новый статус</label>
                         <select class="form-select" name="status" required>
-                            <option value="PENDING" {% if booking.booking_status == 'PENDING' %} selected {% endif %}>Ожидает подтверждения</option>
-                            <option value="CONFIRMED" {% if booking.booking_status == 'CONFIRMED' %} selected {% endif %}>Подтверждено</option>
-                            <option value="ACTIVE" {% if booking.booking_status == 'ACTIVE' %} selected {% endif %}>Активно</option>
-                            <option value="COMPLETED" {% if booking.booking_status == 'COMPLETED' %} selected {% endif %}>Завершено</option>
-                            <option value="CANCELLED" {% if booking.booking_status == 'CANCELLED' %} selected {% endif %}>Отменено</option>
+                            <option value="PENDING" {% if booking.status == 'PENDING' %} selected {% endif %}>Ожидает подтверждения</option>
+                            <option value="CONFIRMED" {% if booking.status == 'CONFIRMED' %} selected {% endif %}>Подтверждено</option>
+                            <option value="ACTIVE" {% if booking.status == 'ACTIVE' %} selected {% endif %}>Активно</option>
+                            <option value="COMPLETED" {% if booking.status == 'COMPLETED' %} selected {% endif %}>Завершено</option>
+                            <option value="CANCELLED" {% if booking.status == 'CANCELLED' %} selected {% endif %}>Отменено</option>
                         </select>
                     </div>
                 </form>
