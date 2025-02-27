@@ -1,0 +1,436 @@
+{% extends "base.html" %}
+
+{% block title %}Бронирование #{{ booking.id }} - CINERENTAL{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center">
+            <h1>Бронирование #{{ booking.id }}</h1>
+            <div>
+                <a href="/bookings" class="btn btn-outline-secondary me-2">
+                    <i class="fas fa-arrow-left"></i> Назад к списку
+                </a>
+                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#editBookingModal" data-booking-id="{{ booking.id }}">
+                    <i class="fas fa-edit"></i> Редактировать
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Информация о бронировании</h5>
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <h6>Статус</h6>
+                        <span class="badge bg-{{ booking.booking_status | lower }}">
+                            {{ booking.booking_status }}
+                        </span>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Статус оплаты</h6>
+                        <span class="badge bg-{{ booking.payment_status | lower }}">
+                            {{ booking.payment_status }}
+                        </span>
+                    </div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <h6>Дата начала</h6>
+                        <p>{{ booking.start_date | date }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Дата окончания</h6>
+                        <p>{{ booking.end_date | date }}</p>
+                    </div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <h6>Общая стоимость</h6>
+                        <p>{{ booking.total_amount }} ₽</p>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Депозит</h6>
+                        <p>{{ booking.deposit_amount }} ₽</p>
+                    </div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <h6>Оплачено</h6>
+                        <p>{{ booking.paid_amount }} ₽</p>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Осталось оплатить</h6>
+                        <p>{{ booking.total_amount - booking.paid_amount }} ₽</p>
+                    </div>
+                </div>
+                {% if booking.notes %}
+                <div class="row mb-3">
+                    <div class="col-12">
+                        <h6>Примечания</h6>
+                        <p>{{ booking.notes }}</p>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Оборудование</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Название</th>
+                                <th>Категория</th>
+                                <th>Серийный номер</th>
+                                <th>Штрих-код</th>
+                                <th>Стоимость в день</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>
+                                    <a href="/equipment/{{ booking.equipment.id }}" class="text-decoration-none">
+                                        {{ booking.equipment.name }}
+                                    </a>
+                                </td>
+                                <td>{{ booking.equipment.category_name }}</td>
+                                <td>{{ booking.equipment.serial_number }}</td>
+                                <td>{{ booking.equipment.barcode }}</td>
+                                <td>{{ booking.equipment.daily_rate }} ₽</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Клиент</h5>
+            </div>
+            <div class="card-body">
+                <h6>
+                    <a href="/clients/{{ booking.client.id }}" class="text-decoration-none">
+                        {{ booking.client.name }}
+                    </a>
+                </h6>
+                <p class="mb-1">
+                    <i class="fas fa-envelope me-2"></i> {{ booking.client.email }}
+                </p>
+                <p class="mb-1">
+                    <i class="fas fa-phone me-2"></i> {{ booking.client.phone }}
+                </p>
+                <p class="mb-1">
+                    <i class="fas fa-map-marker-alt me-2"></i> {{ booking.client.address }}
+                </p>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Действия</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#changeStatusModal">
+                        <i class="fas fa-exchange-alt"></i> Изменить статус
+                    </button>
+                    <button class="btn btn-outline-success" data-bs-toggle="modal" data-bs-target="#paymentModal">
+                        <i class="fas fa-money-bill-wave"></i> Оплата
+                    </button>
+                    <button class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteBookingModal" data-booking-id="{{ booking.id }}">
+                        <i class="fas fa-trash"></i> Удалить бронирование
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Booking Modal -->
+<div class="modal fade" id="editBookingModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Редактировать бронирование</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editBookingForm">
+                    <input type="hidden" name="id" value="{{ booking.id }}">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Клиент</label>
+                            <select class="form-select" name="client_id" required>
+                                <!-- Заполняется через API -->
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Период</label>
+                            <input type="text" class="form-control" name="date_range" required>
+                        </div>
+                    </div>
+                    <hr>
+                    <div class="mb-3">
+                        <label class="form-label">Оборудование</label>
+                        <div id="editEquipmentSelection">
+                            <!-- Заполняется через API -->
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Комментарий</label>
+                        <textarea class="form-control" name="notes" rows="3">{{ booking.notes }}</textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                <button type="button" class="btn btn-primary" id="updateBooking">Сохранить</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Change Status Modal -->
+<div class="modal fade" id="changeStatusModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Изменить статус бронирования</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="changeStatusForm">
+                    <input type="hidden" name="booking_id" value="{{ booking.id }}">
+                    <div class="mb-3">
+                        <label class="form-label">Новый статус</label>
+                        <select class="form-select" name="status" required>
+                            <option value="PENDING" {% if booking.booking_status == 'PENDING' %} selected {% endif %}>Ожидает подтверждения</option>
+                            <option value="CONFIRMED" {% if booking.booking_status == 'CONFIRMED' %} selected {% endif %}>Подтверждено</option>
+                            <option value="ACTIVE" {% if booking.booking_status == 'ACTIVE' %} selected {% endif %}>Активно</option>
+                            <option value="COMPLETED" {% if booking.booking_status == 'COMPLETED' %} selected {% endif %}>Завершено</option>
+                            <option value="CANCELLED" {% if booking.booking_status == 'CANCELLED' %} selected {% endif %}>Отменено</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                <button type="button" class="btn btn-primary" id="changeStatus">Сохранить</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Payment Modal -->
+<div class="modal fade" id="paymentModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Оплата бронирования</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="paymentForm">
+                    <input type="hidden" name="booking_id" value="{{ booking.id }}">
+                    <div class="mb-3">
+                        <label class="form-label">Сумма оплаты</label>
+                        <input type="number" class="form-control" name="amount" min="0" step="0.01" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Статус оплаты</label>
+                        <select class="form-select" name="payment_status" required>
+                            <option value="PENDING" {% if booking.payment_status == 'PENDING' %} selected {% endif %}>Ожидает оплаты</option>
+                            <option value="PARTIAL" {% if booking.payment_status == 'PARTIAL' %} selected {% endif %}>Частично оплачено</option>
+                            <option value="PAID" {% if booking.payment_status == 'PAID' %} selected {% endif %}>Полностью оплачено</option>
+                            <option value="REFUNDED" {% if booking.payment_status == 'REFUNDED' %} selected {% endif %}>Возвращено</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                <button type="button" class="btn btn-primary" id="savePayment">Сохранить</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Booking Modal -->
+<div class="modal fade" id="deleteBookingModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Удалить бронирование</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Вы уверены, что хотите удалить это бронирование?</p>
+                <p class="text-danger">Это действие нельзя отменить.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                <button type="button" class="btn btn-danger" id="deleteBooking">Удалить</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js"></script>
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
+<script src="{{ url_for('static', path='js/main.js') }}"></script>
+<script src="{{ url_for('static', path='js/bookings.js') }}"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Pre-fill payment amount
+    const paymentModal = document.getElementById('paymentModal');
+    if (paymentModal) {
+        paymentModal.addEventListener('show.bs.modal', function() {
+            const remainingAmount = parseFloat('{{ booking.total_amount - booking.paid_amount }}');
+            document.querySelector('#paymentForm input[name="amount"]').value = remainingAmount.toFixed(2);
+        });
+    }
+
+    // Status change handler
+    const changeStatusBtn = document.getElementById('changeStatus');
+    if (changeStatusBtn) {
+        changeStatusBtn.addEventListener('click', function() {
+            const form = document.getElementById('changeStatusForm');
+            const formData = new FormData(form);
+            const status = formData.get('status');
+
+            fetch(`/api/v1/bookings/{{ booking.id }}/status/`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ status: status })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Ошибка при обновлении статуса');
+                }
+                return response.json();
+            })
+            .then(data => {
+                // Close the modal
+                const modal = bootstrap.Modal.getInstance(document.getElementById('changeStatusModal'));
+                modal.hide();
+
+                // Show notification
+                if (typeof showToast === 'function') {
+                    showToast('Статус бронирования обновлен', 'success');
+                }
+
+                // Reload the page to show changes
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1000);
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                if (typeof showToast === 'function') {
+                    showToast('Ошибка при обновлении статуса', 'danger');
+                }
+            });
+        });
+    }
+
+    // Payment handler
+    const paymentForm = document.getElementById('paymentForm');
+    if (paymentForm) {
+        document.getElementById('savePayment').addEventListener('click', function() {
+            if (paymentForm.checkValidity()) {
+                const formData = new FormData(paymentForm);
+                const paymentData = {
+                    paid_amount: parseFloat(formData.get('amount')),
+                    payment_status: formData.get('payment_status')
+                };
+
+                fetch(`/api/v1/bookings/{{ booking.id }}/payment/`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(paymentData)
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Ошибка при обновлении оплаты');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    // Close the modal
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('paymentModal'));
+                    modal.hide();
+
+                    // Show notification
+                    if (typeof showToast === 'function') {
+                        showToast('Информация об оплате обновлена', 'success');
+                    }
+
+                    // Reload the page to show changes
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1000);
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    if (typeof showToast === 'function') {
+                        showToast('Ошибка при обновлении оплаты', 'danger');
+                    }
+                });
+            } else {
+                paymentForm.reportValidity();
+            }
+        });
+    }
+
+    // Local toast function if global is not available
+    if (typeof showToast !== 'function') {
+        window.showToast = function(message, type = 'info') {
+            const toastContainer = document.getElementById('toastContainer');
+            if (!toastContainer) {
+                const container = document.createElement('div');
+                container.id = 'toastContainer';
+                container.className = 'toast-container position-fixed bottom-0 end-0 p-3';
+                document.body.appendChild(container);
+            }
+
+            const toastId = 'toast-' + Date.now();
+            const toastHTML = `
+                <div id="${toastId}" class="toast align-items-center text-white bg-${type} border-0" role="alert" aria-live="assertive" aria-atomic="true">
+                    <div class="d-flex">
+                        <div class="toast-body">
+                            ${message}
+                        </div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('toastContainer').insertAdjacentHTML('beforeend', toastHTML);
+            const toastElement = document.getElementById(toastId);
+            const toast = new bootstrap.Toast(toastElement, { delay: 5000 });
+            toast.show();
+        }
+    }
+});
+</script>
+{% endblock %}

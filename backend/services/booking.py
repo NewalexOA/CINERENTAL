@@ -394,14 +394,34 @@ class BookingService:
             )
         return await self.repository.get_by_payment_status(status)
 
-    async def get_overdue(self) -> List[Booking]:
+    async def get_overdue(self, now: datetime) -> List[Booking]:
         """Get overdue bookings.
+
+        Args:
+            now: Current datetime
 
         Returns:
             List of overdue bookings
         """
         now = datetime.now(timezone.utc)
         return await self.repository.get_overdue(now)
+
+    async def delete_booking(self, booking_id: int) -> None:
+        """Delete booking.
+
+        This is a soft delete that changes the booking status to CANCELLED.
+
+        Args:
+            booking_id: Booking ID
+
+        Raises:
+            NotFoundError: If booking is not found
+        """
+        # First check if booking exists
+        await self.get_booking(booking_id)
+
+        # Then change status to CANCELLED
+        await self.change_status(booking_id, BookingStatus.CANCELLED)
 
     async def change_status(
         self,
