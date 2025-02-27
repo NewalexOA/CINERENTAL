@@ -6,19 +6,61 @@ rental bookings, as well as managing their status and payment information.
 """
 
 from datetime import datetime
-from typing import Annotated, List, Optional, cast
+from typing import Annotated, List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Body, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.api.v1.decorators import typed_delete, typed_get, typed_post, typed_put
+from backend.api.v1.decorators import (
+    typed_delete,
+    typed_get,
+    typed_patch,
+    typed_post,
+    typed_put,
+)
 from backend.core.database import get_db
-from backend.exceptions import AvailabilityError, NotFoundError, ValidationError
+from backend.exceptions import (
+    AvailabilityError,
+    NotFoundError,
+    StatusTransitionError,
+    ValidationError,
+)
 from backend.models import Booking, BookingStatus, PaymentStatus
 from backend.schemas import BookingCreate, BookingResponse, BookingUpdate
 from backend.services import BookingService
 
 bookings_router: APIRouter = APIRouter()
+
+
+def _booking_to_response(booking_obj: Booking) -> BookingResponse:
+    """Convert Booking model to BookingResponse schema.
+
+    Args:
+        booking_obj: Booking model instance
+
+    Returns:
+        BookingResponse schema
+    """
+    equipment_name = booking_obj.equipment.name if booking_obj.equipment else ''
+
+    client_name = ''
+    if booking_obj.client:
+        client_name = f'{booking_obj.client.first_name} {booking_obj.client.last_name}'
+
+    return BookingResponse(
+        id=booking_obj.id,
+        equipment_id=booking_obj.equipment_id,
+        client_id=booking_obj.client_id,
+        start_date=booking_obj.start_date,
+        end_date=booking_obj.end_date,
+        total_amount=booking_obj.total_amount,
+        status=booking_obj.booking_status,
+        payment_status=booking_obj.payment_status,
+        created_at=booking_obj.created_at,
+        updated_at=booking_obj.updated_at,
+        equipment_name=equipment_name,
+        client_name=client_name,
+    )
 
 
 @typed_post(
@@ -54,7 +96,11 @@ async def create_booking(
             deposit_amount=float(booking.total_amount) * 0.2,  # 20% deposit by default
             notes=None,
         )
-        return cast(BookingResponse, booking_obj)
+
+        # Create a proper BookingResponse object with all required fields
+        response = _booking_to_response(booking_obj)
+
+        return response
     except AvailabilityError as e:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -96,18 +142,18 @@ async def get_bookings(
     skip: int = Query(0, description='Number of records to skip'),
     limit: int = Query(100, description='Maximum number of records to return'),
 ) -> List[BookingResponse]:
-    """Get all bookings with optional filtering.
+    """Get bookings with optional filtering.
 
     Args:
         db: Database session
-        client_id: Filter by client ID (optional)
-        equipment_id: Filter by equipment ID (optional)
-        booking_status: Filter by booking status (optional)
-        payment_status: Filter by payment status (optional)
-        start_date: Filter by start date (optional)
-        end_date: Filter by end date (optional)
-        skip: Number of records to skip (pagination)
-        limit: Maximum number of records to return (pagination)
+        client_id: Filter by client ID
+        equipment_id: Filter by equipment ID
+        booking_status: Filter by booking status
+        payment_status: Filter by payment status
+        start_date: Filter by start date
+        end_date: Filter by end date
+        skip: Number of records to skip
+        limit: Maximum number of records to return
 
     Returns:
         List of bookings
@@ -129,15 +175,25 @@ async def get_bookings(
         if booking_status is not None:
             filtered_bookings = await booking_service.get_by_status(booking_status)
 
+        if payment_status is not None:
+            filtered_bookings = await booking_service.get_by_payment_status(
+                payment_status
+            )
+
         # Apply pagination
         paginated_bookings = filtered_bookings[skip : skip + limit]
 
-        # Convert to response type
-        return cast(List[BookingResponse], paginated_bookings)
+        # Convert Booking objects to BookingResponse objects
+        responses = []
+        for booking_obj in paginated_bookings:
+            response = _booking_to_response(booking_obj)
+            responses.append(response)
+
+        return responses
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f'Failed to get bookings: {str(e)}',
+            detail=f'Failed to retrieve bookings: {str(e)}',
         )
 
 
@@ -150,7 +206,7 @@ async def get_booking(
     booking_id: int,
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> BookingResponse:
-    """Get a booking by ID.
+    """Get booking by ID.
 
     Args:
         booking_id: Booking ID
@@ -160,12 +216,16 @@ async def get_booking(
         Booking details
 
     Raises:
-        HTTPException: If booking is not found
+        HTTPException: If booking not found
     """
     booking_service = BookingService(db)
     try:
-        booking = await booking_service.get_booking(booking_id)
-        return cast(BookingResponse, booking)
+        booking_obj = await booking_service.get_booking(booking_id)
+
+        # Convert Booking object to BookingResponse
+        response = _booking_to_response(booking_obj)
+
+        return response
     except NotFoundError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -188,7 +248,7 @@ async def update_booking(
     booking_update: BookingUpdate,
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> BookingResponse:
-    """Update a booking.
+    """Update booking.
 
     Args:
         booking_id: Booking ID
@@ -199,26 +259,46 @@ async def update_booking(
         Updated booking
 
     Raises:
-        HTTPException: If booking is not found or validation fails
+        HTTPException: If booking not found or validation fails
     """
     booking_service = BookingService(db)
     try:
-        booking = await booking_service.update_booking(
+        # Get current booking to check if it exists
+        await booking_service.get_booking(booking_id)
+
+        # Prepare update parameters
+        update_params = {}
+        if booking_update.start_date is not None:
+            update_params['start_date'] = booking_update.start_date
+        if booking_update.end_date is not None:
+            update_params['end_date'] = booking_update.end_date
+        if booking_update.status is not None:
+            await booking_service.change_status(
+                booking_id=booking_id,
+                new_status=booking_update.status,
+            )
+        if booking_update.payment_status is not None:
+            await booking_service.change_payment_status(
+                booking_id=booking_id,
+                status=booking_update.payment_status,
+            )
+
+        # Update booking
+        booking_obj = await booking_service.update_booking(
             booking_id=booking_id,
             start_date=booking_update.start_date,
             end_date=booking_update.end_date,
             notes=None,
         )
-        return cast(BookingResponse, booking)
+
+        # Convert Booking object to BookingResponse
+        response = _booking_to_response(booking_obj)
+
+        return response
     except NotFoundError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f'Booking with ID {booking_id} not found',
-        )
-    except AvailabilityError as e:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail=str(e),
         )
     except ValidationError as e:
         raise HTTPException(
@@ -265,39 +345,45 @@ async def delete_booking(
         )
 
 
-@typed_put(
+@typed_patch(
     bookings_router,
     '/{booking_id}/status',
     response_model=BookingResponse,
 )
 async def update_booking_status(
     booking_id: int,
-    booking_status: BookingStatus,
     db: Annotated[AsyncSession, Depends(get_db)],
+    booking_status: BookingStatus = Body(..., embed=True),
 ) -> BookingResponse:
     """Update booking status.
 
     Args:
         booking_id: Booking ID
-        booking_status: New booking status
         db: Database session
+        booking_status: New booking status
 
     Returns:
         Updated booking
 
     Raises:
-        HTTPException: If booking is not found or status transition is invalid
+        HTTPException: If booking not found or status transition invalid
     """
     booking_service = BookingService(db)
     try:
-        booking = await booking_service.change_status(booking_id, booking_status)
-        return cast(BookingResponse, booking)
+        booking_obj = await booking_service.change_status(
+            booking_id=booking_id, new_status=booking_status
+        )
+
+        # Convert Booking object to BookingResponse
+        response = _booking_to_response(booking_obj)
+
+        return response
     except NotFoundError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f'Booking with ID {booking_id} not found',
         )
-    except ValidationError as e:
+    except StatusTransitionError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e),
