@@ -17,6 +17,7 @@ from backend.models import (
     Client,
     Equipment,
     EquipmentStatus,
+    PaymentStatus,
 )
 from backend.repositories import BookingRepository
 from backend.schemas import EquipmentResponse
@@ -272,8 +273,8 @@ class TestEquipmentService:
         test_dates: dict[str, datetime],
     ) -> None:
         """Test changing status with active booking."""
-        # Create active booking
-        await booking_service.create_booking(
+        # Create booking
+        booking = await booking_service.create_booking(
             client_id=test_client.id,
             equipment_id=test_equipment.id,
             start_date=test_dates['start_date'],
@@ -282,7 +283,15 @@ class TestEquipmentService:
             deposit_amount=float(Decimal('100.00')),
         )
 
-        # Should not be able to change status
+        # Confirm booking and set payment status to PAID
+        await booking_service.change_status(booking.id, BookingStatus.CONFIRMED)
+        await booking_service.update_booking(booking.id, paid_amount=300.0)
+        await booking_service.change_payment_status(booking.id, PaymentStatus.PAID)
+
+        # Activate booking (now it's ACTIVE, not just PENDING or CONFIRMED)
+        await booking_service.change_status(booking.id, BookingStatus.ACTIVE)
+
+        # Should not be able to change status when booking is ACTIVE
         with pytest.raises(BusinessError, match='Cannot change status'):
             await service.change_status(
                 test_equipment.id,
@@ -608,8 +617,8 @@ class TestEquipmentService:
         test_dates: dict[str, datetime],
     ) -> None:
         """Test equipment status transition with active bookings."""
-        # Create active booking
-        await booking_service.create_booking(
+        # Create booking
+        booking = await booking_service.create_booking(
             client_id=test_client.id,
             equipment_id=test_equipment.id,
             start_date=test_dates['start_date'],
@@ -618,7 +627,15 @@ class TestEquipmentService:
             deposit_amount=float(Decimal('100.00')),
         )
 
-        # Try to change status to maintenance
+        # Confirm booking and set payment status to PAID
+        await booking_service.change_status(booking.id, BookingStatus.CONFIRMED)
+        await booking_service.update_booking(booking.id, paid_amount=300.0)
+        await booking_service.change_payment_status(booking.id, PaymentStatus.PAID)
+
+        # Activate booking (now it's ACTIVE, not just PENDING or CONFIRMED)
+        await booking_service.change_status(booking.id, BookingStatus.ACTIVE)
+
+        # Try to change status to maintenance with ACTIVE booking
         with pytest.raises(BusinessError):
             await service.change_status(
                 test_equipment.id,
