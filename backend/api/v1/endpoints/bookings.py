@@ -41,10 +41,12 @@ def _booking_to_response(booking_obj: Booking) -> BookingResponse:
     Returns:
         BookingResponse schema
     """
-    equipment_name = booking_obj.equipment.name if booking_obj.equipment else ''
+    equipment_name = ''
+    if booking_obj.equipment is not None:
+        equipment_name = booking_obj.equipment.name
 
     client_name = ''
-    if booking_obj.client:
+    if booking_obj.client is not None:
         client_name = f'{booking_obj.client.first_name} {booking_obj.client.last_name}'
 
     return BookingResponse(
@@ -112,6 +114,7 @@ async def create_booking(
             detail=str(e),
         )
     except Exception as e:
+        await db.rollback()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f'Failed to create booking: {str(e)}',
@@ -160,25 +163,26 @@ async def get_bookings(
     """
     booking_service = BookingService(db)
     try:
-        # Get all bookings
-        bookings = await booking_service.get_bookings()
+        # Apply filters sequentially
+        filtered_bookings = []
 
-        # Apply filters
-        filtered_bookings: List[Booking] = bookings
-
+        # If client_id is specified, get bookings by client
         if client_id is not None:
             filtered_bookings = await booking_service.get_by_client(client_id)
-
-        if equipment_id is not None:
+        # If equipment_id is specified, get bookings by equipment
+        elif equipment_id is not None:
             filtered_bookings = await booking_service.get_by_equipment(equipment_id)
-
-        if booking_status is not None:
+        # If booking_status is specified, get bookings by status
+        elif booking_status is not None:
             filtered_bookings = await booking_service.get_by_status(booking_status)
-
-        if payment_status is not None:
+        # If payment_status is specified, get bookings by payment status
+        elif payment_status is not None:
             filtered_bookings = await booking_service.get_by_payment_status(
                 payment_status
             )
+        # If no filters are specified, get all bookings
+        else:
+            filtered_bookings = await booking_service.get_bookings()
 
         # Apply pagination
         paginated_bookings = filtered_bookings[skip : skip + limit]
@@ -300,12 +304,18 @@ async def update_booking(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f'Booking with ID {booking_id} not found',
         )
+    except AvailabilityError as e:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=str(e),
+        )
     except ValidationError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e),
         )
     except Exception as e:
+        await db.rollback()  # Добавляем явный откат транзакции при ошибке
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f'Failed to update booking: {str(e)}',
@@ -339,6 +349,7 @@ async def delete_booking(
             detail=f'Booking with ID {booking_id} not found',
         )
     except Exception as e:
+        await db.rollback()  # Добавляем явный откат транзакции при ошибке
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f'Failed to delete booking: {str(e)}',
@@ -389,6 +400,7 @@ async def update_booking_status(
             detail=str(e),
         )
     except Exception as e:
+        await db.rollback()  # Добавляем явный откат транзакции при ошибке
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f'Failed to update booking status: {str(e)}',

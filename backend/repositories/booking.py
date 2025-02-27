@@ -9,6 +9,7 @@ from typing import List, Optional
 
 from sqlalchemy import and_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import joinedload
 
 from backend.models import Booking, BookingStatus, PaymentStatus
 from backend.repositories import BaseRepository
@@ -253,4 +254,23 @@ class BookingRepository(BaseRepository[Booking]):
                 )
             )
         )
+        return list(result.scalars().all())
+
+    async def get_all(self) -> List[Booking]:
+        """Get all bookings.
+
+        This method overrides the base get_all method to include related objects.
+
+        Returns:
+            List of all bookings
+        """
+        query = (
+            select(Booking)
+            .where(
+                Booking.deleted_at.is_(None),
+            )
+            .options(joinedload(Booking.equipment), joinedload(Booking.client))
+        )
+
+        result = await self.session.execute(query)
         return list(result.scalars().all())

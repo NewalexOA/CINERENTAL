@@ -86,7 +86,7 @@ const bookingManager = {
                 clients.forEach(client => {
                     const option = document.createElement('option');
                     option.value = client.id;
-                    option.textContent = client.name;
+                    option.textContent = `${client.first_name} ${client.last_name}`;
                     select.appendChild(option);
                 });
             });
@@ -213,8 +213,9 @@ const bookingManager = {
             const data = {
                 client_id: parseInt(formData.get('client_id')),
                 equipment_id: parseInt(selectedEquipment.value),
-                start_date: moment(dateRange[0], 'DD.MM.YYYY').format('YYYY-MM-DD'),
-                end_date: moment(dateRange[1], 'DD.MM.YYYY').format('YYYY-MM-DD'),
+                start_date: moment(dateRange[0], 'DD.MM.YYYY').format('YYYY-MM-DDT00:00:00'),
+                end_date: moment(dateRange[1], 'DD.MM.YYYY').format('YYYY-MM-DDT00:00:00'),
+                total_amount: 0,
                 notes: formData.get('notes') || ''
             };
 
@@ -317,8 +318,9 @@ const bookingManager = {
             const data = {
                 client_id: parseInt(formData.get('client_id')),
                 equipment_id: parseInt(selectedEquipment.value),
-                start_date: moment(dateRange[0], 'DD.MM.YYYY').format('YYYY-MM-DD'),
-                end_date: moment(dateRange[1], 'DD.MM.YYYY').format('YYYY-MM-DD'),
+                start_date: moment(dateRange[0], 'DD.MM.YYYY').format('YYYY-MM-DDT00:00:00'),
+                end_date: moment(dateRange[1], 'DD.MM.YYYY').format('YYYY-MM-DDT00:00:00'),
+                total_amount: 0,
                 notes: formData.get('notes')
             };
 
@@ -350,8 +352,8 @@ const bookingManager = {
     parseDateRange(dateRange) {
         const [start, end] = dateRange.split(' - ');
         return {
-            start_date: moment(start, 'DD.MM.YYYY').format('YYYY-MM-DD'),
-            end_date: moment(end, 'DD.MM.YYYY').format('YYYY-MM-DD'),
+            start_date: moment(start, 'DD.MM.YYYY').format('YYYY-MM-DDT00:00:00'),
+            end_date: moment(end, 'DD.MM.YYYY').format('YYYY-MM-DDT00:00:00'),
             total_amount: 0 // Будет рассчитано на сервере
         };
     },
@@ -607,8 +609,8 @@ const bookingManager = {
         const dateRange = formData.get('date_range');
         if (dateRange) {
             const [start, end] = dateRange.split(' - ');
-            filters.start_date = moment(start, 'DD.MM.YYYY').format('YYYY-MM-DD');
-            filters.end_date = moment(end, 'DD.MM.YYYY').format('YYYY-MM-DD');
+            filters.start_date = moment(start, 'DD.MM.YYYY').format('YYYY-MM-DDT00:00:00');
+            filters.end_date = moment(end, 'DD.MM.YYYY').format('YYYY-MM-DDT00:00:00');
         }
 
         try {
