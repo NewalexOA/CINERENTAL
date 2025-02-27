@@ -19,7 +19,7 @@ from backend.exceptions import (
     StateError,
     ValidationError,
 )
-from backend.models import Booking, Equipment, EquipmentStatus
+from backend.models import Booking, BookingStatus, Equipment, EquipmentStatus
 from backend.repositories import BookingRepository, EquipmentRepository
 from backend.schemas import EquipmentResponse
 
@@ -461,10 +461,22 @@ class EquipmentService:
             )
 
         # Check for active bookings
-        if new_status != EquipmentStatus.RENTED:
+        if (
+            new_status != EquipmentStatus.RENTED
+            and new_status != EquipmentStatus.AVAILABLE
+        ):
             active_bookings = await self.booking_repository.get_active_by_equipment(
                 equipment_id
             )
+            # Filter out PENDING and CONFIRMED bookings for certain status transitions
+            if new_status == EquipmentStatus.MAINTENANCE:
+                # For maintenance, only block if there are ACTIVE or OVERDUE bookings
+                active_bookings = [
+                    b
+                    for b in active_bookings
+                    if b.booking_status in [BookingStatus.ACTIVE, BookingStatus.OVERDUE]
+                ]
+
             if active_bookings:
                 error_msg = (
                     'Cannot retire equipment with active bookings'
