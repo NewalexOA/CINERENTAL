@@ -271,3 +271,20 @@ class BookingRepository(BaseRepository[Booking]):
         )
         result = await self.session.execute(stmt)
         return list(result.scalars().all())
+
+    async def get_with_relations(self, booking_id: int) -> Optional[Booking]:
+        """Get booking by ID with related objects loaded.
+
+        Args:
+            booking_id: Booking ID
+
+        Returns:
+            Booking with related objects loaded or None if not found
+        """
+        stmt = (
+            select(self.model)
+            .options(joinedload(self.model.client), joinedload(self.model.equipment))
+            .where(self.model.id == booking_id, self.model.deleted_at.is_(None))
+        )
+        result = await self.session.execute(stmt)
+        return result.scalar_one_or_none()

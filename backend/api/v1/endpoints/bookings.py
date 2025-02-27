@@ -182,7 +182,7 @@ async def get_bookings(
             )
         # If no filters are specified, get all bookings
         else:
-            filtered_bookings = await booking_service.get_bookings()
+            filtered_bookings = await booking_service.repository.get_all()
 
         # Apply pagination
         paginated_bookings = filtered_bookings[skip : skip + limit]
@@ -224,7 +224,7 @@ async def get_booking(
     """
     booking_service = BookingService(db)
     try:
-        booking_obj = await booking_service.get_booking(booking_id)
+        booking_obj = await booking_service.get_booking_with_relations(booking_id)
 
         # Convert Booking object to BookingResponse
         response = _booking_to_response(booking_obj)

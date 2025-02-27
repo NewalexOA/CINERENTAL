@@ -198,7 +198,7 @@ class BookingService:
             notes: New notes (optional)
 
         Returns:
-            Updated booking
+            Updated booking with related objects loaded
 
         Raises:
             ValidationError: If booking_id is not positive
@@ -262,7 +262,8 @@ class BookingService:
             # Ensure equipment_id is preserved
             booking.equipment_id = booking.equipment_id
 
-            return await self.repository.update(booking)
+            updated_booking = await self.repository.update(booking)
+            return await self.get_booking_with_relations(updated_booking.id)
         except (ValidationError, DateError, StateError) as e:
             # Do not convert domain-specific errors to ValueError
             if isinstance(e, NotFoundError):
@@ -438,7 +439,7 @@ class BookingService:
             new_status: New booking status
 
         Returns:
-            Updated booking
+            Updated booking with related objects loaded
 
         Raises:
             NotFoundError: If booking not found
@@ -524,7 +525,9 @@ class BookingService:
                 EquipmentStatus.AVAILABLE,
             )
 
-        return await self.repository.update(booking)
+        updated_booking = await self.repository.update(booking)
+
+        return await self.get_booking_with_relations(updated_booking.id)
 
     async def change_payment_status(
         self, booking_id: int, status: PaymentStatus
@@ -536,7 +539,7 @@ class BookingService:
             status: New payment status
 
         Returns:
-            Updated booking
+            Updated booking with related objects loaded
 
         Raises:
             NotFoundError: If booking is not found
@@ -574,7 +577,9 @@ class BookingService:
             )
 
         booking.payment_status = status
-        return await self.repository.update(booking)
+        updated_booking = await self.repository.update(booking)
+
+        return await self.get_booking_with_relations(updated_booking.id)
 
     async def _check_equipment_availability(
         self,
@@ -661,25 +666,12 @@ class BookingService:
         if booking_id <= 0:
             raise ValidationError('Booking ID must be positive')
 
-        # Use the repository to get the booking
-        booking = await self.repository.get(booking_id)
+        # Use the repository to get the booking with relations
+        booking = await self.repository.get_with_relations(booking_id)
         if booking is None:
             raise NotFoundError(
                 f'Booking with ID {booking_id} not found',
                 details={'booking_id': booking_id},
             )
 
-        # Load related objects through the repository
-        # Use the get_all method from BookingRepository, which loads related objects
-        bookings = await self.repository.get_all()
-
-        # Find the booking with loaded related objects
-        for b in bookings:
-            if b.id == booking_id:
-                return b
-
-        # If for some reason the booking is not found in the list of all bookings
-        raise NotFoundError(
-            f'Booking with ID {booking_id} not found in loaded bookings',
-            details={'booking_id': booking_id},
-        )
+        return booking
