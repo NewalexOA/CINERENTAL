@@ -428,6 +428,29 @@ const bookingManager = {
                 }
             });
         }
+
+        // Change booking status
+        const changeStatusBtn = document.getElementById('changeStatus');
+        if (changeStatusBtn) {
+            changeStatusBtn.addEventListener('click', () => {
+                const form = document.getElementById('changeStatusForm');
+                const bookingId = form.querySelector('input[name="booking_id"]').value;
+                const status = form.querySelector('select[name="status"]').value;
+                this.changeBookingStatus(bookingId, status);
+            });
+        }
+
+        // Process payment
+        const savePaymentBtn = document.getElementById('savePayment');
+        if (savePaymentBtn) {
+            savePaymentBtn.addEventListener('click', () => {
+                const form = document.getElementById('paymentForm');
+                const bookingId = form.querySelector('input[name="booking_id"]').value;
+                const amount = parseFloat(form.querySelector('input[name="amount"]').value);
+                const paymentStatus = form.querySelector('select[name="payment_status"]').value;
+                this.processPayment(bookingId, amount, paymentStatus);
+            });
+        }
     },
 
     /**
@@ -641,6 +664,42 @@ const bookingManager = {
                 $(this).val('');
             });
         });
+    },
+
+    /**
+     * Change booking status
+     * @param {number} bookingId - ID of the booking
+     * @param {string} status - New status
+     */
+    changeBookingStatus: async function(bookingId, status) {
+        try {
+            await api.put(`/bookings/${bookingId}/status`, { status: status });
+            showToast('Статус бронирования успешно изменен', 'success');
+            location.reload();
+        } catch (error) {
+            console.error('Error changing booking status:', error);
+            showToast('Ошибка при изменении статуса бронирования', 'danger');
+        }
+    },
+
+    /**
+     * Process payment for booking
+     * @param {number} bookingId - ID of the booking
+     * @param {number} amount - Payment amount
+     * @param {string} paymentStatus - New payment status
+     */
+    processPayment: async function(bookingId, amount, paymentStatus) {
+        try {
+            await api.put(`/bookings/${bookingId}/payment`, {
+                paid_amount: amount,
+                payment_status: paymentStatus
+            });
+            showToast('Оплата успешно обработана', 'success');
+            location.reload();
+        } catch (error) {
+            console.error('Error processing payment:', error);
+            showToast('Ошибка при обработке оплаты', 'danger');
+        }
     },
 };
 
