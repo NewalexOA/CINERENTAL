@@ -63,7 +63,7 @@ class BookingService:
             notes: Additional notes (optional)
 
         Returns:
-            Created booking
+            Created booking with related objects loaded
 
         Raises:
             ValueError: If any validation fails
@@ -160,7 +160,10 @@ class BookingService:
                 deposit_amount=Decimal(str(deposit_amount)),
                 notes=notes,
             )
-            return await self.repository.create(booking)
+            created_booking = await self.repository.create(booking)
+
+            # Load related objects
+            return await self.get_booking_with_relations(created_booking.id)
         except (
             ValidationError,
             DateError,
@@ -641,3 +644,42 @@ class BookingService:
                         'available_to': available_to.isoformat(),
                     },
                 )
+
+    async def get_booking_with_relations(self, booking_id: int) -> Booking:
+        """Get booking with related objects loaded.
+
+        Args:
+            booking_id: Booking ID
+
+        Returns:
+            Booking with related objects loaded
+
+        Raises:
+            NotFoundError: If booking is not found
+        """
+        # First check if the booking exists
+        if booking_id <= 0:
+            raise ValidationError('Booking ID must be positive')
+
+        # Use the repository to get the booking
+        booking = await self.repository.get(booking_id)
+        if booking is None:
+            raise NotFoundError(
+                f'Booking with ID {booking_id} not found',
+                details={'booking_id': booking_id},
+            )
+
+        # Load related objects through the repository
+        # Use the get_all method from BookingRepository, which loads related objects
+        bookings = await self.repository.get_all()
+
+        # Find the booking with loaded related objects
+        for b in bookings:
+            if b.id == booking_id:
+                return b
+
+        # If for some reason the booking is not found in the list of all bookings
+        raise NotFoundError(
+            f'Booking with ID {booking_id} not found in loaded bookings',
+            details={'booking_id': booking_id},
+        )

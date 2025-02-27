@@ -257,20 +257,17 @@ class BookingRepository(BaseRepository[Booking]):
         return list(result.scalars().all())
 
     async def get_all(self) -> List[Booking]:
-        """Get all bookings.
+        """Get all bookings with related objects.
 
-        This method overrides the base get_all method to include related objects.
+        Overrides the base method to include related objects.
 
         Returns:
-            List of all bookings
+            List of all bookings that are not marked as deleted
         """
-        query = (
-            select(Booking)
-            .where(
-                Booking.deleted_at.is_(None),
-            )
-            .options(joinedload(Booking.equipment), joinedload(Booking.client))
+        stmt = (
+            select(self.model)
+            .options(joinedload(self.model.client), joinedload(self.model.equipment))
+            .where(self.model.deleted_at.is_(None))
         )
-
-        result = await self.session.execute(query)
+        result = await self.session.execute(stmt)
         return list(result.scalars().all())
