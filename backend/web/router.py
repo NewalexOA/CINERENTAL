@@ -12,8 +12,12 @@ from backend.core.templates import templates
 from backend.models import EquipmentStatus
 from backend.schemas import EquipmentResponse
 from backend.services import CategoryService, EquipmentService
+from backend.web.routes import bookings
 
 web_router = APIRouter()
+
+# Include modular routes
+web_router.include_router(bookings.router, prefix='/bookings', tags=['Bookings Web'])
 
 # Type variables for route handlers
 T = TypeVar('T')
@@ -152,23 +156,6 @@ async def clients_list(request: Request) -> _TemplateResponse:
     """
     return templates.TemplateResponse(
         'clients/list.html',
-        {'request': request},
-    )
-
-
-@typed_route
-@web_router.get('/bookings', response_class=HTMLResponse)
-async def bookings_list(request: Request) -> _TemplateResponse:
-    """Render bookings list page.
-
-    Args:
-        request: FastAPI request
-
-    Returns:
-        _TemplateResponse: Rendered template
-    """
-    return templates.TemplateResponse(
-        'bookings/list.html',
         {'request': request},
     )
 
