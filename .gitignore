@@ -224,3 +224,6 @@ cython_debug/
 # HTMLHint
 .htmlhintrc
 .htmlhintrc.json
+
+# Current task
+docs/Current_task/*
