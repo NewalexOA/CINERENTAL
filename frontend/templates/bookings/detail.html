@@ -29,13 +29,13 @@
                 <div class="row mb-3">
                     <div class="col-md-6">
                         <h6>Статус</h6>
-                        <span class="badge bg-{{ booking.booking_status | lower }}">
+                        <span class="badge {% if booking.booking_status == 'PENDING' %}bg-warning{% elif booking.booking_status == 'CONFIRMED' %}bg-info{% elif booking.booking_status == 'ACTIVE' %}bg-primary{% elif booking.booking_status == 'COMPLETED' %}bg-success{% elif booking.booking_status == 'CANCELLED' %}bg-danger{% else %}bg-secondary{% endif %}">
                             {{ booking.booking_status }}
                         </span>
                     </div>
                     <div class="col-md-6">
                         <h6>Статус оплаты</h6>
-                        <span class="badge bg-{{ booking.payment_status | lower }}">
+                        <span class="badge {% if booking.payment_status == 'PENDING' %}bg-warning{% elif booking.payment_status == 'PARTIAL' %}bg-info{% elif booking.payment_status == 'PAID' %}bg-success{% elif booking.payment_status == 'REFUNDED' %}bg-danger{% else %}bg-secondary{% endif %}">
                             {{ booking.payment_status }}
                         </span>
                     </div>
