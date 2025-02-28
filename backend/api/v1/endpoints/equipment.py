@@ -98,6 +98,11 @@ async def get_equipment_list(
                 status_code=http_status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail='Limit parameter must be a positive integer',
             )
+        if limit > 1000:
+            raise HTTPException(
+                status_code=http_status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail='Limit parameter must be less than or equal to 1000',
+            )
 
         # Validate date parameters
         if start_date or end_date:
