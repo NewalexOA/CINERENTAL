@@ -67,6 +67,10 @@ jobs:
           #!/bin/bash
           set -e
 
+          # Set the environment variable for tests
+          export ENVIRONMENT=testing
+          echo "Setting ENVIRONMENT=testing for all tests"
+
           if [ ! -d "/app/tests" ]; then
             echo "Directory tests not found"
             exit 1
