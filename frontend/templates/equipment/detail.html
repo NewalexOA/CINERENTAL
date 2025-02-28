@@ -52,14 +52,6 @@
                     <div class="col-sm-6">
                         <div class="card bg-light">
                             <div class="card-body">
-                                <h6 class="card-title">Дневная ставка</h6>
-                                <p class="card-text">{{ equipment.daily_rate }} ₽</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-sm-6">
-                        <div class="card bg-light">
-                            <div class="card-body">
                                 <h6 class="card-title">Стоимость замены</h6>
                                 <p class="card-text">{{ equipment.replacement_cost }} ₽</p>
                             </div>
@@ -157,10 +149,6 @@
                     <div class="mb-3">
                         <label class="form-label">Штрих-код</label>
                         <input type="text" class="form-control" name="barcode" value="{{ equipment.barcode }}">
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Дневная ставка</label>
-                        <input type="number" class="form-control" name="daily_rate" value="{{ equipment.daily_rate }}" required>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Стоимость замены</label>
