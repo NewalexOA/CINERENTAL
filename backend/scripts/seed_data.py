@@ -1,7 +1,10 @@
 """Script for seeding test data into the database."""
 
 import asyncio
+import random
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal
+from typing import cast
 
 from faker import Faker
 from loguru import logger
@@ -9,8 +12,18 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.core.database import AsyncSessionLocal
 from backend.core.logging import configure_logging
-from backend.models import Category, Client, ClientStatus, Equipment, EquipmentStatus
+from backend.models import (
+    Booking,
+    BookingStatus,
+    Category,
+    Client,
+    ClientStatus,
+    Equipment,
+    EquipmentStatus,
+    PaymentStatus,
+)
 from backend.repositories import (
+    BookingRepository,
     CategoryRepository,
     ClientRepository,
     EquipmentRepository,
@@ -530,6 +543,181 @@ async def create_clients(session: AsyncSession) -> None:
         )
 
 
+async def create_bookings(session: AsyncSession) -> None:
+    """Create test bookings.
+
+    Args:
+        session: Database session
+    """
+    booking_repository = BookingRepository(session)
+    client_repository = ClientRepository(session)
+    equipment_repository = EquipmentRepository(session)
+
+    # Get all clients and available equipment
+    clients = await client_repository.get_all()
+    equipment_items = await equipment_repository.get_all()
+    available_equipment = [
+        item for item in equipment_items if item.status == EquipmentStatus.AVAILABLE
+    ]
+
+    if not clients or not available_equipment:
+        logger.warning(
+            'No clients or available equipment found. Cannot create bookings.'
+        )
+        return
+
+    # Create bookings with different statuses
+    now = datetime.now(timezone.utc)
+    booking_data = [
+        # PENDING bookings (future dates)
+        {
+            'client': random.choice(clients),
+            'equipment': random.choice(available_equipment),
+            'start_date': now + timedelta(days=random.randint(5, 10)),
+            'end_date': now + timedelta(days=random.randint(11, 15)),
+            'booking_status': BookingStatus.PENDING,
+            'payment_status': PaymentStatus.PENDING,
+            'notes': 'Ожидает подтверждения',
+        },
+        {
+            'client': random.choice(clients),
+            'equipment': random.choice(available_equipment),
+            'start_date': now + timedelta(days=random.randint(7, 12)),
+            'end_date': now + timedelta(days=random.randint(13, 18)),
+            'booking_status': BookingStatus.PENDING,
+            'payment_status': PaymentStatus.PENDING,
+            'notes': 'Требуется проверка доступности',
+        },
+        # CONFIRMED bookings (future dates)
+        {
+            'client': random.choice(clients),
+            'equipment': random.choice(available_equipment),
+            'start_date': now + timedelta(days=random.randint(3, 7)),
+            'end_date': now + timedelta(days=random.randint(8, 12)),
+            'booking_status': BookingStatus.CONFIRMED,
+            'payment_status': PaymentStatus.PARTIAL,
+            'notes': 'Внесена предоплата 50%',
+        },
+        {
+            'client': random.choice(clients),
+            'equipment': random.choice(available_equipment),
+            'start_date': now + timedelta(days=random.randint(2, 5)),
+            'end_date': now + timedelta(days=random.randint(6, 10)),
+            'booking_status': BookingStatus.CONFIRMED,
+            'payment_status': PaymentStatus.PENDING,
+            'notes': 'Подтверждено, ожидается оплата',
+        },
+        # ACTIVE bookings (current dates)
+        {
+            'client': random.choice(clients),
+            'equipment': random.choice(available_equipment),
+            'start_date': now - timedelta(days=random.randint(2, 4)),
+            'end_date': now + timedelta(days=random.randint(2, 5)),
+            'booking_status': BookingStatus.ACTIVE,
+            'payment_status': PaymentStatus.PAID,
+            'notes': 'Оборудование выдано',
+        },
+        {
+            'client': random.choice(clients),
+            'equipment': random.choice(available_equipment),
+            'start_date': now - timedelta(days=random.randint(1, 3)),
+            'end_date': now + timedelta(days=random.randint(3, 6)),
+            'booking_status': BookingStatus.ACTIVE,
+            'payment_status': PaymentStatus.PARTIAL,
+            'notes': 'Оборудование в использовании, доплата при возврате',
+        },
+        # COMPLETED bookings (past dates)
+        {
+            'client': random.choice(clients),
+            'equipment': random.choice(available_equipment),
+            'start_date': now - timedelta(days=random.randint(15, 20)),
+            'end_date': now - timedelta(days=random.randint(5, 10)),
+            'booking_status': BookingStatus.COMPLETED,
+            'payment_status': PaymentStatus.PAID,
+            'notes': 'Успешно завершено',
+        },
+        {
+            'client': random.choice(clients),
+            'equipment': random.choice(available_equipment),
+            'start_date': now - timedelta(days=random.randint(25, 30)),
+            'end_date': now - timedelta(days=random.randint(15, 20)),
+            'booking_status': BookingStatus.COMPLETED,
+            'payment_status': PaymentStatus.PAID,
+            'notes': 'Клиент остался доволен',
+        },
+        # CANCELLED bookings
+        {
+            'client': random.choice(clients),
+            'equipment': random.choice(available_equipment),
+            'start_date': now + timedelta(days=random.randint(5, 10)),
+            'end_date': now + timedelta(days=random.randint(11, 15)),
+            'booking_status': BookingStatus.CANCELLED,
+            'payment_status': PaymentStatus.REFUNDED,
+            'notes': 'Отменено клиентом, средства возвращены',
+        },
+        # OVERDUE bookings
+        {
+            'client': random.choice(clients),
+            'equipment': random.choice(available_equipment),
+            'start_date': now - timedelta(days=random.randint(10, 15)),
+            'end_date': now - timedelta(days=random.randint(2, 5)),
+            'booking_status': BookingStatus.OVERDUE,
+            'payment_status': PaymentStatus.OVERDUE,
+            'notes': 'Просрочен возврат оборудования',
+        },
+    ]
+
+    for data in booking_data:
+        client = cast(Client, data['client'])
+        equipment = cast(Equipment, data['equipment'])
+        start_date = cast(datetime, data['start_date'])
+        end_date = cast(datetime, data['end_date'])
+
+        # Calculate rental duration in days
+        duration = (end_date - start_date).days
+        if duration < 1:
+            duration = 1
+
+        # Calculate total amount based on equipment daily rate
+        daily_rate = equipment.daily_rate
+        total_amount = daily_rate * duration
+
+        # Calculate deposit (usually 30% of total)
+        deposit_amount = total_amount * Decimal('0.3')
+
+        # Calculate paid amount based on payment status
+        paid_amount = Decimal('0')
+        if data['payment_status'] == PaymentStatus.PAID:
+            paid_amount = total_amount
+        elif data['payment_status'] == PaymentStatus.PARTIAL:
+            paid_amount = total_amount * Decimal('0.5')  # 50% paid
+
+        # Create booking object
+        booking = Booking(
+            client_id=client.id,
+            equipment_id=equipment.id,
+            start_date=start_date,
+            end_date=end_date,
+            booking_status=data['booking_status'],
+            payment_status=data['payment_status'],
+            total_amount=total_amount,
+            deposit_amount=deposit_amount,
+            paid_amount=paid_amount,
+            notes=data['notes'],
+        )
+
+        # Save to database
+        created_booking = await booking_repository.create(booking)
+        logger.info(
+            'Created booking #%s: %s - %s, Status: %s, Payment: %s',
+            created_booking.id,
+            created_booking.start_date.strftime('%Y-%m-%d'),
+            created_booking.end_date.strftime('%Y-%m-%d'),
+            created_booking.booking_status.value,
+            created_booking.payment_status.value,
+        )
+
+
 async def seed_data() -> None:
     """Seed test data into the database."""
     async with AsyncSessionLocal() as session:
@@ -547,6 +735,10 @@ async def seed_data() -> None:
             # Create clients
             await create_clients(session)
             logger.info('Successfully created all clients')
+
+            # Create bookings
+            await create_bookings(session)
+            logger.info('Successfully created all bookings')
 
             await session.commit()
             logger.info('Test data seeding completed successfully')
