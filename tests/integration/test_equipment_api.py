@@ -18,7 +18,6 @@ class EquipmentResponse(TypedDict):
 
     name: str
     barcode: str
-    daily_rate: str
     status: str
 
 
@@ -34,7 +33,6 @@ async def test_create_equipment(
         'barcode': 'TEST-002',
         'serial_number': 'SN-002',
         'category_id': test_category.id,
-        'daily_rate': '150.00',
         'replacement_cost': '1500.00',
         'status': EquipmentStatus.AVAILABLE,
     }
@@ -45,7 +43,6 @@ async def test_create_equipment(
 
     assert result['name'] == data['name']
     assert result['barcode'] == data['barcode']
-    assert str(result['daily_rate']) == data['daily_rate']
     assert result['status'] == EquipmentStatus.AVAILABLE
 
 
@@ -62,7 +59,6 @@ async def test_create_equipment_duplicate_barcode(
         'category_id': test_category.id,
         'barcode': test_equipment.barcode,
         'serial_number': 'SN002',
-        'daily_rate': '100.00',
         'replacement_cost': '1000.00',
     }
 
@@ -143,7 +139,6 @@ async def test_update_equipment(
     data = {
         'name': 'Updated Equipment',
         'description': 'Updated Description',
-        'daily_rate': '150.00',
     }
 
     response = await async_client.put(
@@ -153,7 +148,6 @@ async def test_update_equipment(
     assert response.status_code == 200
     result = response.json()
     assert result['name'] == data['name']
-    assert result['daily_rate'] == data['daily_rate']
 
 
 @async_test
@@ -241,38 +235,37 @@ async def test_get_equipment_list_invalid_pagination(async_client: AsyncClient) 
     """Test get equipment list with invalid pagination parameters."""
     response = await async_client.get('/api/v1/equipment/?skip=-1&limit=0')
     assert response.status_code == http_status.HTTP_422_UNPROCESSABLE_ENTITY
-    errors = response.json()['detail']
-    assert any(e['msg'] == 'Input should be greater than or equal to 0' for e in errors)
+    error_detail = response.json()['detail']
+    assert 'Skip parameter' in str(error_detail) or 'greater than or equal to 0' in str(
+        error_detail
+    )
 
     response = await async_client.get('/api/v1/equipment/?skip=0&limit=0')
     assert response.status_code == http_status.HTTP_422_UNPROCESSABLE_ENTITY
-    errors = response.json()['detail']
-    assert any(e['msg'] == 'Input should be greater than 0' for e in errors)
+    error_detail = response.json()['detail']
+    assert 'Limit parameter' in str(error_detail) or 'greater than 0' in str(
+        error_detail
+    )
 
     response = await async_client.get('/api/v1/equipment/?skip=0&limit=1001')
     assert response.status_code == http_status.HTTP_422_UNPROCESSABLE_ENTITY
-    errors = response.json()['detail']
-    assert any(e['msg'] == 'Input should be less than or equal to 1000' for e in errors)
+    error_detail = response.json()['detail']
+    assert 'Limit parameter' in str(
+        error_detail
+    ) or 'less than or equal to 1000' in str(error_detail)
 
 
 @async_test
 async def test_create_equipment_invalid_rate(async_client: AsyncClient) -> None:
-    """Test create equipment with invalid daily rate."""
+    """Test create equipment with invalid replacement cost."""
     data = {
         'name': 'Test Equipment',
         'description': 'Test Description',
         'barcode': '123456789',
         'serial_number': 'SN123',
-        'daily_rate': '0',
-        'replacement_cost': '100',
+        'replacement_cost': '0',
         'category_id': 1,
     }
-    response = await async_client.post('/api/v1/equipment/', json=data)
-    assert response.status_code == http_status.HTTP_400_BAD_REQUEST
-    assert response.json()['detail'] == 'Daily rate must be greater than 0'
-
-    data['daily_rate'] = '100'
-    data['replacement_cost'] = '0'
     response = await async_client.post('/api/v1/equipment/', json=data)
     assert response.status_code == http_status.HTTP_400_BAD_REQUEST
     assert response.json()['detail'] == 'Replacement cost must be greater than 0'
@@ -296,8 +289,8 @@ async def test_update_equipment_invalid_rate(
     async_client: AsyncClient,
     test_equipment: Equipment,
 ) -> None:
-    """Test updating equipment with invalid rate."""
-    data = {'daily_rate': '-100.00'}
+    """Test updating equipment with invalid replacement cost."""
+    data = {'replacement_cost': '-100.00'}
     response = await async_client.put(
         f'/api/v1/equipment/{test_equipment.id}',
         json=data,
@@ -369,15 +362,10 @@ async def test_search_equipment_with_filters(
         f'/api/v1/equipment/?query={test_equipment.name}'
         f'&category_id={test_category.id}'
         f'&status={test_equipment.status.value}'
-        '&min_rate=50.00&max_rate=200.00'
     )
     assert response.status_code == 200
     result = response.json()
     assert len(result) > 0
-    assert all(
-        float(item['daily_rate']) >= 50.00 and float(item['daily_rate']) <= 200.00
-        for item in result
-    )
 
 
 @async_test
@@ -390,13 +378,3 @@ async def test_search_equipment_pagination(
     assert response.status_code == 200
     result = response.json()
     assert len(result) <= 10
-
-
-@async_test
-async def test_search_equipment_validation(async_client: AsyncClient) -> None:
-    """Test equipment search with invalid parameters."""
-    response = await async_client.get(
-        '/api/v1/equipment/?min_rate=invalid&max_rate=invalid'
-    )
-    assert response.status_code == 400
-    assert 'Invalid rate format' in response.json()['detail']

@@ -48,7 +48,7 @@ class TestBookingProcess:
         # Arrange
         start_date = datetime.now(timezone.utc) + timedelta(days=1)  # Start tomorrow
         end_date = start_date + timedelta(days=3)
-        total_amount = float(300.00)  # 3 days * 100.00 daily rate
+        total_amount = float(300.00)  # Fixed amount for testing
         deposit_amount = float(200.00)  # 20% of replacement cost
 
         # Act
@@ -122,7 +122,7 @@ class TestBookingProcess:
         # Arrange
         start_date = datetime.now(timezone.utc) + timedelta(days=1)  # Start tomorrow
         end_date = start_date + timedelta(days=3)
-        total_amount = float(300.00)  # 3 days * 100.00 daily rate
+        total_amount = float(300.00)  # Fixed amount for testing
         deposit_amount = float(200.00)  # 20% of replacement cost
 
         # Act
@@ -168,7 +168,7 @@ class TestBookingProcess:
         # Arrange
         start_date = datetime.now(timezone.utc) + timedelta(days=1)  # Start tomorrow
         end_date = start_date + timedelta(days=3)
-        total_amount = float(300.00)  # 3 days * 100.00 daily rate
+        total_amount = float(300.00)  # Fixed amount for testing
         deposit_amount = float(200.00)  # 20% of replacement cost
 
         # Act
@@ -246,7 +246,6 @@ class TestCategoryHierarchy:
             description='Professional DSLR camera',
             serial_number='5D4001',
             barcode='CANON5D4001',
-            daily_rate=100.0,
             replacement_cost=2000.0,
         )
         await equipment_service.create_equipment(
@@ -255,7 +254,6 @@ class TestCategoryHierarchy:
             description='Professional video camera',
             serial_number='FX6001',
             barcode='SONYFX6001',
-            daily_rate=200.0,
             replacement_cost=5000.0,
         )
 
@@ -688,7 +686,6 @@ class TestEquipmentBusinessRules:
             description='Test equipment for maintenance status',
             serial_number='TEST-MAINT-001',
             barcode='BARCODE-MAINT-001',
-            daily_rate=100.00,
             replacement_cost=1000.00,
             category_id=test_equipment.category_id,
             status=EquipmentStatus.AVAILABLE,
@@ -716,14 +713,8 @@ class TestEquipmentBusinessRules:
         """Test equipment validation business rules."""
         equipment_service = services['equipment']
 
-        # Cannot update with negative rates
-        with pytest.raises(BusinessError, match='must be positive'):
-            await equipment_service.update_equipment(
-                test_equipment.id, daily_rate=-100.00
-            )
-
         # Cannot update with negative replacement cost
-        with pytest.raises(BusinessError, match='must be positive'):
+        with pytest.raises(BusinessError, match='must be greater than 0'):
             await equipment_service.update_equipment(
                 test_equipment.id, replacement_cost=-1000.00
             )
@@ -736,7 +727,6 @@ class TestEquipmentBusinessRules:
                 category_id=test_equipment.category_id,
                 barcode=test_equipment.barcode,  # Duplicate
                 serial_number='UNIQUE001',
-                daily_rate=100.00,
                 replacement_cost=1000.00,
             )
 
@@ -748,6 +738,5 @@ class TestEquipmentBusinessRules:
                 category_id=test_equipment.category_id,
                 barcode='UNIQUE001',
                 serial_number=test_equipment.serial_number,  # Duplicate
-                daily_rate=100.00,
                 replacement_cost=1000.00,
             )

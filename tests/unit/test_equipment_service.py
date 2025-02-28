@@ -57,7 +57,6 @@ class TestEquipmentService:
             barcode='TEST-001',
             serial_number='SN-001',
             category_id=test_category.id,
-            daily_rate=Decimal('100.00'),
             replacement_cost=Decimal('1000.00'),
             status=EquipmentStatus.AVAILABLE,
         )
@@ -79,7 +78,6 @@ class TestEquipmentService:
             category_id=test_category.id,
             barcode='TEST-001',
             serial_number='SN001',
-            daily_rate=100.00,
             replacement_cost=1000.00,
         )
 
@@ -89,7 +87,6 @@ class TestEquipmentService:
         assert equipment_response.category_id == test_category.id
         assert equipment_response.barcode == 'TEST-001'
         assert equipment_response.serial_number == 'SN001'
-        assert float(equipment_response.daily_rate) == 100.00
         assert float(equipment_response.replacement_cost) == 1000.00
         assert equipment_response.status == EquipmentStatus.AVAILABLE
 
@@ -107,7 +104,6 @@ class TestEquipmentService:
             category_id=test_category.id,
             barcode='TEST-001',
             serial_number='SN001',
-            daily_rate=100.00,
             replacement_cost=1000.00,
         )
 
@@ -119,7 +115,6 @@ class TestEquipmentService:
                 category_id=test_category.id,
                 barcode='TEST-001',  # Same barcode
                 serial_number='SN002',
-                daily_rate=100.00,
                 replacement_cost=1000.00,
             )
 
@@ -127,18 +122,16 @@ class TestEquipmentService:
     async def test_create_equipment_invalid_rate(
         self,
         service: EquipmentService,
-        test_category: Category,
     ) -> None:
-        """Test creating equipment with invalid daily rate."""
-        with pytest.raises(BusinessError, match='must be positive'):
+        """Test creating equipment with invalid rate."""
+        with pytest.raises(BusinessError, match='must be greater than 0'):
             await service.create_equipment(
                 name='Test Equipment',
                 description='Test Description',
-                category_id=test_category.id,
+                category_id=1,
                 barcode='TEST-001',
-                serial_number='SN001',
-                daily_rate=-100.00,  # Invalid rate
-                replacement_cost=1000.00,
+                serial_number='SN-001',
+                replacement_cost=-100.0,
             )
 
     @async_test
@@ -156,7 +149,6 @@ class TestEquipmentService:
             category_id=test_category.id,
             barcode='TEST-001',
             serial_number='SN001',
-            daily_rate=100.00,
             replacement_cost=1000.00,
         )
 
@@ -310,7 +302,6 @@ class TestEquipmentService:
             name='Updated Equipment',
             description='Updated Description',
             barcode='UPDATED-001',
-            daily_rate=200.00,
             replacement_cost=2000.00,
             notes='Updated notes',
         )
@@ -318,7 +309,6 @@ class TestEquipmentService:
         assert equipment.name == 'Updated Equipment'
         assert equipment.description == 'Updated Description'
         assert equipment.barcode == 'UPDATED-001'
-        assert float(equipment.daily_rate) == 200.00
         assert float(equipment.replacement_cost) == 2000.00
         assert equipment.notes == 'Updated notes'
 
@@ -334,7 +324,6 @@ class TestEquipmentService:
             name=test_equipment.name,
             description=test_equipment.description,
             barcode=test_equipment.barcode,
-            daily_rate=float(test_equipment.daily_rate),
             replacement_cost=float(test_equipment.replacement_cost),
             notes=test_equipment.notes,
         )
@@ -342,7 +331,6 @@ class TestEquipmentService:
         assert equipment.name == test_equipment.name
         assert equipment.description == test_equipment.description
         assert equipment.barcode == test_equipment.barcode
-        assert equipment.daily_rate == test_equipment.daily_rate
         assert equipment.replacement_cost == test_equipment.replacement_cost
         assert equipment.notes == test_equipment.notes
 
@@ -378,7 +366,6 @@ class TestEquipmentService:
             category_id=test_equipment.category_id,
             barcode=lower_barcode,
             serial_number='SN-002',
-            daily_rate=100.00,
             replacement_cost=1000.00,
         )
 
@@ -458,13 +445,11 @@ class TestEquipmentService:
             test_equipment.id,
             name='Updated Equipment',
             description='Updated Description',
-            daily_rate=200.00,
             replacement_cost=2000.00,
         )
 
         assert updated.name == 'Updated Equipment'
         assert updated.description == 'Updated Description'
-        assert float(updated.daily_rate) == 200.00
         assert float(updated.replacement_cost) == 2000.00
 
     @async_test
@@ -551,11 +536,11 @@ class TestEquipmentService:
         service: EquipmentService,
         test_equipment: Equipment,
     ) -> None:
-        """Test updating equipment with invalid rate."""
+        """Test updating equipment with invalid replacement cost."""
         with pytest.raises(BusinessError):
             await service.update_equipment(
                 test_equipment.id,
-                daily_rate=-100.00,
+                replacement_cost=-1000.00,  # Negative replacement cost
             )
 
     @async_test
@@ -656,7 +641,6 @@ class TestEquipmentService:
                 category_id=test_category.id,
                 barcode='TEST-001',
                 serial_number='SN001',
-                daily_rate=100.00,
                 replacement_cost=-1000.00,
             )
 
@@ -675,7 +659,6 @@ class TestEquipmentService:
                 category_id=test_category.id,
                 barcode='UNIQUE-001',
                 serial_number=test_equipment.serial_number,  # Duplicate
-                daily_rate=100.00,
                 replacement_cost=1000.00,
             )
 
@@ -761,7 +744,6 @@ class TestEquipmentService:
             category_id=test_category.id,
             barcode='TEST-002',
             serial_number='SN002',
-            daily_rate=100.00,
             replacement_cost=1000.00,
         )
 
@@ -813,7 +795,6 @@ class TestEquipmentService:
                 category_id=test_category.id,
                 barcode=f'TEST-SEARCH-{i:03d}',  # Unique barcode
                 serial_number=f'SN-SEARCH-{i:03d}',  # Unique serial
-                daily_rate=100.00,
                 replacement_cost=1000.00,
             )
 

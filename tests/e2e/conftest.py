@@ -260,7 +260,6 @@ async def test_equipment(
         category_id=test_category['id'],
         barcode='SONY-001',
         serial_number='SN-001',
-        daily_rate=100,
         replacement_cost=1000,
     )
     await db_session.commit()
