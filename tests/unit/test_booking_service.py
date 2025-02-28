@@ -560,7 +560,8 @@ class TestBookingService:
     ) -> None:
         """Test getting overdue bookings."""
         # Initially our booking is not overdue
-        overdue = await booking_service.get_overdue()
+        now = datetime.now(timezone.utc)
+        overdue = await booking_service.get_overdue(now)
         assert not any(b.id == booking.id for b in overdue)
 
         # Change status to CONFIRMED first
@@ -584,6 +585,7 @@ class TestBookingService:
         await booking_service.repository.update(booking)
 
         # Now booking should be in overdue bookings
-        overdue = await booking_service.get_overdue()
+        now = datetime.now(timezone.utc)
+        overdue = await booking_service.get_overdue(now)
         assert len(overdue) >= 1
         assert any(b.id == booking.id for b in overdue)

@@ -237,3 +237,65 @@ booking = await register_and_book(
     start_date=datetime(2024, 3, 1),
     end_date=datetime(2024, 3, 5)
 )
+```
+
+## Примеры работы с API клиентов
+
+```python
+from backend.schemas import ClientCreate, ClientUpdate
+from backend.services import ClientService
+
+# Создание нового клиента
+async def create_new_client(db):
+    client_service = ClientService(db)
+
+    client_data = ClientCreate(
+        first_name="Иван",
+        last_name="Петров",
+        email="ivan@example.com",
+        phone="+7-999-123-4567",
+        passport_number="1234 567890",
+        address="г. Москва, ул. Примерная, д. 1",
+        company="ООО Фильм"
+    )
+
+    client = await client_service.create_client(
+        first_name=client_data.first_name,
+        last_name=client_data.last_name,
+        email=client_data.email,
+        phone=client_data.phone,
+        passport_number=client_data.passport_number,
+        address=client_data.address,
+        company=client_data.company
+    )
+
+    return client
+
+# Поиск клиентов
+async def search_clients(db, query):
+    client_service = ClientService(db)
+    clients = await client_service.search_clients(query)
+    return clients
+
+# Обновление данных клиента
+async def update_client(db, client_id):
+    client_service = ClientService(db)
+
+    client_data = ClientUpdate(
+        phone="+7-999-765-4321",
+        address="г. Москва, ул. Новая, д. 5"
+    )
+
+    updated_client = await client_service.update_client(
+        client_id=client_id,
+        phone=client_data.phone,
+        address=client_data.address
+    )
+
+    return updated_client
+
+# Получение бронирований клиента
+async def get_client_bookings(db, client_id):
+    client_service = ClientService(db)
+    bookings = await client_service.get_client_bookings(client_id)
+    return bookings

@@ -63,7 +63,7 @@ class BookingService:
             notes: Additional notes (optional)
 
         Returns:
-            Created booking
+            Created booking with related objects loaded
 
         Raises:
             ValueError: If any validation fails
@@ -160,7 +160,10 @@ class BookingService:
                 deposit_amount=Decimal(str(deposit_amount)),
                 notes=notes,
             )
-            return await self.repository.create(booking)
+            created_booking = await self.repository.create(booking)
+
+            # Load related objects
+            return await self.get_booking_with_relations(created_booking.id)
         except (
             ValidationError,
             DateError,
@@ -195,7 +198,7 @@ class BookingService:
             notes: New notes (optional)
 
         Returns:
-            Updated booking
+            Updated booking with related objects loaded
 
         Raises:
             ValidationError: If booking_id is not positive
@@ -259,7 +262,8 @@ class BookingService:
             # Ensure equipment_id is preserved
             booking.equipment_id = booking.equipment_id
 
-            return await self.repository.update(booking)
+            updated_booking = await self.repository.update(booking)
+            return await self.get_booking_with_relations(updated_booking.id)
         except (ValidationError, DateError, StateError) as e:
             # Do not convert domain-specific errors to ValueError
             if isinstance(e, NotFoundError):
@@ -394,14 +398,34 @@ class BookingService:
             )
         return await self.repository.get_by_payment_status(status)
 
-    async def get_overdue(self) -> List[Booking]:
+    async def get_overdue(self, now: datetime) -> List[Booking]:
         """Get overdue bookings.
+
+        Args:
+            now: Current datetime
 
         Returns:
             List of overdue bookings
         """
         now = datetime.now(timezone.utc)
         return await self.repository.get_overdue(now)
+
+    async def delete_booking(self, booking_id: int) -> None:
+        """Delete booking.
+
+        This is a soft delete that changes the booking status to CANCELLED.
+
+        Args:
+            booking_id: Booking ID
+
+        Raises:
+            NotFoundError: If booking is not found
+        """
+        # First check if booking exists
+        await self.get_booking(booking_id)
+
+        # Then change status to CANCELLED
+        await self.change_status(booking_id, BookingStatus.CANCELLED)
 
     async def change_status(
         self,
@@ -415,7 +439,7 @@ class BookingService:
             new_status: New booking status
 
         Returns:
-            Updated booking
+            Updated booking with related objects loaded
 
         Raises:
             NotFoundError: If booking not found
@@ -501,7 +525,9 @@ class BookingService:
                 EquipmentStatus.AVAILABLE,
             )
 
-        return await self.repository.update(booking)
+        updated_booking = await self.repository.update(booking)
+
+        return await self.get_booking_with_relations(updated_booking.id)
 
     async def change_payment_status(
         self, booking_id: int, status: PaymentStatus
@@ -513,7 +539,7 @@ class BookingService:
             status: New payment status
 
         Returns:
-            Updated booking
+            Updated booking with related objects loaded
 
         Raises:
             NotFoundError: If booking is not found
@@ -551,7 +577,9 @@ class BookingService:
             )
 
         booking.payment_status = status
-        return await self.repository.update(booking)
+        updated_booking = await self.repository.update(booking)
+
+        return await self.get_booking_with_relations(updated_booking.id)
 
     async def _check_equipment_availability(
         self,
@@ -621,3 +649,29 @@ class BookingService:
                         'available_to': available_to.isoformat(),
                     },
                 )
+
+    async def get_booking_with_relations(self, booking_id: int) -> Booking:
+        """Get booking with related objects loaded.
+
+        Args:
+            booking_id: Booking ID
+
+        Returns:
+            Booking with related objects loaded
+
+        Raises:
+            NotFoundError: If booking is not found
+        """
+        # First check if the booking exists
+        if booking_id <= 0:
+            raise ValidationError('Booking ID must be positive')
+
+        # Use the repository to get the booking with relations
+        booking = await self.repository.get_with_relations(booking_id)
+        if booking is None:
+            raise NotFoundError(
+                f'Booking with ID {booking_id} not found',
+                details={'booking_id': booking_id},
+            )
+
+        return booking

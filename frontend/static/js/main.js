@@ -31,11 +31,55 @@ const formatCurrency = (amount) => {
     }).format(amount);
 };
 
+// Toast notification function
+window.showToast = function(message, type = 'info') {
+    const toastContainer = document.getElementById('toastContainer');
+
+    if (!toastContainer) {
+        // Create toast container if it doesn't exist
+        const container = document.createElement('div');
+        container.id = 'toastContainer';
+        container.className = 'toast-container position-fixed bottom-0 end-0 p-3';
+        document.body.appendChild(container);
+    }
+
+    // Create toast element
+    const toastId = `toast-${Date.now()}`;
+    const toast = document.createElement('div');
+    toast.className = `toast align-items-center text-white bg-${type} border-0`;
+    toast.id = toastId;
+    toast.setAttribute('role', 'alert');
+    toast.setAttribute('aria-live', 'assertive');
+    toast.setAttribute('aria-atomic', 'true');
+
+    toast.innerHTML = `
+        <div class="d-flex">
+            <div class="toast-body">
+                ${message}
+            </div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+    `;
+
+    // Add toast to container
+    document.getElementById('toastContainer').appendChild(toast);
+
+    // Initialize and show toast
+    const bsToast = new bootstrap.Toast(toast);
+    bsToast.show();
+
+    // Remove toast after it's hidden
+    toast.addEventListener('hidden.bs.toast', () => {
+        toast.remove();
+    });
+};
+
 // API calls
 const api = {
     async get(endpoint) {
         try {
-            const response = await fetch(`${API_BASE_URL}${endpoint}`);
+            const url = endpoint.includes('?') || endpoint.endsWith('/') ? endpoint : `${endpoint}/`;
+            const response = await fetch(`${API_BASE_URL}${url}`);
             if (!response.ok) throw new Error('Network response was not ok');
             return await response.json();
         } catch (error) {
@@ -46,7 +90,8 @@ const api = {
 
     async post(endpoint, data) {
         try {
-            const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+            const url = endpoint.endsWith('/') ? endpoint : `${endpoint}/`;
+            const response = await fetch(`${API_BASE_URL}${url}`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -63,7 +108,8 @@ const api = {
 
     async put(endpoint, data) {
         try {
-            const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+            const url = endpoint.endsWith('/') ? endpoint : `${endpoint}/`;
+            const response = await fetch(`${API_BASE_URL}${url}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
@@ -80,7 +126,8 @@ const api = {
 
     async delete(endpoint) {
         try {
-            const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+            const url = endpoint.endsWith('/') ? endpoint : `${endpoint}/`;
+            const response = await fetch(`${API_BASE_URL}${url}`, {
                 method: 'DELETE'
             });
             if (!response.ok) throw new Error('Network response was not ok');
@@ -149,40 +196,6 @@ class BarcodeScanner {
         console.error('Scan error:', error);
     }
 }
-
-// Toast notifications
-const showToast = (message, type = 'info') => {
-    const toastContainer = document.getElementById('toast-container');
-    if (!toastContainer) {
-        const container = document.createElement('div');
-        container.id = 'toast-container';
-        container.className = 'position-fixed bottom-0 end-0 p-3';
-        document.body.appendChild(container);
-    }
-
-    const toast = document.createElement('div');
-    toast.className = `toast align-items-center text-white bg-${type}`;
-    toast.setAttribute('role', 'alert');
-    toast.setAttribute('aria-live', 'assertive');
-    toast.setAttribute('aria-atomic', 'true');
-
-    toast.innerHTML = `
-        <div class="d-flex">
-            <div class="toast-body">
-                ${message}
-            </div>
-            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
-        </div>
-    `;
-
-    document.getElementById('toast-container').appendChild(toast);
-    const bsToast = new bootstrap.Toast(toast);
-    bsToast.show();
-
-    toast.addEventListener('hidden.bs.toast', () => {
-        toast.remove();
-    });
-};
 
 // Form validation
 const validateForm = (formElement) => {

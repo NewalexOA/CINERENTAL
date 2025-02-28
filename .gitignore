@@ -220,3 +220,10 @@ cython_debug/
 .cursorrules
 .cursorignore
 .cursor/
+
+# HTMLHint
+.htmlhintrc
+.htmlhintrc.json
+
+# Current task
+docs/Current_task/*
