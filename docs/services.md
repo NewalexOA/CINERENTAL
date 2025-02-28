@@ -94,7 +94,6 @@ equipment = await equipment_service.create_equipment(
     name="Sony PXW-FX9",
     description="Полнокадровая видеокамера",
     barcode="CAM-001",
-    daily_rate=500.00
 )
 is_available = await equipment_service.check_availability(
     equipment_id=1,
