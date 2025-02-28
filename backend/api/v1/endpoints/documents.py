@@ -5,7 +5,7 @@ It provides routes for uploading, retrieving, and managing various
 documents like contracts, invoices, and other rental paperwork.
 """
 
-from typing import List, Optional, cast
+from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi import status as http_status
@@ -14,11 +14,37 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from backend.api.v1.decorators import typed_delete, typed_get, typed_post, typed_put
 from backend.core.database import get_db
 from backend.exceptions import BusinessError, NotFoundError, StatusTransitionError
-from backend.models import DocumentStatus, DocumentType
+from backend.models import Document, DocumentStatus, DocumentType
 from backend.schemas import DocumentCreate, DocumentResponse, DocumentUpdate
 from backend.services import DocumentService
 
 documents_router: APIRouter = APIRouter()
+
+
+def _document_to_response(document: Document) -> DocumentResponse:
+    """Convert Document model to DocumentResponse schema.
+
+    Args:
+        document: Document model instance
+
+    Returns:
+        DocumentResponse schema
+    """
+    return DocumentResponse(
+        id=document.id,
+        client_id=document.client_id,
+        booking_id=document.booking_id,
+        type=document.type,
+        title=document.title,
+        description=document.description or '',  # Ensure description is never None
+        file_path=document.file_path,
+        file_name=document.file_name,
+        file_size=document.file_size,
+        mime_type=document.mime_type,
+        status=document.status,
+        created_at=document.created_at,
+        updated_at=document.updated_at,
+    )
 
 
 @typed_post(
@@ -69,7 +95,7 @@ async def create_document(
             mime_type=mime_type,
             notes=notes,
         )
-        return cast(DocumentResponse, created_document)
+        return _document_to_response(created_document)
     except NotFoundError as e:
         raise HTTPException(
             status_code=http_status.HTTP_404_NOT_FOUND,
@@ -131,7 +157,9 @@ async def get_documents(
         # Manually apply pagination
         skip_val = skip or 0
         limit_val = limit or 100
-        return cast(List[DocumentResponse], documents[skip_val : skip_val + limit_val])
+        paginated_documents = documents[skip_val : skip_val + limit_val]
+
+        return [_document_to_response(doc) for doc in paginated_documents]
     except BusinessError as e:
         raise HTTPException(
             status_code=http_status.HTTP_400_BAD_REQUEST,
@@ -170,7 +198,7 @@ async def get_document(
                 detail=f'Документ с ID {document_id} не найден',
             )
 
-        return cast(DocumentResponse, document)
+        return _document_to_response(document)
     except BusinessError as e:
         raise HTTPException(
             status_code=http_status.HTTP_400_BAD_REQUEST,
@@ -233,7 +261,7 @@ async def update_document(
                     detail=str(e),
                 ) from e
 
-        return cast(DocumentResponse, updated_document)
+        return _document_to_response(updated_document)
     except ValueError as e:
         raise HTTPException(
             status_code=http_status.HTTP_404_NOT_FOUND,
@@ -292,33 +320,23 @@ async def delete_document(
 async def get_client_documents(
     client_id: int,
     db: AsyncSession = Depends(get_db),
-    skip: Optional[int] = Query(0, ge=0, description='Документов для пропуска'),
-    limit: Optional[int] = Query(
-        100, ge=1, le=1000, description='Максимальное количество документов'
-    ),
 ) -> List[DocumentResponse]:
-    """Get client documents.
+    """Get all documents for a client.
 
     Args:
         client_id: Client ID
         db: Database session
-        skip: Number of documents to skip (for pagination)
-        limit: Maximum number of documents to return (for pagination)
 
     Returns:
-        List of client documents
+        List of client's documents
 
     Raises:
-        HTTPException: If there is an error retrieving documents
+        HTTPException: If there is an error retrieving the documents
     """
     try:
         service = DocumentService(db)
         documents = await service.repository.get_by_client(client_id)
-
-        # Manually apply pagination
-        skip_val = skip or 0
-        limit_val = limit or 100
-        return cast(List[DocumentResponse], documents[skip_val : skip_val + limit_val])
+        return [_document_to_response(doc) for doc in documents]
     except BusinessError as e:
         raise HTTPException(
             status_code=http_status.HTTP_400_BAD_REQUEST,
@@ -334,33 +352,23 @@ async def get_client_documents(
 async def get_booking_documents(
     booking_id: int,
     db: AsyncSession = Depends(get_db),
-    skip: Optional[int] = Query(0, ge=0, description='Документов для пропуска'),
-    limit: Optional[int] = Query(
-        100, ge=1, le=1000, description='Максимальное количество документов'
-    ),
 ) -> List[DocumentResponse]:
-    """Get booking documents.
+    """Get all documents for a booking.
 
     Args:
         booking_id: Booking ID
         db: Database session
-        skip: Number of documents to skip (for pagination)
-        limit: Maximum number of documents to return (for pagination)
 
     Returns:
-        List of booking documents
+        List of booking's documents
 
     Raises:
-        HTTPException: If there is an error retrieving documents
+        HTTPException: If there is an error retrieving the documents
     """
     try:
         service = DocumentService(db)
         documents = await service.get_by_booking(booking_id)
-
-        # Manually apply pagination
-        skip_val = skip or 0
-        limit_val = limit or 100
-        return cast(List[DocumentResponse], documents[skip_val : skip_val + limit_val])
+        return [_document_to_response(doc) for doc in documents]
     except BusinessError as e:
         raise HTTPException(
             status_code=http_status.HTTP_400_BAD_REQUEST,
@@ -378,7 +386,7 @@ async def change_document_status(
     status: DocumentStatus,
     db: AsyncSession = Depends(get_db),
 ) -> DocumentResponse:
-    """Change the document status.
+    """Change document status.
 
     Args:
         document_id: Document ID
@@ -393,11 +401,21 @@ async def change_document_status(
     """
     try:
         service = DocumentService(db)
+
+        # Check if the document exists
+        document = await service.get_document(document_id)
+        if not document:
+            raise HTTPException(
+                status_code=http_status.HTTP_404_NOT_FOUND,
+                detail=f'Документ с ID {document_id} не найден',
+            )
+
+        # Change the status
         updated_document = await service.change_status(
             document_id=document_id,
             status=status,
         )
-        return cast(DocumentResponse, updated_document)
+        return _document_to_response(updated_document)
     except ValueError as e:
         raise HTTPException(
             status_code=http_status.HTTP_404_NOT_FOUND,

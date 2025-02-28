@@ -44,10 +44,19 @@ class DocumentUpdate(BaseModel):
     )
 
 
-class DocumentResponse(DocumentBase):
+class DocumentResponse(BaseModel):
     """Document response schema."""
 
     id: int
+    client_id: int
+    booking_id: Optional[int] = None
+    type: DocumentType
+    title: str
+    description: str
+    file_path: str
+    file_name: str
+    file_size: int
+    mime_type: str
     status: DocumentStatus
     created_at: datetime
     updated_at: datetime
