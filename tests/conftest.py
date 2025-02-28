@@ -1,6 +1,7 @@
 """Test configuration and fixtures."""
 
 import asyncio
+import os
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
@@ -22,6 +23,7 @@ import asyncpg
 import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
+from loguru import logger
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
     AsyncSession,
@@ -33,6 +35,7 @@ from sqlalchemy.sql import text
 
 from backend.core.config import settings
 from backend.core.database import get_db
+from backend.core.logging import configure_logging
 from backend.main import app as main_app
 from backend.models import Base, Booking, Category, Client, Document, Equipment
 from backend.repositories import BookingRepository, EquipmentRepository
@@ -50,6 +53,30 @@ from backend.services import (
     DocumentService,
     EquipmentService,
 )
+
+
+# Set logging for tests
+def configure_test_logging():
+    """Configure logging for tests."""
+    # Set the environment variable for tests
+    os.environ['ENVIRONMENT'] = 'testing'
+
+    # Forcefully set the logging level to WARNING
+    # First, remove all handlers
+    logger.remove()
+
+    # Add a handler with the WARNING level
+    logger.add(
+        sink=lambda msg: None, level='WARNING'  # Empty handler to suppress output
+    )
+
+    # Use centralized logging configuration through loguru
+    configure_logging()
+
+
+# Call the logging configuration function
+configure_test_logging()
+
 
 P = ParamSpec('P')
 T = TypeVar('T')
@@ -239,7 +266,6 @@ async def test_equipment(
         barcode='TEST-001',
         serial_number='SN-001',
         category_id=test_category.id,
-        daily_rate=Decimal('100.00'),
         replacement_cost=Decimal('1000.00'),
         status=EquipmentStatus.AVAILABLE,
     )
@@ -435,7 +461,6 @@ async def equipment_with_special_chars(
         serial_number='Test & Equipment',
         category_id=test_category.id,
         status=EquipmentStatus.AVAILABLE,
-        daily_rate=Decimal('100.00'),
         replacement_cost=Decimal('1000.00'),
     )
     db_session.add(equipment)
@@ -457,7 +482,6 @@ async def equipment_with_long_strings(
         serial_number='D' * 100,  # Maximum length for serial number
         category_id=test_category.id,
         status=EquipmentStatus.AVAILABLE,
-        daily_rate=Decimal('100.00'),
         replacement_cost=Decimal('1000.00'),
     )
     db_session.add(equipment)
@@ -479,7 +503,6 @@ async def equipment_with_unicode(
         serial_number='シリアル-001',
         category_id=test_category.id,
         status=EquipmentStatus.AVAILABLE,
-        daily_rate=Decimal('100.00'),
         replacement_cost=Decimal('1000.00'),
     )
     db_session.add(equipment)

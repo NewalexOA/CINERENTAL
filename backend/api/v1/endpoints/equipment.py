@@ -2,7 +2,7 @@
 
 This module implements API endpoints for managing rental equipment.
 It provides routes for adding, updating, and retrieving equipment items,
-including their specifications, availability, and rental rates.
+including their specifications, availability, and replacement costs.
 """
 
 from datetime import datetime, timedelta
@@ -45,12 +45,7 @@ async def create_equipment(
         HTTPException: If equipment with given barcode already exists
     """
     try:
-        # Validate rates
-        if float(equipment.daily_rate) <= 0:
-            raise HTTPException(
-                status_code=http_status.HTTP_400_BAD_REQUEST,
-                detail='Daily rate must be greater than 0',
-            )
+        # Validate replacement cost
         if float(equipment.replacement_cost) <= 0:
             raise HTTPException(
                 status_code=http_status.HTTP_400_BAD_REQUEST,
@@ -64,7 +59,6 @@ async def create_equipment(
             category_id=equipment.category_id,
             barcode=equipment.barcode,
             serial_number=equipment.serial_number,
-            daily_rate=float(equipment.daily_rate),
             replacement_cost=float(equipment.replacement_cost),
         )
     except BusinessError as e:
@@ -89,8 +83,6 @@ async def get_equipment_list(
     available_to: Optional[datetime] = None,
     start_date: Optional[str] = None,
     end_date: Optional[str] = None,
-    min_rate: Optional[str] = None,
-    max_rate: Optional[str] = None,
     db: AsyncSession = Depends(get_db),
 ) -> List[EquipmentResponse]:
     """Get list of equipment with optional filtering."""
@@ -99,35 +91,17 @@ async def get_equipment_list(
         if skip is None or skip < 0:
             raise HTTPException(
                 status_code=http_status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail=[
-                    {
-                        'loc': ['query', 'skip'],
-                        'msg': 'Input should be greater than or equal to 0',
-                        'type': 'value_error',
-                    }
-                ],
+                detail='Skip parameter must be a non-negative integer',
             )
-        if limit is None or limit <= 0:
+        if limit is None or limit < 1:
             raise HTTPException(
                 status_code=http_status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail=[
-                    {
-                        'loc': ['query', 'limit'],
-                        'msg': 'Input should be greater than 0',
-                        'type': 'value_error',
-                    }
-                ],
+                detail='Limit parameter must be a positive integer',
             )
         if limit > 1000:
             raise HTTPException(
                 status_code=http_status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail=[
-                    {
-                        'loc': ['query', 'limit'],
-                        'msg': 'Input should be less than or equal to 1000',
-                        'type': 'value_error',
-                    }
-                ],
+                detail='Limit parameter must be less than or equal to 1000',
             )
 
         # Validate date parameters
@@ -148,38 +122,12 @@ async def get_equipment_list(
                     detail='Invalid date format. Use ISO format (YYYY-MM-DDTHH:MM:SS)',
                 )
 
-        # Validate rate parameters
-        min_rate_float = None
-        max_rate_float = None
-
         # Validate query parameter length
         if query and len(query) > 255:
             raise HTTPException(
                 status_code=http_status.HTTP_400_BAD_REQUEST,
                 detail='Search query is too long. Maximum length is 255 characters.',
             )
-
-        if min_rate or max_rate:
-            try:
-                if min_rate:
-                    min_rate_float = float(min_rate)
-                    if min_rate_float < 0:
-                        raise ValueError('Minimum rate cannot be negative')
-                if max_rate:
-                    max_rate_float = float(max_rate)
-                    if max_rate_float < 0:
-                        raise ValueError('Maximum rate cannot be negative')
-                if (
-                    min_rate_float
-                    and max_rate_float
-                    and min_rate_float > max_rate_float
-                ):
-                    raise ValueError('Minimum rate cannot be greater than maximum rate')
-            except ValueError as e:
-                raise HTTPException(
-                    status_code=http_status.HTTP_400_BAD_REQUEST,
-                    detail=f'Invalid rate format: {str(e)}',
-                )
 
         # Get equipment list
         equipment_service = EquipmentService(db)
@@ -243,12 +191,7 @@ async def update_equipment(
 ) -> EquipmentResponse:
     """Update equipment by ID."""
     try:
-        # Validate rate and replacement cost
-        if equipment.daily_rate is not None and float(equipment.daily_rate) <= 0:
-            raise HTTPException(
-                status_code=http_status.HTTP_400_BAD_REQUEST,
-                detail='Daily rate must be greater than 0',
-            )
+        # Validate replacement cost
         if (
             equipment.replacement_cost is not None
             and float(equipment.replacement_cost) <= 0
@@ -311,13 +254,6 @@ async def update_equipment(
             # Convert model to dict and update equipment
             equipment_data = equipment.model_dump(exclude_unset=True)
 
-            daily_rate_value = None
-            if (
-                'daily_rate' in equipment_data
-                and equipment_data['daily_rate'] is not None
-            ):
-                daily_rate_value = float(equipment_data['daily_rate'])
-
             replacement_cost_value = None
             if (
                 'replacement_cost' in equipment_data
@@ -329,7 +265,6 @@ async def update_equipment(
                 equipment_id,
                 name=equipment_data.get('name'),
                 description=equipment_data.get('description'),
-                daily_rate=daily_rate_value,
                 replacement_cost=replacement_cost_value,
                 barcode=equipment_data.get('barcode'),
                 serial_number=equipment_data.get('serial_number'),

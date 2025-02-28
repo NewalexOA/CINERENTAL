@@ -297,32 +297,7 @@ const equipmentSearch = {
                     return;
                 }
 
-                table.innerHTML = results.map(item => `
-                    <tr>
-                        <td>
-                            <div class="fw-bold">${item.name}</div>
-                            <small class="text-muted">${item.description || ''}</small>
-                        </td>
-                        <td>${item.category_name || 'Без категории'}</td>
-                        <td>${item.barcode}</td>
-                        <td>
-                            <span class="badge bg-${item.status === 'AVAILABLE' ? 'success' : item.status === 'RENTED' ? 'warning' : 'danger'}">
-                                ${item.status}
-                            </span>
-                        </td>
-                        <td>${formatCurrency(item.daily_rate)}</td>
-                        <td>
-                            <div class="btn-group">
-                                <a href="/equipment/${item.id}" class="btn btn-sm btn-outline-primary">
-                                    <i class="fas fa-info-circle"></i>
-                                </a>
-                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="copyBarcode('${item.barcode}')">
-                                    <i class="fas fa-copy"></i>
-                                </button>
-                            </div>
-                        </td>
-                    </tr>
-                `).join('');
+                table.innerHTML = results.map(item => formatEquipmentRow(item)).join('');
             } catch (error) {
                 console.error('Search error:', error);
                 showToast('Ошибка при поиске оборудования', 'danger');
@@ -340,6 +315,53 @@ const equipmentSearch = {
         updateResults();
     }
 };
+
+// Get status color for badges
+function getStatusColor(status) {
+    switch (status) {
+        case 'AVAILABLE':
+            return 'success';
+        case 'RENTED':
+            return 'warning';
+        case 'MAINTENANCE':
+            return 'info';
+        case 'BROKEN':
+            return 'danger';
+        case 'RETIRED':
+            return 'secondary';
+        default:
+            return 'primary';
+    }
+}
+
+// Format equipment row for table
+function formatEquipmentRow(item) {
+    return `
+        <tr>
+            <td>
+                <div class="fw-bold">${item.name}</div>
+                <small class="text-muted">${item.description}</small>
+            </td>
+            <td>${item.category_name}</td>
+            <td>${item.barcode}</td>
+            <td>
+                <span class="badge bg-${getStatusColor(item.status)}">
+                    ${item.status}
+                </span>
+            </td>
+            <td>
+                <div class="btn-group">
+                    <a href="/equipment/${item.id}" class="btn btn-sm btn-outline-primary">
+                        <i class="fas fa-info-circle"></i>
+                    </a>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="copyBarcode('${item.barcode}')">
+                        <i class="fas fa-copy"></i>
+                    </button>
+                </div>
+            </td>
+        </tr>
+    `;
+}
 
 // Document ready handler
 document.addEventListener('DOMContentLoaded', () => {

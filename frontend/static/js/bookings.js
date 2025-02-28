@@ -134,7 +134,7 @@ const bookingManager = {
                         <input class="form-check-input" type="radio" name="equipment_id"
                             value="${item.id}" id="equipment${item.id}">
                         <label class="form-check-label" for="equipment${item.id}">
-                            ${item.name} - ${item.daily_rate} ₽/день
+                            ${item.name}
                             <small class="text-muted d-block">
                                 ${item.serial_number ? `S/N: ${item.serial_number}` : ''}
                                 ${item.barcode ? `Штрих-код: ${item.barcode}` : ''}

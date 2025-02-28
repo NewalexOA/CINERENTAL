@@ -157,7 +157,6 @@ def upgrade() -> None:
             ),
             nullable=False,
         ),
-        sa.Column('daily_rate', sa.Numeric(precision=10, scale=2), nullable=False),
         sa.Column(
             'replacement_cost', sa.Numeric(precision=10, scale=2), nullable=False
         ),

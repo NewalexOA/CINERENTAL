@@ -36,7 +36,7 @@ ERD диаграмма доступна в файле [database_schema.puml](dat
   - MAINTENANCE (на обслуживании)
   - BROKEN (сломано)
   - RETIRED (списано)
-- `daily_rate` (NUMERIC(10,2), NOT NULL) - стоимость аренды в день
+
 - `replacement_cost` (NUMERIC(10,2), NOT NULL) - стоимость замены
 - `notes` (VARCHAR(1000)) - дополнительные заметки
 - `created_at` (TIMESTAMP WITH TIMEZONE, NOT NULL, INDEX) - дата и время создания

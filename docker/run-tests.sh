@@ -1,6 +1,10 @@
 #!/bin/bash
 set -e
 
+# Set the environment variable for tests
+export ENVIRONMENT=testing
+echo "Setting ENVIRONMENT=testing for all tests"
+
 # Wait for services to be ready
 echo "Waiting for PostgreSQL..."
 ./docker/wait-for.sh postgres test_db 5432

@@ -56,7 +56,6 @@
                             <th>Категория</th>
                             <th>Штрих-код</th>
                             <th>Статус</th>
-                            <th>Дневная ставка</th>
                             <th>Действия</th>
                         </tr>
                     </thead>
@@ -74,7 +73,6 @@
                                     {{ item.status }}
                                 </span>
                             </td>
-                            <td>{{ item.daily_rate }} ₽</td>
                             <td>
                                 <div class="btn-group">
                                     <a href="/equipment/{{ item.id }}" class="btn btn-sm btn-outline-primary">
@@ -125,10 +123,6 @@
                     <div class="mb-3">
                         <label class="form-label">Штрих-код</label>
                         <input type="text" class="form-control" name="barcode" required>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Дневная ставка</label>
-                        <input type="number" class="form-control" name="daily_rate" required>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Стоимость замены</label>

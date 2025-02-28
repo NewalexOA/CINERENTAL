@@ -45,7 +45,7 @@ class TestBookingFlow:
         # Arrange
         start_date = datetime.now(timezone.utc) + timedelta(days=1)  # Start tomorrow
         end_date = start_date + timedelta(days=3)
-        total_amount = float(300.00)  # 3 days * 100.00 daily rate
+        total_amount = float(300.00)
         deposit_amount = float(200.00)  # 20% of replacement cost
 
         # Act
@@ -98,7 +98,7 @@ class TestBookingFlow:
         # Arrange
         start_date = datetime.now(timezone.utc) + timedelta(days=1)  # Start tomorrow
         end_date = start_date + timedelta(days=3)
-        total_amount = float(300.00)  # 3 days * 100.00 daily rate
+        total_amount = float(300.00)
         deposit_amount = float(200.00)  # 20% of replacement cost
 
         # Act
@@ -185,7 +185,7 @@ class TestEquipmentAvailability:
         # Arrange
         start_date = datetime.now(timezone.utc) + timedelta(days=1)  # Start tomorrow
         end_date = start_date + timedelta(days=3)
-        total_amount = float(300.00)  # 3 days * 100.00 daily rate
+        total_amount = float(300.00)
         deposit_amount = float(200.00)  # 20% of replacement cost
 
         # Act

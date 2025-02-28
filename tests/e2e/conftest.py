@@ -2,6 +2,7 @@
 
 import asyncio
 import multiprocessing
+import os
 import time
 from typing import AsyncGenerator, Dict, Generator, Tuple
 
@@ -10,6 +11,7 @@ import requests
 import uvicorn
 from alembic import command
 from alembic.config import Config
+from loguru import logger
 from playwright.async_api import (
     APIRequestContext,
     Browser,
@@ -23,12 +25,36 @@ from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, create_async_engin
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.sql import text
 
+from backend.core.logging import configure_logging
 from backend.main import app as fastapi_app
 from backend.models import Equipment
 from backend.schemas.category import CategoryResponse
 from backend.schemas.equipment import EquipmentResponse
 from backend.services.category import CategoryService
 from backend.services.equipment import EquipmentService
+
+
+# Set logging for tests
+def configure_test_logging():
+    """Configure logging for tests."""
+    # Set the environment variable for tests
+    os.environ['ENVIRONMENT'] = 'testing'
+
+    # Forcefully set the logging level to WARNING
+    # First, remove all handlers
+    logger.remove()
+
+    # Add a handler with the WARNING level
+    logger.add(
+        sink=lambda msg: None, level='WARNING'  # Empty handler to suppress output
+    )
+
+    # Use centralized logging configuration through loguru
+    configure_logging()
+
+
+# Call the logging configuration function
+configure_test_logging()
 
 # Test database URL with trust auth method
 TEST_DATABASE_URL = 'postgresql+asyncpg://postgres@test_db:5432/cinerental_test'
@@ -260,7 +286,6 @@ async def test_equipment(
         category_id=test_category['id'],
         barcode='SONY-001',
         serial_number='SN-001',
-        daily_rate=100,
         replacement_cost=1000,
     )
     await db_session.commit()

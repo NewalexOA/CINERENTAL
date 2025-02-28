@@ -365,7 +365,7 @@
                         ],
                         "body": {
                             "mode": "raw",
-                            "raw": "{\n    \"name\": \"Sony FX6\",\n    \"description\": \"Professional cinema camera\",\n    \"category_id\": 1,\n    \"barcode\": \"CAM-001\",\n    \"serial_number\": \"SN12345\",\n    \"daily_rate\": 299.99,\n    \"replacement_cost\": 5999.99\n}"
+                            "raw": "{\n    \"name\": \"Sony FX6\",\n    \"description\": \"Professional cinema camera\",\n    \"category_id\": 1,\n    \"barcode\": \"CAM-001\",\n    \"serial_number\": \"SN12345\",\n    \"replacement_cost\": 5999.99\n}"
                         },
                         "url": {
                             "raw": "{{base_url}}/equipment/",
@@ -413,7 +413,7 @@
                         ],
                         "body": {
                             "mode": "raw",
-                            "raw": "{\n    \"name\": \"Sony FX6 Updated\",\n    \"description\": \"Updated description\",\n    \"daily_rate\": 349.99,\n    \"replacement_cost\": 6999.99,\n    \"notes\": \"Recently serviced\"\n}"
+                            "raw": "{\n    \"name\": \"Sony FX6 Updated\",\n    \"description\": \"Updated description\",\n    \"replacement_cost\": 6999.99,\n    \"notes\": \"Recently serviced\"\n}"
                         },
                         "url": {
                             "raw": "{{base_url}}/equipment/1",

@@ -66,6 +66,43 @@ class LogConfig(BaseModel):
         'alembic': {'handlers': ['default'], 'level': LOG_LEVEL, 'propagate': False},
     }
 
+    def __init__(self, **data: Any):
+        """Initialize logging configuration with environment-specific settings."""
+        super().__init__(**data)
+
+        # Reduce logging verbosity in testing environment
+        if settings.ENVIRONMENT == 'testing':
+            # Set higher log level for HTTP access logs and other verbose components
+            self.loggers.update(
+                {
+                    'uvicorn.access': {
+                        'handlers': ['default'],
+                        'level': 'WARNING',
+                        'propagate': False,
+                    },
+                    'uvicorn.error': {
+                        'handlers': ['default'],
+                        'level': 'WARNING',
+                        'propagate': False,
+                    },
+                    'uvicorn.asgi': {
+                        'handlers': ['default'],
+                        'level': 'WARNING',
+                        'propagate': False,
+                    },
+                    'fastapi': {
+                        'handlers': ['default'],
+                        'level': 'WARNING',
+                        'propagate': False,
+                    },
+                    'sqlalchemy.engine': {
+                        'handlers': ['default'],
+                        'level': 'WARNING',
+                        'propagate': False,
+                    },
+                }
+            )
+
 
 class InterceptHandler(logging.Handler):
     """Intercepts standard logging and redirects to loguru."""
@@ -183,6 +220,29 @@ class InterceptHandler(logging.Handler):
         """
         # Skip uvicorn access logs timestamp
         try:
+            # Skip more verbose logs in testing environment
+            if settings.ENVIRONMENT == 'testing':
+                # Skip all uvicorn access logs in testing
+                if record.name == 'uvicorn.access':
+                    return
+
+                # Skip HTTP request logs for static files and common API endpoints
+                if hasattr(record, 'getMessage'):
+                    msg = record.getMessage()
+                    if any(
+                        pattern in msg
+                        for pattern in [
+                            'GET /css/',
+                            'GET /js/',
+                            'GET /static/',
+                            'GET /api/v1/health',
+                            'GET /api/v1/equipment',
+                            'GET /api/v1/categories',
+                        ]
+                    ):
+                        return
+
+            # Original filtering logic
             if record.name == 'uvicorn.access' and record.getMessage().startswith('20'):
                 return
 
@@ -241,6 +301,31 @@ def should_log(record: Any) -> bool:
         bool: True if the log should be processed, False otherwise
     """
     try:
+        # In the testing environment, filter more logs
+        if settings.ENVIRONMENT == 'testing':
+            # Filter all HTTP requests and responses
+            if str(record['name']).startswith('uvicorn'):
+                return False
+
+            # Filter SQLAlchemy logs
+            if str(record['name']).startswith('sqlalchemy'):
+                return False
+
+            # Filter FastAPI logs
+            if str(record['name']).startswith('fastapi'):
+                return False
+
+            # Filter Alembic logs
+            if str(record['name']).startswith('alembic'):
+                return False
+
+            # Check the message for the presence of HTTP requests
+            if hasattr(record, 'message'):
+                msg = str(record['message']).lower()
+                if any(x in msg for x in ['get ', 'post ', 'put ', 'delete ', 'http']):
+                    return False
+
+        # Standard filtering for other environments
         # Skip SQLAlchemy initialization logs
         if str(record['name']).startswith('sqlalchemy'):
             msg = str(record['message']).lower()
@@ -332,11 +417,16 @@ def configure_logging(
     # Remove all existing handlers from loguru
     logger.remove()
 
+    # In the testing environment, forcefully set the logging level to WARNING
+    log_level = log_config.LOG_LEVEL
+    if settings.ENVIRONMENT == 'testing':
+        log_level = 'WARNING'
+
     # Configure console logging with colors
     logger.add(
         sys.stderr,
         format=log_config.CONSOLE_FORMAT,
-        level=log_config.LOG_LEVEL,
+        level=log_level,
         colorize=True,
         backtrace=True,
         diagnose=True,
@@ -353,7 +443,7 @@ def configure_logging(
         logger.add(
             str(log_path),
             format=log_config.FILE_FORMAT,
-            level=log_config.LOG_LEVEL,
+            level=log_level,
             rotation='00:00',  # Rotate at midnight
             retention='1 week',
             compression='zip',
@@ -377,7 +467,7 @@ def configure_logging(
     ).info(
         'Logging configured | Environment: {} | Level: {}',
         settings.ENVIRONMENT,
-        log_config.LOG_LEVEL,
+        log_level,
     )
 
 
