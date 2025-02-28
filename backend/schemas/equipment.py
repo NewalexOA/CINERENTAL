@@ -20,9 +20,6 @@ class EquipmentBase(BaseModel):
     description: str = Field(
         ..., title='Description', description='Equipment description'
     )
-    daily_rate: Decimal = Field(
-        ..., title='Daily Rate', description='Daily rental rate'
-    )
     replacement_cost: Decimal = Field(
         ..., title='Replacement Cost', description='Cost to replace if damaged'
     )
@@ -43,9 +40,6 @@ class EquipmentUpdate(BaseModel):
     name: Optional[str] = Field(None, title='Name', description='Equipment name')
     description: Optional[str] = Field(
         None, title='Description', description='Equipment description'
-    )
-    daily_rate: Optional[Decimal] = Field(
-        None, title='Daily Rate', description='Daily rental rate'
     )
     replacement_cost: Optional[Decimal] = Field(
         None, title='Replacement Cost', description='Cost to replace if damaged'

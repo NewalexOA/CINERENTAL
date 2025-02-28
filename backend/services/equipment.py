@@ -58,7 +58,6 @@ class EquipmentService:
         category_id: int,
         barcode: str,
         serial_number: str,
-        daily_rate: float,
         replacement_cost: float,
         notes: Optional[str] = None,
     ) -> EquipmentResponse:
@@ -70,7 +69,6 @@ class EquipmentService:
             category_id: Category ID
             barcode: Equipment barcode
             serial_number: Equipment serial number
-            daily_rate: Daily rental rate
             replacement_cost: Cost to replace if damaged
             notes: Optional notes
 
@@ -82,10 +80,8 @@ class EquipmentService:
             ConflictError: If equipment with given barcode/serial number exists
         """
         # Validate business rules
-        if daily_rate <= 0:
-            raise ValidationError('Daily rate must be positive')
         if replacement_cost <= 0:
-            raise ValidationError('Replacement cost must be positive')
+            raise ValidationError('Replacement cost must be greater than 0')
 
         # Check for duplicate barcode
         existing = await self.repository.get_by_barcode(barcode)
@@ -109,7 +105,6 @@ class EquipmentService:
             category_id=category_id,
             barcode=barcode,
             serial_number=serial_number,
-            daily_rate=Decimal(str(daily_rate)),
             replacement_cost=Decimal(str(replacement_cost)),
             notes=notes,
             status=EquipmentStatus.AVAILABLE,
@@ -209,7 +204,6 @@ class EquipmentService:
         category_id: Optional[int] = None,
         barcode: Optional[str] = None,
         serial_number: Optional[str] = None,
-        daily_rate: Optional[float] = None,
         replacement_cost: Optional[float] = None,
         notes: Optional[str] = None,
         status: Optional[EquipmentStatus] = None,
@@ -223,7 +217,6 @@ class EquipmentService:
             category_id: New category ID
             barcode: New barcode
             serial_number: New serial number
-            daily_rate: New daily rate
             replacement_cost: New replacement cost
             notes: New notes
             status: New status
@@ -240,14 +233,9 @@ class EquipmentService:
         equipment = await self.get_equipment(equipment_id)
 
         # Validate business rules
-        if daily_rate is not None and daily_rate <= 0:
-            raise ValidationError(
-                'Daily rate must be positive',
-                details={'daily_rate': daily_rate},
-            )
         if replacement_cost is not None and replacement_cost <= 0:
             raise ValidationError(
-                'Replacement cost must be positive',
+                'Replacement cost must be greater than 0',
                 details={'replacement_cost': replacement_cost},
             )
 
@@ -276,8 +264,6 @@ class EquipmentService:
             equipment.barcode = barcode
         if serial_number is not None:
             equipment.serial_number = serial_number
-        if daily_rate is not None:
-            equipment.daily_rate = Decimal(str(daily_rate))
         if replacement_cost is not None:
             equipment.replacement_cost = Decimal(str(replacement_cost))
         if notes is not None:

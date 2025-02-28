@@ -2,7 +2,7 @@
 
 This module defines the Equipment model representing physical items
 available for rental. Each equipment item belongs to a category
-and has various attributes like name, description, rental rates,
+and has various attributes like name, description, replacement cost,
 and availability status.
 """
 
@@ -52,7 +52,6 @@ class Equipment(TimestampMixin, SoftDeleteMixin, Base):
         barcode: Unique barcode for scanning.
         category_id: Reference to equipment category.
         status: Current equipment status.
-        daily_rate: Rental rate per day.
         replacement_cost: Cost to replace if damaged.
         notes: Optional internal notes.
         category: Category relationship.
@@ -75,7 +74,6 @@ class Equipment(TimestampMixin, SoftDeleteMixin, Base):
         nullable=False,
         index=True,
     )
-    daily_rate: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
     replacement_cost: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
     notes: Mapped[Optional[str]] = mapped_column(String(1000))
 
