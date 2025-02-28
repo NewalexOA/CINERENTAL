@@ -80,17 +80,20 @@ jobs:
 
           cd /app
 
-          echo "Starting unit tests..."
-          python -m pytest tests/unit/ -v --no-header -p no:cacheprovider || echo "Unit tests failed"
+          echo "Starting unit tests with coverage..."
+          COVERAGE_FILE=/coverage/.coverage.unit python -m pytest tests/unit/ -v --no-header -p no:cacheprovider --cov=backend || echo "Unit tests failed"
 
-          echo "Starting integration tests..."
-          python -m pytest tests/integration/ -v --no-header -p no:cacheprovider || echo "Integration tests failed"
+          echo "Starting integration tests with coverage..."
+          COVERAGE_FILE=/coverage/.coverage.integration python -m pytest tests/integration/ -v --no-header -p no:cacheprovider --cov=backend || echo "Integration tests failed"
 
-          echo "Starting e2e tests..."
-          python -m pytest tests/e2e/ -v --no-header -p no:cacheprovider || echo "E2e tests failed"
+          echo "Starting e2e tests with coverage..."
+          COVERAGE_FILE=/coverage/.coverage.e2e python -m pytest tests/e2e/ -v --no-header -p no:cacheprovider --cov=backend || echo "E2e tests failed"
 
-          echo "Starting coverage tests..."
-          COVERAGE_FILE=/coverage/.coverage python -m pytest tests/ -v --no-header -p no:cacheprovider --cov=backend --cov-report=html:/coverage/htmlcov --cov-report=term
+          echo "Combining coverage data..."
+          cd /coverage
+          coverage combine .coverage.unit .coverage.integration .coverage.e2e
+          coverage html -d htmlcov
+          coverage report
           EOF
 
           chmod +x run_tests_ci.sh
