@@ -10,7 +10,7 @@ from typing import List, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.exceptions import NotFoundError, StatusTransitionError
-from backend.models import Booking, Document, DocumentStatus, DocumentType
+from backend.models import Booking, Client, Document, DocumentStatus, DocumentType
 from backend.repositories import DocumentRepository
 
 
@@ -29,7 +29,6 @@ class DocumentService:
     async def create_document(
         self,
         client_id: int,
-        booking_id: Optional[int],
         document_type: DocumentType,
         file_path: str,
         title: str,
@@ -37,13 +36,13 @@ class DocumentService:
         file_name: str,
         file_size: int,
         mime_type: str,
+        booking_id: Optional[int] = None,
         notes: Optional[str] = None,
     ) -> Document:
         """Create new document.
 
         Args:
             client_id: Client ID
-            booking_id: Booking ID (optional)
             document_type: Document type
             file_path: Path to document file
             title: Document title
@@ -60,6 +59,14 @@ class DocumentService:
             NotFoundError: If booking not found
             DocumentError: If document creation fails
         """
+        # Check if client exists
+        client = await self.session.get(Client, client_id)
+        if not client:
+            raise NotFoundError(
+                f'Client with ID {client_id} not found',
+                {'client_id': client_id},
+            )
+
         # Check if booking exists
         if booking_id is not None:
             booking = await self.session.get(Booking, booking_id)
