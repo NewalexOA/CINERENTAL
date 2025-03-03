@@ -166,7 +166,32 @@ async def get_equipment(
     try:
         service = EquipmentService(db)
         equipment = await service.get_equipment(equipment_id)
-        return EquipmentResponse.model_validate(equipment.__dict__)
+
+        # Create a dictionary with all required fields
+        equipment_dict = {
+            'id': equipment.id,
+            'name': equipment.name,
+            'description': equipment.description,
+            'category_id': equipment.category_id,
+            'barcode': equipment.barcode,
+            'serial_number': equipment.serial_number,
+            'replacement_cost': equipment.replacement_cost,
+            'status': equipment.status,
+            'created_at': equipment.created_at,
+            'updated_at': equipment.updated_at,
+            'category_name': (
+                equipment.category.name if equipment.category else 'Без категории'
+            ),
+        }
+
+        # Add category information if available
+        if equipment.category:
+            equipment_dict['category'] = {
+                'id': equipment.category.id,
+                'name': equipment.category.name,
+            }
+
+        return EquipmentResponse.model_validate(equipment_dict)
     except NotFoundError:
         raise HTTPException(
             status_code=http_status.HTTP_404_NOT_FOUND,

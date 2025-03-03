@@ -134,11 +134,35 @@ async def equipment_detail(
     equipment_service = EquipmentService(db)
     equipment = await equipment_service.get_equipment(equipment_id)
 
+    # Create a dictionary with all required fields
+    equipment_dict = {
+        'id': equipment.id,
+        'name': equipment.name,
+        'description': equipment.description,
+        'category_id': equipment.category_id,
+        'barcode': equipment.barcode,
+        'serial_number': equipment.serial_number,
+        'replacement_cost': equipment.replacement_cost,
+        'status': equipment.status,
+        'created_at': equipment.created_at,
+        'updated_at': equipment.updated_at,
+        'category_name': (
+            equipment.category.name if equipment.category else 'Без категории'
+        ),
+    }
+
+    # Add category information if available
+    if equipment.category:
+        equipment_dict['category'] = {
+            'id': equipment.category.id,
+            'name': equipment.category.name,
+        }
+
     return templates.TemplateResponse(
         'equipment/detail.html',
         {
             'request': request,
-            'equipment': EquipmentResponse.model_validate(equipment).model_dump(),
+            'equipment': EquipmentResponse.model_validate(equipment_dict).model_dump(),
         },
     )
 

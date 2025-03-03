@@ -13,6 +13,15 @@ from pydantic import BaseModel, ConfigDict, Field, computed_field
 from backend.models.equipment import EquipmentStatus
 
 
+class CategoryInfo(BaseModel):
+    """Category information schema."""
+
+    id: int = Field(..., description='Category ID')
+    name: str = Field(..., description='Category name')
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class EquipmentBase(BaseModel):
     """Base equipment schema."""
 
@@ -66,6 +75,7 @@ class EquipmentResponse(EquipmentBase):
     created_at: datetime
     updated_at: datetime
     category_name: str = Field(default='Без категории', description='Category name')
+    category: Optional[CategoryInfo] = Field(None, description='Category information')
 
     @computed_field
     def is_available(self) -> bool:
