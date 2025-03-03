@@ -220,7 +220,7 @@ function updateScanResult(equipment) {
             </span>
         </div>
         <h5>${equipment.name}</h5>
-        <p class="text-muted">${equipment.category.name}</p>
+        <p class="text-muted">${equipment.category_name}</p>
         <div class="mb-3">
             <small class="d-block"><strong>Серийный номер:</strong> ${equipment.serial_number}</small>
             <small class="d-block"><strong>Штрих-код:</strong> ${equipment.barcode}</small>
@@ -247,7 +247,7 @@ function addToScanHistory(equipment) {
         <div class="d-flex w-100 justify-content-between align-items-center">
             <div>
                 <h6 class="mb-1">${equipment.name}</h6>
-                <small class="text-muted">${equipment.category.name}</small>
+                <small class="text-muted">${equipment.category_name}</small>
             </div>
             <small class="text-muted">${timestamp}</small>
         </div>

@@ -65,6 +65,7 @@ class EquipmentResponse(EquipmentBase):
     status: EquipmentStatus
     created_at: datetime
     updated_at: datetime
+    category_name: str = Field(default='Без категории', description='Category name')
 
     @computed_field
     def is_available(self) -> bool:

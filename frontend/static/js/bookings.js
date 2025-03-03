@@ -114,7 +114,7 @@ const bookingManager = {
             // Group equipment by category
             const categories = {};
             equipment.forEach(item => {
-                const categoryName = item.category_name || 'Без категории';
+                const categoryName = item.category_name;
                 if (!categories[categoryName]) {
                     categories[categoryName] = [];
                 }
@@ -163,7 +163,7 @@ const bookingManager = {
                 <div class="list-group-item">
                     <div class="d-flex w-100 justify-content-between">
                         <h6 class="mb-1">${item.name}</h6>
-                        <small class="text-muted">${item.category.name}</small>
+                        <small class="text-muted">${item.category_name}</small>
                     </div>
                     <p class="mb-1">
                         <small>
