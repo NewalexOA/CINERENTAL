@@ -140,7 +140,7 @@ async def get_equipment_list(
             available_from=available_from,
             available_to=available_to,
         )
-        return [EquipmentResponse.model_validate(e.__dict__) for e in equipment_list]
+        return equipment_list
     except BusinessError as e:
         raise HTTPException(
             status_code=http_status.HTTP_400_BAD_REQUEST,
