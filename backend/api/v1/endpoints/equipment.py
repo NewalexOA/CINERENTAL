@@ -15,7 +15,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from backend.api.v1.decorators import typed_delete, typed_get, typed_post, typed_put
 from backend.core.database import get_db
 from backend.exceptions import BusinessError, NotFoundError, StateError, ValidationError
-from backend.models import BookingStatus, EquipmentStatus
+from backend.models.booking import BookingStatus
+from backend.models.equipment import EquipmentStatus
 from backend.schemas import (
     EquipmentCreate,
     EquipmentResponse,
@@ -478,35 +479,46 @@ async def change_equipment_status(
 )
 async def regenerate_equipment_barcode(
     equipment_id: int,
-    request: RegenerateBarcodeRequest,
+    request: Optional[RegenerateBarcodeRequest] = None,
     db: AsyncSession = Depends(get_db),
 ) -> EquipmentResponse:
-    """Regenerate barcode for existing equipment.
+    """Regenerate barcode for equipment.
 
     Args:
         equipment_id: Equipment ID
-        request: Regenerate barcode request data
+        request: Optional request with subcategory prefix ID
         db: Database session
 
     Returns:
         Updated equipment with new barcode
 
     Raises:
-        HTTPException: If barcode regeneration fails
+        HTTPException: If equipment not found or validation fails
     """
+    subcategory_prefix_id = None
+    if request:
+        subcategory_prefix_id = request.subcategory_prefix_id
+
     try:
         service = EquipmentService(db)
-        return await service.regenerate_barcode(
+        updated_equipment = await service.regenerate_barcode(
             equipment_id=equipment_id,
-            subcategory_prefix_id=request.subcategory_prefix_id,
+            subcategory_prefix_id=subcategory_prefix_id,
         )
-    except ValidationError as e:
+
+        return updated_equipment
+    except BusinessError as e:
+        if isinstance(e, NotFoundError):
+            raise HTTPException(
+                status_code=http_status.HTTP_404_NOT_FOUND,
+                detail=str(e),
+            ) from e
+        if isinstance(e, ValidationError):
+            raise HTTPException(
+                status_code=http_status.HTTP_400_BAD_REQUEST,
+                detail=str(e),
+            ) from e
         raise HTTPException(
             status_code=http_status.HTTP_400_BAD_REQUEST,
-            detail=str(e),
-        ) from e
-    except NotFoundError as e:
-        raise HTTPException(
-            status_code=http_status.HTTP_404_NOT_FOUND,
             detail=str(e),
         ) from e

@@ -116,8 +116,8 @@ class EquipmentWithCategory(EquipmentResponse):
 class RegenerateBarcodeRequest(BaseModel):
     """Regenerate barcode request schema."""
 
-    subcategory_prefix_id: int = Field(
-        ...,
+    subcategory_prefix_id: Optional[int] = Field(
+        None,
         title='Subcategory Prefix ID',
         description='ID of subcategory prefix for barcode generation',
     )
