@@ -4,20 +4,22 @@ This module defines the Client model representing rental service customers.
 Each client has personal information, contact details, and rental history.
 """
 
-from enum import Enum
+import enum
 from typing import TYPE_CHECKING, List, Optional
 
 from sqlalchemy import String
 from sqlalchemy.dialects.postgresql import ENUM
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from backend.models import Base, SoftDeleteMixin, TimestampMixin
+from backend.models.core import Base
+from backend.models.mixins import SoftDeleteMixin, TimestampMixin
 
 if TYPE_CHECKING:
-    from backend.models import Booking, Document
+    from backend.models.booking import Booking
+    from backend.models.document import Document
 
 
-class ClientStatus(str, Enum):
+class ClientStatus(str, enum.Enum):
     """Client status enumeration."""
 
     ACTIVE = 'ACTIVE'

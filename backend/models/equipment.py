@@ -1,27 +1,25 @@
 """Equipment model module.
 
-This module defines the Equipment model representing physical items
-available for rental. Each equipment item belongs to a category
-and has various attributes like name, description, replacement cost,
-and availability status.
+This module defines the Equipment model for rental equipment items.
 """
 
+import enum
 from decimal import Decimal
-from enum import Enum
 from typing import TYPE_CHECKING, List, Optional
 
 from sqlalchemy import ForeignKey, Numeric, String
 from sqlalchemy.dialects.postgresql import ENUM
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from backend.models import Base, SoftDeleteMixin, TimestampMixin
+from backend.models.core import Base
+from backend.models.mixins import SoftDeleteMixin, TimestampMixin
 
 if TYPE_CHECKING:
     from backend.models.booking import Booking
     from backend.models.category import Category
 
 
-class EquipmentStatus(str, Enum):
+class EquipmentStatus(str, enum.Enum):
     """Equipment status enumeration."""
 
     AVAILABLE = 'AVAILABLE'

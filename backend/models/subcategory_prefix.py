@@ -10,7 +10,8 @@ from typing import TYPE_CHECKING, Optional
 from sqlalchemy import ForeignKey, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from backend.models import Base, TimestampMixin
+from backend.models.core import Base
+from backend.models.mixins import TimestampMixin
 
 if TYPE_CHECKING:
     from backend.models.category import Category
