@@ -7,7 +7,7 @@ from fastapi import status as http_status
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.models import Category, Client, Equipment
+from backend.models import Category, Client, Equipment, SubcategoryPrefix
 from backend.models.equipment import EquipmentStatus
 from backend.services.booking import BookingService
 from tests.conftest import async_test
@@ -378,3 +378,70 @@ async def test_search_equipment_pagination(
     assert response.status_code == 200
     result = response.json()
     assert len(result) <= 10
+
+
+@async_test
+async def test_regenerate_equipment_barcode(
+    async_client: AsyncClient,
+    test_equipment_with_prefix: Equipment,
+    test_subcategory_prefix: SubcategoryPrefix,
+    db_session: AsyncSession,
+) -> None:
+    """Test regenerating equipment barcode."""
+    # Store the original barcode
+    original_barcode = test_equipment_with_prefix.barcode
+
+    # Regenerate barcode
+    response = await async_client.post(
+        f'/api/v1/equipment/{test_equipment_with_prefix.id}/regenerate-barcode',
+        json={
+            'subcategory_prefix_id': test_subcategory_prefix.id,
+        },
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data['id'] == test_equipment_with_prefix.id
+    assert data['barcode'] != original_barcode
+    # Verify the new barcode format
+    assert len(data['barcode'].split('-')) == 3
+
+
+@async_test
+async def test_regenerate_equipment_barcode_not_found(
+    async_client: AsyncClient,
+    test_subcategory_prefix: SubcategoryPrefix,
+) -> None:
+    """Test regenerating barcode for non-existent equipment."""
+    non_existent_id = 9999
+    response = await async_client.post(
+        f'/api/v1/equipment/{non_existent_id}/regenerate-barcode',
+        json={
+            'subcategory_prefix_id': test_subcategory_prefix.id,
+        },
+    )
+
+    assert response.status_code == 404
+    data = response.json()
+    assert 'detail' in data
+    assert 'not found' in data['detail']
+
+
+@async_test
+async def test_regenerate_equipment_barcode_invalid_subcategory(
+    async_client: AsyncClient,
+    test_equipment_with_prefix: Equipment,
+) -> None:
+    """Test regenerating barcode with invalid subcategory prefix."""
+    non_existent_id = 9999
+    response = await async_client.post(
+        f'/api/v1/equipment/{test_equipment_with_prefix.id}/regenerate-barcode',
+        json={
+            'subcategory_prefix_id': non_existent_id,
+        },
+    )
+
+    assert response.status_code == 400
+    data = response.json()
+    assert 'detail' in data
+    assert 'Subcategory prefix not found' in data['detail']

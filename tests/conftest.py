@@ -608,3 +608,32 @@ async def test_subcategory_prefix(
     await db_session.commit()
     await db_session.refresh(subcategory_prefix)
     return subcategory_prefix
+
+
+@pytest_asyncio.fixture
+async def test_equipment_with_prefix(
+    db_session: AsyncSession,
+    test_category_with_prefix: Category,
+) -> AsyncGenerator[Equipment, None]:
+    """Create a test equipment with category that has prefix.
+
+    Args:
+        db_session: Database session
+        test_category_with_prefix: Category instance with prefix
+
+    Returns:
+        Equipment instance with category that has prefix
+    """
+    equipment = Equipment(
+        name='Test Equipment with Prefix',
+        description='Test Description',
+        category_id=test_category_with_prefix.id,
+        barcode='TCXX-000001-5',
+        serial_number='SN001',
+        replacement_cost=Decimal('1000.00'),
+        status=EquipmentStatus.AVAILABLE,
+    )
+    db_session.add(equipment)
+    await db_session.commit()
+    await db_session.refresh(equipment)
+    yield equipment
