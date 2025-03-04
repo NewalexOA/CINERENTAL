@@ -5,8 +5,6 @@ and their relationships. It also includes common functionality like
 timestamp tracking and soft delete support.
 """
 
-from backend.models.barcode_sequence import BarcodeSequence
-
 # First import base classes
 from backend.models.base import Base, SoftDeleteMixin, TimestampMixin
 from backend.models.booking import Booking, BookingStatus, PaymentStatus
@@ -19,6 +17,7 @@ from backend.models.equipment import Equipment, EquipmentStatus
 
 # Then import models with dependencies
 from backend.models.subcategory_prefix import SubcategoryPrefix
+from backend.models.barcode_sequence import BarcodeSequence
 from backend.models.user import User
 
 __all__ = [
