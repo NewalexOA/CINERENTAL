@@ -14,7 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.api.v1.decorators import typed_delete, typed_get, typed_post, typed_put
 from backend.core.database import get_db
-from backend.exceptions import BusinessError, NotFoundError, StateError
+from backend.exceptions import BusinessError, NotFoundError, StateError, ValidationError
 from backend.models import BookingStatus, EquipmentStatus
 from backend.schemas import EquipmentCreate, EquipmentResponse, EquipmentUpdate
 from backend.services import BookingService, EquipmentService
@@ -42,25 +42,40 @@ async def create_equipment(
         Created equipment
 
     Raises:
-        HTTPException: If equipment with given barcode already exists
+        HTTPException: If equipment creation fails
     """
     try:
-        # Validate replacement cost
-        if float(equipment.replacement_cost) <= 0:
+        # Validate replacement cost if provided
+        if (
+            equipment.replacement_cost is not None
+            and float(equipment.replacement_cost) <= 0
+        ):
             raise HTTPException(
                 status_code=http_status.HTTP_400_BAD_REQUEST,
                 detail='Replacement cost must be greater than 0',
             )
 
         service = EquipmentService(db)
+        replacement_cost = None
+        if equipment.replacement_cost:
+            replacement_cost = float(equipment.replacement_cost)
+
         return await service.create_equipment(
             name=equipment.name,
             description=equipment.description,
             category_id=equipment.category_id,
             barcode=equipment.barcode,
             serial_number=equipment.serial_number,
-            replacement_cost=float(equipment.replacement_cost),
+            replacement_cost=replacement_cost,
+            notes=equipment.notes,
+            subcategory_prefix_id=equipment.subcategory_prefix_id,
+            generate_barcode=equipment.generate_barcode,
         )
+    except ValidationError as e:
+        raise HTTPException(
+            status_code=http_status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        ) from e
     except BusinessError as e:
         raise HTTPException(
             status_code=http_status.HTTP_400_BAD_REQUEST,

@@ -4,12 +4,14 @@ from fastapi import APIRouter
 
 from backend.api.v1.endpoints import (
     auth,
+    barcode,
     bookings,
     categories,
     clients,
     documents,
     equipment,
     health,
+    subcategory_prefix,
 )
 
 api_router = APIRouter()
@@ -29,3 +31,9 @@ api_router.include_router(
 api_router.include_router(
     bookings.bookings_router, prefix='/bookings', tags=['Bookings']
 )
+api_router.include_router(
+    subcategory_prefix.subcategory_prefix_router,
+    prefix='/subcategory-prefixes',
+    tags=['Subcategory Prefixes'],
+)
+api_router.include_router(barcode.barcode_router, prefix='/barcodes', tags=['Barcodes'])

@@ -29,18 +29,32 @@ class EquipmentBase(BaseModel):
     description: str = Field(
         ..., title='Description', description='Equipment description'
     )
-    replacement_cost: Decimal = Field(
-        ..., title='Replacement Cost', description='Cost to replace if damaged'
-    )
-    barcode: str = Field(..., title='Barcode', description='Equipment barcode')
-    serial_number: str = Field(..., title='Serial Number', description='Serial number')
     category_id: int = Field(..., title='Category ID', description='Category ID')
 
 
 class EquipmentCreate(EquipmentBase):
     """Create equipment request schema."""
 
-    pass
+    replacement_cost: Optional[Decimal] = Field(
+        None, title='Replacement Cost', description='Cost to replace if damaged'
+    )
+    barcode: Optional[str] = Field(
+        None, title='Barcode', description='Equipment barcode'
+    )
+    serial_number: Optional[str] = Field(
+        None, title='Serial Number', description='Serial number'
+    )
+    notes: Optional[str] = Field(None, title='Notes', description='Additional notes')
+    subcategory_prefix_id: Optional[int] = Field(
+        None,
+        title='Subcategory Prefix ID',
+        description='ID of subcategory prefix for barcode generation',
+    )
+    generate_barcode: bool = Field(
+        False,
+        title='Generate Barcode',
+        description='Whether to generate barcode automatically',
+    )
 
 
 class EquipmentUpdate(BaseModel):
@@ -67,10 +81,16 @@ class EquipmentUpdate(BaseModel):
     )
 
 
-class EquipmentResponse(EquipmentBase):
+class EquipmentResponse(BaseModel):
     """Equipment response schema."""
 
     id: int
+    name: str
+    description: str
+    replacement_cost: Optional[Decimal]
+    barcode: str
+    serial_number: Optional[str]
+    category_id: int
     status: EquipmentStatus
     created_at: datetime
     updated_at: datetime
