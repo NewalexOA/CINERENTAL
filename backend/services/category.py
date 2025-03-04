@@ -34,7 +34,11 @@ class CategoryService:
         self.equipment_repository = EquipmentRepository(session)
 
     async def create_category(
-        self, name: str, description: str, parent_id: Optional[int] = None
+        self,
+        name: str,
+        description: str,
+        parent_id: Optional[int] = None,
+        prefix: Optional[str] = None,
     ) -> Category:
         """Create new equipment category.
 
@@ -42,6 +46,7 @@ class CategoryService:
             name: Category name
             description: Category description
             parent_id: Parent category ID (optional)
+            prefix: Category prefix for barcode generation (optional)
 
         Returns:
             Created category
@@ -62,11 +67,27 @@ class CategoryService:
             if not parent:
                 raise NotFoundError(f'Parent category with ID {parent_id} not found')
 
+        # Check if prefix is unique if provided
+        if prefix:
+            # Find categories with the same prefix
+            stmt = select(Category).where(
+                Category.prefix == prefix,
+                Category.deleted_at.is_(None),
+            )
+            result = await self.session.execute(stmt)
+            existing_with_prefix = result.scalar_one_or_none()
+            if existing_with_prefix:
+                raise ConflictError(
+                    f'Category with prefix "{prefix}" already exists',
+                    details={'prefix': prefix},
+                )
+
         # Create category
         category = Category(
             name=name,
             description=description,
             parent_id=parent_id,
+            prefix=prefix,
         )
         await self.repository.create(category)
         return category
@@ -77,6 +98,7 @@ class CategoryService:
         name: Optional[str] = None,
         description: Optional[str] = None,
         parent_id: Optional[int] = None,
+        prefix: Optional[str] = None,
     ) -> Category:
         """Update category.
 
@@ -85,6 +107,7 @@ class CategoryService:
             name: New name (optional)
             description: New description (optional)
             parent_id: New parent ID (optional)
+            prefix: New prefix (optional)
 
         Returns:
             Updated category
@@ -120,6 +143,21 @@ class CategoryService:
                     details={'category_id': category_id, 'parent_id': parent_id},
                 )
 
+        # Check prefix uniqueness if changing
+        if prefix and prefix != category.prefix:
+            stmt = select(Category).where(
+                Category.prefix == prefix,
+                Category.id != category_id,
+                Category.deleted_at.is_(None),
+            )
+            result = await self.session.execute(stmt)
+            existing_with_prefix = result.scalar_one_or_none()
+            if existing_with_prefix:
+                raise ConflictError(
+                    f'Category with prefix "{prefix}" already exists',
+                    details={'prefix': prefix},
+                )
+
         # Apply updates
         if name:
             category.name = name
@@ -127,6 +165,8 @@ class CategoryService:
             category.description = description
         if parent_id is not None:  # Allow setting to None
             category.parent_id = parent_id
+        if prefix is not None:  # Allow setting to None
+            category.prefix = prefix
 
         await self.repository.update(category)
         return category
@@ -232,6 +272,7 @@ class CategoryService:
                 name=category.name,
                 description=category.description,
                 parent_id=category.parent_id,
+                prefix=category.prefix,
                 equipment_count=category.equipment_count,
                 created_at=category.created_at,
                 updated_at=category.updated_at,

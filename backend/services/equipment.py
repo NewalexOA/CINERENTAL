@@ -23,6 +23,7 @@ from backend.exceptions import (
 from backend.models import Booking, BookingStatus, Equipment, EquipmentStatus
 from backend.repositories import BookingRepository, EquipmentRepository
 from backend.schemas import EquipmentResponse
+from backend.services.barcode import BarcodeService
 
 
 class EquipmentService:
@@ -37,6 +38,7 @@ class EquipmentService:
         self.session = session
         self.repository = EquipmentRepository(session)
         self.booking_repository = BookingRepository(session)
+        self.barcode_service = BarcodeService(session)
 
     async def _load_equipment_with_category(self, equipment: Equipment) -> Equipment:
         """Load equipment with category relationship.
@@ -61,10 +63,12 @@ class EquipmentService:
         name: str,
         description: str,
         category_id: int,
-        barcode: str,
-        serial_number: str,
-        replacement_cost: float,
+        barcode: Optional[str] = None,
+        serial_number: Optional[str] = None,
+        replacement_cost: Optional[float] = None,
         notes: Optional[str] = None,
+        subcategory_prefix_id: Optional[int] = None,
+        generate_barcode: bool = False,
     ) -> EquipmentResponse:
         """Create new equipment.
 
@@ -72,10 +76,12 @@ class EquipmentService:
             name: Equipment name
             description: Equipment description
             category_id: Category ID
-            barcode: Equipment barcode
+            barcode: Equipment barcode (optional if generate_barcode is True)
             serial_number: Equipment serial number
             replacement_cost: Cost to replace if damaged
             notes: Optional notes
+            subcategory_prefix_id: Subcategory prefix ID for barcode generation
+            generate_barcode: Whether to generate barcode automatically
 
         Returns:
             Created equipment
@@ -86,24 +92,8 @@ class EquipmentService:
             NotFoundError: If category not found
         """
         # Validate business rules
-        if replacement_cost <= 0:
+        if replacement_cost is not None and replacement_cost <= 0:
             raise ValidationError('Replacement cost must be greater than 0')
-
-        # Check for duplicate barcode
-        existing = await self.repository.get_by_barcode(barcode)
-        if existing:
-            raise ConflictError(
-                f'Equipment with barcode {barcode} already exists',
-                details={'barcode': barcode},
-            )
-
-        # Check for duplicate serial number
-        existing = await self.repository.get_by_serial_number(serial_number)
-        if existing:
-            raise ConflictError(
-                f'Equipment with serial number {serial_number} already exists',
-                details={'serial_number': serial_number},
-            )
 
         # Check if category exists
         from backend.services.category import CategoryService
@@ -117,13 +107,58 @@ class EquipmentService:
                 details={'category_id': category_id},
             )
 
+        # Handle barcode generation or validation
+        if generate_barcode:
+            if not subcategory_prefix_id:
+                details = {'subcategory_prefix_id': subcategory_prefix_id}
+                raise ValidationError(
+                    'Subcategory prefix ID is required for barcode generation',
+                    details=details,
+                )
+
+            # Generate barcode
+            barcode = await self.barcode_service.generate_barcode(
+                category_id, subcategory_prefix_id
+            )
+        elif barcode:
+            # Validate provided barcode
+            if not self.barcode_service.validate_barcode_format(barcode):
+                raise ValidationError(
+                    'Invalid barcode format',
+                    details={'barcode': barcode},
+                )
+
+            # Check for duplicate barcode
+            existing = await self.repository.get_by_barcode(barcode)
+            if existing:
+                raise ConflictError(
+                    f'Equipment with barcode {barcode} already exists',
+                    details={'barcode': barcode},
+                )
+        else:
+            raise ValidationError(
+                'Either barcode must be provided or generate_barcode must be True',
+                details={'barcode': barcode, 'generate_barcode': generate_barcode},
+            )
+
+        # Check for duplicate serial number if provided
+        if serial_number:
+            existing = await self.repository.get_by_serial_number(serial_number)
+            if existing:
+                raise ConflictError(
+                    f'Equipment with serial number {serial_number} already exists',
+                    details={'serial_number': serial_number},
+                )
+
         equipment = Equipment(
             name=name,
             description=description,
             category_id=category_id,
             barcode=barcode,
             serial_number=serial_number,
-            replacement_cost=Decimal(str(replacement_cost)),
+            replacement_cost=(
+                Decimal(str(replacement_cost)) if replacement_cost is not None else None
+            ),
             notes=notes,
             status=EquipmentStatus.AVAILABLE,
         )
