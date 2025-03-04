@@ -37,6 +37,7 @@ from backend.schemas.equipment import (
     EquipmentResponse,
     EquipmentUpdate,
     EquipmentWithCategory,
+    RegenerateBarcodeRequest,
 )
 from backend.schemas.subcategory_prefix import (
     SubcategoryPrefixBase,
@@ -69,6 +70,7 @@ __all__ = [
     'EquipmentResponse',
     'EquipmentUpdate',
     'EquipmentWithCategory',
+    'RegenerateBarcodeRequest',
     'CategoryCreate',
     'CategoryResponse',
     'CategoryUpdate',

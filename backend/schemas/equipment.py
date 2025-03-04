@@ -111,3 +111,13 @@ class EquipmentWithCategory(EquipmentResponse):
     category_description: str = Field(..., description='Category description')
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class RegenerateBarcodeRequest(BaseModel):
+    """Regenerate barcode request schema."""
+
+    subcategory_prefix_id: int = Field(
+        ...,
+        title='Subcategory Prefix ID',
+        description='ID of subcategory prefix for barcode generation',
+    )

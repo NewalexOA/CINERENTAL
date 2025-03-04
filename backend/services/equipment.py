@@ -492,18 +492,19 @@ class EquipmentService:
             barcode: Equipment barcode
 
         Returns:
-            Equipment if found, None otherwise
+            Equipment instance or None if not found
         """
         equipment = await self.repository.get_by_barcode(barcode)
         if equipment:
-            return EquipmentResponse.model_validate(equipment)
+            loaded_equipment = await self._load_equipment_with_category(equipment)
+            return EquipmentResponse.model_validate(loaded_equipment)
         return None
 
     async def change_status(
         self,
         equipment_id: int,
         new_status: EquipmentStatus,
-    ) -> Equipment:
+    ) -> EquipmentResponse:
         """Change equipment status.
 
         Args:
@@ -564,8 +565,11 @@ class EquipmentService:
                     },
                 )
 
+        # Update equipment status
         equipment.status = new_status
-        return await self.repository.update(equipment)
+        updated_equipment = await self.repository.update(equipment)
+        loaded_equipment = await self._load_equipment_with_category(updated_equipment)
+        return EquipmentResponse.model_validate(loaded_equipment)
 
     async def check_availability(
         self, equipment_id: int, start_date: datetime, end_date: datetime
@@ -876,3 +880,43 @@ class EquipmentService:
         query = select(Booking).where(Booking.equipment_id == equipment_id)
         result = await self.session.execute(query)
         return list(result.scalars().all())
+
+    async def regenerate_barcode(
+        self,
+        equipment_id: int,
+        subcategory_prefix_id: int,
+    ) -> EquipmentResponse:
+        """Regenerate barcode for existing equipment.
+
+        Args:
+            equipment_id: Equipment ID
+            subcategory_prefix_id: Subcategory prefix ID for barcode generation
+
+        Returns:
+            Updated equipment with new barcode
+
+        Raises:
+            NotFoundError: If equipment not found
+            ValidationError: If subcategory prefix does not belong to the equipment's
+                category
+        """
+        # Get equipment
+        equipment = await self.get_equipment(equipment_id)
+        if not equipment:
+            raise NotFoundError(
+                f'Equipment with ID {equipment_id} not found',
+                details={'equipment_id': equipment_id},
+            )
+
+        # Generate new barcode
+        new_barcode = await self.barcode_service.generate_barcode(
+            equipment.category_id, subcategory_prefix_id
+        )
+
+        # Update equipment barcode
+        updated_equipment = await self.update_equipment(
+            equipment_id=equipment_id,
+            barcode=new_barcode,
+        )
+
+        return EquipmentResponse.model_validate(updated_equipment)
