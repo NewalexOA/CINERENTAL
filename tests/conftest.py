@@ -38,7 +38,12 @@ from backend.core.config import settings
 from backend.core.database import get_db
 from backend.core.logging import configure_logging
 from backend.main import app as main_app
-from backend.models import Base, Booking, Category, Client, Document, Equipment
+from backend.models.booking import Booking
+from backend.models.category import Category
+from backend.models.client import Client
+from backend.models.core import Base
+from backend.models.document import Document
+from backend.models.equipment import Equipment
 from backend.models.subcategory_prefix import SubcategoryPrefix
 from backend.repositories import BookingRepository, EquipmentRepository
 from backend.schemas import (

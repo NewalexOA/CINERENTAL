@@ -14,7 +14,8 @@ from sqlalchemy.orm import joinedload
 from sqlalchemy.sql import Select
 
 from backend.exceptions import BusinessError
-from backend.models import Booking, BookingStatus, Equipment, EquipmentStatus
+from backend.models.booking import Booking, BookingStatus
+from backend.models.equipment import Equipment, EquipmentStatus
 from backend.repositories import BaseRepository
 
 T = TypeVar('T')
