@@ -38,6 +38,12 @@ from backend.schemas.equipment import (
     EquipmentUpdate,
     EquipmentWithCategory,
 )
+from backend.schemas.subcategory_prefix import (
+    SubcategoryPrefixBase,
+    SubcategoryPrefixCreate,
+    SubcategoryPrefixResponse,
+    SubcategoryPrefixUpdate,
+)
 
 __all__ = [
     'BookingStatus',
@@ -67,4 +73,8 @@ __all__ = [
     'CategoryResponse',
     'CategoryUpdate',
     'CategoryWithEquipmentCount',
+    'SubcategoryPrefixBase',
+    'SubcategoryPrefixCreate',
+    'SubcategoryPrefixResponse',
+    'SubcategoryPrefixUpdate',
 ]
