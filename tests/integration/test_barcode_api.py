@@ -169,3 +169,106 @@ async def test_validate_invalid_barcode(
     data = response.json()
     assert data['is_valid'] is False
     assert data['details'] == {}
+
+
+@async_test
+async def test_preview_barcode(
+    async_client: AsyncClient,
+    db_session: AsyncSession,
+) -> None:
+    """Test previewing a barcode via API."""
+    # Create test category
+    category = Category(
+        name='Test Category',
+        description='Test Description',
+        prefix='TC',
+    )
+    db_session.add(category)
+    await db_session.commit()
+    await db_session.refresh(category)
+
+    # Create test subcategory prefix
+    subcategory_prefix = SubcategoryPrefix(
+        name='Test Subcategory',
+        prefix='TS',
+        category_id=category.id,
+    )
+    db_session.add(subcategory_prefix)
+    await db_session.commit()
+    await db_session.refresh(subcategory_prefix)
+
+    # Test preview barcode
+    response = await async_client.post(
+        '/api/v1/barcodes/preview',
+        json={
+            'category_id': category.id,
+            'subcategory_prefix_id': subcategory_prefix.id,
+        },
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert 'barcode' in data
+    assert data['barcode'].startswith(f'{category.prefix}{subcategory_prefix.prefix}-')
+
+
+@async_test
+async def test_preview_barcode_invalid_category(
+    async_client: AsyncClient,
+    db_session: AsyncSession,
+) -> None:
+    """Test previewing a barcode with invalid category."""
+    # Create test subcategory prefix
+    category = Category(
+        name='Test Category',
+        description='Test Description',
+        prefix='TC',
+    )
+    db_session.add(category)
+    await db_session.commit()
+    await db_session.refresh(category)
+
+    subcategory_prefix = SubcategoryPrefix(
+        name='Test Subcategory',
+        prefix='TS',
+        category_id=category.id,
+    )
+    db_session.add(subcategory_prefix)
+    await db_session.commit()
+    await db_session.refresh(subcategory_prefix)
+
+    # Test preview barcode with invalid category
+    response = await async_client.post(
+        '/api/v1/barcodes/preview',
+        json={
+            'category_id': 9999,  # Non-existent category
+            'subcategory_prefix_id': subcategory_prefix.id,
+        },
+    )
+    assert response.status_code == 400
+
+
+@async_test
+async def test_preview_barcode_invalid_subcategory(
+    async_client: AsyncClient,
+    db_session: AsyncSession,
+) -> None:
+    """Test previewing a barcode with invalid subcategory."""
+    # Create test category
+    category = Category(
+        name='Test Category',
+        description='Test Description',
+        prefix='TC',
+    )
+    db_session.add(category)
+    await db_session.commit()
+    await db_session.refresh(category)
+
+    # Test preview barcode with invalid subcategory
+    response = await async_client.post(
+        '/api/v1/barcodes/preview',
+        json={
+            'category_id': category.id,
+            'subcategory_prefix_id': 9999,  # Non-existent subcategory
+        },
+    )
+    assert response.status_code == 400

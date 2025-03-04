@@ -128,3 +128,45 @@ async def validate_barcode(
         )
     except ValidationError:
         return BarcodeValidateResponse(is_valid=False)
+
+
+@barcode_router.post(
+    '/preview',
+    response_model=BarcodeGenerateResponse,
+    summary='Preview barcode',
+    description='Preview a barcode without creating equipment',
+)
+async def preview_barcode(
+    request: BarcodeGenerateRequest,
+    db: AsyncSession = Depends(get_db),
+    # current_user: User = Depends(get_current_active_user),
+) -> BarcodeGenerateResponse:
+    """Preview a barcode without creating equipment.
+
+    This endpoint generates a barcode based on the category and subcategory prefix,
+    but doesn't save it to the database or associate it with equipment.
+    It's intended for UI preview before equipment creation.
+
+    Args:
+        request: Barcode generation request
+        db: Database session
+        current_user: Current authenticated user (temporarily disabled)
+
+    Returns:
+        Preview of generated barcode
+
+    Raises:
+        HTTPException: If barcode generation fails
+    """
+    service = BarcodeService(db)
+    try:
+        barcode = await service.generate_barcode(
+            category_id=request.category_id,
+            subcategory_prefix_id=request.subcategory_prefix_id,
+        )
+        return BarcodeGenerateResponse(barcode=barcode)
+    except ValidationError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        )
