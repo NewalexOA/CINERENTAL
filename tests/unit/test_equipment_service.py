@@ -54,7 +54,7 @@ class TestEquipmentService:
         equipment = Equipment(
             name='Test Camera',
             description='Professional camera for testing',
-            barcode='TEST-001',
+            barcode='CATS-000001-5',
             serial_number='SN-001',
             category_id=test_category.id,
             replacement_cost=Decimal('1000.00'),
@@ -76,7 +76,7 @@ class TestEquipmentService:
             name='Test Equipment',
             description='Test Description',
             category_id=test_category.id,
-            barcode='TEST-001',
+            barcode='CATS-000001-5',
             serial_number='SN001',
             replacement_cost=1000.00,
         )
@@ -85,9 +85,9 @@ class TestEquipmentService:
         assert equipment_response.name == 'Test Equipment'
         assert equipment_response.description == 'Test Description'
         assert equipment_response.category_id == test_category.id
-        assert equipment_response.barcode == 'TEST-001'
+        assert equipment_response.barcode == 'CATS-000001-5'
         assert equipment_response.serial_number == 'SN001'
-        assert float(equipment_response.replacement_cost) == 1000.00
+        assert equipment_response.replacement_cost == Decimal('1000.00')
         assert equipment_response.status == EquipmentStatus.AVAILABLE
 
     @async_test
@@ -102,7 +102,7 @@ class TestEquipmentService:
             name='Test Equipment 1',
             description='Test Description',
             category_id=test_category.id,
-            barcode='TEST-001',
+            barcode='CATS-000001-5',
             serial_number='SN001',
             replacement_cost=1000.00,
         )
@@ -113,7 +113,7 @@ class TestEquipmentService:
                 name='Test Equipment 2',
                 description='Test Description',
                 category_id=test_category.id,
-                barcode='TEST-001',  # Same barcode
+                barcode='CATS-000001-5',  # Same barcode
                 serial_number='SN002',
                 replacement_cost=1000.00,
             )
@@ -129,7 +129,7 @@ class TestEquipmentService:
                 name='Test Equipment',
                 description='Test Description',
                 category_id=1,
-                barcode='TEST-001',
+                barcode='CATS-000001-5',
                 serial_number='SN-001',
                 replacement_cost=-100.0,
             )
@@ -147,7 +147,7 @@ class TestEquipmentService:
             name='Test Equipment',
             description='Test Description',
             category_id=test_category.id,
-            barcode='TEST-001',
+            barcode='CATS-000001-5',
             serial_number='SN001',
             replacement_cost=1000.00,
         )
@@ -301,14 +301,14 @@ class TestEquipmentService:
             test_equipment.id,
             name='Updated Equipment',
             description='Updated Description',
-            barcode='UPDATED-001',
+            barcode='UPDT-000001-5',
             replacement_cost=2000.00,
             notes='Updated notes',
         )
 
         assert equipment.name == 'Updated Equipment'
         assert equipment.description == 'Updated Description'
-        assert equipment.barcode == 'UPDATED-001'
+        assert equipment.barcode == 'UPDT-000001-5'
         assert float(equipment.replacement_cost) == 2000.00
         assert equipment.notes == 'Updated notes'
 
@@ -639,7 +639,7 @@ class TestEquipmentService:
                 name='Test Equipment',
                 description='Test Description',
                 category_id=test_category.id,
-                barcode='TEST-001',
+                barcode='CATS-000001-5',
                 serial_number='SN001',
                 replacement_cost=-1000.00,
             )
@@ -657,7 +657,7 @@ class TestEquipmentService:
                 name='Another Equipment',
                 description='Test Description',
                 category_id=test_category.id,
-                barcode='UNIQUE-001',
+                barcode='UNIQ-000001-5',
                 serial_number=test_equipment.serial_number,  # Duplicate
                 replacement_cost=1000.00,
             )
@@ -739,12 +739,12 @@ class TestEquipmentService:
         """Test searching equipment with filters."""
         # Create another equipment with different status
         equipment2 = await service.create_equipment(
-            name='Another Test Equipment',
-            description='Test Description',
+            name='Test Equipment 2',
+            description='Test Description 2',
             category_id=test_category.id,
-            barcode='TEST-002',
-            serial_number='SN002',
-            replacement_cost=1000.00,
+            barcode='CATS-000002-5',
+            serial_number='SN-002',
+            replacement_cost=2000.00,
         )
 
         # Update its status to MAINTENANCE
@@ -788,15 +788,23 @@ class TestEquipmentService:
     ) -> None:
         """Test equipment search pagination."""
         # Create multiple equipment items with unique barcodes
+        equipment_list = []
         for i in range(5):
-            await service.create_equipment(
+            equipment = Equipment(
                 name=f'Test Equipment {i}',
                 description='Test Description',
                 category_id=test_category.id,
-                barcode=f'TEST-SEARCH-{i:03d}',  # Unique barcode
+                barcode=f'CATS-{i:06d}-{i % 10}',  # Unique barcode
                 serial_number=f'SN-SEARCH-{i:03d}',  # Unique serial
-                replacement_cost=1000.00,
+                replacement_cost=Decimal('1000.00'),
+                status=EquipmentStatus.AVAILABLE,
             )
+            service.session.add(equipment)
+            equipment_list.append(equipment)
+
+        await service.session.commit()
+        for equipment in equipment_list:
+            await service.session.refresh(equipment)
 
         # Get all results for comparison
         all_results = await service.search('test')

@@ -2,6 +2,7 @@
 
 import asyncio
 import os
+import uuid
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
@@ -38,6 +39,7 @@ from backend.core.database import get_db
 from backend.core.logging import configure_logging
 from backend.main import app as main_app
 from backend.models import Base, Booking, Category, Client, Document, Equipment
+from backend.models.subcategory_prefix import SubcategoryPrefix
 from backend.repositories import BookingRepository, EquipmentRepository
 from backend.schemas import (
     BookingStatus,
@@ -53,6 +55,7 @@ from backend.services import (
     DocumentService,
     EquipmentService,
 )
+from backend.services.barcode import BarcodeService
 
 
 # Set logging for tests
@@ -261,11 +264,11 @@ async def test_equipment(
 ) -> AsyncGenerator[Equipment, None]:
     """Create a test equipment."""
     equipment = Equipment(
-        name='Test Camera',
-        description='Professional camera for testing',
-        barcode='TEST-001',
-        serial_number='SN-001',
+        name='Test Equipment',
+        description='Test Description',
         category_id=test_category.id,
+        barcode='CATS-000001-5',
+        serial_number='SN001',
         replacement_cost=Decimal('1000.00'),
         status=EquipmentStatus.AVAILABLE,
     )
@@ -546,3 +549,62 @@ async def document(test_document: Document) -> Document:
 async def equipment_service(db_session: AsyncSession) -> EquipmentService:
     """Create equipment service instance for testing."""
     return EquipmentService(db_session)
+
+
+@pytest_asyncio.fixture
+async def barcode_service(db_session: AsyncSession) -> BarcodeService:
+    """Create barcode service for tests.
+
+    Args:
+        db_session: Database session
+
+    Returns:
+        Barcode service instance
+    """
+    return BarcodeService(db_session)
+
+
+@pytest_asyncio.fixture
+async def test_category_with_prefix(db_session: AsyncSession) -> Category:
+    """Create a test category with prefix.
+
+    Args:
+        db_session: Database session
+
+    Returns:
+        Category instance with prefix
+    """
+    category = Category(
+        name=f'Test Category {uuid.uuid4()}',
+        description='Test Description',
+        prefix='TC',
+    )
+    db_session.add(category)
+    await db_session.commit()
+    await db_session.refresh(category)
+    return category
+
+
+@pytest_asyncio.fixture
+async def test_subcategory_prefix(
+    db_session: AsyncSession, test_category_with_prefix: Category
+) -> SubcategoryPrefix:
+    """Create a test subcategory prefix.
+
+    Args:
+        db_session: Database session
+        test_category_with_prefix: Category instance
+
+    Returns:
+        SubcategoryPrefix instance
+    """
+    subcategory_prefix = SubcategoryPrefix(
+        category_id=test_category_with_prefix.id,
+        name=f'Test Subcategory {uuid.uuid4()}',
+        prefix='TS',
+        description='Test Subcategory Description',
+    )
+    db_session.add(subcategory_prefix)
+    await db_session.commit()
+    await db_session.refresh(subcategory_prefix)
+    return subcategory_prefix

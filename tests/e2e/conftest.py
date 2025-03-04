@@ -4,9 +4,11 @@ import asyncio
 import multiprocessing
 import os
 import time
+from decimal import Decimal
 from typing import AsyncGenerator, Dict, Generator, Tuple
 
 import pytest
+import pytest_asyncio
 import requests
 import uvicorn
 from alembic import command
@@ -29,9 +31,8 @@ from backend.core.logging import configure_logging
 from backend.main import app as fastapi_app
 from backend.models import Equipment
 from backend.schemas.category import CategoryResponse
-from backend.schemas.equipment import EquipmentResponse
+from backend.services import EquipmentService
 from backend.services.category import CategoryService
-from backend.services.equipment import EquipmentService
 
 
 # Set logging for tests
@@ -269,30 +270,23 @@ async def test_category(db_session: AsyncSession) -> AsyncGenerator[Dict, None]:
     await db_session.commit()
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def test_equipment(
     db_session: AsyncSession,
+    equipment_service: EquipmentService,
     test_category: Dict,
-) -> AsyncGenerator[Tuple[Equipment, Dict], None]:
-    """Create test equipment.
-
-    Returns:
-        Tuple containing the SQLAlchemy model and the Pydantic model dict
-    """
-    equipment_service = EquipmentService(db_session)
+) -> AsyncGenerator[Equipment, None]:
+    """Create a test equipment."""
     equipment = await equipment_service.create_equipment(
-        name='Sony Professional Camera',
-        description='Professional camera for video production',
+        name='Sony Test Equipment',
+        description='Test Description for Sony device',
         category_id=test_category['id'],
-        barcode='SONY-001',
-        serial_number='SN-001',
-        replacement_cost=1000,
+        barcode='CATS-000001-5',
+        serial_number='SN001',
+        replacement_cost=Decimal('1000.00'),
     )
     await db_session.commit()
-    equipment_dict = EquipmentResponse.model_validate(equipment).model_dump()
-    yield equipment, equipment_dict
-    await equipment_service.delete_equipment(equipment.id)
-    await db_session.commit()
+    yield equipment
 
 
 @pytest.fixture(scope='session')

@@ -30,7 +30,7 @@ async def test_create_equipment(
     data = {
         'name': 'New Camera',
         'description': 'Professional camera for testing',
-        'barcode': 'TEST-002',
+        'barcode': 'CATS-000002-5',
         'serial_number': 'SN-002',
         'category_id': test_category.id,
         'replacement_cost': '1500.00',

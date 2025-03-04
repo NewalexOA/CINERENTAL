@@ -9,13 +9,23 @@ from typing import Any, Dict
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.exceptions.exceptions_base import BusinessError
-from backend.exceptions.resource_exceptions import AvailabilityError
-from backend.exceptions.state_exceptions import StateError, StatusTransitionError
-from backend.models.booking import Booking, BookingStatus, PaymentStatus
-from backend.models.client import Client
-from backend.models.document import DocumentStatus, DocumentType
-from backend.models.equipment import Equipment, EquipmentStatus
+from backend.exceptions import (
+    AvailabilityError,
+    BusinessError,
+    StateError,
+    StatusTransitionError,
+)
+from backend.models import (
+    Booking,
+    BookingStatus,
+    Client,
+    DocumentStatus,
+    DocumentType,
+    Equipment,
+    EquipmentStatus,
+    PaymentStatus,
+    SubcategoryPrefix,
+)
 from backend.services.booking import BookingService
 from backend.services.category import CategoryService
 from backend.services.client import ClientService
@@ -221,10 +231,12 @@ class TestCategoryHierarchy:
         cameras = await category_service.create_category(
             name='Cameras',
             description='Photo and video cameras only',
+            prefix='CA',
         )
         await category_service.create_category(
             name='Lighting',
             description='Studio and location lighting',
+            prefix='LT',
         )
 
         # Create subcategories
@@ -232,12 +244,34 @@ class TestCategoryHierarchy:
             name='DSLR',
             description='Digital SLR cameras',
             parent_id=cameras.id,
+            prefix='DS',
         )
         video = await category_service.create_category(
             name='Video',
             description='Professional video cameras',
             parent_id=cameras.id,
+            prefix='VI',
         )
+
+        # Create subcategory prefixes
+        dslr_prefix = SubcategoryPrefix(
+            category_id=dslr.id,
+            name='Professional',
+            prefix='PR',
+            description='Professional DSLR cameras',
+        )
+        db_session.add(dslr_prefix)
+
+        video_prefix = SubcategoryPrefix(
+            category_id=video.id,
+            name='Cinema',
+            prefix='CI',
+            description='Cinema video cameras',
+        )
+        db_session.add(video_prefix)
+        await db_session.commit()
+        await db_session.refresh(dslr_prefix)
+        await db_session.refresh(video_prefix)
 
         # Add equipment
         await equipment_service.create_equipment(
@@ -245,7 +279,8 @@ class TestCategoryHierarchy:
             category_id=dslr.id,
             description='Professional DSLR camera',
             serial_number='5D4001',
-            barcode='CANON5D4001',
+            generate_barcode=True,
+            subcategory_prefix_id=dslr_prefix.id,
             replacement_cost=2000.0,
         )
         await equipment_service.create_equipment(
@@ -253,8 +288,9 @@ class TestCategoryHierarchy:
             category_id=video.id,
             description='Professional video camera',
             serial_number='FX6001',
-            barcode='SONYFX6001',
-            replacement_cost=5000.0,
+            generate_barcode=True,
+            subcategory_prefix_id=video_prefix.id,
+            replacement_cost=3000.0,
         )
 
         # Get all categories
@@ -736,7 +772,7 @@ class TestEquipmentBusinessRules:
                 name='Another Equipment',
                 description='Test Description',
                 category_id=test_equipment.category_id,
-                barcode='UNIQUE001',
+                barcode='TCST-000003-5',
                 serial_number=test_equipment.serial_number,  # Duplicate
                 replacement_cost=1000.00,
             )
