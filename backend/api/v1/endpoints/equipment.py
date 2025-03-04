@@ -16,7 +16,12 @@ from backend.api.v1.decorators import typed_delete, typed_get, typed_post, typed
 from backend.core.database import get_db
 from backend.exceptions import BusinessError, NotFoundError, StateError, ValidationError
 from backend.models import BookingStatus, EquipmentStatus
-from backend.schemas import EquipmentCreate, EquipmentResponse, EquipmentUpdate
+from backend.schemas import (
+    EquipmentCreate,
+    EquipmentResponse,
+    EquipmentUpdate,
+    RegenerateBarcodeRequest,
+)
 from backend.services import BookingService, EquipmentService
 
 equipment_router: APIRouter = APIRouter()
@@ -448,20 +453,60 @@ async def change_equipment_status(
 
     try:
         service = EquipmentService(db)
-        equipment = await service.change_status(equipment_id, status)
-        return EquipmentResponse.model_validate(equipment.__dict__)
-    except NotFoundError:
+        return await service.change_status(equipment_id, status)
+    except ValidationError as e:
+        raise HTTPException(
+            status_code=http_status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        ) from e
+    except NotFoundError as e:
         raise HTTPException(
             status_code=http_status.HTTP_404_NOT_FOUND,
-            detail='Equipment not found',
-        )
+            detail=str(e),
+        ) from e
     except StateError as e:
         raise HTTPException(
             status_code=http_status.HTTP_400_BAD_REQUEST,
-            detail=e.details.get('message', str(e)),
+            detail=str(e),
         ) from e
-    except BusinessError as e:
+
+
+@typed_post(
+    equipment_router,
+    '/{equipment_id}/regenerate-barcode',
+    response_model=EquipmentResponse,
+)
+async def regenerate_equipment_barcode(
+    equipment_id: int,
+    request: RegenerateBarcodeRequest,
+    db: AsyncSession = Depends(get_db),
+) -> EquipmentResponse:
+    """Regenerate barcode for existing equipment.
+
+    Args:
+        equipment_id: Equipment ID
+        request: Regenerate barcode request data
+        db: Database session
+
+    Returns:
+        Updated equipment with new barcode
+
+    Raises:
+        HTTPException: If barcode regeneration fails
+    """
+    try:
+        service = EquipmentService(db)
+        return await service.regenerate_barcode(
+            equipment_id=equipment_id,
+            subcategory_prefix_id=request.subcategory_prefix_id,
+        )
+    except ValidationError as e:
         raise HTTPException(
             status_code=http_status.HTTP_400_BAD_REQUEST,
-            detail=e.details.get('message', str(e)),
+            detail=str(e),
+        ) from e
+    except NotFoundError as e:
+        raise HTTPException(
+            status_code=http_status.HTTP_404_NOT_FOUND,
+            detail=str(e),
         ) from e
