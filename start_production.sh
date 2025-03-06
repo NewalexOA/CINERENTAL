@@ -11,8 +11,30 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
+# Определение пути к проекту
+# Если переменная окружения CINERENTAL_PATH задана, используем её
+if [ -n "$CINERENTAL_PATH" ]; then
+    PROJECT_DIR="$CINERENTAL_PATH"
+else
+    # Иначе используем значение по умолчанию или путь относительно скрипта
+    SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+    PROJECT_DIR="$SCRIPT_DIR"
+fi
+
+# Переход в директорию проекта
+echo "Переход в директорию проекта: $PROJECT_DIR"
+cd "$PROJECT_DIR" || { echo -e "${RED}Не удалось перейти в директорию проекта: $PROJECT_DIR${NC}"; exit 1; }
+
+# Подтверждение текущей директории
+CURRENT_DIR=$(pwd)
+echo "Текущая директория: $CURRENT_DIR"
+if [ "$CURRENT_DIR" != "$PROJECT_DIR" ]; then
+    echo -e "${RED}Ошибка: текущая директория ($CURRENT_DIR) не соответствует целевой директории проекта ($PROJECT_DIR)${NC}"
+    exit 1
+fi
+
 # Файл для записи лога
-LOGS_DIR="/Users/anaskin/Github/CINERENTAL/logs"
+LOGS_DIR="$PROJECT_DIR/logs"
 LOG_FILE="$LOGS_DIR/cinerental_startup.log"
 
 # Создаем директорию для логов, если она не существует
