@@ -2,7 +2,7 @@
 -- Save this file as an application from Script Editor
 
 -- Main settings
-property projectPath : "/Users/anaskin/Github/CINERENTAL"
+property projectPath : "/Users/actrental/Documents/GitHub/CINERENTAL"
 property logFolder : projectPath & "/logs"
 property logFile : logFolder & "/cinerental_startup.log"
 
@@ -21,11 +21,11 @@ if button returned of result is "Запустить" then
         end tell
 
         -- Check existence of start_production.sh file and its execution permissions
-        set scriptPath to appPath & "start_production.sh"
+        set scriptPath to "/Users/actrental/Documents/GitHub/CINERENTAL/start_production.sh"
         set scriptExists to do shell script "if [ -f " & quoted form of scriptPath & " ]; then echo 'yes'; else echo 'no'; fi"
 
         if scriptExists is "no" then
-            error "Файл start_production.sh не найден в директории " & appPath
+            error "Файл start_production.sh не найден по пути " & scriptPath
         end if
 
         -- Check and set execution permissions
@@ -44,11 +44,8 @@ mkdir -p " & quoted form of logFolder & "
 echo \"CINERENTAL starter launched $(date)\" > " & quoted form of logFile & "
 echo \"Working directory: $(pwd)\" >> " & quoted form of logFile & "
 
-# Change to application directory
-cd " & quoted form of appPath & "
-
-# Launch main script in background
-nohup ./start_production.sh > /dev/null 2>&1 &
+# Launch main script in background using full path
+nohup " & quoted form of scriptPath & " > /dev/null 2>&1 &
 
 # Record PID for debugging
 echo \"PID of launched process: $!\" >> " & quoted form of logFile & "
@@ -57,7 +54,7 @@ echo \"PID of launched process: $!\" >> " & quoted form of logFile & "
 exit 0"
 
         -- Create temporary starter file
-        set tempStarterPath to "/tmp/cinerental_starter_" & do shell script "date +%s" & ".sh"
+        set tempStarterPath to "/tmp/cinerental_starter_" & (do shell script "date +%s" & ".sh")
         do shell script "echo " & quoted form of starterScript & " > " & quoted form of tempStarterPath
         do shell script "chmod +x " & quoted form of tempStarterPath
 

@@ -9,7 +9,7 @@
 
 1. Приложение отображает диалоговое окно для подтверждения запуска
 2. После подтверждения, запускает `start_production.sh` в фоновом режиме
-3. Создает лог операций в директории `/Users/anaskin/Github/CINERENTAL/logs/`
+3. Создает лог операций в директории `/Users/actrental/Documents/GitHub/CINERENTAL/logs/`
 4. Отображает уведомление о начале запуска и инструкции пользователю
 5. Автоматически открывает браузер, когда приложение полностью загружено
 
@@ -47,7 +47,7 @@
    ```
    На:
    ```applescript
-   set scriptPath to "/Users/anaskin/Github/CINERENTAL/start_production.sh"
+   set scriptPath to "/Users/actrental/Documents/GitHub/CINERENTAL/start_production.sh"
    ```
 
 3. Сохраните файл (Command+S)
@@ -70,7 +70,7 @@
 
 1. Проверьте, что Docker Desktop установлен и запущен
 2. Убедитесь, что скрипт `start_production.sh` находится в ожидаемом месте и имеет права на выполнение
-3. Проверьте лог-файл: `/Users/anaskin/Github/CINERENTAL/logs/cinerental_startup.log`
+3. Проверьте лог-файл: `/Users/actrental/Documents/GitHub/CINERENTAL/logs/cinerental_startup.log`
 
 ### Если кодировка текста отображается некорректно:
 
@@ -88,5 +88,5 @@ osacompile -o ~/Desktop/StartCinerental.app /tmp/start_cinerental.applescript
 ## Дополнительная информация
 
 - Приложение создаёт временные файлы в директории `/tmp/` для запуска скрипта
-- Все логи сохраняются в `/Users/anaskin/Github/CINERENTAL/logs/`
+- Все логи сохраняются в `/Users/actrental/Documents/GitHub/CINERENTAL/logs/`
 - Для остановки CINERENTAL используйте команду `docker compose down`
