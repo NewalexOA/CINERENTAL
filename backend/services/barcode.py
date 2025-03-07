@@ -262,3 +262,60 @@ class BarcodeService:
 
         # Return checksum modulo 10
         return checksum % 10
+
+    async def preview_barcode(
+        self, category_id: int, subcategory_prefix_id: int
+    ) -> str:
+        """Preview a barcode without incrementing the sequence.
+
+        The barcode format is the same as for generate_barcode, but this method
+        does not increment the sequence number, making it suitable for preview
+        in the UI.
+
+        Args:
+            category_id: Category ID
+            subcategory_prefix_id: Subcategory prefix ID
+
+        Returns:
+            Preview of barcode that would be generated
+
+        Raises:
+            ValidationError: If category or subcategory prefix not found
+        """
+        # Get category
+        category = await self.category_repository.get(category_id)
+        if not category or not category.prefix:
+            raise ValidationError(
+                'Category not found or does not have a prefix',
+                details={'category_id': category_id},
+            )
+
+        # Get subcategory prefix
+        subcategory_prefix = await self.subcategory_prefix_repository.get(
+            subcategory_prefix_id
+        )
+        if not subcategory_prefix or subcategory_prefix.category_id != category_id:
+            raise ValidationError(
+                'Subcategory prefix not found or does not belong to the category',
+                details={
+                    'subcategory_prefix_id': subcategory_prefix_id,
+                    'category_id': category_id,
+                },
+            )
+
+        # Get current sequence number without incrementing
+        sequence = await self.barcode_sequence_repository.get_sequence(
+            category_id, subcategory_prefix.prefix
+        )
+
+        # If no sequence found, start with 1
+        sequence_number = (sequence.last_number + 1) if sequence else 1
+
+        # Generate barcode
+        barcode_without_checksum = (
+            f'{category.prefix}{subcategory_prefix.prefix}-' f'{sequence_number:06d}'
+        )
+        checksum = self._calculate_checksum(barcode_without_checksum)
+        barcode = f'{barcode_without_checksum}-{checksum}'
+
+        return barcode

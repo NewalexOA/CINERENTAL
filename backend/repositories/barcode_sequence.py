@@ -104,3 +104,19 @@ class BarcodeSequenceRepository(BaseRepository[BarcodeSequence]):
             )
             await self.create(sequence)
             return 1
+
+    async def get_sequence(
+        self, category_id: int, subcategory_prefix: str
+    ) -> Optional[BarcodeSequence]:
+        """Get barcode sequence by category ID and subcategory prefix.
+
+        This is an alias for get_by_category_and_prefix for clearer API.
+
+        Args:
+            category_id: Category ID
+            subcategory_prefix: Subcategory prefix
+
+        Returns:
+            BarcodeSequence if found, None otherwise
+        """
+        return await self.get_by_category_and_prefix(category_id, subcategory_prefix)

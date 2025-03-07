@@ -558,10 +558,13 @@ class EquipmentService:
 
         # Update equipment
         equipment.barcode = new_barcode
-        updated_equipment = await self.repository.update(equipment)
-        loaded_equipment = await self._load_equipment_with_category(updated_equipment)
+        # Save changes to DB
+        await self.session.commit()
+        await self.session.refresh(equipment)
 
-        # Convert to response model
+        # Load equipment with category for response
+        loaded_equipment = await self._load_equipment_with_category(equipment)
+
         return EquipmentResponse.model_validate(loaded_equipment.__dict__)
 
     async def get_by_serial_number(self, serial_number: str) -> Optional[Equipment]:

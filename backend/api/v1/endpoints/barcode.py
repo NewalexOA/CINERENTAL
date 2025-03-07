@@ -160,10 +160,16 @@ async def preview_barcode(
     """
     service = BarcodeService(db)
     try:
-        barcode = await service.generate_barcode(
-            category_id=request.category_id,
-            subcategory_prefix_id=request.subcategory_prefix_id,
-        )
+        if hasattr(service, 'preview_barcode'):
+            barcode = await service.preview_barcode(
+                category_id=request.category_id,
+                subcategory_prefix_id=request.subcategory_prefix_id,
+            )
+        else:
+            barcode = await service.generate_barcode(
+                category_id=request.category_id,
+                subcategory_prefix_id=request.subcategory_prefix_id,
+            )
         return BarcodeGenerateResponse(barcode=barcode)
     except ValidationError as e:
         raise HTTPException(
