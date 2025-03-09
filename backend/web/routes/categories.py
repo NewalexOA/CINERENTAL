@@ -13,6 +13,7 @@ from starlette.templating import _TemplateResponse
 from backend.core.database import get_db
 from backend.core.templates import templates
 from backend.services import CategoryService
+from backend.web.routes.utils import prepare_model_list_for_template
 
 router = APIRouter()
 
@@ -38,7 +39,7 @@ async def categories_list(
         'categories/list.html',
         {
             'request': request,
-            'categories': [category.model_dump() for category in categories],
+            'categories': prepare_model_list_for_template(categories),
         },
     )
 
@@ -59,4 +60,4 @@ async def get_categories(
     """
     category_service = CategoryService(db)
     categories = await category_service.get_all()
-    return [category.model_dump() for category in categories]
+    return prepare_model_list_for_template(categories)

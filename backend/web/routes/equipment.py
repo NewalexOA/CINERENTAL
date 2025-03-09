@@ -13,8 +13,12 @@ from starlette.templating import _TemplateResponse
 from backend.core.database import get_db
 from backend.core.templates import templates
 from backend.models import EquipmentStatus
-from backend.schemas import EquipmentResponse
 from backend.services import CategoryService, EquipmentService
+from backend.web.routes.utils import (
+    get_template_status_value,
+    prepare_equipment_data,
+    prepare_equipment_list_data,
+)
 
 router = APIRouter()
 
@@ -51,18 +55,8 @@ async def equipment_list(
     # Get all categories for filter dropdown
     categories = await category_service.get_all()
 
-    # Transform data for template
-    equipment_data = []
-    for item in equipment_list:
-        equipment_response = EquipmentResponse.model_validate(item.__dict__)
-        item_dict = equipment_response.model_dump()
-        # Use category_name directly from EquipmentResponse
-        item_dict['category_name'] = item_dict.get('category_name', 'Без категории')
-
-        # Handle status display
-        status = item_dict['status']
-        item_dict['status'] = status.value if status is not None else None
-        equipment_data.append(item_dict)
+    # Transform data for template using utility function
+    equipment_data = prepare_equipment_list_data(equipment_list)
 
     return templates.TemplateResponse(
         'equipment/list.html',
@@ -71,7 +65,7 @@ async def equipment_list(
             'equipment_list': equipment_data,
             'categories': [category.model_dump() for category in categories],
             'current_category_id': category_id,
-            'current_status': status.value if status else None,
+            'current_status': get_template_status_value(status),
         },
     )
 
@@ -95,34 +89,13 @@ async def equipment_detail(
     equipment_service = EquipmentService(db)
     equipment = await equipment_service.get_equipment(equipment_id)
 
-    # Create a dictionary with all required fields
-    equipment_dict = {
-        'id': equipment.id,
-        'name': equipment.name,
-        'description': equipment.description,
-        'category_id': equipment.category_id,
-        'barcode': equipment.barcode,
-        'serial_number': equipment.serial_number,
-        'replacement_cost': equipment.replacement_cost,
-        'status': equipment.status,
-        'created_at': equipment.created_at,
-        'updated_at': equipment.updated_at,
-        'category_name': (
-            equipment.category.name if equipment.category else 'Без категории'
-        ),
-    }
-
-    # Add category information if available
-    if equipment.category:
-        equipment_dict['category'] = {
-            'id': equipment.category.id,
-            'name': equipment.category.name,
-        }
+    # Transform equipment data for template with full category info
+    equipment_data = prepare_equipment_data(equipment, include_full_category=True)
 
     return templates.TemplateResponse(
         'equipment/detail.html',
         {
             'request': request,
-            'equipment': EquipmentResponse.model_validate(equipment_dict).model_dump(),
+            'equipment': equipment_data,
         },
     )

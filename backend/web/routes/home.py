@@ -11,6 +11,7 @@ from starlette.templating import _TemplateResponse
 from backend.core.database import get_db
 from backend.core.templates import templates
 from backend.services import EquipmentService
+from backend.web.routes.utils import prepare_model_list_for_template
 
 router = APIRouter()
 
@@ -36,6 +37,6 @@ async def index(
         'index.html',
         {
             'request': request,
-            'equipment_list': [item.model_dump() for item in equipment_list],
+            'equipment_list': prepare_model_list_for_template(equipment_list),
         },
     )
