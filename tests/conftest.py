@@ -2,7 +2,6 @@
 
 import asyncio
 import os
-import uuid
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
@@ -41,6 +40,7 @@ from backend.main import app as main_app
 from backend.models import Booking, Category, Client, Document, Equipment
 from backend.models.core import Base
 from backend.repositories import BookingRepository, EquipmentRepository
+from backend.repositories.global_barcode import GlobalBarcodeSequenceRepository
 from backend.schemas import (
     BookingStatus,
     DocumentStatus,
@@ -254,7 +254,9 @@ async def test_client(db_session: AsyncSession) -> AsyncGenerator[Client, None]:
     )
     db_session.add(client)
     await db_session.commit()
-    return client
+    await db_session.refresh(client)
+
+    yield client
 
 
 @pytest_asyncio.fixture
@@ -267,7 +269,7 @@ async def test_equipment(
         name='Test Equipment',
         description='Test Description',
         category_id=test_category.id,
-        barcode='CATS-000001-5',
+        barcode='12345678901',  # Numeric format
         serial_number='SN001',
         replacement_cost=Decimal('1000.00'),
         status=EquipmentStatus.AVAILABLE,
@@ -547,68 +549,13 @@ async def document(test_document: Document) -> Document:
 
 @pytest_asyncio.fixture
 async def equipment_service(db_session: AsyncSession) -> EquipmentService:
-    """Create equipment service instance for testing."""
-    return EquipmentService(db_session)
+    """Create an equipment service."""
+    repo = EquipmentRepository(db_session)
+    return EquipmentService(repo)
 
 
 @pytest_asyncio.fixture
 async def barcode_service(db_session: AsyncSession) -> BarcodeService:
-    """Create barcode service for tests.
-
-    Args:
-        db_session: Database session
-
-    Returns:
-        Barcode service instance
-    """
-    return BarcodeService(db_session)
-
-
-@pytest_asyncio.fixture
-async def test_category_with_prefix(db_session: AsyncSession) -> Category:
-    """Create a test category with prefix.
-
-    Args:
-        db_session: Database session
-
-    Returns:
-        Category instance
-    """
-    category = Category(
-        name=f'Test Category {uuid.uuid4()}',
-        description='Test Description',
-        prefix='TC',
-    )
-    db_session.add(category)
-    await db_session.commit()
-    await db_session.refresh(category)
-    return category
-
-
-@pytest_asyncio.fixture
-async def test_equipment_with_prefix(
-    db_session: AsyncSession,
-    test_category_with_prefix: Category,
-) -> AsyncGenerator[Equipment, None]:
-    """Create a test equipment with category that has prefix.
-
-    Args:
-        db_session: Database session
-        test_category_with_prefix: Category instance with prefix
-
-    Returns:
-        Equipment instance with category that has prefix
-    """
-    equipment = Equipment(
-        name='Test Equipment with Prefix',
-        description='Test Description',
-        category_id=test_category_with_prefix.id,
-        barcode='TCXX-000001-5',
-        serial_number='SN001',
-        replacement_cost=Decimal('1000.00'),
-        status=EquipmentStatus.AVAILABLE,
-    )
-    db_session.add(equipment)
-    await db_session.commit()
-    await db_session.refresh(equipment)
-    yield equipment
+    """Create a barcode service."""
+    repo = GlobalBarcodeSequenceRepository(db_session)
+    return BarcodeService(repo)

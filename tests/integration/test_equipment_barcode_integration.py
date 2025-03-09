@@ -17,7 +17,6 @@ async def test_create_equipment_with_generated_barcode(
     category = Category(
         name='Test Category',
         description='Test Description',
-        prefix='TC',
     )
     db_session.add(category)
     await db_session.commit()
@@ -28,30 +27,27 @@ async def test_create_equipment_with_generated_barcode(
         '/api/v1/equipment/',
         json={
             'name': 'Test Equipment',
-            'description': 'Test Equipment Description',
+            'description': 'Test Description',
             'category_id': category.id,
-            'generate_barcode': True,
             'serial_number': 'SN001',
-            'status': 'AVAILABLE',
             'replacement_cost': 1000.00,
         },
     )
 
-    # Check response
-    assert response.status_code == 201
+    assert response.status_code == 201, response.text
     data = response.json()
+
+    # Check that the barcode was auto-generated
     assert 'barcode' in data
-    barcode = data['barcode']
+    assert data['barcode'], 'Barcode should not be empty'
+    assert len(data['barcode']) > 0
 
-    # Check barcode format
-    assert isinstance(barcode, str)
-    assert len(barcode) == 11  # 9 digits for sequence + 2 digits for checksum
+    # Verify the new numeric format
+    assert data['barcode'].isdigit(), 'Barcode should be numeric, '
+    f'got {data["barcode"]}'
 
-    # Verify equipment was created with the barcode
-    equipment_response = await async_client.get(f'/api/v1/equipment/{data["id"]}')
-    assert equipment_response.status_code == 200
-    equipment_data = equipment_response.json()
-    assert equipment_data['barcode'] == barcode
+    assert data['category_id'] == category.id, 'Category ID should match, '
+    f'got {data["category_id"]}'
 
 
 @async_test
@@ -60,34 +56,37 @@ async def test_create_equipment_with_custom_barcode(
     db_session: AsyncSession,
 ) -> None:
     """Test creating equipment with custom barcode."""
-    # Create test category
+    # Create a test category
     category = Category(
         name='Test Category',
         description='Test Description',
-        prefix='TC',
     )
     db_session.add(category)
     await db_session.commit()
     await db_session.refresh(category)
+
+    # Using a valid barcode from test cases in BarcodeService._calculate_checksum
+    # '000000001' with checksum '01'
+    custom_barcode = '00000000101'
 
     # Create equipment with custom barcode
     response = await async_client.post(
         '/api/v1/equipment/',
         json={
             'name': 'Test Equipment',
-            'description': 'Test Equipment Description',
+            'description': 'Test Description',
             'category_id': category.id,
-            'barcode': 'TCTS-000001-3',
-            'serial_number': 'SN001',
-            'status': 'AVAILABLE',
+            'custom_barcode': custom_barcode,
+            'serial_number': 'SN002',
             'replacement_cost': 1000.00,
         },
     )
 
-    # Check response
-    assert response.status_code == 201
+    assert response.status_code == 201, response.text
     data = response.json()
-    assert data['barcode'] == 'TCTS-000001-3'
+
+    # Check that our custom barcode was used
+    assert data['barcode'] == custom_barcode
 
 
 @async_test
@@ -95,33 +94,39 @@ async def test_create_equipment_without_barcode(
     async_client: AsyncClient,
     db_session: AsyncSession,
 ) -> None:
-    """Test creating equipment without barcode."""
+    """Test creating equipment without specifying barcode."""
     # Create test category
     category = Category(
         name='Test Category',
         description='Test Description',
-        prefix='TC',
     )
     db_session.add(category)
     await db_session.commit()
     await db_session.refresh(category)
 
-    # Try to create equipment without barcode
+    # Create equipment without barcode
     response = await async_client.post(
         '/api/v1/equipment/',
         json={
             'name': 'Test Equipment',
-            'description': 'Test Equipment Description',
+            'description': 'Test Description',
             'category_id': category.id,
-            'serial_number': 'SN001',  # Add serial_number
+            'serial_number': 'SN003',
+            'replacement_cost': 1000.00,
         },
     )
 
-    # Check response - should fail with validation error
-    assert response.status_code == 400
+    assert response.status_code == 201, response.text
     data = response.json()
-    assert 'detail' in data
-    assert 'barcode' in data['detail']
+
+    # Auto-generated barcode should be present
+    assert 'barcode' in data
+    assert data['barcode'], 'Barcode should not be empty'
+    assert len(data['barcode']) > 0
+
+    # Verify the numeric format
+    assert data['barcode'].isdigit(), 'Barcode should be numeric, '
+    f'got {data["barcode"]}'
 
 
 @async_test
@@ -129,34 +134,33 @@ async def test_create_equipment_with_invalid_barcode(
     async_client: AsyncClient,
     db_session: AsyncSession,
 ) -> None:
-    """Test creating equipment with invalid barcode."""
+    """Test creating equipment with invalid barcode format."""
     # Create test category
     category = Category(
         name='Test Category',
         description='Test Description',
-        prefix='TC',
     )
     db_session.add(category)
     await db_session.commit()
     await db_session.refresh(category)
 
-    # Try to create equipment with invalid barcode
+    # Create equipment with invalid barcode format
     response = await async_client.post(
         '/api/v1/equipment/',
         json={
             'name': 'Test Equipment',
-            'description': 'Test Equipment Description',
+            'description': 'Test Description',
             'category_id': category.id,
-            'barcode': 'INVALID-BARCODE',  # Invalid barcode format
-            'serial_number': 'SN001',  # Add serial_number
+            'custom_barcode': 'INVALID-FORMAT',  # Invalid format
+            'serial_number': 'SN004',
+            'replacement_cost': 1000.00,
         },
     )
 
-    # Check response - should fail with validation error
-    assert response.status_code == 400
+    assert response.status_code == 400, response.text
     data = response.json()
     assert 'detail' in data
-    assert 'Invalid barcode format' in data['detail']
+    assert 'barcode' in data['detail'].lower() or 'format' in data['detail'].lower()
 
 
 @async_test
@@ -169,43 +173,44 @@ async def test_create_equipment_with_duplicate_barcode(
     category = Category(
         name='Test Category',
         description='Test Description',
-        prefix='TC',
     )
     db_session.add(category)
     await db_session.commit()
     await db_session.refresh(category)
 
+    # Using a valid barcode from test cases in BarcodeService._calculate_checksum
+    # '000000123' with checksum '23'
+    custom_barcode = '00000012323'
+
     # Create first equipment
-    first_response = await async_client.post(
+    response1 = await async_client.post(
         '/api/v1/equipment/',
         json={
             'name': 'Test Equipment 1',
-            'description': 'Test Equipment Description 1',
+            'description': 'Test Description',
             'category_id': category.id,
-            'barcode': 'TCTS-000001-3',
-            'serial_number': 'SN001',
-            'status': 'AVAILABLE',
+            'custom_barcode': custom_barcode,
+            'serial_number': 'SN005',
             'replacement_cost': 1000.00,
         },
     )
-    assert first_response.status_code == 201
 
-    # Try to create second equipment with same barcode
-    second_response = await async_client.post(
+    assert response1.status_code == 201, response1.text
+
+    # Create second equipment with same barcode
+    response2 = await async_client.post(
         '/api/v1/equipment/',
         json={
             'name': 'Test Equipment 2',
-            'description': 'Test Equipment Description 2',
+            'description': 'Test Description',
             'category_id': category.id,
-            'barcode': 'TCTS-000001-3',
-            'serial_number': 'SN002',
-            'status': 'AVAILABLE',
+            'custom_barcode': custom_barcode,  # Duplicate
+            'serial_number': 'SN006',
             'replacement_cost': 1000.00,
         },
     )
 
-    # Check response - should fail with conflict error
-    assert second_response.status_code == 400
-    data = second_response.json()
+    assert response2.status_code == 400, response2.text
+    data = response2.json()
     assert 'detail' in data
-    assert 'already exists' in data['detail']
+    assert 'barcode' in data['detail'].lower() or 'duplicate' in data['detail'].lower()

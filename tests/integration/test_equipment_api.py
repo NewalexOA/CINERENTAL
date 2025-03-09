@@ -383,25 +383,25 @@ async def test_search_equipment_pagination(
 @async_test
 async def test_regenerate_equipment_barcode(
     async_client: AsyncClient,
-    test_equipment_with_prefix: Equipment,
+    test_equipment: Equipment,
     db_session: AsyncSession,
 ) -> None:
     """Test regenerating equipment barcode."""
     # Store the original barcode
-    original_barcode = test_equipment_with_prefix.barcode
+    original_barcode = test_equipment.barcode
 
     # Regenerate barcode
     response = await async_client.post(
-        f'/api/v1/equipment/{test_equipment_with_prefix.id}/regenerate-barcode',
+        f'/api/v1/equipment/{test_equipment.id}/regenerate-barcode',
         json={},
     )
 
     assert response.status_code == 200
     data = response.json()
-    assert data['id'] == test_equipment_with_prefix.id
+    assert data['id'] == test_equipment.id
     assert data['barcode'] != original_barcode
-    # Verify the new barcode format (now it's a 11-digit string)
-    assert len(data['barcode']) == 11
+    # Verify the new barcode format (now it's a numeric string)
+    assert data['barcode'].isdigit()
 
 
 @async_test

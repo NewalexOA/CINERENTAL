@@ -281,7 +281,7 @@ async def test_equipment(
         name='Sony Test Equipment',
         description='Test Description for Sony device',
         category_id=test_category['id'],
-        barcode='CATS-000001-5',
+        custom_barcode='CATS-000001-5',
         serial_number='SN001',
         replacement_cost=Decimal('1000.00'),
     )
