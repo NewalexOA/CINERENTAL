@@ -28,7 +28,7 @@
             <select class="form-select" id="categoryFilter">
                 <option value="">Все категории</option>
                 {% for category in categories %}
-                <option value="{{ category.id }}" {% if category.id == current_category_id %}selected{% endif %}>
+                <option value="{{ category.id }}" {{ "selected" if category.id == current_category_id else "" }}>
                     {{ category.name }}
                 </option>
                 {% endfor %}

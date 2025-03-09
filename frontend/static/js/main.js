@@ -211,14 +211,14 @@ const api = {
 
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({ detail: 'Ошибка сети' }));
-                const error = new Error(errorData.detail || 'Ошибка при обновлении данных');
+                const error = new Error(errorData.detail || 'Ошибка при отправке данных');
                 error.response = { data: errorData, status: response.status };
                 throw error;
             }
 
             return await response.json();
         } catch (error) {
-            console.error('Error updating data:', error);
+            console.error('Error putting data:', error);
             throw error;
         }
     },
