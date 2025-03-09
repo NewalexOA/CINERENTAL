@@ -8,11 +8,17 @@ including their specifications, availability, and replacement costs.
 from datetime import datetime, timedelta
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Body, Depends, HTTPException, Query
 from fastapi import status as http_status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.api.v1.decorators import typed_delete, typed_get, typed_post, typed_put
+from backend.api.v1.decorators import (
+    typed_delete,
+    typed_get,
+    typed_patch,
+    typed_post,
+    typed_put,
+)
 from backend.core.database import get_db
 from backend.exceptions import BusinessError, NotFoundError, StateError, ValidationError
 from backend.models.booking import BookingStatus
@@ -627,4 +633,49 @@ async def get_equipment_status_timeline(
         raise HTTPException(
             status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f'Failed to retrieve status timeline: {str(e)}',
+        ) from e
+
+
+@typed_patch(
+    equipment_router,
+    '/{equipment_id}/notes',
+    response_model=EquipmentResponse,
+)
+async def update_equipment_notes(
+    equipment_id: int,
+    notes: str = Body(..., embed=True),
+    db: AsyncSession = Depends(get_db),
+) -> EquipmentResponse:
+    """Update equipment notes.
+
+    Args:
+        equipment_id: Equipment ID
+        notes: New notes text
+        db: Database session
+
+    Returns:
+        Updated equipment
+
+    Raises:
+        HTTPException: If equipment not found
+    """
+    try:
+        service = EquipmentService(db)
+
+        # Update equipment notes
+        updated_equipment = await service.update_equipment(
+            equipment_id,
+            notes=notes,
+        )
+
+        return EquipmentResponse.model_validate(updated_equipment.__dict__)
+    except NotFoundError as e:
+        raise HTTPException(
+            status_code=http_status.HTTP_404_NOT_FOUND,
+            detail=str(e),
+        ) from e
+    except Exception as e:
+        raise HTTPException(
+            status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f'Failed to update notes: {str(e)}',
         ) from e
