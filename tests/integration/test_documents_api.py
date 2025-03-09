@@ -274,7 +274,7 @@ async def test_update_document_invalid_status_transition(
 
     assert response.status_code == http_status.HTTP_400_BAD_REQUEST
 
-    # Update to a valid transition first
+    # Update to a valid transition firs
     data = {
         'status': 'PENDING',
     }

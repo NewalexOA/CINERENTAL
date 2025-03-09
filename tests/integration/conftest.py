@@ -41,7 +41,7 @@ def configure_test_logging():
 
     # Add a handler with the WARNING level
     logger.add(
-        sink=lambda msg: None, level='WARNING'  # Empty handler to suppress output
+        sink=lambda msg: None, level='WARNING'  # Empty handler to suppress outpu
     )
 
     # Use centralized logging configuration through loguru
