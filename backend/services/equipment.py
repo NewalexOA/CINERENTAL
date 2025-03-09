@@ -6,7 +6,7 @@ including inventory management, availability tracking, and equipment status upda
 
 from datetime import datetime, timezone
 from decimal import Decimal
-from typing import Dict, List, Optional, Set
+from typing import Any, Dict, List, Optional, Set
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -30,16 +30,25 @@ from backend.services.barcode import BarcodeService
 class EquipmentService:
     """Service for managing equipment."""
 
-    def __init__(self, session: AsyncSession) -> None:
+    def __init__(
+        self,
+        session: AsyncSession,
+        category_service: Optional[Any] = None,
+    ) -> None:
         """Initialize service.
 
         Args:
             session: SQLAlchemy async session
+            category_service: Optional Category service instance
         """
         self.session = session
         self.repository = EquipmentRepository(session)
         self.booking_repository = BookingRepository(session)
         self.barcode_service = BarcodeService(session)
+        # Use injected category service or create a new one
+        from backend.services.category import CategoryService
+
+        self.category_service = category_service or CategoryService(session)
 
     async def _load_equipment_with_category(self, equipment: Equipment) -> Equipment:
         """Load equipment with category relationship.
@@ -64,21 +73,25 @@ class EquipmentService:
         name: str,
         description: str,
         category_id: int,
+        daily_rate: float = 0.0,
+        replacement_cost: float = 0.0,
         custom_barcode: Optional[str] = None,
         serial_number: Optional[str] = None,
-        replacement_cost: Optional[float] = None,
+        purchase_date: Optional[datetime] = None,
         notes: Optional[str] = None,
     ) -> EquipmentResponse:
-        """Create new equipment.
+        """Create new equipment item.
 
         Args:
             name: Equipment name
             description: Equipment description
             category_id: Category ID
-            custom_barcode: Custom barcode (optional, auto-generated if not provided)
+            daily_rate: Daily rental rate
+            replacement_cost: Equipment replacement cost
+            custom_barcode: Optional custom barcode
             serial_number: Equipment serial number
-            replacement_cost: Cost to replace if damaged
-            notes: Optional notes
+            purchase_date: Purchase date
+            notes: Additional notes
 
         Returns:
             Created equipment
@@ -93,16 +106,7 @@ class EquipmentService:
             raise ValidationError('Replacement cost must be greater than 0')
 
         # Check if category exists
-        from backend.services.category import CategoryService
-
-        category_service = CategoryService(self.session)
-        try:
-            await category_service.get_category(category_id)
-        except NotFoundError:
-            raise NotFoundError(
-                f'Category with ID {category_id} not found',
-                details={'category_id': category_id},
-            )
+        await self.category_service.get_category(category_id)
 
         # Handle barcode generation or validation
         if custom_barcode:
@@ -217,16 +221,7 @@ class EquipmentService:
 
         # Check if category exists if provided
         if category_id is not None:
-            from backend.services.category import CategoryService
-
-            category_service = CategoryService(self.session)
-            try:
-                await category_service.get_category(category_id)
-            except NotFoundError:
-                raise NotFoundError(
-                    f'Category with ID {category_id} not found',
-                    details={'category_id': category_id},
-                )
+            await self.category_service.get_category(category_id)
 
         # Ensure dates are timezone-aware
         if available_from and available_from.tzinfo is None:
@@ -314,16 +309,7 @@ class EquipmentService:
 
         # Check if category exists if provided
         if category_id is not None:
-            from backend.services.category import CategoryService
-
-            category_service = CategoryService(self.session)
-            try:
-                await category_service.get_category(category_id)
-            except NotFoundError:
-                raise NotFoundError(
-                    f'Category with ID {category_id} not found',
-                    details={'category_id': category_id},
-                )
+            await self.category_service.get_category(category_id)
 
         # Check for duplicate barcode
         if barcode and barcode != equipment.barcode:

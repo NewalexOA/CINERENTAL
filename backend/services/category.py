@@ -23,15 +23,22 @@ from backend.schemas import CategoryResponse, CategoryWithEquipmentCount
 class CategoryService:
     """Service for managing equipment categories."""
 
-    def __init__(self, session: AsyncSession) -> None:
+    def __init__(
+        self,
+        session: AsyncSession,
+        repository: Optional[CategoryRepository] = None,
+        equipment_repository: Optional[EquipmentRepository] = None,
+    ) -> None:
         """Initialize service.
 
         Args:
             session: SQLAlchemy async session
+            repository: Category repository (optional)
+            equipment_repository: Equipment repository (optional)
         """
         self.session = session
-        self.repository = CategoryRepository(session)
-        self.equipment_repository = EquipmentRepository(session)
+        self.repository = repository or CategoryRepository(session)
+        self.equipment_repository = equipment_repository or EquipmentRepository(session)
 
     async def create_category(
         self,
