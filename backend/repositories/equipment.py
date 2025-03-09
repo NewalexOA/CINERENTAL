@@ -364,10 +364,15 @@ class EquipmentRepository(BaseRepository[Equipment]):
         query: Optional[str] = None,
         available_from: Optional[datetime] = None,
         available_to: Optional[datetime] = None,
+        include_deleted: bool = False,
     ) -> List[Equipment]:
         """Get list of equipment with optional filtering and search."""
         try:
             stmt = select(Equipment)
+
+            # Фильтрация удалённых элементов, если include_deleted=False
+            if not include_deleted:
+                stmt = stmt.where(Equipment.deleted_at.is_(None))
 
             if status:
                 stmt = stmt.where(Equipment.status == status)

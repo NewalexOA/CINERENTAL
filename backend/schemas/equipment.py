@@ -38,23 +38,15 @@ class EquipmentCreate(EquipmentBase):
     replacement_cost: Optional[Decimal] = Field(
         None, title='Replacement Cost', description='Cost to replace if damaged'
     )
-    barcode: Optional[str] = Field(
-        None, title='Barcode', description='Equipment barcode'
+    custom_barcode: Optional[str] = Field(
+        None,
+        title='Custom Barcode',
+        description='Optional custom barcode (auto-generated if not provided)',
     )
     serial_number: Optional[str] = Field(
         None, title='Serial Number', description='Serial number'
     )
     notes: Optional[str] = Field(None, title='Notes', description='Additional notes')
-    subcategory_prefix_id: Optional[int] = Field(
-        None,
-        title='Subcategory Prefix ID',
-        description='ID of subcategory prefix for barcode generation',
-    )
-    generate_barcode: bool = Field(
-        False,
-        title='Generate Barcode',
-        description='Whether to generate barcode automatically',
-    )
 
 
 class EquipmentUpdate(BaseModel):
@@ -116,8 +108,17 @@ class EquipmentWithCategory(EquipmentResponse):
 class RegenerateBarcodeRequest(BaseModel):
     """Regenerate barcode request schema."""
 
-    subcategory_prefix_id: Optional[int] = Field(
-        None,
-        title='Subcategory Prefix ID',
-        description='ID of subcategory prefix for barcode generation',
-    )
+    # No additional parameters needed for auto-increment barcode generation
+    pass
+
+
+class StatusTimelineResponse(BaseModel):
+    """Status timeline response schema."""
+
+    id: int
+    equipment_id: int
+    status: EquipmentStatus
+    timestamp: datetime
+    notes: Optional[str] = None
+
+    model_config = ConfigDict(from_attributes=True)

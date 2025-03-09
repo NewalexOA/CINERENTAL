@@ -64,12 +64,10 @@ class EquipmentService:
         name: str,
         description: str,
         category_id: int,
-        barcode: Optional[str] = None,
+        custom_barcode: Optional[str] = None,
         serial_number: Optional[str] = None,
         replacement_cost: Optional[float] = None,
         notes: Optional[str] = None,
-        subcategory_prefix_id: Optional[int] = None,
-        generate_barcode: bool = False,
     ) -> EquipmentResponse:
         """Create new equipment.
 
@@ -77,12 +75,10 @@ class EquipmentService:
             name: Equipment name
             description: Equipment description
             category_id: Category ID
-            barcode: Equipment barcode (optional if generate_barcode is True)
+            custom_barcode: Custom barcode (optional, auto-generated if not provided)
             serial_number: Equipment serial number
             replacement_cost: Cost to replace if damaged
             notes: Optional notes
-            subcategory_prefix_id: Subcategory prefix ID for barcode generation
-            generate_barcode: Whether to generate barcode automatically
 
         Returns:
             Created equipment
@@ -109,38 +105,26 @@ class EquipmentService:
             )
 
         # Handle barcode generation or validation
-        if generate_barcode:
-            if not subcategory_prefix_id:
-                details = {'subcategory_prefix_id': subcategory_prefix_id}
-                raise ValidationError(
-                    'Subcategory prefix ID is required for barcode generation',
-                    details=details,
-                )
-
-            # Generate barcode
-            barcode = await self.barcode_service.generate_barcode(
-                category_id, subcategory_prefix_id
-            )
-        elif barcode:
+        if custom_barcode:
             # Validate provided barcode
-            if not self.barcode_service.validate_barcode_format(barcode):
+            if not self.barcode_service.validate_barcode_format(custom_barcode):
                 raise ValidationError(
                     'Invalid barcode format',
-                    details={'barcode': barcode},
+                    details={'barcode': custom_barcode},
                 )
 
             # Check for duplicate barcode
-            existing = await self.repository.get_by_barcode(barcode)
+            existing = await self.repository.get_by_barcode(custom_barcode)
             if existing:
                 raise ConflictError(
-                    f'Equipment with barcode {barcode} already exists',
-                    details={'barcode': barcode},
+                    f'Equipment with barcode {custom_barcode} already exists',
+                    details={'barcode': custom_barcode},
                 )
+
+            barcode = custom_barcode
         else:
-            raise ValidationError(
-                'Either barcode must be provided or generate_barcode must be True',
-                details={'barcode': barcode, 'generate_barcode': generate_barcode},
-            )
+            # Generate barcode automatically
+            barcode = await self.barcode_service.generate_barcode()
 
         # Check for duplicate serial number if provided
         if serial_number:
@@ -200,6 +184,7 @@ class EquipmentService:
         query: Optional[str] = None,
         available_from: Optional[datetime] = None,
         available_to: Optional[datetime] = None,
+        include_deleted: bool = False,
     ) -> List[EquipmentResponse]:
         """Get list of equipment with optional filtering.
 
@@ -211,6 +196,7 @@ class EquipmentService:
             query: Search query
             available_from: Filter by availability start date
             available_to: Filter by availability end date
+            include_deleted: Whether to include deleted equipment
 
         Returns:
             List of equipment items as EquipmentResponse objects
@@ -257,6 +243,7 @@ class EquipmentService:
             query=query,
             available_from=available_from,
             available_to=available_to,
+            include_deleted=include_deleted,
         )
 
         # Load equipment with categories
@@ -501,22 +488,17 @@ class EquipmentService:
             return await self._load_equipment_with_category(equipment)
         return None
 
-    async def regenerate_barcode(
-        self, equipment_id: int, subcategory_prefix_id: Optional[int] = None
-    ) -> EquipmentResponse:
+    async def regenerate_barcode(self, equipment_id: int) -> EquipmentResponse:
         """Regenerate barcode for equipment.
 
         Args:
             equipment_id: Equipment ID
-            subcategory_prefix_id: Optional ID of subcategory prefix to use.
-                If not provided, will use existing category.
 
         Returns:
             Updated equipment with new barcode
 
         Raises:
             NotFoundError: If equipment not found
-            ValidationError: If validation fails
         """
         # Get equipment
         equipment = await self.get_equipment(equipment_id)
@@ -528,33 +510,7 @@ class EquipmentService:
 
         # Use barcode service to generate new barcode
         barcode_service = BarcodeService(self.session)
-
-        # Generate new barcode
-        if subcategory_prefix_id is not None:
-            new_barcode = await barcode_service.generate_barcode(
-                equipment.category_id, subcategory_prefix_id
-            )
-        else:
-            # If no subcategory_prefix_id is provided, get the default one
-            # This is a simplification - in a real implementation, you'd want
-            # to get the first available subcategory prefix for the category
-            from backend.services.subcategory_prefix import SubcategoryPrefixService
-
-            subcategory_service = SubcategoryPrefixService(self.session)
-            category_prefixes = await subcategory_service.get_by_category(
-                category_id=equipment.category_id
-            )
-
-            if not category_prefixes:
-                category_id = equipment.category_id
-                raise ValidationError(
-                    f'No subcategory prefixes found for category {category_id}',
-                    details={'category_id': category_id},
-                )
-
-            new_barcode = await barcode_service.generate_barcode(
-                equipment.category_id, category_prefixes[0].id
-            )
+        new_barcode = await barcode_service.generate_barcode()
 
         # Update equipment
         equipment.barcode = new_barcode
