@@ -1,10 +1,9 @@
 """Timestamp mixins module.
 
-This module provides mixins for timestamp fields.
+This module provides mixin for timestamp fields.
 """
 
 from datetime import datetime
-from typing import Optional
 
 from sqlalchemy import DateTime, func
 from sqlalchemy.orm import Mapped, mapped_column
@@ -28,20 +27,5 @@ class TimestampMixin:
         server_default=func.now(),
         onupdate=func.now(),
         nullable=False,
-        index=True,
-    )
-
-
-class SoftDeleteMixin:
-    """Mixin for soft delete functionality.
-
-    Provides deleted_at field that is used to mark records as deleted
-    instead of physically removing them from the database.
-    """
-
-    deleted_at: Mapped[Optional[datetime]] = mapped_column(
-        DateTime(timezone=True),
-        nullable=True,
-        default=None,
         index=True,
     )
