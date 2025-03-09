@@ -5,9 +5,6 @@ and their relationships. It also includes common functionality like
 timestamp tracking and soft delete support.
 """
 
-# Then import models with dependencies
-from backend.models.barcode_sequence import BarcodeSequence
-
 # Then import models without dependencies or with minimal dependencies
 from backend.models.booking import Booking, BookingStatus, PaymentStatus
 from backend.models.category import Category
@@ -17,8 +14,10 @@ from backend.models.client import Client, ClientStatus
 from backend.models.core import Base
 from backend.models.document import Document, DocumentStatus, DocumentType
 from backend.models.equipment import Equipment, EquipmentStatus
+
+# Import new global barcode model
+from backend.models.global_barcode import GlobalBarcodeSequence
 from backend.models.mixins import SoftDeleteMixin, TimestampMixin
-from backend.models.subcategory_prefix import SubcategoryPrefix
 from backend.models.user import User
 
 __all__ = [
@@ -33,8 +32,7 @@ __all__ = [
     'Booking',
     'Document',
     'User',
-    'SubcategoryPrefix',
-    'BarcodeSequence',
+    'GlobalBarcodeSequence',
     # Status and type enums
     'BookingStatus',
     'PaymentStatus',
