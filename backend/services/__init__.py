@@ -9,7 +9,6 @@ from backend.services.category import CategoryService
 from backend.services.client import ClientService
 from backend.services.document import DocumentService
 from backend.services.equipment import EquipmentService
-from backend.services.subcategory_prefix import SubcategoryPrefixService
 
 __all__ = [
     # Business services
@@ -19,5 +18,4 @@ __all__ = [
     'ClientService',
     'DocumentService',
     'EquipmentService',
-    'SubcategoryPrefixService',
 ]
