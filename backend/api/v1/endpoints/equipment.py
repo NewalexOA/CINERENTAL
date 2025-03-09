@@ -115,7 +115,7 @@ async def get_equipment_list(
     start_date: Optional[str] = None,
     end_date: Optional[str] = None,
     include_deleted: bool = Query(
-        False, description="Whether to include deleted equipment"
+        False, description='Whether to include deleted equipment'
     ),
     db: AsyncSession = Depends(get_db),
 ) -> List[EquipmentResponse]:
@@ -614,7 +614,7 @@ async def get_equipment_status_timeline(
                 equipment_id=equipment_id,
                 status=equipment.status,
                 timestamp=datetime.now(),
-                notes="Current status",
+                notes='Current status',
             )
         ]
     except NotFoundError as e:
