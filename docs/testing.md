@@ -66,7 +66,7 @@ test:
 docker compose run --rm test tests/unit/test_equipment_service.py::test_create_equipment
 
 # Запуск всех тестов в директории
-docker compose run --rm test tests/unit/
+docker compose run --rm test tests/
 
 # Запуск всех e2e тестов
 docker compose run --rm test tests/e2e/ -v
