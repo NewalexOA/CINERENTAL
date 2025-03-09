@@ -22,7 +22,6 @@ class Category(TimestampMixin, Base):
         id: Primary key.
         name: Category name.
         description: Optional category description.
-        prefix: Category prefix for barcode generation (2 characters).
         parent_id: Optional reference to parent category.
         parent: Parent category relationship.
         children: Child categories relationship.
@@ -36,13 +35,6 @@ class Category(TimestampMixin, Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     name: Mapped[str] = mapped_column(String(100), unique=True)
     description: Mapped[Optional[str]] = mapped_column(String(500))
-    prefix: Mapped[Optional[str]] = mapped_column(
-        String(2),
-        nullable=True,
-        unique=True,
-        index=True,
-        comment='Category prefix for barcode generation (2 characters)',
-    )
     parent_id: Mapped[Optional[int]] = mapped_column(
         Integer,
         ForeignKey('categories.id', ondelete='RESTRICT'),
@@ -69,11 +61,6 @@ class Category(TimestampMixin, Base):
         back_populates='category',
         cascade='all, delete-orphan',
     )
-    subcategory_prefixes = relationship(
-        'SubcategoryPrefix',
-        back_populates='category',
-        cascade='all, delete-orphan',
-    )
 
     # Virtual attribute for equipment count
     equipment_count: int = 0
@@ -84,4 +71,4 @@ class Category(TimestampMixin, Base):
         Returns:
             String representation
         """
-        return f'Category(id={self.id}, name={self.name}, prefix={self.prefix})'
+        return f'Category(id={self.id}, name={self.name})'

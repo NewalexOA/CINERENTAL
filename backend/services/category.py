@@ -38,7 +38,6 @@ class CategoryService:
         name: str,
         description: str,
         parent_id: Optional[int] = None,
-        prefix: Optional[str] = None,
     ) -> Category:
         """Create new equipment category.
 
@@ -46,7 +45,6 @@ class CategoryService:
             name: Category name
             description: Category description
             parent_id: Parent category ID (optional)
-            prefix: Category prefix for barcode generation (optional)
 
         Returns:
             Created category
@@ -67,27 +65,11 @@ class CategoryService:
             if not parent:
                 raise NotFoundError(f'Parent category with ID {parent_id} not found')
 
-        # Check if prefix is unique if provided
-        if prefix:
-            # Find categories with the same prefix
-            stmt = select(Category).where(
-                Category.prefix == prefix,
-                Category.deleted_at.is_(None),
-            )
-            result = await self.session.execute(stmt)
-            existing_with_prefix = result.scalar_one_or_none()
-            if existing_with_prefix:
-                raise ConflictError(
-                    f'Category with prefix "{prefix}" already exists',
-                    details={'prefix': prefix},
-                )
-
         # Create category
         category = Category(
             name=name,
             description=description,
             parent_id=parent_id,
-            prefix=prefix,
         )
         await self.repository.create(category)
         return category
@@ -98,7 +80,6 @@ class CategoryService:
         name: Optional[str] = None,
         description: Optional[str] = None,
         parent_id: Optional[int] = None,
-        prefix: Optional[str] = None,
     ) -> Category:
         """Update category.
 
@@ -107,7 +88,6 @@ class CategoryService:
             name: New name (optional)
             description: New description (optional)
             parent_id: New parent ID (optional)
-            prefix: New prefix (optional)
 
         Returns:
             Updated category
@@ -129,9 +109,9 @@ class CategoryService:
                 )
 
         # Validate parent category if changing
-        if parent_id and parent_id != category.parent_id:
+        if parent_id is not None and parent_id != category.parent_id:
             parent = await self.repository.get(parent_id)
-            if not parent:
+            if not parent and parent_id is not None:
                 raise NotFoundError(
                     f'Parent category with ID {parent_id} not found',
                     details={'parent_id': parent_id},
@@ -143,21 +123,6 @@ class CategoryService:
                     details={'category_id': category_id, 'parent_id': parent_id},
                 )
 
-        # Check prefix uniqueness if changing
-        if prefix and prefix != category.prefix:
-            stmt = select(Category).where(
-                Category.prefix == prefix,
-                Category.id != category_id,
-                Category.deleted_at.is_(None),
-            )
-            result = await self.session.execute(stmt)
-            existing_with_prefix = result.scalar_one_or_none()
-            if existing_with_prefix:
-                raise ConflictError(
-                    f'Category with prefix "{prefix}" already exists',
-                    details={'prefix': prefix},
-                )
-
         # Apply updates
         if name:
             category.name = name
@@ -165,8 +130,6 @@ class CategoryService:
             category.description = description
         if parent_id is not None:  # Allow setting to None
             category.parent_id = parent_id
-        if prefix is not None:  # Allow setting to None
-            category.prefix = prefix
 
         await self.repository.update(category)
         return category
@@ -208,18 +171,22 @@ class CategoryService:
         if not category:
             raise NotFoundError(f'Category with ID {category_id} not found')
 
-        # Check if category has equipment
+        # Check if category has non-deleted equipment
         equipment = await self.equipment_repository.get_by_category(category_id)
-        if equipment:
+        non_deleted_equipment = [e for e in equipment if e.deleted_at is None]
+
+        if non_deleted_equipment:
             raise BusinessError(
                 'Cannot delete category with associated equipment',
                 details={
                     'category_id': category_id,
-                    'equipment_count': len(equipment),
+                    'equipment_count': len(non_deleted_equipment),
                 },
             )
 
-        return await self.repository.delete(category_id)
+        # Use soft delete instead of physical delete
+        deleted_category = await self.repository.soft_delete(category_id)
+        return deleted_category is not None
 
     async def search_categories(self, query: str) -> List[Category]:
         """Search categories by name.
@@ -265,14 +232,16 @@ class CategoryService:
         Returns:
             List of categories with equipment count
         """
-        categories = await self.repository.get_all_with_equipment_count()
+        # Get categories with equipment count
+        categories = await self.get_with_equipment_count()
+
+        # Convert to response schema
         return [
             CategoryWithEquipmentCount(
                 id=category.id,
                 name=category.name,
                 description=category.description,
                 parent_id=category.parent_id,
-                prefix=category.prefix,
                 equipment_count=category.equipment_count,
                 created_at=category.created_at,
                 updated_at=category.updated_at,
