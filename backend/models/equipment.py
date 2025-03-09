@@ -47,7 +47,9 @@ class Equipment(TimestampMixin, SoftDeleteMixin, Base):
         name: Equipment name.
         description: Optional equipment description.
         serial_number: Unique serial number.
-        barcode: Unique barcode for scanning.
+        barcode: Unique barcode for scanning in format NNNNNNNNNCC where:
+            - NNNNNNNNN: 9-digit auto-incremented number (with leading zeros)
+            - CC: 2-digit checksum
         category_id: Reference to equipment category.
         status: Current equipment status.
         replacement_cost: Cost to replace if damaged.

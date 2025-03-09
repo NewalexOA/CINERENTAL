@@ -68,12 +68,6 @@ def upgrade() -> None:
         sa.Column('id', sa.Integer(), nullable=False),
         sa.Column('name', sa.String(length=100), nullable=False),
         sa.Column('description', sa.String(length=500), nullable=True),
-        sa.Column(
-            'prefix',
-            sa.String(length=2),
-            nullable=True,
-            comment='Category prefix for barcode generation (2 characters)',
-        ),
         sa.Column('parent_id', sa.Integer(), nullable=True),
         sa.Column(
             'created_at',
@@ -101,90 +95,12 @@ def upgrade() -> None:
     op.create_index(
         op.f('ix_categories_updated_at'), 'categories', ['updated_at'], unique=False
     )
-    op.create_index(op.f('ix_categories_prefix'), 'categories', ['prefix'], unique=True)
-
-    # Create subcategory_prefixes table
-    op.create_table(
-        'subcategory_prefixes',
-        sa.Column('id', sa.Integer(), nullable=False),
-        sa.Column('category_id', sa.Integer(), nullable=False),
-        sa.Column(
-            'name',
-            sa.String(length=100),
-            nullable=False,
-            comment='Subcategory name',
-        ),
-        sa.Column(
-            'prefix',
-            sa.String(length=2),
-            nullable=False,
-            comment='Subcategory prefix for barcode generation (2 characters)',
-        ),
-        sa.Column(
-            'description',
-            sa.String(length=500),
-            nullable=True,
-            comment='Subcategory description',
-        ),
-        sa.Column(
-            'created_at',
-            sa.DateTime(timezone=True),
-            server_default=sa.text('now()'),
-            nullable=False,
-        ),
-        sa.Column(
-            'updated_at',
-            sa.DateTime(timezone=True),
-            server_default=sa.text('now()'),
-            nullable=False,
-        ),
-        sa.Column('deleted_at', sa.DateTime(timezone=True), nullable=True),
-        sa.ForeignKeyConstraint(['category_id'], ['categories.id'], ondelete='CASCADE'),
-        sa.PrimaryKeyConstraint('id'),
-        sa.UniqueConstraint('category_id', 'prefix', name='uq_subcategory_prefix'),
-    )
-    op.create_index(
-        op.f('ix_subcategory_prefixes_created_at'),
-        'subcategory_prefixes',
-        ['created_at'],
-        unique=False,
-    )
-    op.create_index(
-        op.f('ix_subcategory_prefixes_updated_at'),
-        'subcategory_prefixes',
-        ['updated_at'],
-        unique=False,
-    )
-    op.create_index(
-        op.f('ix_subcategory_prefixes_prefix'),
-        'subcategory_prefixes',
-        ['prefix'],
-        unique=False,
-    )
-    op.create_index(
-        op.f('ix_subcategory_prefixes_category_id'),
-        'subcategory_prefixes',
-        ['category_id'],
-        unique=False,
-    )
-    op.create_index(
-        op.f('ix_subcategory_prefixes_deleted_at'),
-        'subcategory_prefixes',
-        ['deleted_at'],
-        unique=False,
-    )
 
     # Create barcode_sequences table
     op.create_table(
         'barcode_sequences',
         sa.Column('id', sa.Integer(), nullable=False),
         sa.Column('category_id', sa.Integer(), nullable=False),
-        sa.Column(
-            'subcategory_prefix',
-            sa.String(length=2),
-            nullable=False,
-            comment='Subcategory prefix (2 characters)',
-        ),
         sa.Column(
             'last_number',
             sa.Integer(),
@@ -204,12 +120,16 @@ def upgrade() -> None:
             server_default=sa.text('now()'),
             nullable=False,
         ),
+        sa.Column(
+            'deleted_at',
+            sa.DateTime(timezone=True),
+            nullable=True,
+        ),
         sa.ForeignKeyConstraint(['category_id'], ['categories.id'], ondelete='CASCADE'),
         sa.PrimaryKeyConstraint('id'),
         sa.UniqueConstraint(
             'category_id',
-            'subcategory_prefix',
-            name='uq_category_subcategory',
+            name='uq_category',
         ),
     )
     op.create_index(
@@ -225,15 +145,15 @@ def upgrade() -> None:
         unique=False,
     )
     op.create_index(
-        op.f('ix_barcode_sequences_category_id'),
+        op.f('ix_barcode_sequences_deleted_at'),
         'barcode_sequences',
-        ['category_id'],
+        ['deleted_at'],
         unique=False,
     )
     op.create_index(
-        op.f('ix_barcode_sequences_subcategory_prefix'),
+        op.f('ix_barcode_sequences_category_id'),
         'barcode_sequences',
-        ['subcategory_prefix'],
+        ['category_id'],
         unique=False,
     )
 
@@ -534,32 +454,15 @@ def downgrade() -> None:
     op.drop_index(op.f('ix_categories_deleted_at'), table_name='categories')
     op.drop_index(op.f('ix_categories_name'), table_name='categories')
     op.drop_index(op.f('ix_categories_created_at'), table_name='categories')
-    op.drop_index(op.f('ix_categories_prefix'), table_name='categories')
     op.drop_table('categories')
-    op.drop_index(
-        op.f('ix_subcategory_prefixes_category_id'), table_name='subcategory_prefixes'
-    )
-    op.drop_index(
-        op.f('ix_subcategory_prefixes_deleted_at'), table_name='subcategory_prefixes'
-    )
-    op.drop_index(
-        op.f('ix_subcategory_prefixes_prefix'), table_name='subcategory_prefixes'
-    )
-    op.drop_index(
-        op.f('ix_subcategory_prefixes_updated_at'), table_name='subcategory_prefixes'
-    )
-    op.drop_index(
-        op.f('ix_subcategory_prefixes_created_at'), table_name='subcategory_prefixes'
-    )
-    op.drop_table('subcategory_prefixes')
-    op.drop_index(
-        op.f('ix_barcode_sequences_subcategory_prefix'), table_name='barcode_sequences'
-    )
     op.drop_index(
         op.f('ix_barcode_sequences_category_id'), table_name='barcode_sequences'
     )
     op.drop_index(
         op.f('ix_barcode_sequences_updated_at'), table_name='barcode_sequences'
+    )
+    op.drop_index(
+        op.f('ix_barcode_sequences_deleted_at'), table_name='barcode_sequences'
     )
     op.drop_index(
         op.f('ix_barcode_sequences_created_at'), table_name='barcode_sequences'
