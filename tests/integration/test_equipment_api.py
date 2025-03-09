@@ -27,10 +27,14 @@ async def test_create_equipment(
     test_category: Category,
 ) -> None:
     """Test creating new equipment."""
+    # Using a valid numeric barcode format (11 digits)
+    # '000000001' with checksum '01'
+    custom_barcode = '00000000101'
+
     data = {
         'name': 'New Camera',
         'description': 'Professional camera for testing',
-        'barcode': 'TEST-002',
+        'custom_barcode': custom_barcode,  # Using custom_barcode instead of barcode
         'serial_number': 'SN-002',
         'category_id': test_category.id,
         'replacement_cost': '1500.00',
@@ -42,7 +46,8 @@ async def test_create_equipment(
     result = cast(EquipmentResponse, response.json())
 
     assert result['name'] == data['name']
-    assert result['barcode'] == data['barcode']
+    # Check that returned barcode matches our custom barcode
+    assert result['barcode'] == custom_barcode
     assert result['status'] == EquipmentStatus.AVAILABLE
 
 
@@ -53,16 +58,35 @@ async def test_create_equipment_duplicate_barcode(
     test_equipment: Equipment,
 ) -> None:
     """Test creating equipment with duplicate barcode."""
-    data = {
-        'name': 'Another Equipment',
-        'description': 'Test Description',
+    # First, create equipment with a known barcode
+    # Using a valid numeric barcode format (11 digits)
+    # '000000123' with checksum '23'
+    custom_barcode = '00000012323'
+
+    # Create the first equipment
+    first_data = {
+        'name': 'First Equipment',
+        'description': 'First Test Description',
         'category_id': test_category.id,
-        'barcode': test_equipment.barcode,
-        'serial_number': 'SN002',
+        'custom_barcode': custom_barcode,
+        'serial_number': 'SN001-UNIQUE',  # Ensure unique serial number
         'replacement_cost': '1000.00',
     }
 
-    response = await async_client.post('/api/v1/equipment/', json=data)
+    first_response = await async_client.post('/api/v1/equipment/', json=first_data)
+    assert first_response.status_code == 201, first_response.text
+
+    # Now try to create a second equipment with the same barcode
+    second_data = {
+        'name': 'Another Equipment',
+        'description': 'Test Description',
+        'category_id': test_category.id,
+        'custom_barcode': custom_barcode,  # Same barcode as first equipment
+        'serial_number': 'SN002-UNIQUE',  # Ensure unique serial number
+        'replacement_cost': '1000.00',
+    }
+
+    response = await async_client.post('/api/v1/equipment/', json=second_data)
     assert response.status_code == 400
     assert 'already exists' in response.json()['detail']
 
@@ -345,7 +369,7 @@ async def test_delete_equipment_with_bookings(
         notes='Test booking',
     )
 
-    # Try to delete the equipment
+    # Try to delete the equipmen
     response = await async_client.delete(f'/api/v1/equipment/{test_equipment.id}')
     assert response.status_code == 400
     assert 'has active bookings' in response.json()['detail']
@@ -378,3 +402,43 @@ async def test_search_equipment_pagination(
     assert response.status_code == 200
     result = response.json()
     assert len(result) <= 10
+
+
+@async_test
+async def test_regenerate_equipment_barcode(
+    async_client: AsyncClient,
+    test_equipment: Equipment,
+    db_session: AsyncSession,
+) -> None:
+    """Test regenerating equipment barcode."""
+    # Store the original barcode
+    original_barcode = test_equipment.barcode
+
+    # Regenerate barcode
+    response = await async_client.post(
+        f'/api/v1/equipment/{test_equipment.id}/regenerate-barcode',
+        json={},
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data['id'] == test_equipment.id
+    assert data['barcode'] != original_barcode
+    # Verify the new barcode format (now it's a numeric string)
+    assert data['barcode'].isdigit()
+
+
+@async_test
+async def test_regenerate_equipment_barcode_not_found(
+    async_client: AsyncClient,
+) -> None:
+    """Test regenerating barcode for non-existent equipment."""
+    non_existent_id = 9999
+    response = await async_client.post(
+        f'/api/v1/equipment/{non_existent_id}/regenerate-barcode',
+        json={},
+    )
+
+    assert response.status_code == 404
+    data = response.json()
+    assert 'detail' in data

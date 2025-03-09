@@ -7,7 +7,7 @@ from uuid import UUID
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.models import Base
+from backend.models.core import Base
 
 ModelType = TypeVar('ModelType', bound=Base)
 

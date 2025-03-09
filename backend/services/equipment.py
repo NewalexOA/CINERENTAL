@@ -6,7 +6,7 @@ including inventory management, availability tracking, and equipment status upda
 
 from datetime import datetime, timezone
 from decimal import Decimal
-from typing import Dict, List, Optional, Set
+from typing import Any, Dict, List, Optional, Set
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -20,23 +20,35 @@ from backend.exceptions import (
     StateError,
     ValidationError,
 )
-from backend.models import Booking, BookingStatus, Equipment, EquipmentStatus
+from backend.models.booking import Booking, BookingStatus
+from backend.models.equipment import Equipment, EquipmentStatus
 from backend.repositories import BookingRepository, EquipmentRepository
 from backend.schemas import EquipmentResponse
+from backend.services.barcode import BarcodeService
 
 
 class EquipmentService:
     """Service for managing equipment."""
 
-    def __init__(self, session: AsyncSession) -> None:
+    def __init__(
+        self,
+        session: AsyncSession,
+        category_service: Optional[Any] = None,
+    ) -> None:
         """Initialize service.
 
         Args:
             session: SQLAlchemy async session
+            category_service: Optional Category service instance
         """
         self.session = session
         self.repository = EquipmentRepository(session)
         self.booking_repository = BookingRepository(session)
+        self.barcode_service = BarcodeService(session)
+        # Use injected category service or create a new one
+        from backend.services.category import CategoryService
+
+        self.category_service = category_service or CategoryService(session)
 
     async def _load_equipment_with_category(self, equipment: Equipment) -> Equipment:
         """Load equipment with category relationship.
@@ -61,21 +73,25 @@ class EquipmentService:
         name: str,
         description: str,
         category_id: int,
-        barcode: str,
-        serial_number: str,
-        replacement_cost: float,
+        daily_rate: float = 0.0,
+        replacement_cost: float = 0.0,
+        custom_barcode: Optional[str] = None,
+        serial_number: Optional[str] = None,
+        purchase_date: Optional[datetime] = None,
         notes: Optional[str] = None,
     ) -> EquipmentResponse:
-        """Create new equipment.
+        """Create new equipment item.
 
         Args:
             name: Equipment name
             description: Equipment description
             category_id: Category ID
-            barcode: Equipment barcode
+            daily_rate: Daily rental rate
+            replacement_cost: Equipment replacement cost
+            custom_barcode: Optional custom barcode
             serial_number: Equipment serial number
-            replacement_cost: Cost to replace if damaged
-            notes: Optional notes
+            purchase_date: Purchase date
+            notes: Additional notes
 
         Returns:
             Created equipment
@@ -86,36 +102,42 @@ class EquipmentService:
             NotFoundError: If category not found
         """
         # Validate business rules
-        if replacement_cost <= 0:
+        if replacement_cost is not None and replacement_cost <= 0:
             raise ValidationError('Replacement cost must be greater than 0')
 
-        # Check for duplicate barcode
-        existing = await self.repository.get_by_barcode(barcode)
-        if existing:
-            raise ConflictError(
-                f'Equipment with barcode {barcode} already exists',
-                details={'barcode': barcode},
-            )
-
-        # Check for duplicate serial number
-        existing = await self.repository.get_by_serial_number(serial_number)
-        if existing:
-            raise ConflictError(
-                f'Equipment with serial number {serial_number} already exists',
-                details={'serial_number': serial_number},
-            )
-
         # Check if category exists
-        from backend.services.category import CategoryService
+        await self.category_service.get_category(category_id)
 
-        category_service = CategoryService(self.session)
-        try:
-            await category_service.get_category(category_id)
-        except NotFoundError:
-            raise NotFoundError(
-                f'Category with ID {category_id} not found',
-                details={'category_id': category_id},
-            )
+        # Handle barcode generation or validation
+        if custom_barcode:
+            # Validate provided barcode
+            if not self.barcode_service.validate_barcode_format(custom_barcode):
+                raise ValidationError(
+                    'Invalid barcode format',
+                    details={'barcode': custom_barcode},
+                )
+
+            # Check for duplicate barcode
+            existing = await self.repository.get_by_barcode(custom_barcode)
+            if existing:
+                raise ConflictError(
+                    f'Equipment with barcode {custom_barcode} already exists',
+                    details={'barcode': custom_barcode},
+                )
+
+            barcode = custom_barcode
+        else:
+            # Generate barcode automatically
+            barcode = await self.barcode_service.generate_barcode()
+
+        # Check for duplicate serial number if provided
+        if serial_number:
+            existing = await self.repository.get_by_serial_number(serial_number)
+            if existing:
+                raise ConflictError(
+                    f'Equipment with serial number {serial_number} already exists',
+                    details={'serial_number': serial_number},
+                )
 
         equipment = Equipment(
             name=name,
@@ -123,7 +145,9 @@ class EquipmentService:
             category_id=category_id,
             barcode=barcode,
             serial_number=serial_number,
-            replacement_cost=Decimal(str(replacement_cost)),
+            replacement_cost=(
+                Decimal(str(replacement_cost)) if replacement_cost is not None else None
+            ),
             notes=notes,
             status=EquipmentStatus.AVAILABLE,
         )
@@ -164,6 +188,7 @@ class EquipmentService:
         query: Optional[str] = None,
         available_from: Optional[datetime] = None,
         available_to: Optional[datetime] = None,
+        include_deleted: bool = False,
     ) -> List[EquipmentResponse]:
         """Get list of equipment with optional filtering.
 
@@ -175,6 +200,7 @@ class EquipmentService:
             query: Search query
             available_from: Filter by availability start date
             available_to: Filter by availability end date
+            include_deleted: Whether to include deleted equipment
 
         Returns:
             List of equipment items as EquipmentResponse objects
@@ -195,16 +221,7 @@ class EquipmentService:
 
         # Check if category exists if provided
         if category_id is not None:
-            from backend.services.category import CategoryService
-
-            category_service = CategoryService(self.session)
-            try:
-                await category_service.get_category(category_id)
-            except NotFoundError:
-                raise NotFoundError(
-                    f'Category with ID {category_id} not found',
-                    details={'category_id': category_id},
-                )
+            await self.category_service.get_category(category_id)
 
         # Ensure dates are timezone-aware
         if available_from and available_from.tzinfo is None:
@@ -221,6 +238,7 @@ class EquipmentService:
             query=query,
             available_from=available_from,
             available_to=available_to,
+            include_deleted=include_deleted,
         )
 
         # Load equipment with categories
@@ -291,16 +309,7 @@ class EquipmentService:
 
         # Check if category exists if provided
         if category_id is not None:
-            from backend.services.category import CategoryService
-
-            category_service = CategoryService(self.session)
-            try:
-                await category_service.get_category(category_id)
-            except NotFoundError:
-                raise NotFoundError(
-                    f'Category with ID {category_id} not found',
-                    details={'category_id': category_id},
-                )
+            await self.category_service.get_category(category_id)
 
         # Check for duplicate barcode
         if barcode and barcode != equipment.barcode:
@@ -450,7 +459,7 @@ class EquipmentService:
         equipment_list = await self.repository.get_by_category(category_id)
         return [EquipmentResponse.model_validate(e) for e in equipment_list]
 
-    async def get_by_barcode(self, barcode: str) -> Optional[EquipmentResponse]:
+    async def get_by_barcode(self, barcode: str) -> Optional[Equipment]:
         """Get equipment by barcode.
 
         Args:
@@ -461,14 +470,65 @@ class EquipmentService:
         """
         equipment = await self.repository.get_by_barcode(barcode)
         if equipment:
-            return EquipmentResponse.model_validate(equipment)
+            # Load associated category
+            return await self._load_equipment_with_category(equipment)
+        return None
+
+    async def regenerate_barcode(self, equipment_id: int) -> EquipmentResponse:
+        """Regenerate barcode for equipment.
+
+        Args:
+            equipment_id: Equipment ID
+
+        Returns:
+            Updated equipment with new barcode
+
+        Raises:
+            NotFoundError: If equipment not found
+        """
+        # Get equipment
+        equipment = await self.get_equipment(equipment_id)
+        if not equipment:
+            raise NotFoundError(
+                f'Equipment with ID {equipment_id} not found',
+                details={'equipment_id': equipment_id},
+            )
+
+        # Use barcode service to generate new barcode
+        barcode_service = BarcodeService(self.session)
+        new_barcode = await barcode_service.generate_barcode()
+
+        # Update equipment
+        equipment.barcode = new_barcode
+        # Save changes to DB
+        await self.session.commit()
+        await self.session.refresh(equipment)
+
+        # Load equipment with category for response
+        loaded_equipment = await self._load_equipment_with_category(equipment)
+
+        return EquipmentResponse.model_validate(loaded_equipment.__dict__)
+
+    async def get_by_serial_number(self, serial_number: str) -> Optional[Equipment]:
+        """Get equipment by serial number.
+
+        Args:
+            serial_number: Equipment serial number
+
+        Returns:
+            Equipment if found, None otherwise
+        """
+        equipment = await self.repository.get_by_serial_number(serial_number)
+        if equipment:
+            # Load associated category
+            return await self._load_equipment_with_category(equipment)
         return None
 
     async def change_status(
         self,
         equipment_id: int,
         new_status: EquipmentStatus,
-    ) -> Equipment:
+    ) -> EquipmentResponse:
         """Change equipment status.
 
         Args:
@@ -529,8 +589,11 @@ class EquipmentService:
                     },
                 )
 
+        # Update equipment status
         equipment.status = new_status
-        return await self.repository.update(equipment)
+        updated_equipment = await self.repository.update(equipment)
+        loaded_equipment = await self._load_equipment_with_category(updated_equipment)
+        return EquipmentResponse.model_validate(loaded_equipment)
 
     async def check_availability(
         self, equipment_id: int, start_date: datetime, end_date: datetime

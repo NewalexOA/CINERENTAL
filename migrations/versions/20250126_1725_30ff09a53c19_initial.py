@@ -95,6 +95,68 @@ def upgrade() -> None:
     op.create_index(
         op.f('ix_categories_updated_at'), 'categories', ['updated_at'], unique=False
     )
+
+    # Create barcode_sequences table
+    op.create_table(
+        'barcode_sequences',
+        sa.Column('id', sa.Integer(), nullable=False),
+        sa.Column('category_id', sa.Integer(), nullable=False),
+        sa.Column(
+            'last_number',
+            sa.Integer(),
+            nullable=False,
+            server_default=sa.text('0'),
+            comment='Last used sequence number',
+        ),
+        sa.Column(
+            'created_at',
+            sa.DateTime(timezone=True),
+            server_default=sa.text('now()'),
+            nullable=False,
+        ),
+        sa.Column(
+            'updated_at',
+            sa.DateTime(timezone=True),
+            server_default=sa.text('now()'),
+            nullable=False,
+        ),
+        sa.Column(
+            'deleted_at',
+            sa.DateTime(timezone=True),
+            nullable=True,
+        ),
+        sa.ForeignKeyConstraint(['category_id'], ['categories.id'], ondelete='CASCADE'),
+        sa.PrimaryKeyConstraint('id'),
+        sa.UniqueConstraint(
+            'category_id',
+            name='uq_category',
+        ),
+    )
+    op.create_index(
+        op.f('ix_barcode_sequences_created_at'),
+        'barcode_sequences',
+        ['created_at'],
+        unique=False,
+    )
+    op.create_index(
+        op.f('ix_barcode_sequences_updated_at'),
+        'barcode_sequences',
+        ['updated_at'],
+        unique=False,
+    )
+    op.create_index(
+        op.f('ix_barcode_sequences_deleted_at'),
+        'barcode_sequences',
+        ['deleted_at'],
+        unique=False,
+    )
+    op.create_index(
+        op.f('ix_barcode_sequences_category_id'),
+        'barcode_sequences',
+        ['category_id'],
+        unique=False,
+    )
+
     op.create_table(
         'clients',
         sa.Column('id', sa.Integer(), nullable=False),
@@ -142,7 +204,7 @@ def upgrade() -> None:
         sa.Column('id', sa.Integer(), nullable=False),
         sa.Column('name', sa.String(length=200), nullable=False),
         sa.Column('description', sa.String(length=1000), nullable=True),
-        sa.Column('serial_number', sa.String(length=100), nullable=False),
+        sa.Column('serial_number', sa.String(length=100), nullable=True),
         sa.Column('barcode', sa.String(length=100), nullable=False),
         sa.Column('category_id', sa.Integer(), nullable=False),
         sa.Column(
@@ -393,6 +455,19 @@ def downgrade() -> None:
     op.drop_index(op.f('ix_categories_name'), table_name='categories')
     op.drop_index(op.f('ix_categories_created_at'), table_name='categories')
     op.drop_table('categories')
+    op.drop_index(
+        op.f('ix_barcode_sequences_category_id'), table_name='barcode_sequences'
+    )
+    op.drop_index(
+        op.f('ix_barcode_sequences_updated_at'), table_name='barcode_sequences'
+    )
+    op.drop_index(
+        op.f('ix_barcode_sequences_deleted_at'), table_name='barcode_sequences'
+    )
+    op.drop_index(
+        op.f('ix_barcode_sequences_created_at'), table_name='barcode_sequences'
+    )
+    op.drop_table('barcode_sequences')
     op.drop_index(op.f('ix_users_deleted_at'), table_name='users')
     op.drop_index(op.f('ix_users_updated_at'), table_name='users')
     op.drop_index(op.f('ix_users_created_at'), table_name='users')

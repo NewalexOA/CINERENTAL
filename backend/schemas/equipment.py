@@ -29,18 +29,24 @@ class EquipmentBase(BaseModel):
     description: str = Field(
         ..., title='Description', description='Equipment description'
     )
-    replacement_cost: Decimal = Field(
-        ..., title='Replacement Cost', description='Cost to replace if damaged'
-    )
-    barcode: str = Field(..., title='Barcode', description='Equipment barcode')
-    serial_number: str = Field(..., title='Serial Number', description='Serial number')
     category_id: int = Field(..., title='Category ID', description='Category ID')
 
 
 class EquipmentCreate(EquipmentBase):
     """Create equipment request schema."""
 
-    pass
+    replacement_cost: Optional[Decimal] = Field(
+        None, title='Replacement Cost', description='Cost to replace if damaged'
+    )
+    custom_barcode: Optional[str] = Field(
+        None,
+        title='Custom Barcode',
+        description='Optional custom barcode (auto-generated if not provided)',
+    )
+    serial_number: Optional[str] = Field(
+        None, title='Serial Number', description='Serial number'
+    )
+    notes: Optional[str] = Field(None, title='Notes', description='Additional notes')
 
 
 class EquipmentUpdate(BaseModel):
@@ -67,10 +73,16 @@ class EquipmentUpdate(BaseModel):
     )
 
 
-class EquipmentResponse(EquipmentBase):
+class EquipmentResponse(BaseModel):
     """Equipment response schema."""
 
     id: int
+    name: str
+    description: str
+    replacement_cost: Optional[Decimal]
+    barcode: str
+    serial_number: Optional[str]
+    category_id: int
     status: EquipmentStatus
     created_at: datetime
     updated_at: datetime
@@ -89,5 +101,24 @@ class EquipmentWithCategory(EquipmentResponse):
     """Equipment with category details."""
 
     category_description: str = Field(..., description='Category description')
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class RegenerateBarcodeRequest(BaseModel):
+    """Regenerate barcode request schema."""
+
+    # No additional parameters needed for auto-increment barcode generation
+    pass
+
+
+class StatusTimelineResponse(BaseModel):
+    """Status timeline response schema."""
+
+    id: int
+    equipment_id: int
+    status: EquipmentStatus
+    timestamp: datetime
+    notes: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)

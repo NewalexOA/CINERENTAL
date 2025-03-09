@@ -1,6 +1,6 @@
 """Repository package.
 
-This package provides data access layer implementations for all entities.
+This package contains repository classes for database operations.
 """
 
 from backend.repositories.base import BaseRepository
@@ -9,6 +9,7 @@ from backend.repositories.category import CategoryRepository
 from backend.repositories.client import ClientRepository
 from backend.repositories.document import DocumentRepository
 from backend.repositories.equipment import EquipmentRepository
+from backend.repositories.global_barcode import GlobalBarcodeSequenceRepository
 
 __all__ = [
     'BaseRepository',
@@ -17,4 +18,5 @@ __all__ = [
     'ClientRepository',
     'DocumentRepository',
     'EquipmentRepository',
+    'GlobalBarcodeSequenceRepository',
 ]

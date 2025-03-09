@@ -4,9 +4,11 @@ import asyncio
 import multiprocessing
 import os
 import time
+from decimal import Decimal
 from typing import AsyncGenerator, Dict, Generator, Tuple
 
 import pytest
+import pytest_asyncio
 import requests
 import uvicorn
 from alembic import command
@@ -29,9 +31,8 @@ from backend.core.logging import configure_logging
 from backend.main import app as fastapi_app
 from backend.models import Equipment
 from backend.schemas.category import CategoryResponse
-from backend.schemas.equipment import EquipmentResponse
-from backend.services.category import CategoryService
-from backend.services.equipment import EquipmentService
+from backend.services import EquipmentService
+from backend.services.category import CategoryRepository, CategoryService
 
 
 # Set logging for tests
@@ -258,7 +259,8 @@ async def db_session(engine: AsyncEngine) -> AsyncGenerator[AsyncSession, None]:
 @pytest.fixture
 async def test_category(db_session: AsyncSession) -> AsyncGenerator[Dict, None]:
     """Create test category."""
-    category_service = CategoryService(db_session)
+    category_repo = CategoryRepository(db_session)
+    category_service = CategoryService(db_session, repository=category_repo)
     category = await category_service.create_category(
         name='Test Category',
         description='Test Category Description',
@@ -269,30 +271,27 @@ async def test_category(db_session: AsyncSession) -> AsyncGenerator[Dict, None]:
     await db_session.commit()
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def test_equipment(
     db_session: AsyncSession,
+    equipment_service: EquipmentService,
     test_category: Dict,
-) -> AsyncGenerator[Tuple[Equipment, Dict], None]:
-    """Create test equipment.
+) -> AsyncGenerator[Equipment, None]:
+    """Create a test equipment."""
+    # Using a valid numeric barcode format (11 digits)
+    # '000000001' with checksum '01'
+    custom_barcode = '00000000101'
 
-    Returns:
-        Tuple containing the SQLAlchemy model and the Pydantic model dict
-    """
-    equipment_service = EquipmentService(db_session)
     equipment = await equipment_service.create_equipment(
-        name='Sony Professional Camera',
-        description='Professional camera for video production',
+        name='Sony Test Equipment',
+        description='Test Description for Sony device',
         category_id=test_category['id'],
-        barcode='SONY-001',
-        serial_number='SN-001',
-        replacement_cost=1000,
+        custom_barcode=custom_barcode,
+        serial_number='SN001',
+        replacement_cost=Decimal('1000.00'),
     )
     await db_session.commit()
-    equipment_dict = EquipmentResponse.model_validate(equipment).model_dump()
-    yield equipment, equipment_dict
-    await equipment_service.delete_equipment(equipment.id)
-    await db_session.commit()
+    yield equipment
 
 
 @pytest.fixture(scope='session')
@@ -396,3 +395,9 @@ async def cleanup_test_data(db_session: AsyncSession) -> AsyncGenerator[None, No
     except Exception as e:
         print(f'Error during cleanup: {str(e)}')
         await db_session.rollback()
+
+
+@pytest_asyncio.fixture
+async def equipment_service(db_session: AsyncSession) -> EquipmentService:
+    """Create an equipment service with proper repository initialization."""
+    return EquipmentService(db_session)

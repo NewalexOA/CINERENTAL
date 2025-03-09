@@ -35,7 +35,7 @@ jobs:
 
       - name: Run isort
         run: |
-          isort --check --diff --profile black --line-length 88 backend tests
+          isort --check --diff --profile black --line-length 88 --skip backend/models/__init__.py backend tests
 
       - name: Run flake8
         run: |

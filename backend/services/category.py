@@ -23,18 +23,28 @@ from backend.schemas import CategoryResponse, CategoryWithEquipmentCount
 class CategoryService:
     """Service for managing equipment categories."""
 
-    def __init__(self, session: AsyncSession) -> None:
+    def __init__(
+        self,
+        session: AsyncSession,
+        repository: Optional[CategoryRepository] = None,
+        equipment_repository: Optional[EquipmentRepository] = None,
+    ) -> None:
         """Initialize service.
 
         Args:
             session: SQLAlchemy async session
+            repository: Category repository (optional)
+            equipment_repository: Equipment repository (optional)
         """
         self.session = session
-        self.repository = CategoryRepository(session)
-        self.equipment_repository = EquipmentRepository(session)
+        self.repository = repository or CategoryRepository(session)
+        self.equipment_repository = equipment_repository or EquipmentRepository(session)
 
     async def create_category(
-        self, name: str, description: str, parent_id: Optional[int] = None
+        self,
+        name: str,
+        description: str,
+        parent_id: Optional[int] = None,
     ) -> Category:
         """Create new equipment category.
 
@@ -106,9 +116,9 @@ class CategoryService:
                 )
 
         # Validate parent category if changing
-        if parent_id and parent_id != category.parent_id:
+        if parent_id is not None and parent_id != category.parent_id:
             parent = await self.repository.get(parent_id)
-            if not parent:
+            if not parent and parent_id is not None:
                 raise NotFoundError(
                     f'Parent category with ID {parent_id} not found',
                     details={'parent_id': parent_id},
@@ -168,18 +178,22 @@ class CategoryService:
         if not category:
             raise NotFoundError(f'Category with ID {category_id} not found')
 
-        # Check if category has equipment
+        # Check if category has non-deleted equipment
         equipment = await self.equipment_repository.get_by_category(category_id)
-        if equipment:
+        non_deleted_equipment = [e for e in equipment if e.deleted_at is None]
+
+        if non_deleted_equipment:
             raise BusinessError(
                 'Cannot delete category with associated equipment',
                 details={
                     'category_id': category_id,
-                    'equipment_count': len(equipment),
+                    'equipment_count': len(non_deleted_equipment),
                 },
             )
 
-        return await self.repository.delete(category_id)
+        # Use soft delete instead of physical delete
+        deleted_category = await self.repository.soft_delete(category_id)
+        return deleted_category is not None
 
     async def search_categories(self, query: str) -> List[Category]:
         """Search categories by name.
@@ -225,7 +239,10 @@ class CategoryService:
         Returns:
             List of categories with equipment count
         """
-        categories = await self.repository.get_all_with_equipment_count()
+        # Get categories with equipment count
+        categories = await self.get_with_equipment_count()
+
+        # Convert to response schema
         return [
             CategoryWithEquipmentCount(
                 id=category.id,

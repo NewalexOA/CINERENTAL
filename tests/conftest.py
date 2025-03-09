@@ -37,8 +37,10 @@ from backend.core.config import settings
 from backend.core.database import get_db
 from backend.core.logging import configure_logging
 from backend.main import app as main_app
-from backend.models import Base, Booking, Category, Client, Document, Equipment
+from backend.models import Booking, Category, Client, Document, Equipment
+from backend.models.core import Base
 from backend.repositories import BookingRepository, EquipmentRepository
+from backend.repositories.global_barcode import GlobalBarcodeSequenceRepository
 from backend.schemas import (
     BookingStatus,
     DocumentStatus,
@@ -47,6 +49,7 @@ from backend.schemas import (
     PaymentStatus,
 )
 from backend.services import (
+    BarcodeService,
     BookingService,
     CategoryService,
     ClientService,
@@ -251,7 +254,9 @@ async def test_client(db_session: AsyncSession) -> AsyncGenerator[Client, None]:
     )
     db_session.add(client)
     await db_session.commit()
-    return client
+    await db_session.refresh(client)
+
+    yield client
 
 
 @pytest_asyncio.fixture
@@ -261,11 +266,11 @@ async def test_equipment(
 ) -> AsyncGenerator[Equipment, None]:
     """Create a test equipment."""
     equipment = Equipment(
-        name='Test Camera',
-        description='Professional camera for testing',
-        barcode='TEST-001',
-        serial_number='SN-001',
+        name='Test Equipment',
+        description='Test Description',
         category_id=test_category.id,
+        barcode='12345678901',  # Numeric format
+        serial_number='SN001',
         replacement_cost=Decimal('1000.00'),
         status=EquipmentStatus.AVAILABLE,
     )
@@ -544,5 +549,13 @@ async def document(test_document: Document) -> Document:
 
 @pytest_asyncio.fixture
 async def equipment_service(db_session: AsyncSession) -> EquipmentService:
-    """Create equipment service instance for testing."""
-    return EquipmentService(db_session)
+    """Create an equipment service."""
+    repo = EquipmentRepository(db_session)
+    return EquipmentService(repo)
+
+
+@pytest_asyncio.fixture
+async def barcode_service(db_session: AsyncSession) -> BarcodeService:
+    """Create a barcode service."""
+    repo = GlobalBarcodeSequenceRepository(db_session)
+    return BarcodeService(repo)

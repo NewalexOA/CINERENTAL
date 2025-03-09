@@ -5,7 +5,8 @@ from typing import Optional
 from sqlalchemy import String
 from sqlalchemy.orm import Mapped, mapped_column
 
-from backend.models.base import Base, TimestampMixin
+from backend.models.core import Base
+from backend.models.mixins import TimestampMixin
 
 
 class User(TimestampMixin, Base):
