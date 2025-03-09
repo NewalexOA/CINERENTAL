@@ -328,6 +328,7 @@ async def update_equipment(
                 replacement_cost=replacement_cost_value,
                 barcode=equipment_data.get('barcode'),
                 serial_number=equipment_data.get('serial_number'),
+                category_id=equipment_data.get('category_id'),
                 status=equipment_data.get('status'),
             )
             return EquipmentResponse.model_validate(updated_equipment.__dict__)
