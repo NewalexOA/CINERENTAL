@@ -141,7 +141,10 @@
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Стоимость замены</label>
-                        <input type="number" class="form-control" name="replacement_cost" required>
+                        <input type="number" class="form-control" name="replacement_cost" min="0" max="99999999.99" step="0.01" required>
+                        <small class="form-text text-muted">
+                            Максимальное значение: 99,999,999.99
+                        </small>
                     </div>
                 </form>
             </div>
@@ -284,18 +287,18 @@ document.addEventListener('DOMContentLoaded', function() {
             data.replacement_cost = parseFloat(data.replacement_cost);
         }
 
-        // Send API request
+        // Send API reques
         try {
             showLoader();
             const response = await api.post('/equipment/', data);
             showToast('Оборудование успешно добавлено', 'success');
 
-            // Close modal and reload equipment list
+            // Close modal and reload equipment lis
             const modal = bootstrap.Modal.getInstance(document.getElementById('addEquipmentModal'));
             modal.hide();
             form.reset();
 
-            // Reload equipment list
+            // Reload equipment lis
             window.location.reload();
         } catch (error) {
             console.error('Error adding equipment:', error);

@@ -48,8 +48,7 @@
                                 <div class="d-flex justify-content-between align-items-center mb-2">
                                     <p class="card-text mb-0" id="barcodeDisplay">{{ equipment.barcode }}</p>
                                     <div>
-                                        <button type="button" class="btn btn-sm btn-outline-secondary copy-btn"
-                                               data-clipboard-text="{{ equipment.barcode }}">
+                                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="copyBarcode('{{ equipment.barcode }}')">
                                             <i class="fas fa-copy"></i>
                                         </button>
                                         <button type="button" class="btn btn-sm btn-outline-primary" id="regenerateBarcodeBtn">
@@ -58,7 +57,6 @@
                                     </div>
                                 </div>
                                 <div class="small text-muted" id="barcodeInfo">
-                                    <!-- Расшифровка штрих-кода будет загружена динамически -->
                                 </div>
                             </div>
                         </div>
@@ -166,7 +164,10 @@
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Стоимость замены</label>
-                        <input type="number" class="form-control" name="replacement_cost" value="{{ equipment.replacement_cost }}" required>
+                        <input type="number" class="form-control" name="replacement_cost" value="{{ equipment.replacement_cost }}" min="0" max="99999999.99" step="0.01" required>
+                        <small class="form-text text-muted">
+                            Максимальное значение: 99,999,999.99
+                        </small>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Статус</label>
@@ -208,7 +209,7 @@
 {% endblock %}
 
 {% block extra_js %}
-<script
+<scrip
     data-equipment-id="{{ equipment.id }}"
     data-category-id="{{ equipment.category_id }}"
     data-barcode="{{ equipment.barcode }}"
@@ -329,12 +330,30 @@ document.getElementById('updateEquipment').addEventListener('click', async () =>
 // Handle equipment deletion
 document.getElementById('deleteEquipment').addEventListener('click', async () => {
     try {
+        // Отображаем индикатор загрузки
+        const deleteButton = document.getElementById('deleteEquipment');
+        const originalText = deleteButton.innerHTML;
+        deleteButton.disabled = true;
+        deleteButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Удаление...';
+
+        // Выполняем запрос на удаление
         await api.delete(`/equipment/${EQUIPMENT_DATA.id}`);
+
+        // Уведомляем пользователя
         showToast('Оборудование успешно удалено', 'success');
-        window.location.href = '/equipment';
+
+        // Явно перенаправляем на страницу со списком оборудования без кэширования
+        window.location.href = '/equipment?t=' + new Date().getTime();
     } catch (error) {
         console.error('Error deleting equipment:', error);
-        showToast('Ошибка при удалении', 'danger');
+        showToast('Ошибка при удалении: ' + (error.message || 'Неизвестная ошибка'), 'danger');
+
+        // Восстанавливаем кнопку
+        const deleteButton = document.getElementById('deleteEquipment');
+        if (deleteButton) {
+            deleteButton.disabled = false;
+            deleteButton.innerHTML = 'Удалить';
+        }
     }
 });
 
@@ -460,9 +479,6 @@ async function regenerateBarcode() {
                 // Updating the barcode on the page
                 document.getElementById('barcodeDisplay').textContent = response.barcode;
 
-                // Updating the copy button
-                document.querySelector('.copy-btn').dataset.clipboardText = response.barcode;
-
                 // Loading the new barcode info
                 await loadBarcodeInfo();
 
@@ -497,11 +513,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Barcode regeneration button handler
     document.getElementById('regenerateBarcodeBtn').addEventListener('click', regenerateBarcode);
-
-    // Clipboard.js initialization for all copy buttons
-    new ClipboardJS('.copy-btn').on('success', function(e) {
-        showToast('Скопировано в буфер обмена', 'success');
-    });
 });
+
+// Copy barcode to clipboard
+function copyBarcode(barcode) {
+    navigator.clipboard.writeText(barcode).then(() => {
+        showToast('Штрих-код скопирован', 'success');
+    }).catch(() => {
+        showToast('Ошибка при копировании', 'danger');
+    });
+}
 </script>
 {% endblock %}
