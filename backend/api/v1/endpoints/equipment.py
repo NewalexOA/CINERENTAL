@@ -74,7 +74,7 @@ async def create_equipment_endpoint(
             )
 
         service = EquipmentService(db)
-        replacement_cost = None
+        replacement_cost = 0.0
         if equipment.replacement_cost:
             replacement_cost = float(equipment.replacement_cost)
 
