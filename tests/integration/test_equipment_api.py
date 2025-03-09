@@ -18,7 +18,6 @@ class EquipmentResponse(TypedDict):
 
     name: str
     barcode: str
-    daily_rate: str
     status: str
 
 
@@ -28,13 +27,16 @@ async def test_create_equipment(
     test_category: Category,
 ) -> None:
     """Test creating new equipment."""
+    # Using a valid numeric barcode format (11 digits)
+    # '000000001' with checksum '01'
+    custom_barcode = '00000000101'
+
     data = {
         'name': 'New Camera',
         'description': 'Professional camera for testing',
-        'barcode': 'TEST-002',
+        'custom_barcode': custom_barcode,  # Using custom_barcode instead of barcode
         'serial_number': 'SN-002',
         'category_id': test_category.id,
-        'daily_rate': '150.00',
         'replacement_cost': '1500.00',
         'status': EquipmentStatus.AVAILABLE,
     }
@@ -44,8 +46,8 @@ async def test_create_equipment(
     result = cast(EquipmentResponse, response.json())
 
     assert result['name'] == data['name']
-    assert result['barcode'] == data['barcode']
-    assert str(result['daily_rate']) == data['daily_rate']
+    # Check that returned barcode matches our custom barcode
+    assert result['barcode'] == custom_barcode
     assert result['status'] == EquipmentStatus.AVAILABLE
 
 
@@ -56,17 +58,35 @@ async def test_create_equipment_duplicate_barcode(
     test_equipment: Equipment,
 ) -> None:
     """Test creating equipment with duplicate barcode."""
-    data = {
-        'name': 'Another Equipment',
-        'description': 'Test Description',
+    # First, create equipment with a known barcode
+    # Using a valid numeric barcode format (11 digits)
+    # '000000123' with checksum '23'
+    custom_barcode = '00000012323'
+
+    # Create the first equipment
+    first_data = {
+        'name': 'First Equipment',
+        'description': 'First Test Description',
         'category_id': test_category.id,
-        'barcode': test_equipment.barcode,
-        'serial_number': 'SN002',
-        'daily_rate': '100.00',
+        'custom_barcode': custom_barcode,
+        'serial_number': 'SN001-UNIQUE',  # Ensure unique serial number
         'replacement_cost': '1000.00',
     }
 
-    response = await async_client.post('/api/v1/equipment/', json=data)
+    first_response = await async_client.post('/api/v1/equipment/', json=first_data)
+    assert first_response.status_code == 201, first_response.text
+
+    # Now try to create a second equipment with the same barcode
+    second_data = {
+        'name': 'Another Equipment',
+        'description': 'Test Description',
+        'category_id': test_category.id,
+        'custom_barcode': custom_barcode,  # Same barcode as first equipment
+        'serial_number': 'SN002-UNIQUE',  # Ensure unique serial number
+        'replacement_cost': '1000.00',
+    }
+
+    response = await async_client.post('/api/v1/equipment/', json=second_data)
     assert response.status_code == 400
     assert 'already exists' in response.json()['detail']
 
@@ -143,7 +163,6 @@ async def test_update_equipment(
     data = {
         'name': 'Updated Equipment',
         'description': 'Updated Description',
-        'daily_rate': '150.00',
     }
 
     response = await async_client.put(
@@ -153,7 +172,6 @@ async def test_update_equipment(
     assert response.status_code == 200
     result = response.json()
     assert result['name'] == data['name']
-    assert result['daily_rate'] == data['daily_rate']
 
 
 @async_test
@@ -241,38 +259,37 @@ async def test_get_equipment_list_invalid_pagination(async_client: AsyncClient) 
     """Test get equipment list with invalid pagination parameters."""
     response = await async_client.get('/api/v1/equipment/?skip=-1&limit=0')
     assert response.status_code == http_status.HTTP_422_UNPROCESSABLE_ENTITY
-    errors = response.json()['detail']
-    assert any(e['msg'] == 'Input should be greater than or equal to 0' for e in errors)
+    error_detail = response.json()['detail']
+    assert 'Skip parameter' in str(error_detail) or 'greater than or equal to 0' in str(
+        error_detail
+    )
 
     response = await async_client.get('/api/v1/equipment/?skip=0&limit=0')
     assert response.status_code == http_status.HTTP_422_UNPROCESSABLE_ENTITY
-    errors = response.json()['detail']
-    assert any(e['msg'] == 'Input should be greater than 0' for e in errors)
+    error_detail = response.json()['detail']
+    assert 'Limit parameter' in str(error_detail) or 'greater than 0' in str(
+        error_detail
+    )
 
     response = await async_client.get('/api/v1/equipment/?skip=0&limit=1001')
     assert response.status_code == http_status.HTTP_422_UNPROCESSABLE_ENTITY
-    errors = response.json()['detail']
-    assert any(e['msg'] == 'Input should be less than or equal to 1000' for e in errors)
+    error_detail = response.json()['detail']
+    assert 'Limit parameter' in str(
+        error_detail
+    ) or 'less than or equal to 1000' in str(error_detail)
 
 
 @async_test
 async def test_create_equipment_invalid_rate(async_client: AsyncClient) -> None:
-    """Test create equipment with invalid daily rate."""
+    """Test create equipment with invalid replacement cost."""
     data = {
         'name': 'Test Equipment',
         'description': 'Test Description',
         'barcode': '123456789',
         'serial_number': 'SN123',
-        'daily_rate': '0',
-        'replacement_cost': '100',
+        'replacement_cost': '0',
         'category_id': 1,
     }
-    response = await async_client.post('/api/v1/equipment/', json=data)
-    assert response.status_code == http_status.HTTP_400_BAD_REQUEST
-    assert response.json()['detail'] == 'Daily rate must be greater than 0'
-
-    data['daily_rate'] = '100'
-    data['replacement_cost'] = '0'
     response = await async_client.post('/api/v1/equipment/', json=data)
     assert response.status_code == http_status.HTTP_400_BAD_REQUEST
     assert response.json()['detail'] == 'Replacement cost must be greater than 0'
@@ -296,8 +313,8 @@ async def test_update_equipment_invalid_rate(
     async_client: AsyncClient,
     test_equipment: Equipment,
 ) -> None:
-    """Test updating equipment with invalid rate."""
-    data = {'daily_rate': '-100.00'}
+    """Test updating equipment with invalid replacement cost."""
+    data = {'replacement_cost': '-100.00'}
     response = await async_client.put(
         f'/api/v1/equipment/{test_equipment.id}',
         json=data,
@@ -352,7 +369,7 @@ async def test_delete_equipment_with_bookings(
         notes='Test booking',
     )
 
-    # Try to delete the equipment
+    # Try to delete the equipmen
     response = await async_client.delete(f'/api/v1/equipment/{test_equipment.id}')
     assert response.status_code == 400
     assert 'has active bookings' in response.json()['detail']
@@ -369,15 +386,10 @@ async def test_search_equipment_with_filters(
         f'/api/v1/equipment/?query={test_equipment.name}'
         f'&category_id={test_category.id}'
         f'&status={test_equipment.status.value}'
-        '&min_rate=50.00&max_rate=200.00'
     )
     assert response.status_code == 200
     result = response.json()
     assert len(result) > 0
-    assert all(
-        float(item['daily_rate']) >= 50.00 and float(item['daily_rate']) <= 200.00
-        for item in result
-    )
 
 
 @async_test
@@ -393,10 +405,40 @@ async def test_search_equipment_pagination(
 
 
 @async_test
-async def test_search_equipment_validation(async_client: AsyncClient) -> None:
-    """Test equipment search with invalid parameters."""
-    response = await async_client.get(
-        '/api/v1/equipment/?min_rate=invalid&max_rate=invalid'
+async def test_regenerate_equipment_barcode(
+    async_client: AsyncClient,
+    test_equipment: Equipment,
+    db_session: AsyncSession,
+) -> None:
+    """Test regenerating equipment barcode."""
+    # Store the original barcode
+    original_barcode = test_equipment.barcode
+
+    # Regenerate barcode
+    response = await async_client.post(
+        f'/api/v1/equipment/{test_equipment.id}/regenerate-barcode',
+        json={},
     )
-    assert response.status_code == 400
-    assert 'Invalid rate format' in response.json()['detail']
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data['id'] == test_equipment.id
+    assert data['barcode'] != original_barcode
+    # Verify the new barcode format (now it's a numeric string)
+    assert data['barcode'].isdigit()
+
+
+@async_test
+async def test_regenerate_equipment_barcode_not_found(
+    async_client: AsyncClient,
+) -> None:
+    """Test regenerating barcode for non-existent equipment."""
+    non_existent_id = 9999
+    response = await async_client.post(
+        f'/api/v1/equipment/{non_existent_id}/regenerate-barcode',
+        json={},
+    )
+
+    assert response.status_code == 404
+    data = response.json()
+    assert 'detail' in data

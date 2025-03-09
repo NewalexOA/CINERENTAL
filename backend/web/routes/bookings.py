@@ -10,8 +10,12 @@ from starlette.templating import _TemplateResponse
 
 from backend.core.database import get_db
 from backend.core.templates import templates
-from backend.models import BookingStatus, PaymentStatus
 from backend.services import BookingService, ClientService, EquipmentService
+from backend.web.routes.utils import (
+    get_booking_status_values,
+    get_payment_status_values,
+    prepare_booking_data,
+)
 
 router = APIRouter()
 
@@ -25,8 +29,8 @@ async def list_bookings(
         'bookings/list.html',
         {
             'request': request,
-            'booking_statuses': [status.value for status in BookingStatus],
-            'payment_statuses': [status.value for status in PaymentStatus],
+            'booking_statuses': get_booking_status_values(),
+            'payment_statuses': get_payment_status_values(),
         },
     )
 
@@ -48,17 +52,18 @@ async def booking_detail(
         client = await client_service.get_client(booking.client_id)
         equipment = await equipment_service.get_equipment(booking.equipment_id)
 
-        booking_data = booking.__dict__
-        booking_data['client'] = client.__dict__
-        booking_data['equipment'] = equipment.__dict__
+        # Prepare booking data using utility function
+        booking_data = prepare_booking_data(
+            booking, include_relations=True, client=client, equipment=equipment
+        )
 
         return templates.TemplateResponse(
             'bookings/detail.html',
             {
                 'request': request,
                 'booking': booking_data,
-                'booking_statuses': [status.value for status in BookingStatus],
-                'payment_statuses': [status.value for status in PaymentStatus],
+                'booking_statuses': get_booking_status_values(),
+                'payment_statuses': get_payment_status_values(),
             },
         )
     except Exception as e:

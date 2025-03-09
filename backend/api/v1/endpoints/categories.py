@@ -51,7 +51,7 @@ async def create_category(
         db_category = await service.create_category(
             name=category.name,
             description=category.description or '',
-            parent_id=None,
+            parent_id=category.parent_id,
         )
         return CategoryResponse.model_validate(db_category)
     except BusinessError as e:
@@ -244,12 +244,45 @@ async def search_categories(
     """Search categories by name or description.
 
     Args:
-        query: Search query string
+        query: Search query
         session: Database session
 
     Returns:
-        List of matching categories
+        List of categories matching the search query
+    """
+    # Search categories
+    category_service = CategoryService(session)
+    categories = await category_service.search_categories(query)
+    return [CategoryResponse.model_validate(c) for c in categories]
+
+
+@typed_get(
+    categories_router,
+    '/{category_id}/subcategories',
+    response_model=List[CategoryResponse],
+)
+async def get_subcategories(
+    category_id: int,
+    session: AsyncSession = Depends(get_db),
+) -> List[CategoryResponse]:
+    """Get all subcategories of a category.
+
+    Args:
+        category_id: ID of the parent category
+        session: Database session
+
+    Returns:
+        List of subcategories
+
+    Raises:
+        HTTPException: If category not found
     """
     service = CategoryService(session)
-    categories = await service.search_categories(query)
-    return [CategoryResponse.model_validate(cat) for cat in categories]
+    try:
+        subcategories = await service.get_subcategories(category_id)
+        return [CategoryResponse.model_validate(c) for c in subcategories]
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e),
+        ) from e

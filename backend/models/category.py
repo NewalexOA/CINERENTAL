@@ -11,7 +11,8 @@ from typing import Optional
 from sqlalchemy import DateTime, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from backend.models import Base, TimestampMixin
+from backend.models.core import Base
+from backend.models.mixins import TimestampMixin
 
 
 class Category(TimestampMixin, Base):

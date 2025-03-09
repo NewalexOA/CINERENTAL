@@ -1,27 +1,25 @@
 """Equipment model module.
 
-This module defines the Equipment model representing physical items
-available for rental. Each equipment item belongs to a category
-and has various attributes like name, description, rental rates,
-and availability status.
+This module defines the Equipment model for rental equipment items.
 """
 
+import enum
 from decimal import Decimal
-from enum import Enum
 from typing import TYPE_CHECKING, List, Optional
 
 from sqlalchemy import ForeignKey, Numeric, String
 from sqlalchemy.dialects.postgresql import ENUM
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from backend.models import Base, SoftDeleteMixin, TimestampMixin
+from backend.models.core import Base
+from backend.models.mixins import SoftDeleteMixin, TimestampMixin
 
 if TYPE_CHECKING:
     from backend.models.booking import Booking
     from backend.models.category import Category
 
 
-class EquipmentStatus(str, Enum):
+class EquipmentStatus(str, enum.Enum):
     """Equipment status enumeration."""
 
     AVAILABLE = 'AVAILABLE'
@@ -49,10 +47,11 @@ class Equipment(TimestampMixin, SoftDeleteMixin, Base):
         name: Equipment name.
         description: Optional equipment description.
         serial_number: Unique serial number.
-        barcode: Unique barcode for scanning.
+        barcode: Unique barcode for scanning in format NNNNNNNNNCC where:
+            - NNNNNNNNN: 9-digit auto-incremented number (with leading zeros)
+            - CC: 2-digit checksum
         category_id: Reference to equipment category.
         status: Current equipment status.
-        daily_rate: Rental rate per day.
         replacement_cost: Cost to replace if damaged.
         notes: Optional internal notes.
         category: Category relationship.
@@ -75,7 +74,6 @@ class Equipment(TimestampMixin, SoftDeleteMixin, Base):
         nullable=False,
         index=True,
     )
-    daily_rate: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
     replacement_cost: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
     notes: Mapped[Optional[str]] = mapped_column(String(1000))
 

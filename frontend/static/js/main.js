@@ -36,14 +36,14 @@ window.showToast = function(message, type = 'info') {
     const toastContainer = document.getElementById('toastContainer');
 
     if (!toastContainer) {
-        // Create toast container if it doesn't exist
+        // Create toast container if it doesn't exis
         const container = document.createElement('div');
         container.id = 'toastContainer';
         container.className = 'toast-container position-fixed bottom-0 end-0 p-3';
         document.body.appendChild(container);
     }
 
-    // Create toast element
+    // Create toast elemen
     const toastId = `toast-${Date.now()}`;
     const toast = document.createElement('div');
     toast.className = `toast align-items-center text-white bg-${type} border-0`;
@@ -64,7 +64,7 @@ window.showToast = function(message, type = 'info') {
     // Add toast to container
     document.getElementById('toastContainer').appendChild(toast);
 
-    // Initialize and show toast
+    // Initialize and show toas
     const bsToast = new bootstrap.Toast(toast);
     bsToast.show();
 
@@ -74,13 +74,98 @@ window.showToast = function(message, type = 'info') {
     });
 };
 
+// Loader functions
+window.loaderCounter = 0; // Counter of active operations using loader
+
+window.showLoader = function() {
+    window.loaderCounter++;
+
+    let loader = document.getElementById('global-loader');
+
+    // Create loader if it doesn't exis
+    if (!loader) {
+        loader = document.createElement('div');
+        loader.id = 'global-loader';
+        loader.className = 'position-fixed w-100 h-100 d-flex justify-content-center align-items-center';
+        loader.style.top = '0';
+        loader.style.left = '0';
+        loader.style.backgroundColor = 'rgba(0, 0, 0, 0.3)';
+        loader.style.zIndex = '9999';
+
+        loader.innerHTML = `
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Загрузка...</span>
+            </div>
+        `;
+
+        document.body.appendChild(loader);
+    }
+
+    // Store timestamp and remove hidden attribute
+    loader.dataset.timestamp = Date.now().toString();
+    loader.removeAttribute('hidden');
+};
+
+window.hideLoader = function() {
+    window.loaderCounter--;
+
+    // Never hide loader if counter > 0
+    if (window.loaderCounter > 0) {
+        return;
+    }
+
+    // Reset counter to 0 in case it became negative
+    window.loaderCounter = 0;
+
+    const loader = document.getElementById('global-loader');
+    if (loader) {
+        // Use hidden attribute instead of CSS
+        loader.setAttribute('hidden', '');
+    }
+
+    // Safety: force hide loader after 5 seconds if it is still visible
+    setTimeout(() => {
+        const loaderCheck = document.getElementById('global-loader');
+        if (loaderCheck && !loaderCheck.hasAttribute('hidden')) {
+            console.warn('Loader was not hidden within 5 seconds, forcing hide');
+            loaderCheck.setAttribute('hidden', '');
+            window.loaderCounter = 0; // Reset counter
+        }
+    }, 5000);
+};
+
+// Function to forcibly reset loader state
+window.resetLoader = function() {
+    window.loaderCounter = 0;
+
+    const loader = document.getElementById('global-loader');
+    if (loader) {
+        loader.setAttribute('hidden', '');
+
+        // If loader is still visible after setting hidden attribute
+        if (getComputedStyle(loader).display !== 'none') {
+            console.warn('Loader still visible after setting hidden attribute, using CSS display property');
+            loader.style.display = 'none';
+        }
+    }
+
+    console.log('Loader state has been forcibly reset');
+};
+
 // API calls
 const api = {
     async get(endpoint) {
         try {
             const url = endpoint.includes('?') || endpoint.endsWith('/') ? endpoint : `${endpoint}/`;
             const response = await fetch(`${API_BASE_URL}${url}`);
-            if (!response.ok) throw new Error('Network response was not ok');
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({ detail: 'Ошибка сети' }));
+                const error = new Error(errorData.detail || 'Ошибка при получении данных');
+                error.response = { data: errorData, status: response.status };
+                throw error;
+            }
+
             return await response.json();
         } catch (error) {
             console.error('Error fetching data:', error);
@@ -98,7 +183,14 @@ const api = {
                 },
                 body: JSON.stringify(data)
             });
-            if (!response.ok) throw new Error('Network response was not ok');
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({ detail: 'Ошибка сети' }));
+                const error = new Error(errorData.detail || 'Ошибка при отправке данных');
+                error.response = { data: errorData, status: response.status };
+                throw error;
+            }
+
             return await response.json();
         } catch (error) {
             console.error('Error posting data:', error);
@@ -116,7 +208,14 @@ const api = {
                 },
                 body: JSON.stringify(data)
             });
-            if (!response.ok) throw new Error('Network response was not ok');
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({ detail: 'Ошибка сети' }));
+                const error = new Error(errorData.detail || 'Ошибка при обновлении данных');
+                error.response = { data: errorData, status: response.status };
+                throw error;
+            }
+
             return await response.json();
         } catch (error) {
             console.error('Error updating data:', error);
@@ -130,8 +229,32 @@ const api = {
             const response = await fetch(`${API_BASE_URL}${url}`, {
                 method: 'DELETE'
             });
-            if (!response.ok) throw new Error('Network response was not ok');
-            return await response.json();
+
+            if (!response.ok) {
+                let errorData;
+                try {
+                    errorData = await response.json();
+                } catch {
+                    errorData = { detail: 'Ошибка сети или пустой ответ' };
+                }
+                const error = new Error(errorData.detail || 'Ошибка при удалении данных');
+                error.response = { data: errorData, status: response.status };
+                throw error;
+            }
+
+            // Проверяем, есть ли контент для парсинга
+            const contentType = response.headers.get('content-type');
+            if (contentType && contentType.includes('application/json') && response.status !== 204) {
+                try {
+                    return await response.json();
+                } catch (e) {
+                    console.log('Ответ не содержит JSON данных, возвращаем успешный результат');
+                    return { success: true };
+                }
+            }
+
+            // Если ответ пустой или статус 204 No Content, возвращаем успех
+            return { success: true };
         } catch (error) {
             console.error('Error deleting data:', error);
             throw error;
@@ -275,6 +398,11 @@ const equipmentSearch = {
                     params.append('status', status);
                 }
 
+                params.append('include_deleted', 'false');
+
+                // Add timestamp for cache prevention
+                params.append('_t', Date.now());
+
                 // Формируем URL с параметрами
                 const url = params.toString() ? `/equipment?${params.toString()}` : '/equipment';
 
@@ -297,32 +425,7 @@ const equipmentSearch = {
                     return;
                 }
 
-                table.innerHTML = results.map(item => `
-                    <tr>
-                        <td>
-                            <div class="fw-bold">${item.name}</div>
-                            <small class="text-muted">${item.description || ''}</small>
-                        </td>
-                        <td>${item.category_name || 'Без категории'}</td>
-                        <td>${item.barcode}</td>
-                        <td>
-                            <span class="badge bg-${item.status === 'AVAILABLE' ? 'success' : item.status === 'RENTED' ? 'warning' : 'danger'}">
-                                ${item.status}
-                            </span>
-                        </td>
-                        <td>${formatCurrency(item.daily_rate)}</td>
-                        <td>
-                            <div class="btn-group">
-                                <a href="/equipment/${item.id}" class="btn btn-sm btn-outline-primary">
-                                    <i class="fas fa-info-circle"></i>
-                                </a>
-                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="copyBarcode('${item.barcode}')">
-                                    <i class="fas fa-copy"></i>
-                                </button>
-                            </div>
-                        </td>
-                    </tr>
-                `).join('');
+                table.innerHTML = results.map(item => formatEquipmentRow(item)).join('');
             } catch (error) {
                 console.error('Search error:', error);
                 showToast('Ошибка при поиске оборудования', 'danger');
@@ -340,6 +443,53 @@ const equipmentSearch = {
         updateResults();
     }
 };
+
+// Get status color for badges
+function getStatusColor(status) {
+    switch (status) {
+        case 'AVAILABLE':
+            return 'success';
+        case 'RENTED':
+            return 'warning';
+        case 'MAINTENANCE':
+            return 'info';
+        case 'BROKEN':
+            return 'danger';
+        case 'RETIRED':
+            return 'secondary';
+        default:
+            return 'primary';
+    }
+}
+
+// Format equipment row for table
+function formatEquipmentRow(item) {
+    return `
+        <tr>
+            <td>
+                <div class="fw-bold">${item.name}</div>
+                <small class="text-muted">${item.description}</small>
+            </td>
+            <td>${item.category_name}</td>
+            <td>${item.barcode}</td>
+            <td>
+                <span class="badge bg-${getStatusColor(item.status)}">
+                    ${item.status}
+                </span>
+            </td>
+            <td>
+                <div class="btn-group">
+                    <a href="/equipment/${item.id}" class="btn btn-sm btn-outline-primary">
+                        <i class="fas fa-info-circle"></i>
+                    </a>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="copyBarcode('${item.barcode}')">
+                        <i class="fas fa-copy"></i>
+                    </button>
+                </div>
+            </td>
+        </tr>
+    `;
+}
 
 // Document ready handler
 document.addEventListener('DOMContentLoaded', () => {

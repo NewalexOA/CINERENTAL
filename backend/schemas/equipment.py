@@ -13,6 +13,15 @@ from pydantic import BaseModel, ConfigDict, Field, computed_field
 from backend.models.equipment import EquipmentStatus
 
 
+class CategoryInfo(BaseModel):
+    """Category information schema."""
+
+    id: int = Field(..., description='Category ID')
+    name: str = Field(..., description='Category name')
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class EquipmentBase(BaseModel):
     """Base equipment schema."""
 
@@ -20,21 +29,24 @@ class EquipmentBase(BaseModel):
     description: str = Field(
         ..., title='Description', description='Equipment description'
     )
-    daily_rate: Decimal = Field(
-        ..., title='Daily Rate', description='Daily rental rate'
-    )
-    replacement_cost: Decimal = Field(
-        ..., title='Replacement Cost', description='Cost to replace if damaged'
-    )
-    barcode: str = Field(..., title='Barcode', description='Equipment barcode')
-    serial_number: str = Field(..., title='Serial Number', description='Serial number')
     category_id: int = Field(..., title='Category ID', description='Category ID')
 
 
 class EquipmentCreate(EquipmentBase):
     """Create equipment request schema."""
 
-    pass
+    replacement_cost: Optional[Decimal] = Field(
+        None, title='Replacement Cost', description='Cost to replace if damaged'
+    )
+    custom_barcode: Optional[str] = Field(
+        None,
+        title='Custom Barcode',
+        description='Optional custom barcode (auto-generated if not provided)',
+    )
+    serial_number: Optional[str] = Field(
+        None, title='Serial Number', description='Serial number'
+    )
+    notes: Optional[str] = Field(None, title='Notes', description='Additional notes')
 
 
 class EquipmentUpdate(BaseModel):
@@ -43,9 +55,6 @@ class EquipmentUpdate(BaseModel):
     name: Optional[str] = Field(None, title='Name', description='Equipment name')
     description: Optional[str] = Field(
         None, title='Description', description='Equipment description'
-    )
-    daily_rate: Optional[Decimal] = Field(
-        None, title='Daily Rate', description='Daily rental rate'
     )
     replacement_cost: Optional[Decimal] = Field(
         None, title='Replacement Cost', description='Cost to replace if damaged'
@@ -64,13 +73,21 @@ class EquipmentUpdate(BaseModel):
     )
 
 
-class EquipmentResponse(EquipmentBase):
+class EquipmentResponse(BaseModel):
     """Equipment response schema."""
 
     id: int
+    name: str
+    description: str
+    replacement_cost: Optional[Decimal]
+    barcode: str
+    serial_number: Optional[str]
+    category_id: int
     status: EquipmentStatus
     created_at: datetime
     updated_at: datetime
+    category_name: str = Field(default='Без категории', description='Category name')
+    category: Optional[CategoryInfo] = Field(None, description='Category information')
 
     @computed_field
     def is_available(self) -> bool:
@@ -84,5 +101,24 @@ class EquipmentWithCategory(EquipmentResponse):
     """Equipment with category details."""
 
     category_description: str = Field(..., description='Category description')
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class RegenerateBarcodeRequest(BaseModel):
+    """Regenerate barcode request schema."""
+
+    # No additional parameters needed for auto-increment barcode generation
+    pass
+
+
+class StatusTimelineResponse(BaseModel):
+    """Status timeline response schema."""
+
+    id: int
+    equipment_id: int
+    status: EquipmentStatus
+    timestamp: datetime
+    notes: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)

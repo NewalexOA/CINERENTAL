@@ -38,7 +38,6 @@ equipment = await equipment_service.create_equipment(
     name="Sony PXW-FX9",
     description="Полнокадровая видеокамера",
     barcode="CAM-001",
-    daily_rate=500.00,
     replacement_cost=15000.00
 )
 
@@ -198,7 +197,7 @@ async def register_and_book(
     # Получаем оборудование для расчета стоимости
     equipment = await equipment_service.get_equipment(equipment_id)
     days = (end_date - start_date).days
-    total_amount = equipment.daily_rate * days
+    total_amount
     deposit_amount = equipment.replacement_cost * 0.2  # 20% от стоимости
 
     # Создаем бронирование

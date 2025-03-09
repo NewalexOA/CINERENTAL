@@ -1,20 +1,20 @@
 // Bookings management for CINERENTAL
 
-// Проверяем, существует ли уже функция showToast
+// Проверяем, существует ли уже функция showToas
 if (typeof window.showToast !== 'function') {
     // Toast notification
     window.showToast = function(message, type = 'info') {
         const toastContainer = document.getElementById('toastContainer');
 
         if (!toastContainer) {
-            // Create toast container if it doesn't exist
+            // Create toast container if it doesn't exis
             const container = document.createElement('div');
             container.id = 'toastContainer';
             container.className = 'toast-container position-fixed bottom-0 end-0 p-3';
             document.body.appendChild(container);
         }
 
-        // Create toast element
+        // Create toast elemen
         const toastId = `toast-${Date.now()}`;
         const toast = document.createElement('div');
         toast.className = `toast align-items-center text-white bg-${type} border-0`;
@@ -35,7 +35,7 @@ if (typeof window.showToast !== 'function') {
         // Add toast to container
         document.getElementById('toastContainer').appendChild(toast);
 
-        // Initialize and show toast
+        // Initialize and show toas
         const bsToast = new bootstrap.Toast(toast);
         bsToast.show();
 
@@ -46,7 +46,7 @@ if (typeof window.showToast !== 'function') {
     }
 }
 
-// Booking management
+// Booking managemen
 const bookingManager = {
     // Initialize date range picker
     initDateRangePicker(selector) {
@@ -114,7 +114,7 @@ const bookingManager = {
             // Group equipment by category
             const categories = {};
             equipment.forEach(item => {
-                const categoryName = item.category_name || 'Без категории';
+                const categoryName = item.category_name;
                 if (!categories[categoryName]) {
                     categories[categoryName] = [];
                 }
@@ -134,7 +134,7 @@ const bookingManager = {
                         <input class="form-check-input" type="radio" name="equipment_id"
                             value="${item.id}" id="equipment${item.id}">
                         <label class="form-check-label" for="equipment${item.id}">
-                            ${item.name} - ${item.daily_rate} ₽/день
+                            ${item.name}
                             <small class="text-muted d-block">
                                 ${item.serial_number ? `S/N: ${item.serial_number}` : ''}
                                 ${item.barcode ? `Штрих-код: ${item.barcode}` : ''}
@@ -163,7 +163,7 @@ const bookingManager = {
                 <div class="list-group-item">
                     <div class="d-flex w-100 justify-content-between">
                         <h6 class="mb-1">${item.name}</h6>
-                        <small class="text-muted">${item.category.name}</small>
+                        <small class="text-muted">${item.category_name}</small>
                     </div>
                     <p class="mb-1">
                         <small>
@@ -195,7 +195,7 @@ const bookingManager = {
                 return;
             }
 
-            // Get selected equipment
+            // Get selected equipmen
             const selectedEquipment = form.querySelector('input[name="equipment_id"]:checked');
             if (!selectedEquipment) {
                 showToast('Выберите оборудование', 'warning');
@@ -219,7 +219,7 @@ const bookingManager = {
                 notes: formData.get('notes') || ''
             };
 
-            // Send request
+            // Send reques
             await api.post('/bookings', data);
 
             // Show success message
@@ -239,8 +239,8 @@ const bookingManager = {
 
     /**
      * Load booking data for editing
-     * @param {number} bookingId - ID of the booking to edit
-     * @param {string} formId - ID of the form element
+     * @param {number} bookingId - ID of the booking to edi
+     * @param {string} formId - ID of the form elemen
      * @param {string} equipmentContainerId - ID of the container for equipment selection
      */
     loadBookingForEdit: async function(bookingId, formId, equipmentContainerId) {
@@ -306,7 +306,7 @@ const bookingManager = {
             const formData = new FormData(form);
             const dateRange = formData.get('date_range').split(' - ');
 
-            // Get selected equipment
+            // Get selected equipmen
             const equipmentContainer = document.getElementById('editEquipmentSelection');
             const selectedEquipment = equipmentContainer.querySelector('input[type="radio"]:checked');
 
@@ -370,7 +370,7 @@ const bookingManager = {
         // Initialize date range picker for new bookings
         this.initDateRangePicker();
 
-        // Load clients and equipment
+        // Load clients and equipmen
         this.loadClients();
         this.loadEquipment();
 
@@ -442,7 +442,7 @@ const bookingManager = {
             });
         }
 
-        // Process payment
+        // Process paymen
         const savePaymentBtn = document.getElementById('savePayment');
         if (savePaymentBtn) {
             savePaymentBtn.addEventListener('click', () => {
@@ -632,7 +632,7 @@ const bookingManager = {
 
     /**
      * Initialize date range picker
-     * @param {string} [selector='input[name="date_range"]'] - Selector for date range input
+     * @param {string} [selector='input[name="date_range"]'] - Selector for date range inpu
      */
     initDateRangePicker: function(selector = 'input[name="date_range"]') {
         const inputs = document.querySelectorAll(selector);
@@ -687,7 +687,7 @@ const bookingManager = {
     /**
      * Process payment for booking
      * @param {number} bookingId - ID of the booking
-     * @param {number} amount - Payment amount
+     * @param {number} amount - Payment amoun
      * @param {string} paymentStatus - New payment status
      */
     processPayment: async function(bookingId, amount, paymentStatus) {

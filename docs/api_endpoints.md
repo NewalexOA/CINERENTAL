@@ -243,7 +243,6 @@ POST /
     "barcode": "string",
     "serial_number": "string",
     "category_id": "integer",
-    "daily_rate": "decimal",
     "replacement_cost": "decimal",
     "notes": "string | null"
 }
@@ -258,7 +257,6 @@ POST /
     "barcode": "string",
     "serial_number": "string",
     "category_id": "integer",
-    "daily_rate": "decimal",
     "replacement_cost": "decimal",
     "notes": "string | null",
     "status": "string",
@@ -297,7 +295,6 @@ GET /
         "serial_number": "string",
         "category_id": "integer",
         "category_name": "string",
-        "daily_rate": "decimal",
         "replacement_cost": "decimal",
         "notes": "string | null",
         "status": "string",
@@ -327,7 +324,6 @@ GET /{equipment_id}
     "serial_number": "string",
     "category_id": "integer",
     "category_name": "string",
-    "daily_rate": "decimal",
     "replacement_cost": "decimal",
     "notes": "string | null",
     "status": "string",
@@ -357,7 +353,6 @@ PUT /{equipment_id}
     "barcode": "string | null",
     "serial_number": "string | null",
     "category_id": "integer | null",
-    "daily_rate": "decimal | null",
     "replacement_cost": "decimal | null",
     "notes": "string | null",
     "status": "string | null"
@@ -373,7 +368,6 @@ PUT /{equipment_id}
     "barcode": "string",
     "serial_number": "string",
     "category_id": "integer",
-    "daily_rate": "decimal",
     "replacement_cost": "decimal",
     "notes": "string | null",
     "status": "string",
@@ -422,7 +416,6 @@ GET /barcode/{barcode}
     "serial_number": "string",
     "category_id": "integer",
     "category_name": "string",
-    "daily_rate": "decimal",
     "replacement_cost": "decimal",
     "notes": "string | null",
     "status": "string",
@@ -455,7 +448,6 @@ GET /search/{query}
         "serial_number": "string",
         "category_id": "integer",
         "category_name": "string",
-        "daily_rate": "decimal",
         "replacement_cost": "decimal",
         "notes": "string | null",
         "status": "string",
@@ -477,7 +469,6 @@ curl -X POST "http://localhost:8000/api/v1/equipment/" \
            "barcode": "CAM-001",
            "serial_number": "FX9-12345",
            "category_id": 1,
-           "daily_rate": 500.00,
            "replacement_cost": 15000.00
          }'
 ```

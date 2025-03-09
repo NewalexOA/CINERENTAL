@@ -48,7 +48,7 @@ class TestBookingEdgeCases:
         """Test booking date validation edge cases."""
         # Past start date
         past_start = datetime.now(timezone.utc) - timedelta(days=1)
-        total_amount = float(300.00)  # 3 days * 100.00 daily rate
+        total_amount = float(300.00)
         deposit_amount = float(200.00)  # 20% of replacement cost
 
         with pytest.raises(ValueError, match='Start date cannot be in the past'):
@@ -98,7 +98,7 @@ class TestDocumentEdgeCases:
         # Create booking and document
         start_date = datetime.now(timezone.utc) + timedelta(days=1)
         end_date = start_date + timedelta(days=1)
-        total_amount = float(200.00)  # 2 days * 100.00 daily rate
+        total_amount = float(200.00)
         deposit_amount = float(200.00)  # 20% of replacement cost
 
         booking = await services['booking'].create_booking(
@@ -166,7 +166,7 @@ class TestEquipmentEdgeCases:
         # Create booking that ends exactly when another starts
         start1 = datetime.now(timezone.utc) + timedelta(days=1)
         end1 = start1 + timedelta(days=1)
-        total_amount = float(200.00)  # 2 days * 100.00 daily rate
+        total_amount = float(200.00)
         deposit_amount = float(200.00)  # 20% of replacement cost
 
         booking1 = await services['booking'].create_booking(

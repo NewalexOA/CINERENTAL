@@ -2,7 +2,7 @@
 
 This module implements API endpoints for managing rental equipment.
 It provides routes for adding, updating, and retrieving equipment items,
-including their specifications, availability, and rental rates.
+including their specifications, availability, and replacement costs.
 """
 
 from datetime import datetime, timedelta
@@ -14,9 +14,17 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.api.v1.decorators import typed_delete, typed_get, typed_post, typed_put
 from backend.core.database import get_db
-from backend.exceptions import BusinessError, NotFoundError, StateError
-from backend.models import BookingStatus, EquipmentStatus
-from backend.schemas import EquipmentCreate, EquipmentResponse, EquipmentUpdate
+from backend.exceptions import BusinessError, NotFoundError, StateError, ValidationError
+from backend.models.booking import BookingStatus
+from backend.models.equipment import EquipmentStatus
+from backend.schemas import (
+    BookingResponse,
+    EquipmentCreate,
+    EquipmentResponse,
+    EquipmentUpdate,
+    RegenerateBarcodeRequest,
+    StatusTimelineResponse,
+)
 from backend.services import BookingService, EquipmentService
 
 equipment_router: APIRouter = APIRouter()
@@ -28,7 +36,7 @@ equipment_router: APIRouter = APIRouter()
     response_model=EquipmentResponse,
     status_code=http_status.HTTP_201_CREATED,
 )
-async def create_equipment(
+async def create_equipment_endpoint(
     equipment: EquipmentCreate,
     db: AsyncSession = Depends(get_db),
 ) -> EquipmentResponse:
@@ -42,31 +50,48 @@ async def create_equipment(
         Created equipment
 
     Raises:
-        HTTPException: If equipment with given barcode already exists
+        HTTPException: If equipment creation fails
     """
     try:
-        # Validate rates
-        if float(equipment.daily_rate) <= 0:
-            raise HTTPException(
-                status_code=http_status.HTTP_400_BAD_REQUEST,
-                detail='Daily rate must be greater than 0',
-            )
-        if float(equipment.replacement_cost) <= 0:
+        # Validate replacement cost if provided
+        if (
+            equipment.replacement_cost is not None
+            and float(equipment.replacement_cost) <= 0
+        ):
             raise HTTPException(
                 status_code=http_status.HTTP_400_BAD_REQUEST,
                 detail='Replacement cost must be greater than 0',
             )
 
+        # Check that replacement cost is within the database limits
+        if (
+            equipment.replacement_cost is not None
+            and float(equipment.replacement_cost) >= 100000000
+        ):
+            raise HTTPException(
+                status_code=http_status.HTTP_400_BAD_REQUEST,
+                detail='Replacement cost must be less than 100,000,000',
+            )
+
         service = EquipmentService(db)
+        replacement_cost = 0.0
+        if equipment.replacement_cost:
+            replacement_cost = float(equipment.replacement_cost)
+
         return await service.create_equipment(
             name=equipment.name,
             description=equipment.description,
             category_id=equipment.category_id,
-            barcode=equipment.barcode,
+            custom_barcode=equipment.custom_barcode,
             serial_number=equipment.serial_number,
-            daily_rate=float(equipment.daily_rate),
-            replacement_cost=float(equipment.replacement_cost),
+            replacement_cost=replacement_cost,
+            notes=equipment.notes,
         )
+    except ValidationError as e:
+        raise HTTPException(
+            status_code=http_status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        ) from e
     except BusinessError as e:
         raise HTTPException(
             status_code=http_status.HTTP_400_BAD_REQUEST,
@@ -89,8 +114,9 @@ async def get_equipment_list(
     available_to: Optional[datetime] = None,
     start_date: Optional[str] = None,
     end_date: Optional[str] = None,
-    min_rate: Optional[str] = None,
-    max_rate: Optional[str] = None,
+    include_deleted: bool = Query(
+        False, description='Whether to include deleted equipment'
+    ),
     db: AsyncSession = Depends(get_db),
 ) -> List[EquipmentResponse]:
     """Get list of equipment with optional filtering."""
@@ -99,35 +125,17 @@ async def get_equipment_list(
         if skip is None or skip < 0:
             raise HTTPException(
                 status_code=http_status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail=[
-                    {
-                        'loc': ['query', 'skip'],
-                        'msg': 'Input should be greater than or equal to 0',
-                        'type': 'value_error',
-                    }
-                ],
+                detail='Skip parameter must be a non-negative integer',
             )
-        if limit is None or limit <= 0:
+        if limit is None or limit < 1:
             raise HTTPException(
                 status_code=http_status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail=[
-                    {
-                        'loc': ['query', 'limit'],
-                        'msg': 'Input should be greater than 0',
-                        'type': 'value_error',
-                    }
-                ],
+                detail='Limit parameter must be a positive integer',
             )
         if limit > 1000:
             raise HTTPException(
                 status_code=http_status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail=[
-                    {
-                        'loc': ['query', 'limit'],
-                        'msg': 'Input should be less than or equal to 1000',
-                        'type': 'value_error',
-                    }
-                ],
+                detail='Limit parameter must be less than or equal to 1000',
             )
 
         # Validate date parameters
@@ -148,38 +156,12 @@ async def get_equipment_list(
                     detail='Invalid date format. Use ISO format (YYYY-MM-DDTHH:MM:SS)',
                 )
 
-        # Validate rate parameters
-        min_rate_float = None
-        max_rate_float = None
-
         # Validate query parameter length
         if query and len(query) > 255:
             raise HTTPException(
                 status_code=http_status.HTTP_400_BAD_REQUEST,
                 detail='Search query is too long. Maximum length is 255 characters.',
             )
-
-        if min_rate or max_rate:
-            try:
-                if min_rate:
-                    min_rate_float = float(min_rate)
-                    if min_rate_float < 0:
-                        raise ValueError('Minimum rate cannot be negative')
-                if max_rate:
-                    max_rate_float = float(max_rate)
-                    if max_rate_float < 0:
-                        raise ValueError('Maximum rate cannot be negative')
-                if (
-                    min_rate_float
-                    and max_rate_float
-                    and min_rate_float > max_rate_float
-                ):
-                    raise ValueError('Minimum rate cannot be greater than maximum rate')
-            except ValueError as e:
-                raise HTTPException(
-                    status_code=http_status.HTTP_400_BAD_REQUEST,
-                    detail=f'Invalid rate format: {str(e)}',
-                )
 
         # Get equipment list
         equipment_service = EquipmentService(db)
@@ -191,8 +173,9 @@ async def get_equipment_list(
             query=query,
             available_from=available_from,
             available_to=available_to,
+            include_deleted=include_deleted,
         )
-        return [EquipmentResponse.model_validate(e.__dict__) for e in equipment_list]
+        return equipment_list
     except BusinessError as e:
         raise HTTPException(
             status_code=http_status.HTTP_400_BAD_REQUEST,
@@ -218,7 +201,32 @@ async def get_equipment(
     try:
         service = EquipmentService(db)
         equipment = await service.get_equipment(equipment_id)
-        return EquipmentResponse.model_validate(equipment.__dict__)
+
+        # Create a dictionary with all required fields
+        equipment_dict = {
+            'id': equipment.id,
+            'name': equipment.name,
+            'description': equipment.description,
+            'category_id': equipment.category_id,
+            'barcode': equipment.barcode,
+            'serial_number': equipment.serial_number,
+            'replacement_cost': equipment.replacement_cost,
+            'status': equipment.status,
+            'created_at': equipment.created_at,
+            'updated_at': equipment.updated_at,
+            'category_name': (
+                equipment.category.name if equipment.category else 'Без категории'
+            ),
+        }
+
+        # Add category information if available
+        if equipment.category:
+            equipment_dict['category'] = {
+                'id': equipment.category.id,
+                'name': equipment.category.name,
+            }
+
+        return EquipmentResponse.model_validate(equipment_dict)
     except NotFoundError:
         raise HTTPException(
             status_code=http_status.HTTP_404_NOT_FOUND,
@@ -243,12 +251,7 @@ async def update_equipment(
 ) -> EquipmentResponse:
     """Update equipment by ID."""
     try:
-        # Validate rate and replacement cost
-        if equipment.daily_rate is not None and float(equipment.daily_rate) <= 0:
-            raise HTTPException(
-                status_code=http_status.HTTP_400_BAD_REQUEST,
-                detail='Daily rate must be greater than 0',
-            )
+        # Validate replacement cost
         if (
             equipment.replacement_cost is not None
             and float(equipment.replacement_cost) <= 0
@@ -311,13 +314,6 @@ async def update_equipment(
             # Convert model to dict and update equipment
             equipment_data = equipment.model_dump(exclude_unset=True)
 
-            daily_rate_value = None
-            if (
-                'daily_rate' in equipment_data
-                and equipment_data['daily_rate'] is not None
-            ):
-                daily_rate_value = float(equipment_data['daily_rate'])
-
             replacement_cost_value = None
             if (
                 'replacement_cost' in equipment_data
@@ -329,7 +325,6 @@ async def update_equipment(
                 equipment_id,
                 name=equipment_data.get('name'),
                 description=equipment_data.get('description'),
-                daily_rate=daily_rate_value,
                 replacement_cost=replacement_cost_value,
                 barcode=equipment_data.get('barcode'),
                 serial_number=equipment_data.get('serial_number'),
@@ -473,20 +468,162 @@ async def change_equipment_status(
 
     try:
         service = EquipmentService(db)
-        equipment = await service.change_status(equipment_id, status)
-        return EquipmentResponse.model_validate(equipment.__dict__)
-    except NotFoundError:
+        return await service.change_status(equipment_id, status)
+    except ValidationError as e:
+        raise HTTPException(
+            status_code=http_status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        ) from e
+    except NotFoundError as e:
         raise HTTPException(
             status_code=http_status.HTTP_404_NOT_FOUND,
-            detail='Equipment not found',
-        )
+            detail=str(e),
+        ) from e
     except StateError as e:
         raise HTTPException(
             status_code=http_status.HTTP_400_BAD_REQUEST,
-            detail=e.details.get('message', str(e)),
+            detail=str(e),
         ) from e
+
+
+@typed_post(
+    equipment_router,
+    '/{equipment_id}/regenerate-barcode',
+    response_model=EquipmentResponse,
+)
+async def regenerate_equipment_barcode(
+    equipment_id: int,
+    request: Optional[RegenerateBarcodeRequest] = None,
+    db: AsyncSession = Depends(get_db),
+) -> EquipmentResponse:
+    """Regenerate barcode for equipment.
+
+    Args:
+        equipment_id: Equipment ID
+        request: Empty request, kept for backwards compatibility
+        db: Database session
+
+    Returns:
+        Updated equipment with new barcode
+
+    Raises:
+        HTTPException: If equipment not found or validation fails
+    """
+    try:
+        service = EquipmentService(db)
+        updated_equipment = await service.regenerate_barcode(
+            equipment_id=equipment_id,
+        )
+
+        return updated_equipment
     except BusinessError as e:
+        if isinstance(e, NotFoundError):
+            raise HTTPException(
+                status_code=http_status.HTTP_404_NOT_FOUND,
+                detail=str(e),
+            ) from e
         raise HTTPException(
             status_code=http_status.HTTP_400_BAD_REQUEST,
-            detail=e.details.get('message', str(e)),
+            detail=str(e),
+        ) from e
+
+
+@typed_get(
+    equipment_router,
+    '/{equipment_id}/bookings',
+    response_model=List[BookingResponse],
+)
+async def get_equipment_bookings(
+    equipment_id: int,
+    db: AsyncSession = Depends(get_db),
+) -> List[BookingResponse]:
+    """Get bookings for a specific equipment item.
+
+    Args:
+        equipment_id: Equipment ID
+        db: Database session
+
+    Returns:
+        List of bookings for the specified equipment
+
+    Raises:
+        HTTPException: If equipment not found
+    """
+    try:
+        service = EquipmentService(db)
+        # Verify equipment exists
+        equipment = await service.get_equipment(equipment_id)
+        if not equipment:
+            raise HTTPException(
+                status_code=http_status.HTTP_404_NOT_FOUND,
+                detail=f'Equipment with ID {equipment_id} not found',
+            )
+
+        # Get equipment bookings
+        bookings = await service.get_equipment_bookings(equipment_id)
+        return [BookingResponse.model_validate(booking) for booking in bookings]
+    except NotFoundError as e:
+        raise HTTPException(
+            status_code=http_status.HTTP_404_NOT_FOUND,
+            detail=str(e),
+        ) from e
+    except Exception as e:
+        raise HTTPException(
+            status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f'Failed to retrieve bookings: {str(e)}',
+        ) from e
+
+
+@typed_get(
+    equipment_router,
+    '/{equipment_id}/timeline',
+    response_model=List[StatusTimelineResponse],
+)
+async def get_equipment_status_timeline(
+    equipment_id: int,
+    db: AsyncSession = Depends(get_db),
+) -> List[StatusTimelineResponse]:
+    """Get status timeline for a specific equipment item.
+
+    Args:
+        equipment_id: Equipment ID
+        db: Database session
+
+    Returns:
+        Status timeline for the specified equipment
+
+    Raises:
+        HTTPException: If equipment not found
+    """
+    try:
+        service = EquipmentService(db)
+        # Verify equipment exists
+        equipment = await service.get_equipment(equipment_id)
+        if not equipment:
+            raise HTTPException(
+                status_code=http_status.HTTP_404_NOT_FOUND,
+                detail=f'Equipment with ID {equipment_id} not found',
+            )
+
+        # For now, return a mock timeline since we don't have a dedicated method yet
+        # In a real implementation, we would have a service method like
+        # get_status_timeline
+        return [
+            StatusTimelineResponse(
+                id=1,
+                equipment_id=equipment_id,
+                status=equipment.status,
+                timestamp=datetime.now(),
+                notes='Current status',
+            )
+        ]
+    except NotFoundError as e:
+        raise HTTPException(
+            status_code=http_status.HTTP_404_NOT_FOUND,
+            detail=str(e),
+        ) from e
+    except Exception as e:
+        raise HTTPException(
+            status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f'Failed to retrieve status timeline: {str(e)}',
         ) from e

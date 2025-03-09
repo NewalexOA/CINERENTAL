@@ -37,7 +37,12 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """
     # Setup logging on startup
     configure_logging()
-    logger.info('Application startup')
+
+    # If we are in the testing environment, log only warnings and errors
+    # if settings.ENVIRONMENT == 'testing':
+    #     logger.info('Application startup in testing mode - reduced logging')
+    # else:
+    #     logger.info('Application startup')
 
     # Initialize resources
     await init_redis()

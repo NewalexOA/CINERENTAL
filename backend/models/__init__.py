@@ -5,12 +5,19 @@ and their relationships. It also includes common functionality like
 timestamp tracking and soft delete support.
 """
 
-from backend.models.base import Base, SoftDeleteMixin, TimestampMixin
+# Then import models without dependencies or with minimal dependencies
 from backend.models.booking import Booking, BookingStatus, PaymentStatus
 from backend.models.category import Category
 from backend.models.client import Client, ClientStatus
+
+# First import from core and mixins packages
+from backend.models.core import Base
 from backend.models.document import Document, DocumentStatus, DocumentType
 from backend.models.equipment import Equipment, EquipmentStatus
+
+# Import new global barcode model
+from backend.models.global_barcode import GlobalBarcodeSequence
+from backend.models.mixins import SoftDeleteMixin, TimestampMixin
 from backend.models.user import User
 
 __all__ = [
@@ -25,6 +32,7 @@ __all__ = [
     'Booking',
     'Document',
     'User',
+    'GlobalBarcodeSequence',
     # Status and type enums
     'BookingStatus',
     'PaymentStatus',

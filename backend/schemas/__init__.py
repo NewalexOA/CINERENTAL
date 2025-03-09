@@ -37,6 +37,8 @@ from backend.schemas.equipment import (
     EquipmentResponse,
     EquipmentUpdate,
     EquipmentWithCategory,
+    RegenerateBarcodeRequest,
+    StatusTimelineResponse,
 )
 
 __all__ = [
@@ -63,6 +65,8 @@ __all__ = [
     'EquipmentResponse',
     'EquipmentUpdate',
     'EquipmentWithCategory',
+    'RegenerateBarcodeRequest',
+    'StatusTimelineResponse',
     'CategoryCreate',
     'CategoryResponse',
     'CategoryUpdate',

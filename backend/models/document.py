@@ -5,20 +5,22 @@ Each document is associated with a booking and can be of different types
 like contracts, handover acts, etc.
 """
 
-from enum import Enum
+import enum
 from typing import TYPE_CHECKING, Optional
 
 from sqlalchemy import ForeignKey, String
 from sqlalchemy.dialects.postgresql import ENUM
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from backend.models import Base, TimestampMixin
+from backend.models.core import Base
+from backend.models.mixins import TimestampMixin
 
 if TYPE_CHECKING:
-    from backend.models import Booking, Client
+    from backend.models.booking import Booking
+    from backend.models.client import Client
 
 
-class DocumentStatus(str, Enum):
+class DocumentStatus(str, enum.Enum):
     """Document status enumeration."""
 
     DRAFT = 'DRAFT'
@@ -30,7 +32,7 @@ class DocumentStatus(str, Enum):
     CANCELLED = 'CANCELLED'
 
 
-class DocumentType(str, Enum):
+class DocumentType(str, enum.Enum):
     """Document type enumeration."""
 
     CONTRACT = 'CONTRACT'

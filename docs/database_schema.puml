@@ -22,7 +22,6 @@ table(equipment) {
   name: VARCHAR(255)
   description: TEXT
   barcode: VARCHAR(50)
-  daily_price: DECIMAL
   status: VARCHAR(20)
   created_at: TIMESTAMP
   updated_at: TIMESTAMP
@@ -54,7 +53,6 @@ table(booking_items) {
   primary_key(id): UUID
   foreign_key(booking_id): UUID
   foreign_key(equipment_id): UUID
-  daily_price: DECIMAL
   created_at: TIMESTAMP
   updated_at: TIMESTAMP
 }

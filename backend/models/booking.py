@@ -1,20 +1,20 @@
 """Booking model module.
 
-This module defines the Booking model representing equipment rental bookings.
-Each booking is associated with a client and equipment item, and tracks
-rental period, payment status, and other booking-related information.
+This module defines the Booking model for rental bookings.
+This includes the main booking entity and status enums.
 """
 
+import enum
 from datetime import datetime
 from decimal import Decimal
-from enum import Enum
 from typing import TYPE_CHECKING, List, Optional
 
 from sqlalchemy import DateTime, ForeignKey, Numeric, String
 from sqlalchemy.dialects.postgresql import ENUM
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from backend.models import Base, TimestampMixin
+from backend.models.core import Base
+from backend.models.mixins import TimestampMixin
 
 if TYPE_CHECKING:
     from backend.models.client import Client
@@ -22,7 +22,7 @@ if TYPE_CHECKING:
     from backend.models.equipment import Equipment
 
 
-class BookingStatus(str, Enum):
+class BookingStatus(str, enum.Enum):
     """Booking status enumeration."""
 
     PENDING = 'PENDING'
@@ -33,7 +33,7 @@ class BookingStatus(str, Enum):
     OVERDUE = 'OVERDUE'
 
 
-class PaymentStatus(str, Enum):
+class PaymentStatus(str, enum.Enum):
     """Payment status enumeration."""
 
     PENDING = 'PENDING'

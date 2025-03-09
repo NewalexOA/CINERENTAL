@@ -1,0 +1,824 @@
+{% extends "base.html" %}
+
+{% block title %}Категории - CINERENTAL{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Категории</h1>
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addCategoryModal">
+            <i class="fas fa-plus"></i> Добавить категорию
+        </button>
+    </div>
+
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Название</th>
+                                    <th>Оборудование</th>
+                                    <th>Действия</th>
+                                </tr>
+                            </thead>
+                            <tbody id="categoriesTable">
+                                <!-- Categories will be loaded dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Category Modal -->
+<div class="modal fade" id="addCategoryModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Добавить категорию</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addCategoryForm">
+                    <div class="mb-3">
+                        <label class="form-label">Название категории</label>
+                        <input type="text" class="form-control" name="name" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Описание</label>
+                        <textarea class="form-control" name="description" rows="3"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                <button type="button" class="btn btn-primary" id="addCategory">Добавить</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Category Modal -->
+<div class="modal fade" id="editCategoryModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Редактировать категорию</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editCategoryForm">
+                    <input type="hidden" name="id">
+                    <div class="mb-3">
+                        <label class="form-label">Название категории</label>
+                        <input type="text" class="form-control" name="name" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Описание</label>
+                        <textarea class="form-control" name="description" rows="3"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                <button type="button" class="btn btn-primary" id="updateCategory">Сохранить</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Category Details Modal -->
+<div class="modal fade" id="categoryDetailsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Детали категории</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="categoryDetails"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Subcategories Modal -->
+<div class="modal fade" id="subcategoriesModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Подкатегории - <span id="categoryName"></span></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <button class="btn btn-sm btn-primary" id="addSubcategoryBtn">
+                        <i class="fas fa-plus"></i> Добавить подкатегорию
+                    </button>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-sm table-striped">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Название</th>
+                                <th>Действия</th>
+                            </tr>
+                        </thead>
+                        <tbody id="subcategoriesTable">
+                            <!-- Subcategories will be loaded dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Add subcategory form -->
+                <div id="addSubcategoryForm" class="border p-3 rounded mt-3" style="display: none;">
+                    <h6>Добавить подкатегорию</h6>
+                    <input type="hidden" id="subcategoryCategoryId">
+                    <div class="mb-3">
+                        <label class="form-label">Название</label>
+                        <input type="text" class="form-control" id="subcategoryName" required>
+                    </div>
+                    <div>
+                        <button type="button" class="btn btn-sm btn-primary" id="saveSubcategory">Сохранить</button>
+                        <button type="button" class="btn btn-sm btn-secondary" id="cancelSubcategory">Отмена</button>
+                    </div>
+                </div>
+
+                <!-- Edit subcategory form -->
+                <div id="editSubcategoryForm" class="border p-3 rounded mt-3" style="display: none;">
+                    <h6>Редактировать подкатегорию</h6>
+                    <input type="hidden" id="editSubcategoryId">
+                    <div class="mb-3">
+                        <label class="form-label">Название</label>
+                        <input type="text" class="form-control" id="editSubcategoryName" required>
+                    </div>
+                    <div>
+                        <button type="button" class="btn btn-sm btn-primary" id="updateSubcategory">Обновить</button>
+                        <button type="button" class="btn btn-sm btn-secondary" id="cancelEditSubcategory">Отмена</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Loading categories when page is loaded
+    document.addEventListener('DOMContentLoaded', () => {
+        // First ensure loader is reset and hidden
+        const loader = document.getElementById('global-loader');
+        if (loader) {
+            loader.setAttribute('hidden', '');
+            if (getComputedStyle(loader).display !== 'none') {
+                loader.style.display = 'none';
+            }
+        }
+        window.loaderCounter = 0;
+        console.log('Forced loader reset on page load');
+
+        // Use inline loading indicator instead of global loader
+        const table = document.getElementById('categoriesTable');
+        if (table) {
+            table.innerHTML = '<tr><td colspan="4" class="text-center"><div class="spinner-border spinner-border-sm text-primary"></div> Загрузка категорий...</td></tr>';
+        }
+
+        // Load categories without using global loader
+        loadCategoriesWithoutGlobalLoader();
+        setupEventListeners();
+    });
+
+    // Load categories without using global loader
+    async function loadCategoriesWithoutGlobalLoader() {
+        try {
+            const categories = await api.get('/categories');
+            console.log('Загруженные категории:', categories);
+            const table = document.getElementById('categoriesTable');
+
+            if (!table) {
+                console.error('Элемент categoriesTable не найден');
+                return;
+            }
+
+            table.innerHTML = '';
+
+            if (categories.length === 0) {
+                table.innerHTML = '<tr><td colspan="4" class="text-center">Нет категорий</td></tr>';
+                return;
+            }
+
+            categories.forEach(category => {
+                console.log('Категория:', category.id, category);
+
+                const row = document.createElement('tr');
+                row.setAttribute('data-category-id', category.id);
+                row.innerHTML = `
+                    <td>${category.id}</td>
+                    <td>${escapeHtml(category.name)}</td>
+                    <td>${category.equipment_count || 0}</td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-primary subcategories-btn"
+                                data-category-id="${category.id}"
+                                data-category-name="${escapeHtml(category.name)}">
+                            Подкатегории
+                        </button>
+                        <button class="btn btn-sm btn-outline-primary edit-category"
+                                data-category-id="${category.id}">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger delete-category"
+                                data-category-id="${category.id}"
+                                data-category-name="${escapeHtml(category.name)}">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                `;
+                table.appendChild(row);
+            });
+
+            // Add event listeners
+            document.querySelectorAll('.edit-category').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const categoryId = e.target.closest('button').dataset.categoryId;
+                    openEditCategoryModal(categoryId);
+                });
+            });
+
+            document.querySelectorAll('.delete-category').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const categoryId = e.target.closest('button').dataset.categoryId;
+                    const categoryName = e.target.closest('button').dataset.categoryName;
+                    deleteCategory(categoryId, categoryName);
+                });
+            });
+
+            document.querySelectorAll('.subcategories-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const categoryId = e.target.dataset.categoryId;
+                    const categoryName = e.target.dataset.categoryName;
+                    openSubcategoriesModal(categoryId, categoryName);
+                });
+            });
+        } catch (error) {
+            console.error('Ошибка при загрузке категорий:', error);
+            const table = document.getElementById('categoriesTable');
+            if (table) {
+                table.innerHTML = '<tr><td colspan="4" class="text-center text-danger">Ошибка при загрузке категорий</td></tr>';
+            }
+            showToast('Ошибка при загрузке категорий', 'danger');
+        }
+    }
+
+    // Setup event listeners
+    function setupEventListeners() {
+        // Add category
+        document.getElementById('addCategory').addEventListener('click', addCategory);
+
+        // Edit category
+        document.getElementById('updateCategory').addEventListener('click', updateCategory);
+
+        // Add subcategory
+        document.getElementById('addSubcategoryBtn').addEventListener('click', () => {
+            document.getElementById('addSubcategoryForm').style.display = 'block';
+            document.getElementById('editSubcategoryForm').style.display = 'none';
+        });
+
+        document.getElementById('cancelSubcategory').addEventListener('click', () => {
+            document.getElementById('addSubcategoryForm').style.display = 'none';
+        });
+
+        document.getElementById('saveSubcategory').addEventListener('click', addSubcategory);
+
+        // Cancel subcategory editing
+        document.getElementById('cancelEditSubcategory').addEventListener('click', () => {
+            document.getElementById('editSubcategoryForm').style.display = 'none';
+        });
+
+        // Update subcategory
+        document.getElementById('updateSubcategory').addEventListener('click', updateSubcategory);
+
+        // Event handlers for closing modals
+        const modals = [
+            'addCategoryModal', 'editCategoryModal', 'subcategoriesModal'
+        ];
+
+        modals.forEach(modalId => {
+            const modalElement = document.getElementById(modalId);
+            if (!modalElement) return;
+
+            // Reset loader when modal is shown
+            modalElement.addEventListener('show.bs.modal', () => {
+                resetLoader();
+            });
+
+            // Reset loader when modal is hidden
+            modalElement.addEventListener('hidden.bs.modal', () => {
+                resetLoader();
+            });
+
+            // Additional safety: reset loader on backdrop click
+            modalElement.addEventListener('click', (event) => {
+                if (event.target === modalElement) {
+                    resetLoader();
+                }
+            });
+        });
+
+        // Loader failsafe check
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape') {
+                const loader = document.getElementById('global-loader');
+                if (loader && !loader.hasAttribute('hidden')) {
+                    console.warn('Modal closed with Escape key, forcing loader reset');
+                    resetLoader();
+                }
+            }
+        });
+
+        // Safety: when page is loaded and when navigating to other pages
+        window.addEventListener('beforeunload', resetLoader);
+        window.addEventListener('pageshow', resetLoader);
+
+        // Additional safety: periodically check for loader being visible too long
+        setInterval(() => {
+            const loader = document.getElementById('global-loader');
+            if (loader && !loader.hasAttribute('hidden')) {
+                const loaderTimestamp = parseInt(loader.dataset.timestamp || '0');
+                const currentTime = Date.now();
+
+                // If loader has been visible for more than 3 seconds, reset i
+                if (currentTime - loaderTimestamp > 3000) {
+                    console.warn('Loader has been visible for too long, resetting');
+                    resetLoader();
+                }
+            }
+        }, 3000);
+    }
+
+    // Add category
+    async function addCategory() {
+        const form = document.getElementById('addCategoryForm');
+        const formData = new FormData(form);
+        const data = Object.fromEntries(formData);
+
+        console.log('Данные для создания категории:', data);
+
+        // Validation of form data
+        if (!data.name.trim()) {
+            showToast('Необходимо указать название категории', 'warning');
+            return;
+        }
+
+        // Get the add button and change its state to loading
+        const addButton = document.getElementById('addCategory');
+        const originalButtonText = addButton.innerHTML;
+        addButton.disabled = true;
+        addButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Добавление...';
+
+        try {
+            const response = await api.post('/categories/', data);
+            console.log('Ответ сервера при создании категории:', response);
+            showToast('Категория успешно добавлена', 'success');
+
+            // Close modal and update category lis
+            const modal = bootstrap.Modal.getInstance(document.getElementById('addCategoryModal'));
+            modal.hide();
+            form.reset();
+
+            await loadCategoriesWithoutGlobalLoader();
+        } catch (error) {
+            console.error('Ошибка при добавлении категории:', error);
+            showToast('Ошибка при добавлении категории', 'danger');
+        } finally {
+            // Restore button state
+            addButton.disabled = false;
+            addButton.innerHTML = originalButtonText;
+        }
+    }
+
+    // Open edit category modal
+    async function openEditCategoryModal(categoryId) {
+        // Create a temporary loading overlay in the table area
+        const tableArea = document.querySelector('.card-body');
+        const loadingOverlay = document.createElement('div');
+        loadingOverlay.className = 'position-absolute top-0 left-0 w-100 h-100 d-flex justify-content-center align-items-center bg-light bg-opacity-75';
+        loadingOverlay.style.zIndex = '100';
+        loadingOverlay.innerHTML = '<div class="spinner-border text-primary" role="status"><span class="visually-hidden">Загрузка...</span></div>';
+
+        if (tableArea) {
+            tableArea.style.position = 'relative';
+            tableArea.appendChild(loadingOverlay);
+        }
+
+        try {
+            const category = await api.get(`/categories/${categoryId}`);
+
+            const form = document.getElementById('editCategoryForm');
+            form.elements.id.value = category.id;
+            form.elements.name.value = category.name;
+            form.elements.description.value = category.description || '';
+
+            const modal = new bootstrap.Modal(document.getElementById('editCategoryModal'));
+            modal.show();
+        } catch (error) {
+            console.error('Ошибка при загрузке категории:', error);
+            showToast('Ошибка при загрузке категории', 'danger');
+        } finally {
+            // Remove loading overlay
+            if (loadingOverlay && loadingOverlay.parentNode) {
+                loadingOverlay.parentNode.removeChild(loadingOverlay);
+            }
+        }
+    }
+
+    // Update category
+    async function updateCategory() {
+        const form = document.getElementById('editCategoryForm');
+        const categoryId = form.elements.id.value;
+        const data = {
+            name: form.elements.name.value,
+            description: form.elements.description.value
+        };
+
+        // Validation of form data
+        if (!data.name.trim()) {
+            showToast('Необходимо указать название категории', 'warning');
+            return;
+        }
+
+        // Get the update button and change its state to loading
+        const updateButton = document.getElementById('updateCategory');
+        const originalButtonText = updateButton.innerHTML;
+        updateButton.disabled = true;
+        updateButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Сохранение...';
+
+        try {
+            await api.put(`/categories/${categoryId}`, data);
+            showToast('Категория успешно обновлена', 'success');
+
+            // Close modal and update category lis
+            const modal = bootstrap.Modal.getInstance(document.getElementById('editCategoryModal'));
+            modal.hide();
+
+            await loadCategoriesWithoutGlobalLoader();
+        } catch (error) {
+            console.error('Ошибка при обновлении категории:', error);
+            showToast('Ошибка при обновлении категории', 'danger');
+        } finally {
+            // Restore button state
+            updateButton.disabled = false;
+            updateButton.innerHTML = originalButtonText;
+        }
+    }
+
+    // Open subcategories modal
+    async function openSubcategoriesModal(categoryId, categoryName) {
+        try {
+            // Prepare modal conten
+            document.getElementById('categoryName').textContent = categoryName || '';
+            document.getElementById('subcategoryCategoryId').value = categoryId || '';
+            document.getElementById('addSubcategoryForm').style.display = 'none';
+            document.getElementById('editSubcategoryForm').style.display = 'none';
+            document.getElementById('subcategoriesTable').innerHTML = '<tr><td colspan="3" class="text-center"><div class="spinner-border spinner-border-sm text-primary"></div> Загрузка подкатегорий...</td></tr>';
+
+            // Show modal first for better UX
+            const modal = new bootstrap.Modal(document.getElementById('subcategoriesModal'));
+            modal.show();
+
+            // Load data after modal animation completes
+            setTimeout(async () => {
+                try {
+                    const subcategories = await api.get(`/categories/${categoryId}/subcategories`);
+                    renderSubcategories(subcategories);
+                } catch (error) {
+                    console.error('Error loading subcategories:', error);
+                    document.getElementById('subcategoriesTable').innerHTML =
+                        '<tr><td colspan="3" class="text-center text-danger">Ошибка при загрузке подкатегорий</td></tr>';
+                    showToast('Ошибка при загрузке подкатегорий', 'danger');
+                }
+            }, 300);
+        } catch (error) {
+            console.error('Error in modal preparation:', error);
+            showToast('Ошибка при открытии модального окна', 'danger');
+            resetLoader();
+        }
+    }
+
+    // Load subcategories
+    async function loadSubcategories(categoryId) {
+        try {
+            const subcategories = await api.get(`/categories/${categoryId}/subcategories`);
+            return subcategories;
+        } catch (error) {
+            console.error('Ошибка при загрузке подкатегорий:', error);
+            showToast('Ошибка при загрузке подкатегорий', 'danger');
+            throw error;
+        }
+    }
+
+    // Helper function to render subcategories
+    function renderSubcategories(subcategories) {
+        const table = document.getElementById('subcategoriesTable');
+
+        if (!table) {
+            console.error('Элемент subcategoriesTable не найден');
+            return;
+        }
+
+        table.innerHTML = '';
+
+        if (!subcategories || subcategories.length === 0) {
+            table.innerHTML = '<tr><td colspan="3" class="text-center">Нет подкатегорий</td></tr>';
+            return;
+        }
+
+        subcategories.forEach(subcategory => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${subcategory.id}</td>
+                <td>${escapeHtml(subcategory.name)}</td>
+                <td>
+                    <button class="btn btn-sm btn-outline-primary edit-subcategory"
+                            data-subcategory-id="${subcategory.id}">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="btn btn-sm btn-outline-danger delete-subcategory"
+                            data-subcategory-id="${subcategory.id}">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            `;
+            table.appendChild(row);
+        });
+
+        // Add event listeners for editing and deleting subcategories
+        document.querySelectorAll('.edit-subcategory').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const subcategoryId = e.target.closest('button').dataset.subcategoryId;
+                openEditSubcategoryForm(subcategoryId);
+            });
+        });
+
+        document.querySelectorAll('.delete-subcategory').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const subcategoryId = e.target.closest('button').dataset.subcategoryId;
+                deleteSubcategory(subcategoryId);
+            });
+        });
+    }
+
+    // Add subcategory
+    async function addSubcategory() {
+        const categoryId = document.getElementById('subcategoryCategoryId').value;
+        const name = document.getElementById('subcategoryName').value;
+
+        // Validation
+        if (!name.trim()) {
+            showToast('Необходимо указать название подкатегории', 'warning');
+            return;
+        }
+
+        // Set button loading state
+        const saveButton = document.getElementById('saveSubcategory');
+        const originalButtonText = saveButton.innerHTML;
+        saveButton.disabled = true;
+        saveButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Сохранение...';
+
+        try {
+            const response = await api.post('/categories/', {
+                parent_id: parseInt(categoryId),
+                name: name,
+                description: ''
+            });
+
+            showToast('Подкатегория успешно добавлена', 'success');
+
+            // Reset form and update lis
+            document.getElementById('subcategoryName').value = '';
+            document.getElementById('addSubcategoryForm').style.display = 'none';
+
+            const subcategories = await loadSubcategories(categoryId);
+            renderSubcategories(subcategories);
+        } catch (error) {
+            console.error('Ошибка при добавлении подкатегории:', error);
+            showToast('Ошибка при добавлении подкатегории', 'danger');
+        } finally {
+            // Restore button state
+            saveButton.disabled = false;
+            saveButton.innerHTML = originalButtonText;
+        }
+    }
+
+    // Open edit subcategory form
+    async function openEditSubcategoryForm(subcategoryId) {
+        // Show loading state
+        document.getElementById('subcategoriesTable').innerHTML =
+            '<tr><td colspan="3" class="text-center"><div class="spinner-border spinner-border-sm"></div> Загрузка...</td></tr>';
+
+        try {
+            const subcategory = await api.get(`/categories/${subcategoryId}`);
+
+            // Restore table and populate form
+            const categoryId = document.getElementById('subcategoryCategoryId').value;
+            const subcategories = await loadSubcategories(categoryId);
+            renderSubcategories(subcategories);
+
+            document.getElementById('editSubcategoryId').value = subcategory.id;
+            document.getElementById('editSubcategoryName').value = subcategory.name;
+
+            document.getElementById('editSubcategoryForm').style.display = 'block';
+            document.getElementById('addSubcategoryForm').style.display = 'none';
+        } catch (error) {
+            console.error('Ошибка при загрузке подкатегории:', error);
+            showToast('Ошибка при загрузке подкатегории', 'danger');
+
+            // Restore table on error
+            const categoryId = document.getElementById('subcategoryCategoryId').value;
+            try {
+                const subcategories = await loadSubcategories(categoryId);
+                renderSubcategories(subcategories);
+            } catch (e) {
+                document.getElementById('subcategoriesTable').innerHTML =
+                    '<tr><td colspan="3" class="text-center text-danger">Не удалось загрузить подкатегории</td></tr>';
+            }
+        }
+    }
+
+    // Update subcategory
+    async function updateSubcategory() {
+        const subcategoryId = document.getElementById('editSubcategoryId').value;
+        const name = document.getElementById('editSubcategoryName').value;
+
+        // Validation
+        if (!name.trim()) {
+            showToast('Необходимо указать название подкатегории', 'warning');
+            return;
+        }
+
+        // Set button loading state
+        const updateButton = document.getElementById('updateSubcategory');
+        const originalButtonText = updateButton.innerHTML;
+        updateButton.disabled = true;
+        updateButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Обновление...';
+
+        try {
+            const subcategory = await api.get(`/categories/${subcategoryId}`);
+            await api.put(`/categories/${subcategoryId}`, {
+                name,
+                description: subcategory.description,
+                parent_id: subcategory.parent_id
+            });
+            showToast('Подкатегория успешно обновлена', 'success');
+
+            document.getElementById('editSubcategoryForm').style.display = 'none';
+
+            const categoryId = document.getElementById('subcategoryCategoryId').value;
+            const subcategories = await loadSubcategories(categoryId);
+            renderSubcategories(subcategories);
+        } catch (error) {
+            console.error('Ошибка при обновлении подкатегории:', error);
+            showToast('Ошибка при обновлении подкатегории', 'danger');
+        } finally {
+            // Restore button state
+            updateButton.disabled = false;
+            updateButton.innerHTML = originalButtonText;
+        }
+    }
+
+    // Delete subcategory
+    async function deleteSubcategory(subcategoryId) {
+        if (!confirm('Вы уверены, что хотите удалить эту подкатегорию?\n\nВнимание: Это помечает подкатегорию как удаленную. Подкатегория не будет видна в списке, но данные сохранятся в системе.')) {
+            return;
+        }
+
+        // Show loading state
+        document.getElementById('subcategoriesTable').innerHTML =
+            '<tr><td colspan="3" class="text-center"><div class="spinner-border spinner-border-sm"></div> Удаление...</td></tr>';
+
+        try {
+            await api.delete(`/categories/${subcategoryId}`);
+            showToast('Подкатегория успешно удалена', 'success');
+
+            const categoryId = document.getElementById('subcategoryCategoryId').value;
+            const subcategories = await loadSubcategories(categoryId);
+            renderSubcategories(subcategories);
+        } catch (error) {
+            console.error('Ошибка при удалении подкатегории:', error);
+
+            // Try to extract more detailed error message
+            let errorMessage = 'Ошибка при удалении подкатегории';
+            if (error.response && error.response.data && error.response.data.detail) {
+                if (typeof error.response.data.detail === 'string') {
+                    errorMessage = error.response.data.detail;
+                }
+            }
+
+            showToast(errorMessage, 'danger');
+
+            // Restore table on error
+            const categoryId = document.getElementById('subcategoryCategoryId').value;
+            try {
+                const subcategories = await loadSubcategories(categoryId);
+                renderSubcategories(subcategories);
+            } catch (e) {
+                document.getElementById('subcategoriesTable').innerHTML =
+                    '<tr><td colspan="3" class="text-center text-danger">Не удалось загрузить подкатегории</td></tr>';
+            }
+        }
+    }
+
+    // Delete category
+    async function deleteCategory(categoryId, categoryName) {
+        if (!confirm(`Вы уверены, что хотите удалить категорию "${categoryName}"?\n\nВнимание: Это помечает категорию как удаленную. Категория не будет видна в списке, но данные сохранятся в системе.`)) {
+            return;
+        }
+
+        // Find category row in the table
+        const row = document.querySelector(`tr[data-category-id="${categoryId}"]`);
+        if (row) {
+            row.style.opacity = '0.6';
+
+            // Create loading overlay
+            const loadingOverlay = document.createElement('div');
+            loadingOverlay.className = 'position-absolute w-100 h-100 d-flex justify-content-center align-items-center';
+            loadingOverlay.style = 'top: 0; left: 0; background: rgba(255,255,255,0.7);';
+            loadingOverlay.innerHTML = '<div class="spinner-border spinner-border-sm text-primary"></div>';
+
+            // Ensure row has relative positioning
+            if (window.getComputedStyle(row).position !== 'relative') {
+                row.style.position = 'relative';
+            }
+
+            row.appendChild(loadingOverlay);
+        }
+
+        try {
+            await api.delete(`/categories/${categoryId}`);
+            showToast(`Категория "${categoryName}" успешно удалена`, 'success');
+            await loadCategoriesWithoutGlobalLoader();
+
+        } catch (error) {
+            console.error('Ошибка при удалении категории:', error);
+
+            // Handle specific error types
+            let errorMessage = 'Не удалось удалить категорию';
+
+            if (error.message && error.message.includes('foreign key constraint')) {
+                if (error.message.includes('equipment_category_id_fkey')) {
+                    errorMessage = `Категория "${categoryName}" не может быть удалена, так как она используется в оборудовании. Сначала необходимо удалить или переместить связанное оборудование.`;
+                } else if (error.message.includes('subcategory')) {
+                    errorMessage = `Категория "${categoryName}" не может быть удалена, так как она содержит подкатегории. Сначала необходимо удалить все подкатегории.`;
+                }
+            } else if (error.response) {
+                // Try to parse API response for more detailed error messages
+                const data = error.response.data;
+                if (data && data.detail) {
+                    if (typeof data.detail === 'string') {
+                        // Direct error message
+                        errorMessage = data.detail;
+                    } else if (data.detail.msg) {
+                        // Pydantic validation error
+                        errorMessage = data.detail.msg;
+                    }
+                }
+            }
+
+            showToast(errorMessage, 'danger');
+            await loadCategoriesWithoutGlobalLoader();
+
+        } finally {
+            // Restore row appearance
+            if (row) {
+                row.style.opacity = '';
+
+                const loadingOverlay = row.querySelector('div.position-absolute');
+                if (loadingOverlay) {
+                    loadingOverlay.remove();
+                }
+            }
+        }
+    }
+
+    // Helper function for HTML escaping
+    function escapeHtml(str) {
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    }
+</script>
+{% endblock %}

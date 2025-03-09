@@ -76,7 +76,6 @@ class TestDocumentService:
             description='Test Description',
             serial_number='TEST001',
             barcode='TEST001',
-            daily_rate=Decimal('100.00'),
             replacement_cost=Decimal('1000.00'),
             status=EquipmentStatus.AVAILABLE,
         )
@@ -96,7 +95,7 @@ class TestDocumentService:
         booking_service = BookingService(db_session)
         start_date = datetime.now(timezone.utc) + timedelta(days=1)
         end_date = start_date + timedelta(days=3)
-        total_amount = float(300.00)  # 3 days * 100.00 daily rate
+        total_amount = float(300.00)
         deposit_amount = float(200.00)  # 20% of replacement cost
 
         return await booking_service.create_booking(

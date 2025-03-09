@@ -1,5 +1,6 @@
 """Test configuration and fixtures for integration tests."""
 
+import os
 from datetime import datetime, timedelta, timezone
 from functools import wraps
 from typing import (
@@ -13,8 +14,10 @@ from typing import (
 )
 
 import pytest_asyncio
+from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from backend.core.logging import configure_logging
 from backend.models.booking import Booking
 from backend.models.category import Category
 from backend.models.client import Client
@@ -24,6 +27,30 @@ from backend.services.category import CategoryService
 from backend.services.client import ClientService
 from backend.services.document import DocumentService
 from backend.services.equipment import EquipmentService
+
+
+# Set logging for tests
+def configure_test_logging():
+    """Configure logging for tests."""
+    # Set the environment variable for tests
+    os.environ['ENVIRONMENT'] = 'testing'
+
+    # Forcefully set the logging level to WARNING
+    # First, remove all handlers
+    logger.remove()
+
+    # Add a handler with the WARNING level
+    logger.add(
+        sink=lambda msg: None, level='WARNING'  # Empty handler to suppress outpu
+    )
+
+    # Use centralized logging configuration through loguru
+    configure_logging()
+
+
+# Call the logging configuration function
+configure_test_logging()
+
 
 P = ParamSpec('P')
 T = TypeVar('T')
@@ -99,7 +126,6 @@ async def test_equipment(
         description='Test Description',
         serial_number='TEST001',
         barcode='TEST001',
-        daily_rate=100.0,
         replacement_cost=1000.0,
     )
     yield equipment
@@ -139,11 +165,20 @@ async def document_service(
 
 
 @async_fixture
+async def category_service(
+    db_session: AsyncSession,
+) -> AsyncGenerator[CategoryService, None]:
+    """Create category service instance."""
+    yield CategoryService(db_session)
+
+
+@async_fixture
 async def equipment_service(
     db_session: AsyncSession,
+    category_service: CategoryService,
 ) -> AsyncGenerator[EquipmentService, None]:
     """Create equipment service instance."""
-    yield EquipmentService(db_session)
+    yield EquipmentService(db_session, category_service)
 
 
 @async_fixture

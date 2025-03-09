@@ -14,7 +14,8 @@ from sqlalchemy.orm import joinedload
 from sqlalchemy.sql import Select
 
 from backend.exceptions import BusinessError
-from backend.models import Booking, BookingStatus, Equipment, EquipmentStatus
+from backend.models.booking import Booking, BookingStatus
+from backend.models.equipment import Equipment, EquipmentStatus
 from backend.repositories import BaseRepository
 
 T = TypeVar('T')
@@ -363,10 +364,15 @@ class EquipmentRepository(BaseRepository[Equipment]):
         query: Optional[str] = None,
         available_from: Optional[datetime] = None,
         available_to: Optional[datetime] = None,
+        include_deleted: bool = False,
     ) -> List[Equipment]:
         """Get list of equipment with optional filtering and search."""
         try:
             stmt = select(Equipment)
+
+            # Фильтрация удалённых элементов, если include_deleted=False
+            if not include_deleted:
+                stmt = stmt.where(Equipment.deleted_at.is_(None))
 
             if status:
                 stmt = stmt.where(Equipment.status == status)

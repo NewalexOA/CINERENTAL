@@ -56,7 +56,6 @@
                             <th>Категория</th>
                             <th>Штрих-код</th>
                             <th>Статус</th>
-                            <th>Дневная ставка</th>
                             <th>Действия</th>
                         </tr>
                     </thead>
@@ -74,7 +73,6 @@
                                     {{ item.status }}
                                 </span>
                             </td>
-                            <td>{{ item.daily_rate }} ₽</td>
                             <td>
                                 <div class="btn-group">
                                     <a href="/equipment/{{ item.id }}" class="btn btn-sm btn-outline-primary">
@@ -110,8 +108,14 @@
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Категория</label>
-                        <select class="form-select" name="category_id" required>
+                        <select class="form-select" name="category_id" id="category_id" required>
                             <!-- Categories will be loaded dynamically -->
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Подкатегория</label>
+                        <select class="form-select" name="subcategory_prefix_id" id="subcategory_prefix_id" disabled>
+                            <option value="">Сначала выберите категорию</option>
                         </select>
                     </div>
                     <div class="mb-3">
@@ -123,16 +127,24 @@
                         <input type="text" class="form-control" name="serial_number" required>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Штрих-код</label>
-                        <input type="text" class="form-control" name="barcode" required>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Дневная ставка</label>
-                        <input type="number" class="form-control" name="daily_rate" required>
+                        <div class="form-check form-switch mb-2">
+                            <input class="form-check-input" type="checkbox" id="generate_barcode" name="generate_barcode" checked>
+                            <label class="form-check-label" for="generate_barcode">Сгенерировать штрих-код автоматически</label>
+                        </div>
+                        <div class="input-group">
+                            <input type="text" class="form-control" name="barcode" id="barcode_input" readonly>
+                            <button class="btn btn-outline-secondary" type="button" id="preview_barcode">Предпросмотр</button>
+                        </div>
+                        <small class="form-text text-muted">
+                            Штрих-код будет сгенерирован автоматически на основе выбранной категории и подкатегории.
+                        </small>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Стоимость замены</label>
-                        <input type="number" class="form-control" name="replacement_cost" required>
+                        <input type="number" class="form-control" name="replacement_cost" min="0" max="99999999.99" step="0.01" required>
+                        <small class="form-text text-muted">
+                            Максимальное значение: 99,999,999.99
+                        </small>
                     </div>
                 </form>
             </div>
@@ -155,26 +167,146 @@ async function loadCategories() {
         formSelect.innerHTML = categories.map(category =>
             `<option value="${category.id}">${category.name}</option>`
         ).join('');
+
+        if (categories.length > 0) {
+            await loadSubcategories(categories[0].id);
+        }
     } catch (error) {
         console.error('Error loading categories:', error);
-        showToast('Ошибка загрузки категорий', 'danger');
+        showToast('Ошибка при загрузке категорий', 'danger');
     }
 }
 
-// Handle equipment creation
-document.getElementById('addEquipment').addEventListener('click', async () => {
-    const form = document.getElementById('addEquipmentForm');
-    const formData = new FormData(form);
-    const data = Object.fromEntries(formData.entries());
+async function loadSubcategories(categoryId) {
+    try {
+        const subcategorySelect = document.getElementById('subcategory_prefix_id');
+
+        subcategorySelect.innerHTML = '<option value="">Загрузка...</option>';
+        subcategorySelect.disabled = true;
+
+        const subcategories = await api.get(`/categories/${categoryId}/subcategories`);
+
+        if (subcategories.length === 0) {
+            subcategorySelect.innerHTML = '<option value="">Нет доступных подкатегорий</option>';
+            subcategorySelect.disabled = true;
+            document.getElementById('preview_barcode').disabled = true;
+        } else {
+            subcategorySelect.innerHTML = subcategories.map(subcategory =>
+                `<option value="${subcategory.id}">${subcategory.name} (${subcategory.prefix})</option>`
+            ).join('');
+            subcategorySelect.disabled = false;
+            document.getElementById('preview_barcode').disabled = false;
+        }
+    } catch (error) {
+        console.error('Error loading subcategories:', error);
+        showToast('Ошибка при загрузке подкатегорий', 'danger');
+    }
+}
+
+async function previewBarcode() {
+    const categoryId = document.getElementById('category_id').value;
+    const subcategoryPrefixId = document.getElementById('subcategory_prefix_id').value;
+    const barcodeInput = document.getElementById('barcode_input');
+
+    if (!categoryId || !subcategoryPrefixId) {
+        showToast('Выберите категорию и подкатегорию', 'warning');
+        return;
+    }
 
     try {
-        await api.post('/equipment', data);
-        showToast('Оборудование успешно добавлено', 'success');
-        location.reload();
+        showLoader();
+        const response = await api.post('/barcodes/preview', {
+            category_id: parseInt(categoryId),
+            subcategory_prefix_id: parseInt(subcategoryPrefixId)
+        });
+
+        barcodeInput.value = response.barcode;
     } catch (error) {
-        console.error('Error creating equipment:', error);
-        showToast('Ошибка при создании', 'danger');
+        console.error('Error previewing barcode:', error);
+        showToast('Ошибка при предпросмотре штрих-кода', 'danger');
+    } finally {
+        hideLoader();
     }
+}
+
+// Add event listeners after DOM is loaded
+document.addEventListener('DOMContentLoaded', function() {
+    loadCategories();
+
+    // Listen for category changes
+    document.getElementById('category_id').addEventListener('change', function() {
+        loadSubcategories(this.value);
+    });
+
+    // Listen for preview barcode button clicks
+    document.getElementById('preview_barcode').addEventListener('click', previewBarcode);
+
+    // Listen for generate barcode checkbox changes
+    document.getElementById('generate_barcode').addEventListener('change', function() {
+        const barcodeInput = document.getElementById('barcode_input');
+        const previewButton = document.getElementById('preview_barcode');
+
+        if (this.checked) {
+            barcodeInput.readOnly = true;
+            previewButton.disabled = false;
+            previewButton.style.display = '';
+            barcodeInput.value = '';
+        } else {
+            barcodeInput.readOnly = false;
+            previewButton.disabled = true;
+            previewButton.style.display = 'none';
+        }
+    });
+
+    // Form submission handler
+    document.getElementById('addEquipment').addEventListener('click', async function() {
+        const form = document.getElementById('addEquipmentForm');
+
+        // Additional validation
+        if (document.getElementById('generate_barcode').checked) {
+            const subcategoryPrefixId = document.getElementById('subcategory_prefix_id').value;
+            if (!subcategoryPrefixId) {
+                showToast('Выберите подкатегорию для генерации штрих-кода', 'warning');
+                return;
+            }
+        }
+
+        // Get form data
+        const formData = new FormData(form);
+        const data = Object.fromEntries(formData.entries());
+
+        // Convert checkbox value to boolean
+        data.generate_barcode = formData.has('generate_barcode');
+
+        // Convert numeric fields
+        data.category_id = parseInt(data.category_id);
+        if (data.subcategory_prefix_id) {
+            data.subcategory_prefix_id = parseInt(data.subcategory_prefix_id);
+        }
+        if (data.replacement_cost) {
+            data.replacement_cost = parseFloat(data.replacement_cost);
+        }
+
+        // Send API reques
+        try {
+            showLoader();
+            const response = await api.post('/equipment/', data);
+            showToast('Оборудование успешно добавлено', 'success');
+
+            // Close modal and reload equipment lis
+            const modal = bootstrap.Modal.getInstance(document.getElementById('addEquipmentModal'));
+            modal.hide();
+            form.reset();
+
+            // Reload equipment lis
+            window.location.reload();
+        } catch (error) {
+            console.error('Error adding equipment:', error);
+            showToast(error.response?.data?.detail || 'Ошибка при добавлении оборудования', 'danger');
+        } finally {
+            hideLoader();
+        }
+    });
 });
 
 // Copy barcode to clipboard
