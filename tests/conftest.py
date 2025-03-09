@@ -38,13 +38,8 @@ from backend.core.config import settings
 from backend.core.database import get_db
 from backend.core.logging import configure_logging
 from backend.main import app as main_app
-from backend.models.booking import Booking
-from backend.models.category import Category
-from backend.models.client import Client
+from backend.models import Booking, Category, Client, Document, Equipment
 from backend.models.core import Base
-from backend.models.document import Document
-from backend.models.equipment import Equipment
-from backend.models.subcategory_prefix import SubcategoryPrefix
 from backend.repositories import BookingRepository, EquipmentRepository
 from backend.schemas import (
     BookingStatus,
@@ -54,13 +49,13 @@ from backend.schemas import (
     PaymentStatus,
 )
 from backend.services import (
+    BarcodeService,
     BookingService,
     CategoryService,
     ClientService,
     DocumentService,
     EquipmentService,
 )
-from backend.services.barcode import BarcodeService
 
 
 # Set logging for tests
@@ -577,7 +572,7 @@ async def test_category_with_prefix(db_session: AsyncSession) -> Category:
         db_session: Database session
 
     Returns:
-        Category instance with prefix
+        Category instance
     """
     category = Category(
         name=f'Test Category {uuid.uuid4()}',
@@ -588,31 +583,6 @@ async def test_category_with_prefix(db_session: AsyncSession) -> Category:
     await db_session.commit()
     await db_session.refresh(category)
     return category
-
-
-@pytest_asyncio.fixture
-async def test_subcategory_prefix(
-    db_session: AsyncSession, test_category_with_prefix: Category
-) -> SubcategoryPrefix:
-    """Create a test subcategory prefix.
-
-    Args:
-        db_session: Database session
-        test_category_with_prefix: Category instance
-
-    Returns:
-        SubcategoryPrefix instance
-    """
-    subcategory_prefix = SubcategoryPrefix(
-        category_id=test_category_with_prefix.id,
-        name=f'Test Subcategory {uuid.uuid4()}',
-        prefix='TS',
-        description='Test Subcategory Description',
-    )
-    db_session.add(subcategory_prefix)
-    await db_session.commit()
-    await db_session.refresh(subcategory_prefix)
-    return subcategory_prefix
 
 
 @pytest_asyncio.fixture

@@ -3,7 +3,7 @@
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.models import Category, SubcategoryPrefix
+from backend.models import Category
 from tests.conftest import async_test
 
 
@@ -23,17 +23,6 @@ async def test_create_equipment_with_generated_barcode(
     await db_session.commit()
     await db_session.refresh(category)
 
-    # Create test subcategory prefix
-    subcategory_prefix = SubcategoryPrefix(
-        category_id=category.id,
-        name='Test Subcategory',
-        prefix='TS',
-        description='Test Subcategory Description',
-    )
-    db_session.add(subcategory_prefix)
-    await db_session.commit()
-    await db_session.refresh(subcategory_prefix)
-
     # Create equipment with generated barcode
     response = await async_client.post(
         '/api/v1/equipment/',
@@ -41,7 +30,6 @@ async def test_create_equipment_with_generated_barcode(
             'name': 'Test Equipment',
             'description': 'Test Equipment Description',
             'category_id': category.id,
-            'subcategory_prefix_id': subcategory_prefix.id,
             'generate_barcode': True,
             'serial_number': 'SN001',
             'status': 'AVAILABLE',
@@ -57,8 +45,7 @@ async def test_create_equipment_with_generated_barcode(
 
     # Check barcode format
     assert isinstance(barcode, str)
-    assert len(barcode.split('-')) == 3
-    assert barcode.startswith('TCTS-')
+    assert len(barcode) == 11  # 9 digits for sequence + 2 digits for checksum
 
     # Verify equipment was created with the barcode
     equipment_response = await async_client.get(f'/api/v1/equipment/{data["id"]}')

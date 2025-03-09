@@ -4,7 +4,6 @@ import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.exceptions import ValidationError
-from backend.models import Category, SubcategoryPrefix
 from backend.services.barcode import BarcodeService
 from tests.conftest import async_fixture, async_test
 
@@ -29,68 +28,13 @@ class TestBarcodeService:
     async def test_generate_barcode(
         self,
         barcode_service: BarcodeService,
-        test_category_with_prefix: Category,
-        test_subcategory_prefix: SubcategoryPrefix,
     ) -> None:
         """Test generating a barcode."""
-        barcode = await barcode_service.generate_barcode(
-            category_id=test_category_with_prefix.id,
-            subcategory_prefix_id=test_subcategory_prefix.id,
-        )
+        barcode = await barcode_service.generate_barcode()
 
         # Check barcode format
         assert isinstance(barcode, str)
-        assert len(barcode.split('-')) == 3
-
-        # Check prefix part
-        prefix_part = barcode.split('-')[0]
-        cat_prefix = test_category_with_prefix.prefix
-        subcat_prefix = test_subcategory_prefix.prefix
-        expected_prefix = f'{cat_prefix}{subcat_prefix}'
-        assert prefix_part == expected_prefix
-
-        # Check sequence part
-        sequence_part = barcode.split('-')[1]
-        assert len(sequence_part) == 6
-        assert sequence_part.isdigit()
-
-        # Check checksum part
-        checksum_part = barcode.split('-')[2]
-        assert len(checksum_part) == 1
-        assert checksum_part.isdigit()
-
-        # Validate the barcode
-        assert barcode_service.validate_barcode_format(barcode)
-
-    @async_test
-    async def test_generate_barcode_with_invalid_category(
-        self,
-        barcode_service: BarcodeService,
-        test_subcategory_prefix: SubcategoryPrefix,
-    ) -> None:
-        """Test generating a barcode with invalid category."""
-        with pytest.raises(ValidationError) as excinfo:
-            await barcode_service.generate_barcode(
-                category_id=999999,  # Non-existent category ID
-                subcategory_prefix_id=test_subcategory_prefix.id,
-            )
-
-        assert 'Category not found' in str(excinfo.value)
-
-    @async_test
-    async def test_generate_barcode_with_invalid_subcategory_prefix(
-        self,
-        barcode_service: BarcodeService,
-        test_category_with_prefix: Category,
-    ) -> None:
-        """Test generating a barcode with invalid subcategory prefix."""
-        with pytest.raises(ValidationError) as excinfo:
-            await barcode_service.generate_barcode(
-                category_id=test_category_with_prefix.id,
-                subcategory_prefix_id=999999,  # Non-existent subcategory prefix ID
-            )
-
-        assert 'Subcategory prefix not found' in str(excinfo.value)
+        assert len(barcode) == 11  # 9 digits for sequence + 2 digits for checksum
 
     @async_test
     async def test_validate_barcode_format(
@@ -99,78 +43,36 @@ class TestBarcodeService:
     ) -> None:
         """Test validating barcode format."""
         # Valid barcode
-        assert barcode_service.validate_barcode_format('CATS-000001-5')
+        valid_barcode = '000000001XX'  # Replace XX with valid checksum
+        valid_barcode = await barcode_service.generate_barcode()  # Get a valid barcode
 
-        # Invalid formats
-        # Missing checksum
-        assert not barcode_service.validate_barcode_format('CATS-000001')
-        # Sequence too short
-        assert not barcode_service.validate_barcode_format('CATS-00001-5')
-        # Prefix too short
-        assert not barcode_service.validate_barcode_format('CAT-000001-5')
-        # Non-digit sequence
-        assert not barcode_service.validate_barcode_format('CATS-00000A-5')
-        # Non-digit checksum
-        assert not barcode_service.validate_barcode_format('CATS-000001-A')
+        # Should not raise exception
+        barcode_service.validate_barcode_format(valid_barcode)
 
-    @async_test
-    async def test_parse_barcode(
-        self,
-        barcode_service: BarcodeService,
-        test_category_with_prefix: Category,
-        test_subcategory_prefix: SubcategoryPrefix,
-    ) -> None:
-        """Test parsing a barcode."""
-        # First generate a barcode
-        barcode = await barcode_service.generate_barcode(
-            category_id=test_category_with_prefix.id,
-            subcategory_prefix_id=test_subcategory_prefix.id,
-        )
+        # Invalid barcode - wrong length
+        with pytest.raises(ValidationError):
+            barcode_service.validate_barcode_format('12345')
 
-        # Then parse it
-        result = await barcode_service.parse_barcode(barcode)
-        category, subcategory_prefix, sequence_number = result
-
-        # Check parsed components
-        assert category['id'] == test_category_with_prefix.id
-        assert subcategory_prefix['id'] == test_subcategory_prefix.id
-        assert isinstance(sequence_number, int)
-        assert sequence_number > 0
-
-    @async_test
-    async def test_parse_invalid_barcode(
-        self,
-        barcode_service: BarcodeService,
-    ) -> None:
-        """Test parsing an invalid barcode."""
-        with pytest.raises(ValidationError) as excinfo:
-            await barcode_service.parse_barcode('INVALID-BARCODE')
-
-        assert 'Invalid barcode format' in str(excinfo.value)
+        # Invalid barcode - non-numeric
+        with pytest.raises(ValidationError):
+            barcode_service.validate_barcode_format('ABCDEFGHIJK')
 
     @async_test
     async def test_sequential_barcode_generation(
         self,
         barcode_service: BarcodeService,
-        test_category_with_prefix: Category,
-        test_subcategory_prefix: SubcategoryPrefix,
     ) -> None:
-        """Test sequential generation of barcodes."""
-        # Generate first barcode
-        barcode1 = await barcode_service.generate_barcode(
-            category_id=test_category_with_prefix.id,
-            subcategory_prefix_id=test_subcategory_prefix.id,
-        )
-
-        # Generate second barcode
-        barcode2 = await barcode_service.generate_barcode(
-            category_id=test_category_with_prefix.id,
-            subcategory_prefix_id=test_subcategory_prefix.id,
-        )
+        """Test sequential barcode generation."""
+        # Generate multiple barcodes
+        barcode1 = await barcode_service.generate_barcode()
+        barcode2 = await barcode_service.generate_barcode()
+        barcode3 = await barcode_service.generate_barcode()
 
         # Extract sequence numbers
-        sequence1 = int(barcode1.split('-')[1])
-        sequence2 = int(barcode2.split('-')[1])
+        sequence1 = int(barcode1[:-2])
+        sequence2 = int(barcode2[:-2])
+        sequence3 = int(barcode3[:-2])
 
-        # Check that sequence2 = sequence1 + 1
+        # Check that sequences are sequential
         assert sequence2 == sequence1 + 1
+        assert sequence3 == sequence2 + 1
