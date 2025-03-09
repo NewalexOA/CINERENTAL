@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from backend.exceptions import (
     AvailabilityError,
     BusinessError,
+    ConflictError,
     StateError,
     StatusTransitionError,
 )
@@ -225,6 +226,8 @@ class TestCategoryHierarchy:
     ) -> None:
         """Test category hierarchy and equipment counting."""
         category_service = CategoryService(db_session)
+        # Переинициализируем сервис оборудования с правильной зависимостью
+        equipment_service = EquipmentService(db_session, category_service)
 
         # Create root categories
         cameras = await category_service.create_category(
@@ -253,7 +256,6 @@ class TestCategoryHierarchy:
             await equipment_service.create_equipment(
                 name=f'Canon 5D Mark IV #{i}',
                 description='Professional DSLR camera',
-                custom_barcode=f'CANON5D{i}',
                 category_id=dslr.id,
                 serial_number=f'CN5D{i}',
                 replacement_cost=3000.0,
@@ -263,7 +265,6 @@ class TestCategoryHierarchy:
             await equipment_service.create_equipment(
                 name=f'Sony FS7 #{i}',
                 description='4K Super 35mm sensor camera',
-                custom_barcode=f'SONYFS7{i}',
                 category_id=video.id,
                 serial_number=f'SF7{i}',
                 replacement_cost=8000.0,
@@ -338,6 +339,12 @@ class TestBookingLifecycle:
         equipment_service: EquipmentService,
     ) -> None:
         """Test that equipment status affects booking availability."""
+        from backend.services.category import CategoryService
+
+        # Инициализация с правильной зависимостью
+        category_service = CategoryService(db_session)
+        equipment_service = EquipmentService(db_session, category_service)
+
         start_date = datetime.now(timezone.utc) + timedelta(days=1)
         end_date = start_date + timedelta(days=3)
 
@@ -700,23 +707,38 @@ class TestEquipmentBusinessRules:
             )
 
         # Cannot create duplicate barcode
-        with pytest.raises(BusinessError, match='already exists'):
+        # First create equipment with a valid barcode
+        valid_barcode = '00000012323'  # '000000123' with checksum '23'
+
+        # Create first equipment with this barcode
+        first_equipment = await equipment_service.create_equipment(
+            name='First Equipment',
+            description='Test Description',
+            category_id=test_equipment.category_id,
+            custom_barcode=valid_barcode,
+            serial_number='UNIQUE001',
+            replacement_cost=1000.00,
+        )
+
+        # Now try to create another equipment with the same barcode
+        with pytest.raises(ConflictError, match='already exists'):
             await equipment_service.create_equipment(
                 name='Another Equipment',
                 description='Test Description',
                 category_id=test_equipment.category_id,
-                barcode=test_equipment.barcode,  # Duplicate
-                serial_number='UNIQUE001',
+                custom_barcode=valid_barcode,  # Same barcode as first equipment
+                serial_number='UNIQUE002',
                 replacement_cost=1000.00,
             )
 
         # Cannot create duplicate serial number
-        with pytest.raises(BusinessError, match='already exists'):
+        with pytest.raises(ConflictError, match='already exists'):
             await equipment_service.create_equipment(
                 name='Another Equipment',
                 description='Test Description',
                 category_id=test_equipment.category_id,
-                barcode='TCST-000003-5',
-                serial_number=test_equipment.serial_number,  # Duplicate
+                # Valid barcode format: '000000123' with checksum '23'
+                custom_barcode='00001234545',  # Different valid barcode
+                serial_number=first_equipment.serial_number,  # Duplicate
                 replacement_cost=1000.00,
             )

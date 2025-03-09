@@ -165,11 +165,20 @@ async def document_service(
 
 
 @async_fixture
+async def category_service(
+    db_session: AsyncSession,
+) -> AsyncGenerator[CategoryService, None]:
+    """Create category service instance."""
+    yield CategoryService(db_session)
+
+
+@async_fixture
 async def equipment_service(
     db_session: AsyncSession,
+    category_service: CategoryService,
 ) -> AsyncGenerator[EquipmentService, None]:
     """Create equipment service instance."""
-    yield EquipmentService(db_session)
+    yield EquipmentService(db_session, category_service)
 
 
 @async_fixture

@@ -32,7 +32,7 @@ from backend.main import app as fastapi_app
 from backend.models import Equipment
 from backend.schemas.category import CategoryResponse
 from backend.services import EquipmentService
-from backend.services.category import CategoryService
+from backend.services.category import CategoryRepository, CategoryService
 
 
 # Set logging for tests
@@ -259,7 +259,8 @@ async def db_session(engine: AsyncEngine) -> AsyncGenerator[AsyncSession, None]:
 @pytest.fixture
 async def test_category(db_session: AsyncSession) -> AsyncGenerator[Dict, None]:
     """Create test category."""
-    category_service = CategoryService(db_session)
+    category_repo = CategoryRepository(db_session)
+    category_service = CategoryService(db_session, repository=category_repo)
     category = await category_service.create_category(
         name='Test Category',
         description='Test Category Description',
@@ -277,11 +278,15 @@ async def test_equipment(
     test_category: Dict,
 ) -> AsyncGenerator[Equipment, None]:
     """Create a test equipment."""
+    # Using a valid numeric barcode format (11 digits)
+    # '000000001' with checksum '01'
+    custom_barcode = '00000000101'
+
     equipment = await equipment_service.create_equipment(
         name='Sony Test Equipment',
         description='Test Description for Sony device',
         category_id=test_category['id'],
-        custom_barcode='CATS-000001-5',
+        custom_barcode=custom_barcode,
         serial_number='SN001',
         replacement_cost=Decimal('1000.00'),
     )
@@ -390,3 +395,9 @@ async def cleanup_test_data(db_session: AsyncSession) -> AsyncGenerator[None, No
     except Exception as e:
         print(f'Error during cleanup: {str(e)}')
         await db_session.rollback()
+
+
+@pytest_asyncio.fixture
+async def equipment_service(db_session: AsyncSession) -> EquipmentService:
+    """Create an equipment service with proper repository initialization."""
+    return EquipmentService(db_session)
