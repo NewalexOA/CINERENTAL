@@ -39,7 +39,6 @@ if [ -d "dist/CINERENTAL Launcher.app" ]; then
         # Create DMG
         create-dmg \
             --volname "CINERENTAL Launcher" \
-            --volicon "assets/icon.icns" \
             --window-pos 200 120 \
             --window-size 800 400 \
             --icon-size 100 \
