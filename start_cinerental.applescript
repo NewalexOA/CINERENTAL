@@ -9,12 +9,12 @@ property logFile : logFolder & "/cinerental_startup.log"
 
 on run
     -- Show initial dialog window with version information
-    display dialog "Start CINERENTAL production environment?" & return & return & "Version: " & scriptVersion buttons {"Cancel", "Start"} default button "Start" with icon note with title "CINERENTAL Launcher"
+    display dialog "Запустить производственную среду CINERENTAL?" & return & return & "Версия: " & scriptVersion buttons {"Отмена", "Запустить"} default button "Запустить" with icon note with title "CINERENTAL Launcher"
 
     -- If user clicked "Start"
-    if button returned of result is "Start" then
+    if button returned of result is "Запустить" then
         -- Show launch indicator
-        display notification "Starting CINERENTAL... This may take a few minutes." with title "CINERENTAL" subtitle "Please wait"
+        display notification "Запуск CINERENTAL... Это может занять несколько минут." with title "CINERENTAL" subtitle "Пожалуйста, подождите"
 
         try
             -- Get path to the script location
@@ -38,7 +38,7 @@ on run
                 set scriptExists to do shell script "if [ -f " & quoted form of setupScriptPath & " ]; then echo 'yes'; else echo 'no'; fi"
 
                 if scriptExists is "no" then
-                    error "Setup script not found at:" & return & setupScriptPath & return & "Please check the file location."
+                    error "Скрипт настройки не найден:" & return & setupScriptPath & return & "Пожалуйста, проверьте расположение файла."
                 end if
             end if
 
@@ -50,18 +50,18 @@ on run
 
             -- Create a temporary launcher script to run the setup script in background
             set tempLauncherScript to "#!/bin/bash
-# Temporary launcher script for CINERENTAL
-# Created by CINERENTAL Launcher " & scriptVersion & "
+# Временный скрипт запуска CINERENTAL
+# Создан CINERENTAL Launcher " & scriptVersion & "
 # $(date)
 
 # Ensure log directory exists
 mkdir -p " & quoted form of logFolder & "
 
 # Record launch information
-echo \"CINERENTAL launcher started at $(date)\" > " & quoted form of logFile & "
-echo \"Launcher version: " & scriptVersion & "\" >> " & quoted form of logFile & "
-echo \"Setup script path: " & setupScriptPath & "\" >> " & quoted form of logFile & "
-echo \"Working directory: $(pwd)\" >> " & quoted form of logFile & "
+echo \"CINERENTAL запущен $(date)\" > " & quoted form of logFile & "
+echo \"Версия launcher: " & scriptVersion & "\" >> " & quoted form of logFile & "
+echo \"Путь к скрипту настройки: " & setupScriptPath & "\" >> " & quoted form of logFile & "
+echo \"Рабочая директория: $(pwd)\" >> " & quoted form of logFile & "
 
 # Make the setup script executable
 chmod +x \"" & setupScriptPath & "\"
@@ -71,7 +71,7 @@ nohup \"" & setupScriptPath & "\" > \"" & logFolder & "/setup_output.log\" 2>&1 
 
 # Record PID of the launched process
 SETUP_PID=$!
-echo \"PID of setup process: $SETUP_PID\" >> " & quoted form of logFile & "
+echo \"PID процесса: $SETUP_PID\" >> " & quoted form of logFile & "
 
 # Exit with success code
 exit 0"
@@ -83,32 +83,32 @@ exit 0"
             do shell script quoted form of tempScriptPath
 
             -- Display notification to the user
-            display notification "CINERENTAL is starting in the background. The browser will open automatically when the application is ready." with title "CINERENTAL" subtitle "Launch initiated"
+            display notification "CINERENTAL запускается в фоновом режиме. Браузер откроется автоматически, когда приложение будет готово." with title "CINERENTAL" subtitle "Запуск начат"
 
             -- Show detailed instructions to the user
-            display dialog "CINERENTAL launch initiated!
+            display dialog "Запуск CINERENTAL начат!
 
-If the browser doesn't open automatically within 2-3 minutes:
-1. Verify that Docker Desktop is running
-2. Open http://localhost:8000 manually
-3. Check the logs at: " & logFile & "
+Если браузер не откроется автоматически в течение 2-3 минут:
+1. Убедитесь, что Docker Desktop запущен
+2. Откройте http://localhost:8000 вручную
+3. Проверьте логи: " & logFile & "
 
-The application will be ready when you see a notification.
+Приложение будет готово к работе, когда появится уведомление.
 
-Log files:
-- Launch log: " & logFile & "
-- Setup output: " & logFolder & "/setup_output.log" buttons {"OK"} default button "OK" with icon note with title "CINERENTAL Launcher"
+Файлы логов:
+- Лог запуска: " & logFile & "
+- Вывод скрипта: " & logFolder & "/setup_output.log" buttons {"OK"} default button "OK" with icon note with title "CINERENTAL Launcher"
 
         on error errMsg
             -- Handle errors and show diagnostics
-            display dialog "Error starting CINERENTAL: " & errMsg & "
+            display dialog "Ошибка запуска CINERENTAL: " & errMsg & "
 
-Please check:
-1. Is Docker Desktop installed and running?
-2. Does the setup script exist at " & setupScriptPath & "?
-3. Check logs at: " & logFile & "
+Пожалуйста, проверьте:
+1. Установлен и запущен ли Docker Desktop?
+2. Существует ли скрипт настройки по пути " & setupScriptPath & "?
+3. Проверьте логи: " & logFile & "
 
-You may need to run the setup script manually from Terminal." buttons {"OK"} default button "OK" with icon stop with title "CINERENTAL - Error"
+Возможно, потребуется запустить скрипт настройки вручную из Терминала." buttons {"OK"} default button "OK" with icon stop with title "CINERENTAL - Ошибка"
         end try
     end if
 end run
