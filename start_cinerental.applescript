@@ -3,7 +3,7 @@
 
 -- Main settings and properties
 property scriptVersion : "2.0.0"
-property defaultProjectPath : "/Users/actrental/Github/CINERENTAL"
+property defaultProjectPath : "/Users/actrental/Documents/GitHub/CINERENTAL"
 property logFolder : defaultProjectPath & "/logs"
 property logFile : logFolder & "/cinerental_startup.log"
 
