@@ -1,92 +1,80 @@
-# Руководство по использованию Mac-приложения для запуска CINERENTAL
+# Guide to Using the CINERENTAL Launcher for macOS
 
-## Общая информация
+## Overview
 
-Приложение `start_cinerental.app` представляет собой macOS-утилиту для удобного запуска CINERENTAL в production режиме.
-Оно разработано с использованием AppleScript и обеспечивает графический интерфейс для запуска основного скрипта `start_production.sh`.
+`CINERENTAL Launcher.app` is a macOS utility designed to easily start CINERENTAL in production mode.
+It was developed using AppleScript and provides a graphical interface for launching the main setup script `docker/setup_production.sh`.
 
-## Принцип работы
+## How It Works
 
-1. Приложение отображает диалоговое окно для подтверждения запуска
-2. После подтверждения, запускает `start_production.sh` в фоновом режиме
-3. Создает лог операций в директории `/Users/actrental/Documents/GitHub/CINERENTAL/logs/`
-4. Отображает уведомление о начале запуска и инструкции пользователю
-5. Автоматически открывает браузер, когда приложение полностью загружено
+1. The application displays a dialog box to confirm the launch
+2. After confirmation, it launches `setup_production.sh` in the background
+3. Creates a log of operations in the `/Users/actrental/Github/CINERENTAL/logs/` directory
+4. Displays a notification about the launch process and user instructions
+5. The browser will open automatically when the application is fully loaded
 
-## Перенос приложения
+## Application Setup
 
-### Вариант 1: Перенос только приложения (не рекомендуется)
+### Option 1: Using the application from the project directory
 
-Если вы переместите только AppleScript-приложение без файла `start_production.sh`:
+The simplest way to use the launcher is to save the application in the project directory:
 
-- Приложение **не будет работать**, так как оно ищет `start_production.sh` в той же директории
-- При запуске будет выдавать ошибку "Файл start_production.sh не найден"
+1. Save the AppleScript as an application (File → Export... → File Format: Application)
+2. Place the application in the CINERENTAL repository root directory
+3. Run the application by double-clicking it
 
-### Вариант 2: Перенос приложения вместе со скриптом
+This way, the application will automatically find the setup script in the `docker` subdirectory.
 
-Если вы переместите приложение **вместе с файлом** `start_production.sh`:
+### Option 2: Placing the application elsewhere
 
-1. Скопируйте оба файла в новую директорию
-2. Убедитесь, что скрипт имеет права на выполнение:
-   ```bash
-   chmod +x /новый/путь/start_production.sh
-   ```
-3. Приложение будет работать корректно
+If you want to place the application in a different location (e.g., Desktop or Applications folder):
 
-### Вариант 3: Модификация скрипта (рекомендуется)
+1. The script will try to locate the setup script at `<app_location>/docker/setup_production.sh`
+2. If not found, it will use the default path: `/Users/actrental/Github/CINERENTAL/docker/setup_production.sh`
+3. You may need to modify the `defaultProjectPath` variable in the script to match your actual project location
 
-Самый удобный способ — установить жесткий путь к скрипту запуска:
+To modify the default path:
+1. Right-click the application → Show Package Contents
+2. Navigate to Contents → Resources → Scripts → main.scpt
+3. Open with Script Editor
+4. Change the `defaultProjectPath` property to your actual project path
+5. Save the file (Command+S)
 
-1. Откройте приложение в Script Editor:
-   - Щелкните правой кнопкой мыши → Show Package Contents
-   - Перейдите в Contents → Resources → Scripts → main.scpt
+### Option 3: Creating an alias (recommended)
 
-2. Замените строку:
-   ```applescript
-   set scriptPath to appPath & "start_production.sh"
-   ```
-   На:
-   ```applescript
-   set scriptPath to "/Users/actrental/Documents/GitHub/CINERENTAL/start_production.sh"
-   ```
+The safest option is to create an alias to the application stored in the repository:
 
-3. Сохраните файл (Command+S)
+1. Place the application in the repository root
+2. Select the application and press Command+L or choose File → Make Alias
+3. Move the alias to your preferred location (e.g., Desktop)
 
-После этой модификации приложение можно поместить в любую директорию (даже в Dock или Applications), и оно всегда будет запускать скрипт из репозитория проекта.
+This method ensures the original application remains in place and works correctly.
 
-### Вариант 4: Создание ярлыка (самый безопасный)
+## Troubleshooting
 
-Вместо переноса самого приложения, вы можете создать ярлык (alias):
+### If the application doesn't start:
 
-1. Выберите приложение
-2. Нажмите Command+L или выберите в меню File → Make Alias
-3. Перенесите созданный ярлык в нужное место (например, на рабочий стол)
+1. Verify that Docker Desktop is installed and running
+2. Make sure the script `docker/setup_production.sh` is in the expected location and has execution permissions
+3. Check the log file: `/Users/actrental/Github/CINERENTAL/logs/cinerental_startup.log`
+4. Check the setup output log: `/Users/actrental/Github/CINERENTAL/logs/setup_output.log`
 
-Этот вариант самый безопасный, так как оригинальное приложение остается на месте и продолжает корректно работать.
+### If the text encoding is displayed incorrectly:
 
-## Решение проблем
-
-### Если приложение не запускается:
-
-1. Проверьте, что Docker Desktop установлен и запущен
-2. Убедитесь, что скрипт `start_production.sh` находится в ожидаемом месте и имеет права на выполнение
-3. Проверьте лог-файл: `/Users/actrental/Documents/GitHub/CINERENTAL/logs/cinerental_startup.log`
-
-### Если кодировка текста отображается некорректно:
-
-Если вы видите кракозябры вместо русского текста в Script Editor, создайте скрипт с помощью терминала:
+If you see garbled text instead of proper text in Script Editor, create the script using Terminal:
 
 ```bash
-cat > /tmp/start_cinerental.applescript << 'EOF'
--- Скрипт для запуска CINERENTAL
--- ... остальной код ...
+cat > /tmp/cinerental_launcher.applescript << 'EOF'
+-- Script for launching CINERENTAL
+-- ... rest of the code ...
 EOF
 
-osacompile -o ~/Desktop/StartCinerental.app /tmp/start_cinerental.applescript
+osacompile -o ~/Desktop/CINERENTALLauncher.app /tmp/cinerental_launcher.applescript
 ```
 
-## Дополнительная информация
+## Additional Information
 
-- Приложение создаёт временные файлы в директории `/tmp/` для запуска скрипта
-- Все логи сохраняются в `/Users/actrental/Documents/GitHub/CINERENTAL/logs/`
-- Для остановки CINERENTAL используйте команду `docker compose down`
+- The application creates temporary files in the `/tmp/` directory to launch the script
+- All logs are saved in `/Users/actrental/Github/CINERENTAL/logs/`
+- To stop CINERENTAL, use the command `docker compose down` in Terminal
+- The application version can be seen in the initial dialog box
