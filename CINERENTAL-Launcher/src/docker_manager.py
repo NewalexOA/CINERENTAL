@@ -364,12 +364,13 @@ class DockerManager:
             return False, error_msg
 
     def stop_containers(self) -> Tuple[bool, str]:
-        """Stop CINERENTAL containers."""
+        """Stop CINERENTAL containers without removing them."""
         self.logger.info('Остановка контейнеров CINERENTAL...')
 
         docker_compose_cmd = self.get_docker_compose_cmd()
 
-        result = self.run_command(f'{docker_compose_cmd} down')
+        # Using 'stop' instead of 'down' to keep containers
+        result = self.run_command(f'{docker_compose_cmd} stop')
 
         if result and result.returncode == 0:
             self.logger.info('Контейнеры успешно остановлены')
@@ -383,15 +384,48 @@ class DockerManager:
             self.logger.error(f'Ошибка при остановке контейнеров: {error_msg}')
             return False, f'Ошибка при остановке контейнеров: {error_msg}'
 
+    def down_containers(self) -> Tuple[bool, str]:
+        """Stop and remove CINERENTAL containers."""
+        self.logger.info('Остановка и удаление контейнеров CINERENTAL...')
+
+        docker_compose_cmd = self.get_docker_compose_cmd()
+
+        result = self.run_command(f'{docker_compose_cmd} down')
+
+        if result and result.returncode == 0:
+            self.logger.info('Контейнеры успешно остановлены и удалены')
+            return True, 'Контейнеры успешно остановлены и удалены'
+        else:
+            error_msg = (
+                result.stderr
+                if result and hasattr(result, 'stderr')
+                else 'Неизвестная ошибка'
+            )
+            self.logger.error(
+                f'Ошибка при остановке и удалении контейнеров: {error_msg}'
+            )
+            return False, f'Ошибка при остановке и удалении контейнеров: {error_msg}'
+
     def restart_containers(self) -> Tuple[bool, str]:
         """Restart CINERENTAL containers."""
         self.logger.info('Перезапуск контейнеров CINERENTAL...')
 
-        stop_success, stop_msg = self.stop_containers()
-        if not stop_success:
-            return stop_success, stop_msg
+        docker_compose_cmd = self.get_docker_compose_cmd()
 
-        return self.start_containers()
+        # Using the dedicated 'restart' command instead of stop+start
+        result = self.run_command(f'{docker_compose_cmd} restart')
+
+        if result and result.returncode == 0:
+            self.logger.info('Контейнеры успешно перезапущены')
+            return True, 'Контейнеры успешно перезапущены'
+        else:
+            error_msg = (
+                result.stderr
+                if result and hasattr(result, 'stderr')
+                else 'Неизвестная ошибка'
+            )
+            self.logger.error(f'Ошибка при перезапуске контейнеров: {error_msg}')
+            return False, f'Ошибка при перезапуске контейнеров: {error_msg}'
 
     def open_in_browser(self) -> bool:
         """Open CINERENTAL in web browser."""

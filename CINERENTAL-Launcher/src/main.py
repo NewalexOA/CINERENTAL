@@ -131,11 +131,11 @@ class MainWindow(QMainWindow):
         self.start_log_monitor()
         self.check_status()  # Check Docker status on startup
 
-    def select_project_path(self) -> str | None:
+    def select_project_path(self) -> Optional[str]:
         """Prompt user to select the CINERENTAL project path.
 
         Returns:
-            str | None: The selected path or None if user cancels
+            Optional[str]: The selected path or None if user cancels
         """
         # Default path suggestion
         default_path = os.path.expanduser('~')
