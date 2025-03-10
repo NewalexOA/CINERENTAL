@@ -442,3 +442,33 @@ async def test_regenerate_equipment_barcode_not_found(
     assert response.status_code == 404
     data = response.json()
     assert 'detail' in data
+
+
+@async_test
+async def test_update_equipment_notes(
+    async_client: AsyncClient,
+    test_equipment: Equipment,
+) -> None:
+    """Test updating equipment notes."""
+    new_notes = 'Test notes for equipment'
+
+    response = await async_client.patch(
+        f'/api/v1/equipment/{test_equipment.id}/notes', json={'notes': new_notes}
+    )
+
+    assert response.status_code == http_status.HTTP_200_OK
+    result = response.json()
+
+    assert result['notes'] == new_notes
+    assert result['id'] == test_equipment.id
+
+
+@async_test
+async def test_update_equipment_notes_not_found(async_client: AsyncClient) -> None:
+    """Test updating notes for non-existent equipment."""
+    response = await async_client.patch(
+        '/api/v1/equipment/9999/notes',
+        json={'notes': 'Notes for non-existent equipment'},
+    )
+
+    assert response.status_code == http_status.HTTP_404_NOT_FOUND

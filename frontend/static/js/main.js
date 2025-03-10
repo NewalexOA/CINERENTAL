@@ -198,11 +198,11 @@ const api = {
         }
     },
 
-    async put(endpoint, data) {
+    async patch(endpoint, data) {
         try {
             const url = endpoint.endsWith('/') ? endpoint : `${endpoint}/`;
             const response = await fetch(`${API_BASE_URL}${url}`, {
-                method: 'PUT',
+                method: 'PATCH',
                 headers: {
                     'Content-Type': 'application/json',
                 },
@@ -218,7 +218,32 @@ const api = {
 
             return await response.json();
         } catch (error) {
-            console.error('Error updating data:', error);
+            console.error('Error patching data:', error);
+            throw error;
+        }
+    },
+
+    async put(endpoint, data) {
+        try {
+            const url = endpoint.endsWith('/') ? endpoint : `${endpoint}/`;
+            const response = await fetch(`${API_BASE_URL}${url}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(data)
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({ detail: 'Ошибка сети' }));
+                const error = new Error(errorData.detail || 'Ошибка при отправке данных');
+                error.response = { data: errorData, status: response.status };
+                throw error;
+            }
+
+            return await response.json();
+        } catch (error) {
+            console.error('Error putting data:', error);
             throw error;
         }
     },
