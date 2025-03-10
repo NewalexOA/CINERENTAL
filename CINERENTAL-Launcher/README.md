@@ -5,6 +5,7 @@ An application for managing CINERENTAL Docker containers. Makes it easy to start
 ## Features
 
 - Starting and stopping CINERENTAL containers
+- Configuring project path through the graphical interface
 - Monitoring Docker and container status
 - Viewing container logs
 - Automatic opening of the application in a browser
@@ -54,14 +55,58 @@ To build a standalone macOS application, py2app is used:
 
 2. Build the application:
    ```
+   # For a full build
    python setup.py py2app
+
+   # For a quick build in alias mode (for testing)
+   python setup.py py2app -A
    ```
 
 3. The finished application will be located in the `dist/CINERENTAL Launcher.app` folder
 
+4. Set the correct permissions for execution:
+   ```
+   chmod -R 755 "dist/CINERENTAL Launcher.app"
+   chmod +x "dist/CINERENTAL Launcher.app/Contents/MacOS/CINERENTAL Launcher"
+   ```
+
+## Creating a DMG image
+
+To create a DMG distribution, you can use the create-dmg utility:
+
+1. Install the utility:
+   ```
+   brew install create-dmg
+   ```
+
+2. Create the DMG image:
+   ```
+   create-dmg \
+       --volname "CINERENTAL Launcher" \
+       --volicon "assets/icon.icns" \
+       --window-pos 200 120 \
+       --window-size 800 400 \
+       --icon-size 100 \
+       --icon "CINERENTAL Launcher.app" 200 190 \
+       --hide-extension "CINERENTAL Launcher.app" \
+       --app-drop-link 600 185 \
+       "dist/CINERENTAL Launcher.dmg" \
+       "dist/CINERENTAL Launcher.app"
+   ```
+
 ## Configuration
 
-By default, the application looks for the CINERENTAL project in the `~/Github/CINERENTAL` directory. If your project is located elsewhere, you can change the path in the `src/docker_manager.py` file.
+On first launch, the application will prompt you to select the CINERENTAL project path. Choose the folder containing the docker-compose.yml or docker-compose.prod.yml file.
+
+The project path can be changed at any time through the "File" -> "Change project path" menu.
+
+The application saves the selected path in its settings and uses it for subsequent launches.
+
+## Container Management
+
+- **Start**: Launches CINERENTAL containers
+- **Stop**: Stops containers (without removing them)
+- **Restart**: Restarts running containers
 
 ## License
 
