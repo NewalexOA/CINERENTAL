@@ -1,86 +1,114 @@
--- Script for launching CINERENTAL in production mode
--- Save this file as an application from Script Editor
+-- Script for launching CINERENTAL production environment
+-- Version 2.0.0
 
--- Main settings
-property projectPath : "/Users/actrental/Documents/GitHub/CINERENTAL"
-property logFolder : projectPath & "/logs"
+-- Main settings and properties
+property scriptVersion : "2.0.0"
+property defaultProjectPath : "/Users/actrental/Github/CINERENTAL"
+property logFolder : defaultProjectPath & "/logs"
 property logFile : logFolder & "/cinerental_startup.log"
 
--- Show initial dialog window
-display dialog "Запустить CINERENTAL в production режиме?" buttons {"Отмена", "Запустить"} default button "Запустить" with icon note with title "CINERENTAL"
+on run
+    -- Show initial dialog window with version information
+    display dialog "Start CINERENTAL production environment?" & return & return & "Version: " & scriptVersion buttons {"Cancel", "Start"} default button "Start" with icon note with title "CINERENTAL Launcher"
 
--- If user clicked "Start"
-if button returned of result is "Запустить" then
-    -- Show launch indicator
-    display notification "Запускаем приложение... Это может занять некоторое время." with title "CINERENTAL" subtitle "Пожалуйста, подождите"
+    -- If user clicked "Start"
+    if button returned of result is "Start" then
+        -- Show launch indicator
+        display notification "Starting CINERENTAL... This may take a few minutes." with title "CINERENTAL" subtitle "Please wait"
 
-    try
-        -- Get path to directory where this application is located
-        tell application "Finder"
-            set appPath to POSIX path of (container of (path to me) as alias)
-        end tell
+        try
+            -- Get path to the script location
+            set appPath to ""
+            try
+                tell application "Finder"
+                    set appPath to POSIX path of (container of (path to me) as alias)
+                end tell
+            on error
+                -- If we can't get the path, use the default
+                set appPath to defaultProjectPath & "/"
+            end try
 
-        -- Check existence of start_production.sh file and its execution permissions
-        set scriptPath to "/Users/actrental/Documents/GitHub/CINERENTAL/start_production.sh"
-        set scriptExists to do shell script "if [ -f " & quoted form of scriptPath & " ]; then echo 'yes'; else echo 'no'; fi"
+            -- Define and check the setup script path
+            set setupScriptPath to appPath & "docker/setup_production.sh"
+            set scriptExists to do shell script "if [ -f " & quoted form of setupScriptPath & " ]; then echo 'yes'; else echo 'no'; fi"
 
-        if scriptExists is "no" then
-            error "Файл start_production.sh не найден по пути " & scriptPath
-        end if
+            if scriptExists is "no" then
+                -- Try alternative location relative to the project root
+                set setupScriptPath to defaultProjectPath & "/docker/setup_production.sh"
+                set scriptExists to do shell script "if [ -f " & quoted form of setupScriptPath & " ]; then echo 'yes'; else echo 'no'; fi"
 
-        -- Check and set execution permissions
-        do shell script "chmod +x " & quoted form of scriptPath
+                if scriptExists is "no" then
+                    error "Setup script not found at:" & return & setupScriptPath & return & "Please check the file location."
+                end if
+            end if
 
-        -- Check logs directory existence
-        do shell script "mkdir -p " & quoted form of logFolder
+            -- Ensure logs directory exists
+            do shell script "mkdir -p " & quoted form of logFolder
 
-        -- Create improved mini-starter script
-        set starterScript to "#!/bin/bash
-# Temporary starter script for CINERENTAL
-# Create log directory if it doesn't exist
+            -- Set execution permissions for the script
+            do shell script "chmod +x " & quoted form of setupScriptPath
+
+            -- Create a temporary launcher script to run the setup script in background
+            set tempLauncherScript to "#!/bin/bash
+# Temporary launcher script for CINERENTAL
+# Created by CINERENTAL Launcher " & scriptVersion & "
+# $(date)
+
+# Ensure log directory exists
 mkdir -p " & quoted form of logFolder & "
 
-# Write launch information
-echo \"CINERENTAL starter launched $(date)\" > " & quoted form of logFile & "
+# Record launch information
+echo \"CINERENTAL launcher started at $(date)\" > " & quoted form of logFile & "
+echo \"Launcher version: " & scriptVersion & "\" >> " & quoted form of logFile & "
+echo \"Setup script path: " & setupScriptPath & "\" >> " & quoted form of logFile & "
 echo \"Working directory: $(pwd)\" >> " & quoted form of logFile & "
 
-# Launch main script in background using full path
-nohup " & quoted form of scriptPath & " > /dev/null 2>&1 &
+# Make the setup script executable
+chmod +x \"" & setupScriptPath & "\"
 
-# Record PID for debugging
-echo \"PID of launched process: $!\" >> " & quoted form of logFile & "
+# Launch setup script in background
+nohup \"" & setupScriptPath & "\" > \"" & logFolder & "/setup_output.log\" 2>&1 &
+
+# Record PID of the launched process
+SETUP_PID=$!
+echo \"PID of setup process: $SETUP_PID\" >> " & quoted form of logFile & "
 
 # Exit with success code
 exit 0"
 
-        -- Create temporary starter file
-        set tempStarterPath to "/tmp/cinerental_starter_" & (do shell script "date +%s" & ".sh")
-        do shell script "echo " & quoted form of starterScript & " > " & quoted form of tempStarterPath
-        do shell script "chmod +x " & quoted form of tempStarterPath
+            -- Create and execute the temporary launcher script
+            set tempScriptPath to "/tmp/cinerental_launcher_" & (do shell script "date +%s") & ".sh"
+            do shell script "echo " & quoted form of tempLauncherScript & " > " & quoted form of tempScriptPath
+            do shell script "chmod +x " & quoted form of tempScriptPath
+            do shell script quoted form of tempScriptPath
 
-        -- Launch starter and immediately return control
-        do shell script quoted form of tempStarterPath
+            -- Display notification to the user
+            display notification "CINERENTAL is starting in the background. The browser will open automatically when the application is ready." with title "CINERENTAL" subtitle "Launch initiated"
 
-        -- Display info to user
-        display notification "CINERENTAL запускается в фоновом режиме. Браузер откроется автоматически, когда приложение будет готово." with title "CINERENTAL" subtitle "Запуск начат"
+            -- Show detailed instructions to the user
+            display dialog "CINERENTAL launch initiated!
 
-        -- Show instructions to user
-        display dialog "Запуск CINERENTAL начат!
+If the browser doesn't open automatically within 2-3 minutes:
+1. Verify that Docker Desktop is running
+2. Open http://localhost:8000 manually
+3. Check the logs at: " & logFile & "
 
-Если через 2-3 минуты браузер не откроется автоматически:
-1. Проверьте приложение Docker Desktop - оно должно быть запущено
-2. Откройте вручную http://localhost:8000
-3. Проверьте лог: " & logFile & "
+The application will be ready when you see a notification.
 
-Приложение будет готово к работе, когда появится уведомление." buttons {"OK"} default button "OK" with icon note
+Log files:
+- Launch log: " & logFile & "
+- Setup output: " & logFolder & "/setup_output.log" buttons {"OK"} default button "OK" with icon note with title "CINERENTAL Launcher"
 
-    on error errMsg
-        -- In case of error show message
-        display dialog "Произошла ошибка при запуске CINERENTAL: " & errMsg & "
+        on error errMsg
+            -- Handle errors and show diagnostics
+            display dialog "Error starting CINERENTAL: " & errMsg & "
 
-Проверьте:
-1. Установлен ли Docker Desktop?
-2. Есть ли файл start_production.sh в нужной директории?
-3. Лог по пути: " & logFile buttons {"OK"} default button "OK" with icon stop with title "CINERENTAL - Ошибка"
-    end try
-end if
+Please check:
+1. Is Docker Desktop installed and running?
+2. Does the setup script exist at " & setupScriptPath & "?
+3. Check logs at: " & logFile & "
+
+You may need to run the setup script manually from Terminal." buttons {"OK"} default button "OK" with icon stop with title "CINERENTAL - Error"
+        end try
+    end if
+end run
