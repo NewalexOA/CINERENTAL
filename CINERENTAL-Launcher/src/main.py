@@ -7,10 +7,11 @@ import time
 from typing import Any, Callable, Optional
 
 from docker_manager import DockerManager
-from PyQt5.QtCore import QEvent, QThread, pyqtSignal
+from PyQt5.QtCore import QEvent, QSettings, QThread, pyqtSignal
 from PyQt5.QtGui import QFont
 from PyQt5.QtWidgets import (
     QApplication,
+    QFileDialog,
     QGroupBox,
     QHBoxLayout,
     QLabel,
@@ -110,16 +111,93 @@ class MainWindow(QMainWindow):
     def __init__(self) -> None:
         """Initialize the main window."""
         super().__init__()
-        self.docker = DockerManager()
+
+        # Load settings
+        self.settings = QSettings('CINERENTAL', 'Launcher')
+
+        # Get project path or ask user to select it if not defined
+        project_path = self.settings.value('project_path', None, str)
+        if not project_path or not os.path.isdir(project_path):
+            project_path = self.select_project_path()
+            if project_path:
+                self.settings.setValue('project_path', project_path)
+
+        # Initialize Docker manager with the project path
+        self.docker = DockerManager(project_path=project_path)
         self.log_monitor_thread = None
+
+        # Initialize UI and check status
         self.init_ui()
+        self.start_log_monitor()
         self.check_status()  # Check Docker status on startup
+
+    def select_project_path(self) -> str | None:
+        """Prompt user to select the CINERENTAL project path.
+
+        Returns:
+            str | None: The selected path or None if user cancels
+        """
+        # Default path suggestion
+        default_path = os.path.expanduser('~')
+
+        # Show information dialog
+        QMessageBox.information(
+            self,
+            'Выбор пути проекта',
+            'Пожалуйста, выберите папку, где находится проект CINERENTAL.\n'
+            'Это папка, содержащая файл docker-compose.yml '
+            'или docker-compose.prod.yml.',
+        )
+
+        # Open directory selection dialog
+        project_path = (
+            str(
+                QFileDialog.getExistingDirectory(
+                    self,
+                    'Выберите папку проекта CINERENTAL',
+                    default_path,
+                    QFileDialog.ShowDirsOnly | QFileDialog.DontResolveSymlinks,
+                )
+            )
+            or None
+        )
+
+        if not project_path:
+            # User canceled, show warning and offer to use default path
+            reply = QMessageBox.question(
+                self,
+                'Использовать путь по умолчанию?',
+                'Вы не выбрали путь к проекту CINERENTAL. '
+                'Хотите использовать путь по умолчанию?\n\n'
+                '~/Github/CINERENTAL',
+                QMessageBox.Yes | QMessageBox.No,
+                QMessageBox.Yes,
+            )
+
+            if reply == QMessageBox.Yes:
+                return os.path.expanduser('~/Github/CINERENTAL')
+            return None
+
+        return project_path
 
     def init_ui(self) -> None:
         """Initialize user interface components."""
         self.setWindowTitle('CINERENTAL Launcher')
         self.setMinimumSize(800, 600)
 
+        # Set up menubar
+        menubar = self.menuBar()
+        file_menu = menubar.addMenu('Файл')
+
+        # Add menu actions
+        change_path_action = file_menu.addAction('Изменить путь проекта')
+        change_path_action.triggered.connect(self.change_project_path)
+
+        file_menu.addSeparator()
+        exit_action = file_menu.addAction('Выход')
+        exit_action.triggered.connect(self.close)
+
+        # Main layout setup
         main_widget = QWidget()
         main_layout = QVBoxLayout()
         main_widget.setLayout(main_layout)
@@ -202,9 +280,13 @@ class MainWindow(QMainWindow):
 
         main_layout.addWidget(logs_group)
 
+        # Create status bar
         self.status_bar = QStatusBar()
         self.setStatusBar(self.status_bar)
-        self.status_bar.showMessage('Готов')
+
+        # Show project path in status bar
+        path_label = QLabel(f'Путь проекта: {self.docker.project_path}')
+        self.status_bar.addPermanentWidget(path_label)
 
     def start_log_monitor(self) -> None:
         """Start log file monitoring."""
@@ -442,6 +524,27 @@ class MainWindow(QMainWindow):
 
         if event:
             event.accept()
+
+    def change_project_path(self) -> None:
+        """Change the project path and restart the application."""
+        # Ask user to select a new path
+        new_path = self.select_project_path()
+
+        if new_path:
+            # Save the new path
+            self.settings.setValue('project_path', new_path)
+
+            # Show restart message
+            QMessageBox.information(
+                self,
+                'Перезапуск приложения',
+                'Путь проекта изменен. '
+                'Приложение будет перезапущено для применения изменений.',
+            )
+
+            # Restart the application
+            python = sys.executable
+            os.execl(python, python, *sys.argv)
 
 
 if __name__ == '__main__':
