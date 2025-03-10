@@ -75,7 +75,7 @@ class Equipment(TimestampMixin, SoftDeleteMixin, Base):
         index=True,
     )
     replacement_cost: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
-    notes: Mapped[Optional[str]] = mapped_column(String(1000))
+    notes: Mapped[Optional[str]] = mapped_column(String(5000))
 
     # Relationships
     category: Mapped['Category'] = relationship(back_populates='equipment')

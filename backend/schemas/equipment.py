@@ -86,6 +86,7 @@ class EquipmentResponse(BaseModel):
     status: EquipmentStatus
     created_at: datetime
     updated_at: datetime
+    notes: Optional[str] = None
     category_name: str = Field(default='Без категории', description='Category name')
     category: Optional[CategoryInfo] = Field(None, description='Category information')
 

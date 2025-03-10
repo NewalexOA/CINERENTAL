@@ -209,7 +209,7 @@
 {% endblock %}
 
 {% block extra_js %}
-<scrip
+<script
     data-equipment-id="{{ equipment.id }}"
     data-category-id="{{ equipment.category_id }}"
     data-barcode="{{ equipment.barcode }}"
@@ -222,17 +222,69 @@ const EQUIPMENT_DATA = {
     barcode: scriptTag.dataset.barcode
 };
 
+// Enhance the showToast function to auto-dismiss notifications
+const originalShowToast = showToast;
+window.showToast = function(message, type) {
+    const toast = originalShowToast(message, type);
+
+    // Auto-dismiss the toast after 3 seconds
+    setTimeout(() => {
+        const toastElement = document.querySelector('.toast.show');
+        if (toastElement) {
+            const bsToast = bootstrap.Toast.getInstance(toastElement);
+            if (bsToast) {
+                bsToast.hide();
+            }
+        }
+    }, 3000);
+
+    return toast;
+};
+
 // Load categories for edit form
 async function loadCategories() {
     try {
         const categories = await api.get('/categories');
         const formSelect = document.querySelector('select[name="category_id"]');
 
-        formSelect.innerHTML = categories.map(category =>
-            `<option value="${category.id}" ${category.id === EQUIPMENT_DATA.categoryId ? 'selected' : ''}>
+        // Get equipment category id from URL if available (takes precedence over stored value)
+        const url = new URL(window.location.href);
+        let equipmentCategoryId = EQUIPMENT_DATA.categoryId;
+
+        // If category_id is in URL parameters, use that instead
+        if (url.searchParams.has('category_id')) {
+            equipmentCategoryId = parseInt(url.searchParams.get('category_id'), 10);
+        }
+
+        // Update display name in card subtitle immediately when loading from URL parameter
+        if (url.searchParams.has('category_id')) {
+            const categoryId = parseInt(url.searchParams.get('category_id'), 10);
+            if (!isNaN(categoryId)) {
+                // Find the category by ID
+                const category = categories.find(cat => parseInt(cat.id, 10) === categoryId);
+                if (category) {
+                    // Update the displayed category name in the UI
+                    document.querySelector('.card-subtitle.text-muted').textContent = category.name;
+                }
+            }
+        }
+
+        // First add empty option for "no category" selection
+        let options = `<option value="">Без категории</option>`;
+
+        // Then add all available categories
+        options += categories.map(category => {
+            // Ensure both values are numbers for comparison
+            const categoryId = parseInt(category.id, 10);
+            // Use strict comparison to avoid false positives
+            const isSelected = categoryId === equipmentCategoryId;
+
+            return `<option value="${categoryId}" ${isSelected ? 'selected' : ''}>
                 ${category.name}
-            </option>`
-        ).join('');
+            </option>`;
+        }).join('');
+
+        formSelect.innerHTML = options;
     } catch (error) {
         console.error('Error loading categories:', error);
         showToast('Ошибка загрузки категорий', 'danger');
@@ -315,12 +367,58 @@ async function loadStatusTimeline() {
 document.getElementById('updateEquipment').addEventListener('click', async () => {
     const form = document.getElementById('editEquipmentForm');
     const formData = new FormData(form);
+
+    // Extract data from form
     const data = Object.fromEntries(formData.entries());
 
+    // Convert string values to appropriate types
+    if (data.category_id) {
+        data.category_id = parseInt(data.category_id, 10);
+    } else {
+        // Make sure we send a proper empty value - this is critical
+        data.category_id = null;
+    }
+
+    if (data.replacement_cost) {
+        data.replacement_cost = parseFloat(data.replacement_cost);
+    }
+
     try {
-        await api.put(`/equipment/${EQUIPMENT_DATA.id}`, data);
-        showToast('Оборудование успешно обновлено', 'success');
-        location.reload();
+        const response = await api.put(`/equipment/${EQUIPMENT_DATA.id}`, data);
+
+        // Update the displayed category name before redirect
+        const categorySelect = form.querySelector('select[name="category_id"]');
+        const selectedOption = categorySelect.options[categorySelect.selectedIndex];
+        const categoryName = selectedOption ? selectedOption.textContent.trim() : 'Без категории';
+
+        // Update the displayed category name in the UI immediately
+        document.querySelector('.card-subtitle.text-muted').textContent = categoryName;
+
+        // Store notification message in sessionStorage to show after reload
+        try {
+            sessionStorage.setItem('equipmentNotification', JSON.stringify({
+                message: 'Оборудование успешно обновлено',
+                type: 'success'
+            }));
+        } catch (storageError) {
+            console.warn('Unable to access sessionStorage:', storageError);
+            // We'll still show a toast before redirecting
+            showToast('Оборудование успешно обновлено', 'success');
+        }
+
+        // Redirect with category_id parameter for proper backend rendering
+        setTimeout(() => {
+            // Include category_id in query params to ensure correct rendering after load
+            const url = new URL(window.location.origin + `/equipment/${EQUIPMENT_DATA.id}`);
+            url.searchParams.set('t', new Date().getTime()); // Cache-busting
+
+            // Always include category_id parameter, even if null (will be handled correctly by backend)
+            if (data.category_id !== null) {
+                url.searchParams.set('category_id', data.category_id);
+            }
+
+            window.location.href = url.toString();
+        }, 1000); // Delay to allow toast to be visible
     } catch (error) {
         console.error('Error updating equipment:', error);
         showToast('Ошибка при обновлении', 'danger');
@@ -330,25 +428,25 @@ document.getElementById('updateEquipment').addEventListener('click', async () =>
 // Handle equipment deletion
 document.getElementById('deleteEquipment').addEventListener('click', async () => {
     try {
-        // Отображаем индикатор загрузки
+        // Display loading indicator
         const deleteButton = document.getElementById('deleteEquipment');
         const originalText = deleteButton.innerHTML;
         deleteButton.disabled = true;
         deleteButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Удаление...';
 
-        // Выполняем запрос на удаление
+        // Execute delete request
         await api.delete(`/equipment/${EQUIPMENT_DATA.id}`);
 
-        // Уведомляем пользователя
+        // Notify user
         showToast('Оборудование успешно удалено', 'success');
 
-        // Явно перенаправляем на страницу со списком оборудования без кэширования
+        // Redirect to equipment list with cache-busting parameter
         window.location.href = '/equipment?t=' + new Date().getTime();
     } catch (error) {
         console.error('Error deleting equipment:', error);
         showToast('Ошибка при удалении: ' + (error.message || 'Неизвестная ошибка'), 'danger');
 
-        // Восстанавливаем кнопку
+        // Restore button state
         const deleteButton = document.getElementById('deleteEquipment');
         if (deleteButton) {
             deleteButton.disabled = false;
@@ -395,23 +493,33 @@ async function loadBarcodeInfo() {
         const response = await api.post('/barcodes/validate', { barcode });
 
         if (response.is_valid) {
-            const details = response.details;
-            const category = details.category?.name || 'Неизвестно';
-            const subcategory = details.subcategory_prefix?.name || 'Неизвестно';
+            const details = response.details || {};
 
-            let info = `
-                <strong>Категория:</strong> ${category} <br>
-                <strong>Подкатегория:</strong> ${subcategory} <br>
-                <strong>Серийный номер:</strong> ${details.sequence_number}
-            `;
+            // Display barcode information based on available data
+            // For new format (global counter), we'll just show basic info
+            let infoContent = '';
 
-            document.getElementById('barcodeInfo').innerHTML = info;
+            if (details.category?.name) {
+                // Legacy format with category info
+                const category = details.category.name || 'Unknown';
+                infoContent += `<strong>Category:</strong> ${category} <br>`;
+            }
+
+            // Always show the barcode
+            infoContent += `<strong>Barcode:</strong> ${barcode} <br>`;
+
+            // Show sequence number if available
+            if (details.sequence_number) {
+                infoContent += `<strong>Sequence:</strong> ${details.sequence_number}`;
+            }
+
+            document.getElementById('barcodeInfo').innerHTML = infoContent || `<strong>Status:</strong> Valid`;
         } else {
-            document.getElementById('barcodeInfo').innerHTML = '<span class="text-danger">Недействительный штрих-код</span>';
+            document.getElementById('barcodeInfo').innerHTML = '<span class="text-danger">Invalid barcode</span>';
         }
     } catch (error) {
         console.error('Error loading barcode info:', error);
-        document.getElementById('barcodeInfo').innerHTML = '<span class="text-danger">Ошибка загрузки информации</span>';
+        document.getElementById('barcodeInfo').innerHTML = '<span class="text-danger">Error loading barcode information</span>';
     }
 }
 
@@ -421,84 +529,53 @@ async function regenerateBarcode() {
         return;
     }
 
+    // Completely remove global loader if exists
+    const existingLoader = document.getElementById('global-loader');
+    if (existingLoader) {
+        existingLoader.remove();
+        window.loaderCounter = 0;
+        console.log('Global loader completely removed from DOM');
+    }
+
+    // Create and display a local loading indicator
+    const regenerateBtn = document.getElementById('regenerateBarcodeBtn');
+    const originalBtnContent = regenerateBtn.innerHTML;
+    regenerateBtn.disabled = true;
+    regenerateBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>';
+
+    // Also show a loading indicator in the barcode info section
+    const barcodeInfoElement = document.getElementById('barcodeInfo');
+    const originalInfoContent = barcodeInfoElement.innerHTML;
+    barcodeInfoElement.innerHTML = '<div class="text-center"><div class="spinner-border spinner-border-sm text-primary"></div> Processing...</div>';
+
     try {
-        showLoader();
+        // Call API for barcode regeneration without subcategory parameter
+        const response = await api.post(`/equipment/${EQUIPMENT_DATA.id}/regenerate-barcode`, {});
 
-        // Getting available subcategories for the current category
-        const subcategoriesResponse = await api.get(`/categories/${EQUIPMENT_DATA.categoryId}/subcategories`);
+        // Update barcode on the page
+        document.getElementById('barcodeDisplay').textContent = response.barcode;
 
-        if (subcategoriesResponse.length === 0) {
-            showToast('Для выбранной категории нет доступных подкатегорий', 'warning');
-            return;
-        }
+        // Load information about the new barcode
+        await loadBarcodeInfo();
 
-        // Creating a modal for subcategory selection
-        const modalHtml = `
-            <div class="modal fade" id="regenerateBarcodeModal" tabindex="-1">
-                <div class="modal-dialog">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h5 class="modal-title">Выберите подкатегорию</h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                        </div>
-                        <div class="modal-body">
-                            <p>Выберите подкатегорию для нового штрих-кода:</p>
-                            <select class="form-select" id="subcategorySelect">
-                                ${subcategoriesResponse.map(subcategory =>
-                                    `<option value="${subcategory.id}">${subcategory.name} (${subcategory.prefix})</option>`
-                                ).join('')}
-                            </select>
-                        </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
-                            <button type="button" class="btn btn-primary" id="confirmRegenerate">Перегенерировать</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
-
-        // Adding the modal to the DOM
-        const modalContainer = document.createElement('div');
-        modalContainer.innerHTML = modalHtml;
-        document.body.appendChild(modalContainer);
-
-        // Showing the modal
-        const modal = new bootstrap.Modal(document.getElementById('regenerateBarcodeModal'));
-        modal.show();
-
-        // Confirmation button handler
-        document.getElementById('confirmRegenerate').addEventListener('click', async () => {
-            const subcategoryPrefixId = document.getElementById('subcategorySelect').value;
-
-            try {
-                const response = await api.post(`/equipment/${EQUIPMENT_DATA.id}/regenerate-barcode`, {
-                    subcategory_prefix_id: parseInt(subcategoryPrefixId)
-                });
-
-                // Updating the barcode on the page
-                document.getElementById('barcodeDisplay').textContent = response.barcode;
-
-                // Loading the new barcode info
-                await loadBarcodeInfo();
-
-                showToast('Штрих-код успешно перегенерирован', 'success');
-
-                // Closing the modal
-                modal.hide();
-
-                // Removing the modal from the DOM after closing
-                modalContainer.remove();
-            } catch (error) {
-                console.error('Error regenerating barcode:', error);
-                showToast('Ошибка при перегенерации штрих-кода', 'danger');
-            }
-        });
+        showToast('Штрих-код успешно перегенерирован', 'success');
     } catch (error) {
-        console.error('Error loading subcategories:', error);
-        showToast('Ошибка при загрузке подкатегорий', 'danger');
+        console.error('Error regenerating barcode:', error);
+        showToast('Ошибка при перегенерации штрих-кода', 'danger');
+        // Restore original barcode info if loadBarcodeInfo failed
+        barcodeInfoElement.innerHTML = originalInfoContent;
     } finally {
-        hideLoader();
+        // Restore button state
+        regenerateBtn.disabled = false;
+        regenerateBtn.innerHTML = originalBtnContent;
+
+        // Final safety check - remove any global loader that might have appeared
+        const finalCheck = document.getElementById('global-loader');
+        if (finalCheck) {
+            finalCheck.remove();
+            window.loaderCounter = 0;
+            console.log('Global loader removed in final cleanup');
+        }
     }
 }
 
@@ -507,6 +584,14 @@ document.addEventListener('DOMContentLoaded', () => {
     loadCategories();
     loadBookingHistory();
     loadStatusTimeline();
+
+    // Check for notification stored from previous page load
+    const notification = sessionStorage.getItem('equipmentNotification');
+    if (notification) {
+        const { message, type } = JSON.parse(notification);
+        showToast(message, type);
+        sessionStorage.removeItem('equipmentNotification');
+    }
 
     // Loading barcode info
     loadBarcodeInfo();

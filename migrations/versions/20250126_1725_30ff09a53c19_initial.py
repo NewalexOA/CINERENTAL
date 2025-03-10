@@ -412,6 +412,55 @@ def upgrade() -> None:
         'CREATE INDEX idx_equipment_serial_number_search '
         'ON equipment USING gin (serial_number gin_trgm_ops)'
     )
+
+    # Create global_barcode_sequence table
+    op.create_table(
+        'global_barcode_sequence',
+        sa.Column('id', sa.Integer(), nullable=False),
+        sa.Column(
+            'last_number',
+            sa.Integer(),
+            nullable=False,
+            server_default=sa.text('0'),
+            comment='Last used sequence number for auto-incremented barcodes',
+        ),
+        sa.Column(
+            'created_at',
+            sa.DateTime(timezone=True),
+            server_default=sa.text('now()'),
+            nullable=False,
+        ),
+        sa.Column(
+            'updated_at',
+            sa.DateTime(timezone=True),
+            server_default=sa.text('now()'),
+            nullable=False,
+        ),
+        sa.Column('deleted_at', sa.DateTime(timezone=True), nullable=True),
+        sa.PrimaryKeyConstraint('id'),
+    )
+
+    # Insert initial record with id=1
+    op.execute("INSERT INTO global_barcode_sequence (id, last_number) VALUES (1, 0)")
+
+    op.create_index(
+        op.f('ix_global_barcode_sequence_created_at'),
+        'global_barcode_sequence',
+        ['created_at'],
+        unique=False,
+    )
+    op.create_index(
+        op.f('ix_global_barcode_sequence_updated_at'),
+        'global_barcode_sequence',
+        ['updated_at'],
+        unique=False,
+    )
+    op.create_index(
+        op.f('ix_global_barcode_sequence_deleted_at'),
+        'global_barcode_sequence',
+        ['deleted_at'],
+        unique=False,
+    )
     # ### end Alembic commands ###
 
 
@@ -423,6 +472,21 @@ def downgrade() -> None:
     op.execute('DROP INDEX IF EXISTS idx_equipment_barcode_search')
     op.execute('DROP INDEX IF EXISTS idx_equipment_description_search')
     op.execute('DROP INDEX IF EXISTS idx_equipment_serial_number_search')
+
+    # Drop global_barcode_sequence indices and table
+    op.drop_index(
+        op.f('ix_global_barcode_sequence_deleted_at'),
+        table_name='global_barcode_sequence',
+    )
+    op.drop_index(
+        op.f('ix_global_barcode_sequence_updated_at'),
+        table_name='global_barcode_sequence',
+    )
+    op.drop_index(
+        op.f('ix_global_barcode_sequence_created_at'),
+        table_name='global_barcode_sequence',
+    )
+    op.drop_table('global_barcode_sequence')
 
     op.drop_index(op.f('ix_documents_updated_at'), table_name='documents')
     op.drop_index(op.f('ix_documents_type'), table_name='documents')
