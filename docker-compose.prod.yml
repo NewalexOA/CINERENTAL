@@ -16,12 +16,12 @@ services:
     environment:
       - ENVIRONMENT=production
       - POSTGRES_SERVER=db
-      - POSTGRES_USER=${POSTGRES_USER:-cinerental_prod}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-      - POSTGRES_DB=${POSTGRES_DB:-cinerental_prod}
+      - POSTGRES_USER=${POSTGRES_USER:?POSTGRES_USER must be set in .env.production}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in .env.production}
+      - POSTGRES_DB=${POSTGRES_DB:?POSTGRES_DB must be set in .env.production}
       - REDIS_HOST=redis
-      - REDIS_PASSWORD=${REDIS_PASSWORD:-}
-      - SECRET_KEY=${SECRET_KEY}
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - SECRET_KEY=${SECRET_KEY:?SECRET_KEY must be set in .env.production}
       - DEBUG=false
       - WORKERS_COUNT=${WORKERS_COUNT:-4}
       - LOG_LEVEL=${LOG_LEVEL:-info}
@@ -62,9 +62,9 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     environment:
-      - POSTGRES_DB=${POSTGRES_DB:-cinerental_prod}
-      - POSTGRES_USER=${POSTGRES_USER:-cinerental_prod}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB:?POSTGRES_DB must be set in .env.production}
+      - POSTGRES_USER=${POSTGRES_USER:?POSTGRES_USER must be set in .env.production}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in .env.production}
       - POSTGRES_HOST_AUTH_METHOD=${POSTGRES_HOST_AUTH_METHOD:-scram-sha-256}
       - PGDATA=/var/lib/postgresql/data/pgdata
     ports:
