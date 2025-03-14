@@ -1,10 +1,10 @@
-"""Script for building the CINERENTAL Launcher application using py2app."""
+"""Script for building the ACT-Rental Launcher application using py2app."""
 
 from setuptools import setup
 
-APP = ['src/main.py']
+APP = ['main.py']
 DATA_FILES = [
-    ('assets', ['assets/README.md']),
+    ('assets', ['../assets/README.md']),
 ]
 OPTIONS = {
     'argv_emulation': False,
@@ -31,14 +31,14 @@ OPTIONS = {
         'PyQt6',
     ],
     'strip': False,  # Disable stripping to help with debugging
-    'iconfile': None,  # You can add an icon file path here if available
+    'iconfile': '../assets/icon.iconset/icon.icns',  # Icon file for the application
     'resources': [],
     'plist': {
-        'CFBundleName': 'CINERENTAL Launcher',
-        'CFBundleDisplayName': 'CINERENTAL Launcher',
+        'CFBundleName': 'ACT-Rental Launcher',
+        'CFBundleDisplayName': 'ACT-Rental Launcher',
         'CFBundleVersion': '1.0.0',
         'CFBundleShortVersionString': '1.0.0',
-        'CFBundleIdentifier': 'com.cinerental.launcher',
+        'CFBundleIdentifier': 'com.act-rental.launcher',
         'NSHumanReadableCopyright': 'Copyright © 2023',
         'NSHighResolutionCapable': True,
         'NSRequiresAquaSystemAppearance': False,
@@ -51,7 +51,7 @@ OPTIONS = {
 }
 
 setup(
-    name='CINERENTAL Launcher',
+    name='ACT-Rental Launcher',
     app=APP,
     data_files=DATA_FILES,
     options={'py2app': OPTIONS},

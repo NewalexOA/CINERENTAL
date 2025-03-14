@@ -18,12 +18,12 @@ rm -rf build dist
 
 # Build the application
 echo "Сборка приложения..."
-python setup.py py2app
+cd src && python ../setup.py py2app
 
 # Check the result
-if [ -d "dist/CINERENTAL Launcher.app" ]; then
+if [ -d "dist/ACT-Rental Launcher.app" ]; then
     echo "Приложение успешно собрано!"
-    echo "Путь к приложению: $(pwd)/dist/CINERENTAL Launcher.app"
+    echo "Путь к приложению: $(pwd)/dist/ACT-Rental Launcher.app"
 
     # Create DMG image (optional)
     read -p "Создать DMG-образ? (y/n): " create_dmg
@@ -38,18 +38,18 @@ if [ -d "dist/CINERENTAL Launcher.app" ]; then
 
         # Create DMG
         create-dmg \
-            --volname "CINERENTAL Launcher" \
+            --volname "ACT-Rental Launcher" \
             --window-pos 200 120 \
             --window-size 800 400 \
             --icon-size 100 \
-            --icon "CINERENTAL Launcher.app" 200 190 \
-            --hide-extension "CINERENTAL Launcher.app" \
+            --icon "ACT-Rental Launcher.app" 200 190 \
+            --hide-extension "ACT-Rental Launcher.app" \
             --app-drop-link 600 185 \
-            "dist/CINERENTAL Launcher.dmg" \
-            "dist/CINERENTAL Launcher.app" || { echo "Ошибка создания DMG-образа"; }
+            "dist/ACT-Rental Launcher.dmg" \
+            "dist/ACT-Rental Launcher.app" || { echo "Ошибка создания DMG-образа"; }
 
-        if [ -f "dist/CINERENTAL Launcher.dmg" ]; then
-            echo "DMG-образ успешно создан: $(pwd)/dist/CINERENTAL Launcher.dmg"
+        if [ -f "dist/ACT-Rental Launcher.dmg" ]; then
+            echo "DMG-образ успешно создан: $(pwd)/dist/ACT-Rental Launcher.dmg"
         fi
     fi
 else
