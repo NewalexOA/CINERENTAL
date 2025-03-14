@@ -100,7 +100,44 @@ docker run --rm -v cinerental_redis_data:/from -v act-rental_redis_data:/to alpi
 docker run --rm -v cinerental_media:/from -v act-rental_media:/to alpine sh -c "cp -av /from/. /to/"
 ```
 
-## Шаг 6: Обновление файла .env (если требуется)
+## Шаг 6: Переименование базы данных PostgreSQL
+
+**Важно**: После копирования данных необходимо переименовать саму базу данных внутри тома PostgreSQL!
+
+```bash
+# Запускаем временный контейнер PostgreSQL, подключенный к новому тому
+docker run --rm -it \
+  -v act-rental_postgres_data:/var/lib/postgresql/data \
+  --name pg_temp \
+  --env POSTGRES_PASSWORD=postgres \
+  postgres:13 \
+  bash -c "createdb -U postgres act-rental && \
+           psql -U postgres -c \"ALTER DATABASE cinerental RENAME TO \\\"act-rental\\\";\" || \
+           echo 'Уже существует или нет базы cinerental'"
+```
+
+> **Примечание**: Если база уже была переименована или ее структура отличается, возможно понадобится создать новую базу данных и восстановить в нее данные из дампа. В этом случае рекомендуется сначала создать дамп старой базы:
+>
+> ```bash
+> # Создание SQL дампа только структуры и данных конкретной базы
+> docker run --rm -v cinerental_postgres_data:/var/lib/postgresql/data \
+>   -v ~/db_backups/$BACKUP_TIMESTAMP:/backup \
+>   -e PGDATA=/var/lib/postgresql/data/pgdata \
+>   -e POSTGRES_PASSWORD=postgres \
+>   postgres:13 \
+>   bash -c "pg_dump -U postgres cinerental > /backup/cinerental_dump.sql"
+>
+> # Создание новой базы и восстановление в нее данных
+> docker run --rm -v act-rental_postgres_data:/var/lib/postgresql/data \
+>   -v ~/db_backups/$BACKUP_TIMESTAMP:/backup \
+>   -e PGDATA=/var/lib/postgresql/data/pgdata \
+>   -e POSTGRES_PASSWORD=postgres \
+>   postgres:13 \
+>   bash -c "createdb -U postgres act-rental && \
+>            psql -U postgres -d act-rental -f /backup/cinerental_dump.sql"
+> ```
+
+## Шаг 7: Обновление файла .env (если требуется)
 
 ```bash
 # Проверьте, существует ли файл .env.example в новой версии
@@ -116,7 +153,7 @@ if [ -f .env.example ]; then
 fi
 ```
 
-## Шаг 7: Запуск новой версии приложения
+## Шаг 8: Запуск новой версии приложения
 
 ```bash
 # Сборка и запуск контейнеров новой версии
@@ -127,7 +164,7 @@ docker compose -f docker-compose.prod.yml up -d
 docker compose -f docker-compose.prod.yml ps
 ```
 
-## Шаг 8: Проверка работоспособности приложения
+## Шаг 9: Проверка работоспособности приложения
 
 ```bash
 # Проверка доступности веб-интерфейса
@@ -137,14 +174,14 @@ curl -s -o /dev/null -w "%{http_code}\n" http://localhost:8000
 docker compose -f docker-compose.prod.yml logs
 ```
 
-## Шаг 9: Тестирование функциональности
+## Шаг 10: Тестирование функциональности
 
 Войдите в систему и убедитесь, что:
 - Все данные доступны
 - Вы можете создавать и редактировать записи
 - Все основные функции работают корректно
 
-## Шаг 10: Удаление устаревших томов (после успешной миграции)
+## Шаг 11: Удаление устаревших томов (после успешной миграции)
 
 **Внимание: Выполняйте этот шаг только после полной проверки работоспособности новой версии!**
 
