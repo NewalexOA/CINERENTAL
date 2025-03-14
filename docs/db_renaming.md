@@ -1,180 +1,5 @@
 # Инструкция по переносу базы данных после переименования проекта
 
-## Шаг 1: Проверка существующих томов
-
-```bash
-docker volume ls | grep -E 'cinerental_|act-rental_'
-```
-
-Убедитесь, что у вас есть старые тома (`cinerental_postgres_data`, `cinerental_redis_data`, `cinerental_media`).
-
-## Шаг 2: Остановите все контейнеры
-
-```bash
-cd /путь/к/вашему/проекту
-docker compose -f docker-compose.prod.yml down
-```
-
-## Шаг 3: Создайте бэкап базы данных (важно!)
-
-Перед любыми операциями с томами создайте полный бэкап базы данных PostgreSQL:
-
-```bash
-# Сохраняем текущий таймстемп в переменную
-BACKUP_TIMESTAMP=$(date +%Y%m%d_%H%M%S)
-
-# Создание директории для бэкапов с сохраненным таймстемпом
-mkdir -p ~/db_backups/$BACKUP_TIMESTAMP
-
-# Создание бэкапа PostgreSQL (дамп данных)
-docker run --rm -v cinerental_postgres_data:/var/lib/postgresql/data \
-  -v ~/db_backups/$BACKUP_TIMESTAMP:/backups \
-  --env PGUSER=postgres \
-  --env PGPASSWORD=postgres \
-  postgres:13 \
-  pg_dumpall -c > ~/db_backups/$BACKUP_TIMESTAMP/full_db_backup.sql
-
-# Архивируем тома для дополнительной безопасности
-docker run --rm -v cinerental_postgres_data:/source -v ~/db_backups/$BACKUP_TIMESTAMP:/backup \
-  alpine:latest tar czf /backup/cinerental_postgres_data.tar.gz -C /source .
-docker run --rm -v cinerental_redis_data:/source -v ~/db_backups/$BACKUP_TIMESTAMP:/backup \
-  alpine:latest tar czf /backup/cinerental_redis_data.tar.gz -C /source .
-docker run --rm -v cinerental_media:/source -v ~/db_backups/$BACKUP_TIMESTAMP:/backup \
-  alpine:latest tar czf /backup/cinerental_media.tar.gz -C /source .
-```
-
-Убедитесь, что бэкапы были успешно созданы, проверив размер и содержимое файлов:
-
-```bash
-ls -lh ~/db_backups/$BACKUP_TIMESTAMP/
-```
-
-## Шаг 4: Создайте резервные копии томов (необязательно, но рекомендуется)
-
-```bash
-# Используем тот же таймстемп для согласованности
-# Создание папки для резервных копий
-mkdir -p ~/docker_backups/$BACKUP_TIMESTAMP
-
-# Резервное копирование старых томов
-docker run --rm -v cinerental_postgres_data:/data -v ~/docker_backups/$BACKUP_TIMESTAMP:/backup alpine tar czf /backup/cinerental_postgres_data.tar.gz /data
-docker run --rm -v cinerental_redis_data:/data -v ~/docker_backups/$BACKUP_TIMESTAMP:/backup alpine tar czf /backup/cinerental_redis_data.tar.gz /data
-docker run --rm -v cinerental_media:/data -v ~/docker_backups/$BACKUP_TIMESTAMP:/backup alpine tar czf /backup/cinerental_media.tar.gz /data
-```
-
-## Шаг 5: Создание новых томов (если они не существуют)
-
-Проверьте, существуют ли новые тома и создайте их, если они отсутствуют:
-
-### Проверка существования новых томов
-```bash
-NEW_VOLUMES=$(docker volume ls --format "{{.Name}}" | grep act-rental)
-```
-
-### Создание томов, если они отсутствуют
-```bash
-if [[ ! $NEW_VOLUMES =~ "act-rental_postgres_data" ]]; then
-  echo "Создание тома act-rental_postgres_data..."
-  docker volume create act-rental_postgres_data
-fi
-
-if [[ ! $NEW_VOLUMES =~ "act-rental_redis_data" ]]; then
-  echo "Создание тома act-rental_redis_data..."
-  docker volume create act-rental_redis_data
-fi
-
-if [[ ! $NEW_VOLUMES =~ "act-rental_media" ]]; then
-  echo "Создание тома act-rental_media..."
-  docker volume create act-rental_media
-fi
-```
-
-### Проверка, что все тома созданы
-```bash
-docker volume ls | grep act-rental_
-```
-
-Альтернативный способ - использование Docker Compose для создания томов без запуска контейнеров:
-
-### Создание томов через docker-compose
-```bash
-cd /путь/к/вашему/проекту
-docker compose -f docker-compose.prod.yml up --no-start
-docker compose -f docker-compose.prod.yml down
-```
-
-## Шаг 6: Копирование данных из старых томов в новые
-
-### Копирование данных PostgreSQL
-```bash
-docker run --rm -v cinerental_postgres_data:/from -v act-rental_postgres_data:/to alpine sh -c "cp -av /from/. /to/"
-
-### Копирование данных Redis
-```bash
-docker run --rm -v cinerental_redis_data:/from -v act-rental_redis_data:/to alpine sh -c "cp -av /from/. /to/"
-```
-
-### Копирование медиа-файлов
-```bash
-docker run --rm -v cinerental_media:/from -v act-rental_media:/to alpine sh -c "cp -av /from/. /to/"
-```
-
-## Шаг 7: Запустите приложение и проверьте данные
-
-### Запустите лаунчер и используйте кнопку "Запустить" в интерфейсе Или запустите контейнеры напрямую:
-```bash
-cd /путь/к/вашему/проекту
-docker compose -f docker-compose.prod.yml up -d
-```
-
-Проверьте, что ваши данные доступны в приложении. Войдите в систему с вашими учетными данными и убедитесь, что все данные на месте.
-
-## Шаг 8: (Необязательно) Удаление старых томов после успешной миграции
-
-Если вы убедились, что все данные успешно перенесены и приложение работает нормально, можно удалить старые тома, чтобы освободить место:
-
-```bash
-docker volume rm cinerental_postgres_data
-docker volume rm cinerental_redis_data
-docker volume rm cinerental_media
-```
-
-## Дополнительные примечания:
-
-1. **Проблемы с правами доступа**: В некоторых случаях могут возникнуть проблемы с правами доступа при копировании данных. Если приложение не запускается или не может получить доступ к базе данных после копирования, попробуйте изменить владельца данных:
-
-   ```bash
-   docker run --rm -v act-rental_postgres_data:/data alpine sh -c "chown -R 999:999 /data"
-   ```
-
-2. **Восстановление из резервной копии**: Если что-то пошло не так, вы можете восстановить данные из резервной копии:
-
-   ```bash
-   # Укажите фактический таймстемп вашего бэкапа вместо YYYYMMDD_HHMMSS
-   BACKUP_TIMESTAMP=YYYYMMDD_HHMMSS
-
-   # Восстановление из SQL дампа (предпочтительный метод)
-   docker run --rm -i \
-     -v ~/db_backups/$BACKUP_TIMESTAMP:/backups \
-     --env PGUSER=postgres \
-     --env PGPASSWORD=postgres \
-     postgres:13 \
-     psql -d postgres < /backups/full_db_backup.sql
-
-   # Или восстановление из архива тома (альтернативный метод)
-   docker run --rm -v act-rental_postgres_data:/data -v ~/db_backups/$BACKUP_TIMESTAMP:/backup alpine sh -c "rm -rf /data/* && tar xzf /backup/cinerental_postgres_data.tar.gz -C /data"
-   ```
-
-3. **Проверка размера томов**: Чтобы убедиться, что данные были успешно скопированы, сравните размеры старых и новых томов:
-
-   ```bash
-   docker system df -v | grep -E 'cinerental_|act-rental_'
-   ```
-
-# Обновление продакшен-сервера с CINERENTAL до ACT-Rental
-
-Если вам нужно обновить существующий продакшен-сервер с версии CINERENTAL до ACT-Rental, следуйте этой инструкции.
-
 ## Шаг 1: Создание резервной копии данных (крайне важно!)
 
 ```bash
@@ -184,17 +9,34 @@ BACKUP_TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 # Создание директории для бэкапов с текущей датой и временем
 mkdir -p ~/prod_backups/$BACKUP_TIMESTAMP
 
-# Создание полного дампа базы данных
-docker exec -t $(docker ps -q -f name=cinerental_db) pg_dumpall -c -U postgres > ~/prod_backups/$BACKUP_TIMESTAMP/full_database_backup.sql
-
-# Архивирование томов для дополнительной безопасности
+# Создание архивов томов (работает независимо от запущенных контейнеров)
 docker run --rm -v cinerental_postgres_data:/source -v ~/prod_backups/$BACKUP_TIMESTAMP:/backup \
   alpine:latest tar czf /backup/cinerental_postgres_data.tar.gz -C /source .
 docker run --rm -v cinerental_redis_data:/source -v ~/prod_backups/$BACKUP_TIMESTAMP:/backup \
   alpine:latest tar czf /backup/cinerental_redis_data.tar.gz -C /source .
 docker run --rm -v cinerental_media:/source -v ~/prod_backups/$BACKUP_TIMESTAMP:/backup \
   alpine:latest tar czf /backup/cinerental_media.tar.gz -C /source .
+
+# Если контейнеры запущены, можно создать SQL дамп через запущенный контейнер
+if [ $(docker ps -q -f name=cinerental_db | wc -l) -gt 0 ]; then
+  docker exec -t $(docker ps -q -f name=cinerental_db) pg_dumpall -c -U postgres > ~/prod_backups/$BACKUP_TIMESTAMP/full_database_backup.sql
+  echo "SQL дамп создан через работающий контейнер"
+else
+  # Если контейнеры не запущены, создаем SQL дамп через временный контейнер
+  docker run --rm -v cinerental_postgres_data:/var/lib/postgresql/data \
+    -v ~/prod_backups/$BACKUP_TIMESTAMP:/backup \
+    -e PGDATA=/var/lib/postgresql/data/pgdata \
+    -e POSTGRES_PASSWORD=postgres \
+    postgres:13 \
+    bash -c "pg_dumpall -U postgres > /backup/full_database_backup.sql"
+  echo "SQL дамп создан через временный контейнер"
+fi
+
+# Проверка созданных бэкапов
+ls -lh ~/prod_backups/$BACKUP_TIMESTAMP/
 ```
+
+> **Примечание**: Обратите внимание, что для создания SQL дампа нам не нужен запущенный контейнер с базой данных. Мы можем использовать временный контейнер, который подключается напрямую к тому.
 
 ## Шаг 2: Скачивание обновленного кода из репозитория
 
@@ -319,14 +161,39 @@ else
 fi
 ```
 
-## Дополнительные рекомендации для продакшен-сервера:
+## Дополнительные примечания:
 
-1. **Проверка миграций базы данных**: Если в новой версии есть изменения схемы базы данных, убедитесь, что миграции применяются автоматически при запуске или выполните их вручную:
+1. **Проблемы с правами доступа**: В некоторых случаях могут возникнуть проблемы с правами доступа при копировании данных. Если приложение не запускается или не может получить доступ к базе данных после копирования, попробуйте изменить владельца данных:
+
+   ```bash
+   docker run --rm -v act-rental_postgres_data:/data alpine sh -c "chown -R 999:999 /data"
+   ```
+
+2. **Восстановление из резервной копии**: Если что-то пошло не так, вы можете восстановить данные из резервной копии:
+
+   ```bash
+   # Укажите фактический таймстемп вашего бэкапа
+   BACKUP_TIMESTAMP=YYYYMMDD_HHMMSS
+
+   # Восстановление из архива тома
+   docker run --rm -v act-rental_postgres_data:/data -v ~/prod_backups/$BACKUP_TIMESTAMP:/backup \
+     alpine sh -c "rm -rf /data/* && tar xzf /backup/cinerental_postgres_data.tar.gz -C /data"
+
+   # Или восстановление из SQL дампа
+   docker run --rm -i \
+     -v ~/prod_backups/$BACKUP_TIMESTAMP:/backup \
+     -v act-rental_postgres_data:/var/lib/postgresql/data \
+     -e POSTGRES_PASSWORD=postgres \
+     postgres:13 bash -c "mkdir -p /var/lib/postgresql/data/pgdata && \
+                         psql -U postgres -d postgres -f /backup/full_database_backup.sql"
+   ```
+
+3. **Проверка миграций базы данных**: Если в новой версии есть изменения схемы базы данных, убедитесь, что миграции применяются автоматически при запуске или выполните их вручную:
    ```bash
    docker compose -f docker-compose.prod.yml exec web alembic upgrade head
    ```
 
-2. **Подготовка плана отката**: На случай серьезных проблем имейте готовый план отката:
+4. **Подготовка плана отката**: На случай серьезных проблем имейте готовый план отката:
    ```bash
    # Для восстановления старой версии:
    git checkout backup-$(date +%Y%m%d)
@@ -335,9 +202,14 @@ fi
    docker compose -f docker-compose.prod.yml up -d
    ```
 
-3. **Мониторинг после обновления**: В течение нескольких дней после обновления внимательно следите за логами и производительностью системы:
+5. **Мониторинг после обновления**: В течение нескольких дней после обновления внимательно следите за логами и производительностью системы:
    ```bash
    docker compose -f docker-compose.prod.yml logs -f
    ```
 
-4. **Документирование изменений**: Запишите все изменения и проблемы, возникшие в процессе обновления, для будущих обновлений.
+6. **Проверка размера томов**: Чтобы убедиться, что данные были успешно скопированы, сравните размеры старых и новых томов:
+   ```bash
+   docker system df -v | grep -E 'cinerental_|act-rental_'
+   ```
+
+7. **Документирование изменений**: Запишите все изменения и проблемы, возникшие в процессе обновления, для будущих обновлений.
