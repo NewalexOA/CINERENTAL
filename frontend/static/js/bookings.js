@@ -1,6 +1,6 @@
-// Bookings management for CINERENTAL
+// Bookings management for ACT-RENTAL
 
-// Проверяем, существует ли уже функция showToas
+// Check if the showToast function already exists
 if (typeof window.showToast !== 'function') {
     // Toast notification
     window.showToast = function(message, type = 'info') {

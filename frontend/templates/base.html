@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}CINERENTAL{% endblock %}</title>
+    <title>{% block title %}{{ APP_NAME }}{% endblock %}</title>
 
     <!-- Favicon - используем встроенный data-URI вместо файла -->
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎬</text></svg>">
@@ -29,7 +29,7 @@
     <!-- Navigation -->
     <nav class="navbar navbar-expand-lg">
         <div class="container">
-            <a class="navbar-brand" href="/">CINERENTAL</a>
+            <a class="navbar-brand" href="/">{{ APP_NAME }}</a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
             </button>
@@ -78,7 +78,7 @@
     <!-- Footer -->
     <footer class="footer">
         <div class="container text-center">
-            <span class="text-muted">© 2024 CINERENTAL. Все права защищены.</span>
+            <span class="text-muted">© {{ COMPANY_SINCE }} {{ APP_NAME }}. Все права защищены.</span>
         </div>
     </footer>
 
