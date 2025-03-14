@@ -20,42 +20,46 @@ docker compose -f docker-compose.prod.yml down
 Перед любыми операциями с томами создайте полный бэкап базы данных PostgreSQL:
 
 ```bash
-# Создание директории для бэкапов
-mkdir -p ~/db_backups/$(date +%Y%m%d_%H%M%S)
+# Сохраняем текущий таймстемп в переменную
+BACKUP_TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+
+# Создание директории для бэкапов с сохраненным таймстемпом
+mkdir -p ~/db_backups/$BACKUP_TIMESTAMP
 
 # Создание бэкапа PostgreSQL (дамп данных)
 docker run --rm -v cinerental_postgres_data:/var/lib/postgresql/data \
-  -v ~/db_backups/$(date +%Y%m%d_%H%M%S):/backups \
+  -v ~/db_backups/$BACKUP_TIMESTAMP:/backups \
   --env PGUSER=postgres \
   --env PGPASSWORD=postgres \
   postgres:13 \
-  pg_dumpall -c > ~/db_backups/$(date +%Y%m%d_%H%M%S)/full_db_backup.sql
+  pg_dumpall -c > ~/db_backups/$BACKUP_TIMESTAMP/full_db_backup.sql
 
 # Архивируем тома для дополнительной безопасности
-docker run --rm -v cinerental_postgres_data:/source -v ~/db_backups/$(date +%Y%m%d_%H%M%S):/backup \
+docker run --rm -v cinerental_postgres_data:/source -v ~/db_backups/$BACKUP_TIMESTAMP:/backup \
   alpine:latest tar czf /backup/cinerental_postgres_data.tar.gz -C /source .
-docker run --rm -v cinerental_redis_data:/source -v ~/db_backups/$(date +%Y%m%d_%H%M%S):/backup \
+docker run --rm -v cinerental_redis_data:/source -v ~/db_backups/$BACKUP_TIMESTAMP:/backup \
   alpine:latest tar czf /backup/cinerental_redis_data.tar.gz -C /source .
-docker run --rm -v cinerental_media:/source -v ~/db_backups/$(date +%Y%m%d_%H%M%S):/backup \
+docker run --rm -v cinerental_media:/source -v ~/db_backups/$BACKUP_TIMESTAMP:/backup \
   alpine:latest tar czf /backup/cinerental_media.tar.gz -C /source .
 ```
 
 Убедитесь, что бэкапы были успешно созданы, проверив размер и содержимое файлов:
 
 ```bash
-ls -lh ~/db_backups/$(date +%Y%m%d_%H%M%S)/
+ls -lh ~/db_backups/$BACKUP_TIMESTAMP/
 ```
 
 ## Шаг 4: Создайте резервные копии томов (необязательно, но рекомендуется)
 
 ```bash
+# Используем тот же таймстемп для согласованности
 # Создание папки для резервных копий
-mkdir -p ~/docker_backups/$(date +%Y%m%d)
+mkdir -p ~/docker_backups/$BACKUP_TIMESTAMP
 
 # Резервное копирование старых томов
-docker run --rm -v cinerental_postgres_data:/data -v ~/docker_backups/$(date +%Y%m%d):/backup alpine tar czf /backup/cinerental_postgres_data.tar.gz /data
-docker run --rm -v cinerental_redis_data:/data -v ~/docker_backups/$(date +%Y%m%d):/backup alpine tar czf /backup/cinerental_redis_data.tar.gz /data
-docker run --rm -v cinerental_media:/data -v ~/docker_backups/$(date +%Y%m%d):/backup alpine tar czf /backup/cinerental_media.tar.gz /data
+docker run --rm -v cinerental_postgres_data:/data -v ~/docker_backups/$BACKUP_TIMESTAMP:/backup alpine tar czf /backup/cinerental_postgres_data.tar.gz /data
+docker run --rm -v cinerental_redis_data:/data -v ~/docker_backups/$BACKUP_TIMESTAMP:/backup alpine tar czf /backup/cinerental_redis_data.tar.gz /data
+docker run --rm -v cinerental_media:/data -v ~/docker_backups/$BACKUP_TIMESTAMP:/backup alpine tar czf /backup/cinerental_media.tar.gz /data
 ```
 
 ## Шаг 5: Создание новых томов (если они не существуют)
@@ -146,16 +150,19 @@ docker volume rm cinerental_media
 2. **Восстановление из резервной копии**: Если что-то пошло не так, вы можете восстановить данные из резервной копии:
 
    ```bash
+   # Укажите фактический таймстемп вашего бэкапа вместо YYYYMMDD_HHMMSS
+   BACKUP_TIMESTAMP=YYYYMMDD_HHMMSS
+
    # Восстановление из SQL дампа (предпочтительный метод)
    docker run --rm -i \
-     -v ~/db_backups/YYYYMMDD_HHMMSS:/backups \
+     -v ~/db_backups/$BACKUP_TIMESTAMP:/backups \
      --env PGUSER=postgres \
      --env PGPASSWORD=postgres \
      postgres:13 \
      psql -d postgres < /backups/full_db_backup.sql
 
    # Или восстановление из архива тома (альтернативный метод)
-   docker run --rm -v act-rental_postgres_data:/data -v ~/db_backups/YYYYMMDD_HHMMSS:/backup alpine sh -c "rm -rf /data/* && tar xzf /backup/cinerental_postgres_data.tar.gz -C /data"
+   docker run --rm -v act-rental_postgres_data:/data -v ~/db_backups/$BACKUP_TIMESTAMP:/backup alpine sh -c "rm -rf /data/* && tar xzf /backup/cinerental_postgres_data.tar.gz -C /data"
    ```
 
 3. **Проверка размера томов**: Чтобы убедиться, что данные были успешно скопированы, сравните размеры старых и новых томов:
@@ -171,18 +178,21 @@ docker volume rm cinerental_media
 ## Шаг 1: Создание резервной копии данных (крайне важно!)
 
 ```bash
+# Сохраняем текущий таймстемп в переменную для консистентности
+BACKUP_TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+
 # Создание директории для бэкапов с текущей датой и временем
-mkdir -p ~/prod_backups/$(date +%Y%m%d_%H%M%S)
+mkdir -p ~/prod_backups/$BACKUP_TIMESTAMP
 
 # Создание полного дампа базы данных
-docker exec -t $(docker ps -q -f name=cinerental_db) pg_dumpall -c -U postgres > ~/prod_backups/$(date +%Y%m%d_%H%M%S)/full_database_backup.sql
+docker exec -t $(docker ps -q -f name=cinerental_db) pg_dumpall -c -U postgres > ~/prod_backups/$BACKUP_TIMESTAMP/full_database_backup.sql
 
 # Архивирование томов для дополнительной безопасности
-docker run --rm -v cinerental_postgres_data:/source -v ~/prod_backups/$(date +%Y%m%d_%H%M%S):/backup \
+docker run --rm -v cinerental_postgres_data:/source -v ~/prod_backups/$BACKUP_TIMESTAMP:/backup \
   alpine:latest tar czf /backup/cinerental_postgres_data.tar.gz -C /source .
-docker run --rm -v cinerental_redis_data:/source -v ~/prod_backups/$(date +%Y%m%d_%H%M%S):/backup \
+docker run --rm -v cinerental_redis_data:/source -v ~/prod_backups/$BACKUP_TIMESTAMP:/backup \
   alpine:latest tar czf /backup/cinerental_redis_data.tar.gz -C /source .
-docker run --rm -v cinerental_media:/source -v ~/prod_backups/$(date +%Y%m%d_%H%M%S):/backup \
+docker run --rm -v cinerental_media:/source -v ~/prod_backups/$BACKUP_TIMESTAMP:/backup \
   alpine:latest tar czf /backup/cinerental_media.tar.gz -C /source .
 ```
 
