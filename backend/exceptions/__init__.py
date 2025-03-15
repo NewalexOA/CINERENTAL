@@ -1,7 +1,7 @@
-"""CINERENTAL exceptions package.
+"""ACT-RENTAL exceptions package.
 
 This package provides a comprehensive set of exceptions for handling various error cases
-in the CINERENTAL application.
+in the ACT-RENTAL application.
 """
 
 from backend.exceptions.exceptions_base import BusinessError

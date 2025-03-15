@@ -24,7 +24,7 @@ class LogConfig(BaseModel):
     It includes settings for log format, level, handlers, and formatters.
     """
 
-    LOGGER_NAME: str = 'cinerental'
+    LOGGER_NAME: str = 'act-rental'
     CONSOLE_FORMAT: str = (
         '{time:YYYY-MM-DD HH:mm:ss} | '
         '<level>{level: <8}</level> | '
@@ -437,7 +437,7 @@ def configure_logging(
 
     # Configure file logging in development
     if settings.ENVIRONMENT == 'development':
-        log_path = Path(sink) if sink else Path('logs/cinerental.log')
+        log_path = Path(sink) if sink else Path('logs/act-rental.log')
         log_path.parent.mkdir(parents=True, exist_ok=True)
 
         logger.add(

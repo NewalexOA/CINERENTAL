@@ -64,7 +64,7 @@ def create_app() -> FastAPI:
     app = FastAPI(
         title=settings.PROJECT_NAME,
         version=settings.PROJECT_VERSION,
-        description='CINERENTAL API',
+        description='ACT-Rental API',
         docs_url='/api/docs',
         openapi_url='/api/openapi.json',
         lifespan=lifespan,

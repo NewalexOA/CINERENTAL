@@ -1,4 +1,4 @@
-# CINERENTAL - Cinema Equipment Rental Management System
+# ACT-Rental - Cinema Equipment Rental Management System
 
 [![Python](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/downloads/release/python-3120/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.104.1-009688.svg?logo=fastapi)](https://fastapi.tiangolo.com)
@@ -8,7 +8,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ## Description
-CINERENTAL is a comprehensive system for managing cinema equipment rentals. It allows managers to control equipment availability, handle bookings, and track equipment returns efficiently.
+ACT-Rental is a comprehensive system for managing cinema equipment rentals. It allows managers to control equipment availability, handle bookings, and track equipment returns efficiently.
 
 ## Documentation
 - [Project Architecture](docs/architecture.md) - Detailed system architecture and design decisions
@@ -34,7 +34,7 @@ CINERENTAL is a comprehensive system for managing cinema equipment rentals. It a
 
 ## Project Structure
 ```
-cinerental/
+act-rental/
 ├── backend/             # Backend application
 │   ├── api/            # API endpoints and routers
 │   │   └── v1/        # API version 1
@@ -69,7 +69,7 @@ cinerental/
 ### Database Settings
 - `POSTGRES_USER` - PostgreSQL username (default: postgres)
 - `POSTGRES_PASSWORD` - PostgreSQL password (default: postgres)
-- `POSTGRES_DB` - Database name (default: cinerental)
+- `POSTGRES_DB` - Database name (default: act-rental)
 - `POSTGRES_SERVER` - Database host (default: db)
 
 ### Redis Settings
@@ -150,8 +150,8 @@ docker compose -f docker-compose.prod.yml up -d
 ## Installation
 1. Clone the repository:
    ```bash
-   git clone https://github.com/yourusername/cinerental.git
-   cd cinerental
+   git clone https://github.com/yourusername/act-rental.git
+   cd act-rental
    ```
 
 2. Create and activate virtual environment:
@@ -193,4 +193,3 @@ docker compose -f docker-compose.prod.yml up -d
 - Update documentation
 
 ## Testing
-```
