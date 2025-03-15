@@ -1,4 +1,4 @@
-name: cinerental
+name: act-rental
 
 services:
   web:
@@ -49,7 +49,7 @@ services:
       redis:
         condition: service_healthy
     networks:
-      - cinerental_network
+      - act-rental_network
     logging:
       driver: "json-file"
       options:
@@ -77,9 +77,9 @@ services:
         reservations:
           memory: 512M
     networks:
-      - cinerental_network
+      - act-rental_network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-cinerental_prod}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-act-rental_prod}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -103,7 +103,7 @@ services:
           cpus: '1'
           memory: 512M
     networks:
-      - cinerental_network
+      - act-rental_network
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -112,17 +112,17 @@ services:
 
 volumes:
   postgres_data:
-    name: cinerental_postgres_data
+    name: act-rental_postgres_data
     external: true
   redis_data:
-    name: cinerental_redis_data
+    name: act-rental_redis_data
     external: true
   media_volume:
-    name: cinerental_media
+    name: act-rental_media
     external: true
 
 networks:
-  cinerental_network:
+  act-rental_network:
     driver: bridge
     ipam:
       driver: default

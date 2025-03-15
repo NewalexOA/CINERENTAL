@@ -27,7 +27,8 @@ class Settings(BaseSettings):
     ENV: ClassVar[str] = os.environ.get('ENVIRONMENT', 'development')
 
     # Application
-    APP_NAME: str = 'CINERENTAL'
+    APP_NAME: str = 'ACT-Rental'
+    COMPANY_SINCE: str = '2024'
     ENVIRONMENT: str = os.environ.get('ENVIRONMENT', 'development')
     DEBUG: bool = os.environ.get('DEBUG', 'true').lower() in ('true', '1', 't')
     SECRET_KEY: str = Field(
@@ -43,14 +44,14 @@ class Settings(BaseSettings):
     OPENAPI_URL: str = f'{API_V1_STR}/openapi.json'
     DOCS_URL: str = f'{API_V1_STR}/docs'
     REDOC_URL: str = f'{API_V1_STR}/redoc'
-    PROJECT_NAME: str = 'CINERENTAL API'
+    PROJECT_NAME: str = 'ACT-Rental API'
     PROJECT_DESCRIPTION: str = 'Equipment Rental Management System API'
     PROJECT_VERSION: str = '1.0.0'
 
     # Database
     POSTGRES_SERVER: str = os.environ.get('POSTGRES_SERVER', 'localhost')
     POSTGRES_PORT: int = int(os.environ.get('POSTGRES_PORT', '5432'))
-    POSTGRES_DB: str = os.environ.get('POSTGRES_DB', 'cinerental')
+    POSTGRES_DB: str = os.environ.get('POSTGRES_DB', 'act-rental')
     POSTGRES_USER: str = os.environ.get('POSTGRES_USER', 'postgres')
     POSTGRES_PASSWORD: str = Field(
         os.environ.get('POSTGRES_PASSWORD', DEFAULT_DB_PASS),

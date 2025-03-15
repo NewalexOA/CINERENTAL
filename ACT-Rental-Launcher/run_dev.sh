@@ -13,5 +13,5 @@ else
 fi
 
 # Launch the application
-echo "Запуск CINERENTAL Launcher в режиме разработки..."
-python src/main.py
+echo "Запуск ACT-Rental Launcher в режиме разработки..."
+cd src && python main.py

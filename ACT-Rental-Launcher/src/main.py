@@ -1,4 +1,4 @@
-"""Main application module for CINERENTAL Launcher."""
+"""Main application module for ACT-Rental Launcher."""
 
 import logging
 import os
@@ -8,7 +8,7 @@ from typing import Any, Callable, Optional
 
 from docker_manager import DockerManager
 from PyQt5.QtCore import QEvent, QSettings, QThread, pyqtSignal
-from PyQt5.QtGui import QFont
+from PyQt5.QtGui import QFont, QIcon
 from PyQt5.QtWidgets import (
     QApplication,
     QFileDialog,
@@ -106,14 +106,14 @@ class LogMonitorThread(QThread):
 
 
 class MainWindow(QMainWindow):
-    """Main application window for CINERENTAL Launcher."""
+    """Main application window for ACT-Rental Launcher."""
 
     def __init__(self) -> None:
         """Initialize the main window."""
         super().__init__()
 
         # Load settings
-        self.settings = QSettings('CINERENTAL', 'Launcher')
+        self.settings = QSettings('ACT-Rental', 'Launcher')
 
         # Get project path or ask user to select it if not defined
         project_path = self.settings.value('project_path', None, str)
@@ -132,7 +132,7 @@ class MainWindow(QMainWindow):
         self.check_status()  # Check Docker status on startup
 
     def select_project_path(self) -> Optional[str]:
-        """Prompt user to select the CINERENTAL project path.
+        """Prompt user to select the ACT-Rental project path.
 
         Returns:
             Optional[str]: The selected path or None if user cancels
@@ -144,7 +144,7 @@ class MainWindow(QMainWindow):
         QMessageBox.information(
             self,
             'Выбор пути проекта',
-            'Пожалуйста, выберите папку, где находится проект CINERENTAL.\n'
+            'Пожалуйста, выберите папку, где находится проект ACT-Rental.\n'
             'Это папка, содержащая файл docker-compose.yml '
             'или docker-compose.prod.yml.',
         )
@@ -154,7 +154,7 @@ class MainWindow(QMainWindow):
             str(
                 QFileDialog.getExistingDirectory(
                     self,
-                    'Выберите папку проекта CINERENTAL',
+                    'Выберите папку проекта ACT-Rental',
                     default_path,
                     QFileDialog.ShowDirsOnly | QFileDialog.DontResolveSymlinks,
                 )
@@ -167,23 +167,29 @@ class MainWindow(QMainWindow):
             reply = QMessageBox.question(
                 self,
                 'Использовать путь по умолчанию?',
-                'Вы не выбрали путь к проекту CINERENTAL. '
+                'Вы не выбрали путь к проекту ACT-Rental. '
                 'Хотите использовать путь по умолчанию?\n\n'
-                '~/Github/CINERENTAL',
+                '~/Github/ACT-Rental',
                 QMessageBox.Yes | QMessageBox.No,
                 QMessageBox.Yes,
             )
 
             if reply == QMessageBox.Yes:
-                return os.path.expanduser('~/Github/CINERENTAL')
+                return os.path.expanduser('~/Github/ACT-Rental')
             return None
 
         return project_path
 
     def init_ui(self) -> None:
         """Initialize user interface components."""
-        self.setWindowTitle('CINERENTAL Launcher')
+        self.setWindowTitle('ACT-Rental Launcher')
         self.setMinimumSize(800, 600)
+
+        # Set window icon
+        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        icon_path = os.path.join(base_dir, 'assets', 'icon.iconset', 'icon.icns')
+        if os.path.exists(icon_path):
+            self.setWindowIcon(QIcon(icon_path))
 
         # Set up menubar
         menubar = self.menuBar()
@@ -209,7 +215,7 @@ class MainWindow(QMainWindow):
         # logo_pixmap = QPixmap("assets/logo.png")
         # logo_label.setPixmap(logo_pixmap.scaled(64, 64, Qt.KeepAspectRatio))
 
-        title_label = QLabel('CINERENTAL Launcher')
+        title_label = QLabel('ACT-Rental Launcher')
         title_font = QFont()
         title_font.setPointSize(18)
         title_font.setBold(True)
@@ -316,16 +322,16 @@ class MainWindow(QMainWindow):
             self.status_bar.showMessage('Docker не запущен. Запустите Docker Desktop.')
             return
 
-        if self.docker.check_cinerental_running():
-            self.status_label.setText('CINERENTAL запущен и работает')
+        if self.docker.check_act_rental_running():
+            self.status_label.setText('ACT-Rental запущен и работает')
             self.status_label.setStyleSheet('color: green;')
             self.update_buttons_state(True, running=True)
-            self.status_bar.showMessage('CINERENTAL запущен и готов к работе')
+            self.status_bar.showMessage('ACT-Rental запущен и готов к работе')
         else:
-            self.status_label.setText('CINERENTAL не запущен')
+            self.status_label.setText('ACT-Rental не запущен')
             self.status_label.setStyleSheet('color: orange;')
             self.update_buttons_state(True, running=False)
-            self.status_bar.showMessage('CINERENTAL не запущен. Нажмите "Запустить".')
+            self.status_bar.showMessage('ACT-Rental не запущен. Нажмите "Запустить".')
 
     def update_buttons_state(self, docker_running: bool, running: bool = False) -> None:
         """Update UI button states based on Docker and containers status."""
@@ -335,7 +341,7 @@ class MainWindow(QMainWindow):
         self.open_button.setEnabled(running)
 
     def start_containers(self) -> None:
-        """Start CINERENTAL containers."""
+        """Start ACT-Rental containers."""
         self.status_bar.showMessage('Запуск контейнеров...')
         self.status_label.setText('Запуск контейнеров...')
         self.status_label.setStyleSheet('color: orange;')
@@ -355,7 +361,7 @@ class MainWindow(QMainWindow):
         self.progress_bar.setVisible(False)
 
         if success:
-            self.status_label.setText('CINERENTAL запущен и работает')
+            self.status_label.setText('ACT-Rental запущен и работает')
             self.status_label.setStyleSheet('color: green;')
             self.update_buttons_state(True, running=True)
             self.status_bar.showMessage(message)
@@ -371,7 +377,7 @@ class MainWindow(QMainWindow):
             if reply == QMessageBox.Yes:
                 self.open_in_browser()
         else:
-            self.status_label.setText('Ошибка при запуске CINERENTAL')
+            self.status_label.setText('Ошибка при запуске ACT-Rental')
             self.status_label.setStyleSheet('color: red;')
             self.update_buttons_state(True, running=False)
             self.status_bar.showMessage(message)
@@ -379,15 +385,15 @@ class MainWindow(QMainWindow):
             QMessageBox.critical(
                 self,
                 'Ошибка запуска',
-                f'Не удалось запустить CINERENTAL: {message}',
+                f'Не удалось запустить ACT-Rental: {message}',
             )
 
     def stop_containers(self) -> None:
-        """Stop CINERENTAL containers."""
+        """Stop ACT-Rental containers."""
         reply = QMessageBox.question(
             self,
             'Подтверждение',
-            'Вы уверены, что хотите остановить CINERENTAL?',
+            'Вы уверены, что хотите остановить ACT-Rental?',
             QMessageBox.Yes | QMessageBox.No,
             QMessageBox.No,
         )
@@ -414,12 +420,12 @@ class MainWindow(QMainWindow):
         self.progress_bar.setVisible(False)
 
         if success:
-            self.status_label.setText('CINERENTAL остановлен')
+            self.status_label.setText('ACT-Rental остановлен')
             self.status_label.setStyleSheet('color: orange;')
             self.update_buttons_state(True, running=False)
             self.status_bar.showMessage(message)
         else:
-            self.status_label.setText('Ошибка при остановке CINERENTAL')
+            self.status_label.setText('Ошибка при остановке ACT-Rental')
             self.status_label.setStyleSheet('color: red;')
             self.check_status()
             self.status_bar.showMessage(message)
@@ -427,15 +433,15 @@ class MainWindow(QMainWindow):
             QMessageBox.critical(
                 self,
                 'Ошибка остановки',
-                f'Не удалось остановить CINERENTAL: {message}',
+                f'Не удалось остановить ACT-Rental: {message}',
             )
 
     def restart_containers(self) -> None:
-        """Restart CINERENTAL containers."""
+        """Restart ACT-Rental containers."""
         reply = QMessageBox.question(
             self,
             'Подтверждение',
-            'Вы уверены, что хотите перезапустить CINERENTAL?',
+            'Вы уверены, что хотите перезапустить ACT-Rental?',
             QMessageBox.Yes | QMessageBox.No,
             QMessageBox.No,
         )
@@ -462,12 +468,12 @@ class MainWindow(QMainWindow):
         self.progress_bar.setVisible(False)
 
         if success:
-            self.status_label.setText('CINERENTAL запущен и работает')
+            self.status_label.setText('ACT-Rental запущен и работает')
             self.status_label.setStyleSheet('color: green;')
             self.update_buttons_state(True, running=True)
             self.status_bar.showMessage(message)
         else:
-            self.status_label.setText('Ошибка при перезапуске CINERENTAL')
+            self.status_label.setText('Ошибка при перезапуске ACT-Rental')
             self.status_label.setStyleSheet('color: red;')
             self.check_status()
             self.status_bar.showMessage(message)
@@ -475,7 +481,7 @@ class MainWindow(QMainWindow):
             QMessageBox.critical(
                 self,
                 'Ошибка перезапуска',
-                f'Не удалось перезапустить CINERENTAL: {message}',
+                f'Не удалось перезапустить ACT-Rental: {message}',
             )
 
     def open_in_browser(self) -> None:

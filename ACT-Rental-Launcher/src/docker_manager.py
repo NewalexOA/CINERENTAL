@@ -1,4 +1,4 @@
-"""Docker manager for CINERENTAL application."""
+"""Docker manager for ACT-Rental application."""
 
 import logging
 import os
@@ -8,7 +8,7 @@ from typing import Optional, Tuple, Union
 
 
 class DockerManager:
-    """Docker container manager for CINERENTAL."""
+    """Docker container manager for ACT-Rental."""
 
     def __init__(
         self,
@@ -19,17 +19,17 @@ class DockerManager:
         """Initialize Docker manager.
 
         Args:
-            project_path: Path to CINERENTAL project directory
+            project_path: Path to ACT-Rental project directory
             compose_file: Docker compose file name
             log_folder: Path to log folder
         """
-        self.project_path = project_path or os.path.expanduser('~/Github/CINERENTAL')
+        self.project_path = project_path or os.path.expanduser('~/Github/ACT-Rental')
         self.compose_file = compose_file
 
         self.log_folder = log_folder or os.path.join(self.project_path, 'logs')
         os.makedirs(self.log_folder, exist_ok=True)
 
-        self.log_file = os.path.join(self.log_folder, 'cinerental_launcher.log')
+        self.log_file = os.path.join(self.log_folder, 'act-rental_launcher.log')
         self.setup_log_file = os.path.join(self.log_folder, 'setup_output.log')
 
         self.setup_logger()
@@ -139,8 +139,8 @@ class DockerManager:
         self.logger.warning('Docker не найден или не запущен')
         return False
 
-    def check_cinerental_running(self) -> bool:
-        """Check if CINERENTAL containers are running."""
+    def check_act_rental_running(self) -> bool:
+        """Check if ACT-Rental containers are running."""
         if not self.is_docker_running():
             self.logger.warning('Docker не запущен')
             return False
@@ -167,7 +167,7 @@ class DockerManager:
                 result = self.run_command(cmd)
 
                 if result and result.stdout.strip() == 'running':
-                    self.logger.info('CINERENTAL веб-сервис запущен')
+                    self.logger.info('ACT-Rental веб-сервис запущен')
 
                     curl_cmd = (
                         f'curl -s -o /dev/null '
@@ -181,23 +181,23 @@ class DockerManager:
                         or web_check.stdout in ['301', '302']
                     ):
                         self.logger.info(
-                            f'CINERENTAL уже запущен и веб-интерфейс доступен '
+                            f'ACT-Rental уже запущен и веб-интерфейс доступен '
                             f'(код {web_check.stdout})'
                         )
                         return True
                     else:
                         code_value = web_check.stdout if web_check else 'неизвестно'
                         self.logger.warning(
-                            'CINERENTAL веб-сервис запущен, но '
+                            'ACT-Rental веб-сервис запущен, но '
                             'веб-интерфейс не отвечает '
                             f'(код {code_value})'
                         )
                         return False
                 else:
-                    self.logger.info('Контейнеры CINERENTAL существуют, но не запущены')
+                    self.logger.info('Контейнеры ACT-Rental существуют, но не запущены')
                     return False
             else:
-                self.logger.info('Контейнеры CINERENTAL не созданы')
+                self.logger.info('Контейнеры ACT-Rental не созданы')
                 return False
 
         except ValueError:
@@ -232,8 +232,8 @@ class DockerManager:
         return f'docker compose -f {self.compose_file}'
 
     def start_containers(self) -> Tuple[bool, str]:
-        """Start CINERENTAL containers."""
-        self.logger.info('Запуск контейнеров CINERENTAL...')
+        """Start ACT-Rental containers."""
+        self.logger.info('Запуск контейнеров ACT-Rental...')
 
         if not self.is_docker_running():
             self.logger.error('Docker не запущен. Невозможно запустить контейнеры.')
@@ -266,7 +266,7 @@ class DockerManager:
             timestamp = time.strftime('%Y-%m-%d %H:%M:%S')
             with open(self.setup_log_file, 'a', encoding='utf-8') as f:
                 f.write('============================================\n')
-                f.write(f'Контейнеры CINERENTAL запущены {timestamp}\n')
+                f.write(f'Контейнеры ACT-Rental запущены {timestamp}\n')
                 f.write('✓ Приложение успешно запущено\n')
                 f.write('============================================\n')
 
@@ -308,13 +308,13 @@ class DockerManager:
         self.logger.info('Проверка и создание Docker-томов...')
 
         try:
-            volumes_cmd = 'docker volume ls --format "{{.Name}}" | grep cinerental'
+            volumes_cmd = 'docker volume ls --format "{{.Name}}" | grep act-rental'
             result = self.run_command(volumes_cmd)
 
             required_volumes = [
-                'cinerental_postgres_data',
-                'cinerental_redis_data',
-                'cinerental_media',
+                'act-rental_postgres_data',
+                'act-rental_redis_data',
+                'act-rental_media',
             ]
             existing_volumes = []
 
@@ -364,8 +364,8 @@ class DockerManager:
             return False, error_msg
 
     def stop_containers(self) -> Tuple[bool, str]:
-        """Stop CINERENTAL containers without removing them."""
-        self.logger.info('Остановка контейнеров CINERENTAL...')
+        """Stop ACT-Rental containers without removing them."""
+        self.logger.info('Остановка контейнеров ACT-Rental...')
 
         docker_compose_cmd = self.get_docker_compose_cmd()
 
@@ -385,8 +385,8 @@ class DockerManager:
             return False, f'Ошибка при остановке контейнеров: {error_msg}'
 
     def down_containers(self) -> Tuple[bool, str]:
-        """Stop and remove CINERENTAL containers."""
-        self.logger.info('Остановка и удаление контейнеров CINERENTAL...')
+        """Stop and remove ACT-Rental containers."""
+        self.logger.info('Остановка и удаление контейнеров ACT-Rental...')
 
         docker_compose_cmd = self.get_docker_compose_cmd()
 
@@ -407,8 +407,8 @@ class DockerManager:
             return False, f'Ошибка при остановке и удалении контейнеров: {error_msg}'
 
     def restart_containers(self) -> Tuple[bool, str]:
-        """Restart CINERENTAL containers."""
-        self.logger.info('Перезапуск контейнеров CINERENTAL...')
+        """Restart ACT-Rental containers."""
+        self.logger.info('Перезапуск контейнеров ACT-Rental...')
 
         docker_compose_cmd = self.get_docker_compose_cmd()
 
@@ -428,7 +428,7 @@ class DockerManager:
             return False, f'Ошибка при перезапуске контейнеров: {error_msg}'
 
     def open_in_browser(self) -> bool:
-        """Open CINERENTAL in web browser."""
+        """Open ACT-Rental in web browser."""
         self.logger.info(f'Открытие приложения в браузере: {self.app_url}')
 
         result = self.run_command(f'open {self.app_url}')

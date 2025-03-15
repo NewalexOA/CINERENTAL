@@ -1,4 +1,4 @@
-name: cinerental
+name: act-rental
 
 services:
   web:
@@ -15,7 +15,7 @@ services:
       - POSTGRES_SERVER=db
       - POSTGRES_USER=${POSTGRES_USER:-postgres}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
-      - POSTGRES_DB=${POSTGRES_DB:-cinerental}
+      - POSTGRES_DB=${POSTGRES_DB:-act-rental}
       - REDIS_HOST=redis
       - REDIS_PASSWORD=${REDIS_PASSWORD:-}
       - SECRET_KEY=${SECRET_KEY:-your-secret-key}
@@ -46,7 +46,7 @@ services:
       redis:
         condition: service_healthy
     networks:
-      - cinerental_network
+      - act-rental_network
     restart: unless-stopped
     logging:
       driver: "json-file"
@@ -66,7 +66,7 @@ services:
       - POSTGRES_SERVER=test_db
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
-      - POSTGRES_DB=cinerental_test
+      - POSTGRES_DB=act-rental_test
       - REDIS_HOST=redis
       - REDIS_PASSWORD=
       - TESTING=1
@@ -82,14 +82,14 @@ services:
       redis:
         condition: service_healthy
     networks:
-      - cinerental_network
+      - act-rental_network
 
   db:
     image: postgres:14-alpine
     volumes:
       - postgres_data:/var/lib/postgresql/data
     environment:
-      - POSTGRES_DB=${POSTGRES_DB:-cinerental}
+      - POSTGRES_DB=${POSTGRES_DB:-act-rental}
       - POSTGRES_USER=${POSTGRES_USER:-postgres}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
       - POSTGRES_HOST_AUTH_METHOD=${POSTGRES_HOST_AUTH_METHOD:-md5}
@@ -103,7 +103,7 @@ services:
         reservations:
           memory: 256M
     networks:
-      - cinerental_network
+      - act-rental_network
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
@@ -115,7 +115,7 @@ services:
     tmpfs:
       - /var/lib/postgresql/data
     environment:
-      - POSTGRES_DB=cinerental_test
+      - POSTGRES_DB=act-rental_test
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
       - POSTGRES_HOST_AUTH_METHOD=trust
@@ -127,7 +127,7 @@ services:
           cpus: '0.5'
           memory: 512M
     networks:
-      - cinerental_network
+      - act-rental_network
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
@@ -147,7 +147,7 @@ services:
           cpus: '0.5'
           memory: 256M
     networks:
-      - cinerental_network
+      - act-rental_network
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -163,7 +163,7 @@ volumes:
     driver: local
 
 networks:
-  cinerental_network:
+  act-rental_network:
     driver: bridge
     ipam:
       driver: default

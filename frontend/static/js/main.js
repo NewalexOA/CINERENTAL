@@ -1,4 +1,4 @@
-// Main JavaScript for CINERENTAL
+// Main JavaScript for rental equipment management system
 
 // Constants
 const API_BASE_URL = '/api/v1';

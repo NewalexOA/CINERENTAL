@@ -7,8 +7,18 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from jinja2 import Environment
 
+from backend.core.config import settings
+
 # Initialize templates
 templates = Jinja2Templates(directory='frontend/templates')
+
+# Add global context to templates
+templates.env.globals.update(
+    {
+        'APP_NAME': settings.APP_NAME,
+        'COMPANY_SINCE': settings.COMPANY_SINCE,
+    }
+)
 
 # Initialize static files
 static_files = StaticFiles(directory='frontend/static')
