@@ -280,19 +280,23 @@ async def test_get_equipment_list_invalid_pagination(async_client: AsyncClient) 
 
 
 @async_test
-async def test_create_equipment_invalid_rate(async_client: AsyncClient) -> None:
+async def test_create_equipment_invalid_rate(
+    async_client: AsyncClient, test_category: Category
+) -> None:
     """Test create equipment with invalid replacement cost."""
     data = {
         'name': 'Test Equipment',
         'description': 'Test Description',
         'barcode': '123456789',
         'serial_number': 'SN123',
-        'replacement_cost': '0',
-        'category_id': 1,
+        'replacement_cost': '-10',  # Using negative value instead of 0
+        'category_id': test_category.id,
     }
     response = await async_client.post('/api/v1/equipment/', json=data)
     assert response.status_code == http_status.HTTP_400_BAD_REQUEST
-    assert response.json()['detail'] == 'Replacement cost must be greater than 0'
+    assert response.json()['detail'] == (
+        'Replacement cost must be greater than or equal to 0'
+    )
 
 
 @async_test
@@ -320,7 +324,7 @@ async def test_update_equipment_invalid_rate(
         json=data,
     )
     assert response.status_code == 400
-    assert 'must be greater than 0' in response.json()['detail']
+    assert 'must be greater than or equal to 0' in response.json()['detail']
 
 
 @async_test
