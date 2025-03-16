@@ -54,7 +54,7 @@
                         <tr>
                             <th>Название</th>
                             <th>Категория</th>
-                            <th>Штрих-код</th>
+                            <th>Серийный номер</th>
                             <th>Статус</th>
                             <th>Действия</th>
                         </tr>
@@ -64,10 +64,10 @@
                         <tr>
                             <td>
                                 <div class="fw-bold">{{ item.name }}</div>
-                                <small class="text-muted">{{ item.description }}</small>
+                                <small class="text-muted">{{ item.description or '' }}</small>
                             </td>
                             <td>{{ item.category_name }}</td>
-                            <td>{{ item.barcode }}</td>
+                            <td>{{ item.serial_number or '' }}</td>
                             <td>
                                 <span class="badge bg-{{ 'success' if item.status == 'AVAILABLE' else 'warning' if item.status == 'RENTED' else 'danger' }}">
                                     {{ item.status }}
@@ -113,18 +113,15 @@
                         </select>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Подкатегория</label>
-                        <select class="form-select" name="subcategory_prefix_id" id="subcategory_prefix_id" disabled>
-                            <option value="">Сначала выберите категорию</option>
-                        </select>
-                    </div>
-                    <div class="mb-3">
                         <label class="form-label">Описание</label>
-                        <textarea class="form-control" name="description" rows="3" required></textarea>
+                        <textarea class="form-control" name="description" rows="3"></textarea>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Серийный номер</label>
-                        <input type="text" class="form-control" name="serial_number" required>
+                        <input type="text" class="form-control" name="serial_number" pattern="[A-Za-z0-9\-_\.]*">
+                        <small class="form-text text-muted">
+                            Только латинские буквы, цифры, дефис, подчеркивание и точка
+                        </small>
                     </div>
                     <div class="mb-3">
                         <div class="form-check form-switch mb-2">
@@ -135,15 +132,15 @@
                             <input type="text" class="form-control" name="barcode" id="barcode_input" readonly>
                             <button class="btn btn-outline-secondary" type="button" id="preview_barcode">Предпросмотр</button>
                         </div>
-                        <small class="form-text text-muted">
-                            Штрих-код будет сгенерирован автоматически на основе выбранной категории и подкатегории.
+                        <small class="form-text text-muted" id="barcode_help">
+                            Штрих-код будет сгенерирован автоматически.
                         </small>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Стоимость замены</label>
-                        <input type="number" class="form-control" name="replacement_cost" min="0" max="99999999.99" step="0.01" required>
+                        <label class="form-label">Сумма материальной ответственности</label>
+                        <input type="number" class="form-control" name="replacement_cost" min="0" max="999999999" step="1" value="0" required>
                         <small class="form-text text-muted">
-                            Максимальное значение: 99,999,999.99
+                            Максимальное значение: 999 999 999
                         </small>
                     </div>
                 </form>
@@ -167,76 +164,69 @@ async function loadCategories() {
         formSelect.innerHTML = categories.map(category =>
             `<option value="${category.id}">${category.name}</option>`
         ).join('');
-
-        if (categories.length > 0) {
-            await loadSubcategories(categories[0].id);
-        }
     } catch (error) {
         console.error('Error loading categories:', error);
         showToast('Ошибка при загрузке категорий', 'danger');
     }
 }
 
-async function loadSubcategories(categoryId) {
-    try {
-        const subcategorySelect = document.getElementById('subcategory_prefix_id');
-
-        subcategorySelect.innerHTML = '<option value="">Загрузка...</option>';
-        subcategorySelect.disabled = true;
-
-        const subcategories = await api.get(`/categories/${categoryId}/subcategories`);
-
-        if (subcategories.length === 0) {
-            subcategorySelect.innerHTML = '<option value="">Нет доступных подкатегорий</option>';
-            subcategorySelect.disabled = true;
-            document.getElementById('preview_barcode').disabled = true;
-        } else {
-            subcategorySelect.innerHTML = subcategories.map(subcategory =>
-                `<option value="${subcategory.id}">${subcategory.name} (${subcategory.prefix})</option>`
-            ).join('');
-            subcategorySelect.disabled = false;
-            document.getElementById('preview_barcode').disabled = false;
-        }
-    } catch (error) {
-        console.error('Error loading subcategories:', error);
-        showToast('Ошибка при загрузке подкатегорий', 'danger');
-    }
-}
-
 async function previewBarcode() {
-    const categoryId = document.getElementById('category_id').value;
-    const subcategoryPrefixId = document.getElementById('subcategory_prefix_id').value;
+    // Get the preview button and barcode input
+    const previewButton = document.getElementById('preview_barcode');
     const barcodeInput = document.getElementById('barcode_input');
 
-    if (!categoryId || !subcategoryPrefixId) {
-        showToast('Выберите категорию и подкатегорию', 'warning');
-        return;
-    }
+    // Show loading state on the button
+    const originalButtonText = previewButton.innerHTML;
+    previewButton.disabled = true;
+    previewButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>';
 
     try {
-        showLoader();
-        const response = await api.post('/barcodes/preview', {
-            category_id: parseInt(categoryId),
-            subcategory_prefix_id: parseInt(subcategoryPrefixId)
-        });
+        // Reset any global loader that might be active
+        resetLoader();
 
+        // Generate the barcode
+        const response = await api.post('/barcodes/generate', {});
         barcodeInput.value = response.barcode;
+
+        // Show feedback (optional)
+        showToast('Штрих-код сгенерирован', 'success');
     } catch (error) {
         console.error('Error previewing barcode:', error);
         showToast('Ошибка при предпросмотре штрих-кода', 'danger');
     } finally {
-        hideLoader();
+        // Restore button state
+        previewButton.disabled = false;
+        previewButton.innerHTML = originalButtonText;
     }
+}
+
+// Function to forcibly reset loader state if needed
+function resetLoader() {
+    window.loaderCounter = 0;
+
+    const loader = document.getElementById('global-loader');
+    if (loader) {
+        loader.setAttribute('hidden', '');
+
+        // If loader is still visible after setting hidden attribute
+        if (getComputedStyle(loader).display !== 'none') {
+            console.warn('Loader still visible after setting hidden attribute, using CSS display property');
+            loader.style.display = 'none';
+        }
+    }
+}
+
+function formatNumber(num) {
+    return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ");
 }
 
 // Add event listeners after DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
-    loadCategories();
+    // Reset any active loader first
+    resetLoader();
 
-    // Listen for category changes
-    document.getElementById('category_id').addEventListener('change', function() {
-        loadSubcategories(this.value);
-    });
+    // Load categories
+    loadCategories();
 
     // Listen for preview barcode button clicks
     document.getElementById('preview_barcode').addEventListener('click', previewBarcode);
@@ -245,16 +235,19 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('generate_barcode').addEventListener('change', function() {
         const barcodeInput = document.getElementById('barcode_input');
         const previewButton = document.getElementById('preview_barcode');
+        const barcodeHelp = document.getElementById('barcode_help');
 
         if (this.checked) {
             barcodeInput.readOnly = true;
             previewButton.disabled = false;
             previewButton.style.display = '';
             barcodeInput.value = '';
+            barcodeHelp.textContent = 'Штрих-код будет сгенерирован автоматически.';
         } else {
             barcodeInput.readOnly = false;
             previewButton.disabled = true;
             previewButton.style.display = 'none';
+            barcodeHelp.textContent = 'Введите штрих-код в любом формате.';
         }
     });
 
@@ -262,13 +255,11 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('addEquipment').addEventListener('click', async function() {
         const form = document.getElementById('addEquipmentForm');
 
-        // Additional validation
-        if (document.getElementById('generate_barcode').checked) {
-            const subcategoryPrefixId = document.getElementById('subcategory_prefix_id').value;
-            if (!subcategoryPrefixId) {
-                showToast('Выберите подкатегорию для генерации штрих-кода', 'warning');
-                return;
-            }
+        // Check form validity before submission
+        if (!form.checkValidity()) {
+            // Trigger HTML5 validation
+            form.reportValidity();
+            return;
         }
 
         // Get form data
@@ -280,33 +271,175 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Convert numeric fields
         data.category_id = parseInt(data.category_id);
-        if (data.subcategory_prefix_id) {
-            data.subcategory_prefix_id = parseInt(data.subcategory_prefix_id);
-        }
-        if (data.replacement_cost) {
-            data.replacement_cost = parseFloat(data.replacement_cost);
+
+        // Ensure replacement_cost is a number and has a default value
+        data.replacement_cost = parseFloat(data.replacement_cost || 0);
+
+        // If description is empty, set it to null to prevent validation errors
+        if (!data.description.trim()) {
+            data.description = null;
         }
 
-        // Send API reques
+        // If serial_number is empty, set it to null
+        if (!data.serial_number.trim()) {
+            data.serial_number = null;
+        }
+
+        // If generate_barcode is true, remove the barcode field from the data
+        // as the server will generate it automatically
+        if (data.generate_barcode) {
+            delete data.barcode;
+        } else if (!data.barcode.trim()) {
+            // If generate_barcode is false and barcode is empty, set it to null
+            data.barcode = null;
+        } else {
+            // If barcode is provided manually, use it as custom_barcode
+            data.custom_barcode = data.barcode;
+            // Disable barcode format validation for manually entered barcodes
+            data.validate_barcode = false;
+            delete data.barcode;
+        }
+
+        // Get the button and show loading state
+        const addButton = document.getElementById('addEquipment');
+        const originalButtonText = addButton.innerHTML;
+        addButton.disabled = true;
+        addButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Добавление...';
+
+        // Make sure any previous global loader is reset
+        resetLoader();
+
+        // Send API request
         try {
-            showLoader();
+            console.log('Sending data:', data);
             const response = await api.post('/equipment/', data);
             showToast('Оборудование успешно добавлено', 'success');
 
-            // Close modal and reload equipment lis
+            // Close modal and reload equipment list
             const modal = bootstrap.Modal.getInstance(document.getElementById('addEquipmentModal'));
             modal.hide();
             form.reset();
 
-            // Reload equipment lis
+            // Reload equipment list
             window.location.reload();
         } catch (error) {
             console.error('Error adding equipment:', error);
-            showToast(error.response?.data?.detail || 'Ошибка при добавлении оборудования', 'danger');
+
+            // Extended error diagnostics
+            if (error.response) {
+                console.error('Full API response:', error.response);
+                console.error('Error details:', error.response.data);
+                console.error('Complete error object JSON:', JSON.stringify(error.response.data, null, 2));
+
+                if (error.response.data?.detail) {
+                    console.error('Error detail content:', error.response.data.detail);
+                    if (Array.isArray(error.response.data.detail)) {
+                        console.error('Validation errors:');
+                        error.response.data.detail.forEach((item, index) => {
+                            console.error(`Error ${index + 1}:`, item);
+                            if (typeof item === 'object') {
+                                console.error('Fields:', Object.keys(item));
+                                for (const key in item) {
+                                    console.error(`- ${key}:`, item[key]);
+                                }
+                            }
+                        });
+                    }
+                }
+
+                // Reset any existing error indicators
+                document.querySelectorAll('.is-invalid').forEach(el => {
+                    el.classList.remove('is-invalid');
+                });
+                document.querySelectorAll('.invalid-feedback').forEach(el => {
+                    el.remove();
+                });
+
+                let errorMessage = 'Ошибка при добавлении оборудования';
+
+                // Check for field-specific errors
+                if (error.response.data?.details) {
+                    // Process field-specific errors
+                    const details = error.response.data.details;
+
+                    // Highlight fields with errors
+                    Object.keys(details).forEach(fieldName => {
+                        const field = form.querySelector(`[name="${fieldName}"]`);
+                        if (field) {
+                            field.classList.add('is-invalid');
+
+                            // Add error message below the field
+                            const errorDiv = document.createElement('div');
+                            errorDiv.className = 'invalid-feedback';
+                            errorDiv.textContent = details[fieldName];
+                            field.parentNode.appendChild(errorDiv);
+                        }
+                    });
+
+                    // Use the main error message if available
+                    if (error.response.data?.detail) {
+                        errorMessage = error.response.data.detail;
+                    }
+                } else if (typeof error.response.data === 'string') {
+                    errorMessage = error.response.data;
+                } else if (error.response.data?.detail) {
+                    errorMessage = error.response.data.detail;
+
+                    // Handle specific error messages for serial number
+                    if (errorMessage.includes('serial number') && errorMessage.includes('already exists')) {
+                        const serialField = form.querySelector('[name="serial_number"]');
+                        if (serialField) {
+                            serialField.classList.add('is-invalid');
+
+                            const errorDiv = document.createElement('div');
+                            errorDiv.className = 'invalid-feedback';
+                            errorDiv.textContent = 'Серийный номер уже используется';
+                            serialField.parentNode.appendChild(errorDiv);
+                        }
+                    }
+                } else if (error.response.data?.message) {
+                    errorMessage = error.response.data.message;
+                } else if (error.response.data?.error) {
+                    errorMessage = error.response.data.error;
+                }
+
+                showToast(errorMessage, 'danger');
+            } else {
+                showToast('Ошибка сети или сервера', 'danger');
+            }
+
+            // Ensure loader is reset in case of error
+            resetLoader();
         } finally {
-            hideLoader();
+            // Restore button state
+            addButton.disabled = false;
+            addButton.innerHTML = originalButtonText;
+            // Ensure loader is always reset
+            resetLoader();
         }
     });
+
+    // Format amounts in the table
+    const formatAmounts = () => {
+        document.querySelectorAll('.replacement-cost').forEach(element => {
+            const value = parseFloat(element.textContent);
+            if (!isNaN(value)) {
+                element.textContent = formatNumber(value);
+            }
+        });
+    };
+
+    // Run formatting after page load
+    formatAmounts();
+
+    // Also format values after search update
+    if (window.equipmentSearch) {
+        const originalUpdateResults = equipmentSearch.updateResults;
+        equipmentSearch.updateResults = function() {
+            originalUpdateResults.apply(this, arguments);
+            setTimeout(formatAmounts, 100);
+        };
+    }
 });
 
 // Copy barcode to clipboard
