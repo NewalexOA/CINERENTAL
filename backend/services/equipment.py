@@ -71,7 +71,7 @@ class EquipmentService:
     async def create_equipment(
         self,
         name: str,
-        description: str,
+        description: Optional[str],
         category_id: int,
         daily_rate: float = 0.0,
         replacement_cost: float = 0.0,
