@@ -192,4 +192,34 @@ docker compose -f docker-compose.prod.yml up -d
 - Write tests for new features
 - Update documentation
 
-## Testing
+## Migrations
+
+To apply migrations and update the database schema:
+
+```bash
+# Apply all migrations
+alembic upgrade head
+
+# Create a new migration
+alembic revision -m "your_migration_name"
+
+# Roll back the last migration
+alembic downgrade -1
+
+# Check migration history
+alembic history
+```
+
+### Future Migrations
+
+The `migrations/versions/future` directory contains migrations that are prepared but not yet applied:
+
+To apply a future migration:
+
+```bash
+# Move the migration to the main versions directory
+mv migrations/versions/future/your_migration_name.py migrations/versions/
+
+# Apply the migration
+alembic upgrade head
+```

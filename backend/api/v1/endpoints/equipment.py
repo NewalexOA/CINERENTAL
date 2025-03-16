@@ -62,11 +62,11 @@ async def create_equipment_endpoint(
         # Validate replacement cost if provided
         if (
             equipment.replacement_cost is not None
-            and float(equipment.replacement_cost) <= 0
+            and float(equipment.replacement_cost) < 0
         ):
             raise HTTPException(
                 status_code=http_status.HTTP_400_BAD_REQUEST,
-                detail='Replacement cost must be greater than 0',
+                detail='Replacement cost must be greater than or equal to 0',
             )
 
         # Check that replacement cost is within the database limits
@@ -84,6 +84,15 @@ async def create_equipment_endpoint(
         if equipment.replacement_cost:
             replacement_cost = float(equipment.replacement_cost)
 
+        # Check if we should validate barcode format
+        # If custom_barcode comes from frontend manual input, don't validate format
+        validate_barcode_format = True
+        if (
+            hasattr(equipment, 'validate_barcode')
+            and equipment.validate_barcode is False
+        ):
+            validate_barcode_format = False
+
         return await service.create_equipment(
             name=equipment.name,
             description=equipment.description,
@@ -92,6 +101,7 @@ async def create_equipment_endpoint(
             serial_number=equipment.serial_number,
             replacement_cost=replacement_cost,
             notes=equipment.notes,
+            validate_barcode_format=validate_barcode_format,
         )
     except ValidationError as e:
         raise HTTPException(
@@ -260,11 +270,11 @@ async def update_equipment(
         # Validate replacement cost
         if (
             equipment.replacement_cost is not None
-            and float(equipment.replacement_cost) <= 0
+            and float(equipment.replacement_cost) < 0
         ):
             raise HTTPException(
                 status_code=http_status.HTTP_400_BAD_REQUEST,
-                detail='Replacement cost must be greater than 0',
+                detail='Replacement cost must be greater than or equal to 0',
             )
 
         service = EquipmentService(db)

@@ -71,7 +71,7 @@ class EquipmentService:
     async def create_equipment(
         self,
         name: str,
-        description: str,
+        description: Optional[str],
         category_id: int,
         daily_rate: float = 0.0,
         replacement_cost: float = 0.0,
@@ -79,6 +79,7 @@ class EquipmentService:
         serial_number: Optional[str] = None,
         purchase_date: Optional[datetime] = None,
         notes: Optional[str] = None,
+        validate_barcode_format: bool = True,
     ) -> EquipmentResponse:
         """Create new equipment item.
 
@@ -92,6 +93,7 @@ class EquipmentService:
             serial_number: Equipment serial number
             purchase_date: Purchase date
             notes: Additional notes
+            validate_barcode_format: Whether to validate custom barcode format
 
         Returns:
             Created equipment
@@ -102,16 +104,19 @@ class EquipmentService:
             NotFoundError: If category not found
         """
         # Validate business rules
-        if replacement_cost is not None and replacement_cost <= 0:
-            raise ValidationError('Replacement cost must be greater than 0')
+        if replacement_cost is not None and replacement_cost < 0:
+            raise ValidationError('Replacement cost must be greater than or equal to 0')
 
         # Check if category exists
         await self.category_service.get_category(category_id)
 
         # Handle barcode generation or validation
         if custom_barcode:
-            # Validate provided barcode
-            if not self.barcode_service.validate_barcode_format(custom_barcode):
+            # Validate provided barcode if validation is enabled
+            if (
+                validate_barcode_format
+                and not self.barcode_service.validate_barcode_format(custom_barcode)
+            ):
                 raise ValidationError(
                     'Invalid barcode format',
                     details={'barcode': custom_barcode},
@@ -130,15 +135,7 @@ class EquipmentService:
             # Generate barcode automatically
             barcode = await self.barcode_service.generate_barcode()
 
-        # Check for duplicate serial number if provided
-        if serial_number:
-            existing = await self.repository.get_by_serial_number(serial_number)
-            if existing:
-                raise ConflictError(
-                    f'Equipment with serial number {serial_number} already exists',
-                    details={'serial_number': serial_number},
-                )
-
+        # Create equipment object
         equipment = Equipment(
             name=name,
             description=description,
@@ -320,18 +317,9 @@ class EquipmentService:
                     details={'barcode': barcode},
                 )
 
-        # Check for duplicate serial number
-        if serial_number and serial_number != equipment.serial_number:
-            existing = await self.repository.get_by_serial_number(serial_number)
-            if existing:
-                raise ConflictError(
-                    f'Equipment with serial number {serial_number} already exists',
-                    details={'serial_number': serial_number},
-                )
-
         # Validate replacement cost
-        if replacement_cost is not None and replacement_cost <= 0:
-            raise ValidationError('Replacement cost must be greater than 0')
+        if replacement_cost is not None and replacement_cost < 0:
+            raise ValidationError('Replacement cost must be greater than or equal to 0')
 
         # Check status transition
         if status and not self._is_valid_status_transition(equipment.status, status):
