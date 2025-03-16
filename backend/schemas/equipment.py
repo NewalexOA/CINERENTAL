@@ -26,8 +26,8 @@ class EquipmentBase(BaseModel):
     """Base equipment schema."""
 
     name: str = Field(..., title='Name', description='Equipment name')
-    description: str = Field(
-        ..., title='Description', description='Equipment description'
+    description: Optional[str] = Field(
+        '', title='Description', description='Equipment description'
     )
     category_id: int = Field(..., title='Category ID', description='Category ID')
 
@@ -42,6 +42,11 @@ class EquipmentCreate(EquipmentBase):
         None,
         title='Custom Barcode',
         description='Optional custom barcode (auto-generated if not provided)',
+    )
+    validate_barcode: Optional[bool] = Field(
+        True,
+        title='Validate Barcode',
+        description='Whether to validate the custom barcode format',
     )
     serial_number: Optional[str] = Field(
         None, title='Serial Number', description='Serial number'
@@ -78,7 +83,7 @@ class EquipmentResponse(BaseModel):
 
     id: int
     name: str
-    description: str
+    description: Optional[str] = None
     replacement_cost: Optional[Decimal]
     barcode: str
     serial_number: Optional[str]
