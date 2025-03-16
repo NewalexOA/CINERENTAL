@@ -30,14 +30,14 @@
                     </div>
                 </div>
 
-                <p class="card-text">{{ equipment.description }}</p>
+                <p class="card-text">{{ equipment.description or '' }}</p>
 
                 <div class="row g-3">
                     <div class="col-sm-6">
                         <div class="card bg-light">
                             <div class="card-body">
                                 <h6 class="card-title">Серийный номер</h6>
-                                <p class="card-text">{{ equipment.serial_number }}</p>
+                                <p class="card-text">{{ equipment.serial_number or '' }}</p>
                             </div>
                         </div>
                     </div>
@@ -64,7 +64,7 @@
                     <div class="col-sm-6">
                         <div class="card bg-light">
                             <div class="card-body">
-                                <h6 class="card-title">Стоимость замены</h6>
+                                <h6 class="card-title">Сумма материальной ответственности</h6>
                                 <p class="card-text">{{ equipment.replacement_cost }} ₽</p>
                             </div>
                         </div>
@@ -152,18 +152,18 @@
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Описание</label>
-                        <textarea class="form-control" name="description" rows="3">{{ equipment.description }}</textarea>
+                        <textarea class="form-control" name="description" rows="3">{{ equipment.description or '' }}</textarea>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Серийный номер</label>
-                        <input type="text" class="form-control" name="serial_number" value="{{ equipment.serial_number }}">
+                        <input type="text" class="form-control" name="serial_number" value="{{ equipment.serial_number or '' }}">
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Штрих-код</label>
                         <input type="text" class="form-control" name="barcode" value="{{ equipment.barcode }}">
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Стоимость замены</label>
+                        <label class="form-label">Сумма материальной ответственности</label>
                         <input type="number" class="form-control" name="replacement_cost" value="{{ equipment.replacement_cost }}" min="0" max="99999999.99" step="0.01" required>
                         <small class="form-text text-muted">
                             Максимальное значение: 99,999,999.99
@@ -515,7 +515,7 @@ async function loadBarcodeInfo() {
 
             document.getElementById('barcodeInfo').innerHTML = infoContent || `<strong>Status:</strong> Valid`;
         } else {
-            document.getElementById('barcodeInfo').innerHTML = '<span class="text-danger">Invalid barcode</span>';
+            document.getElementById('barcodeInfo').innerHTML = '<span class="text-info">Custom barcode</span>';
         }
     } catch (error) {
         console.error('Error loading barcode info:', error);

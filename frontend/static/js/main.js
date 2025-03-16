@@ -175,23 +175,57 @@ const api = {
 
     async post(endpoint, data) {
         try {
+            // Convert decimal fields to strings to avoid precision issues
+            if (data && typeof data === 'object') {
+                Object.keys(data).forEach(key => {
+                    if (typeof data[key] === 'number' && key.includes('cost')) {
+                        data[key] = String(data[key]);
+                    }
+                });
+            }
+
+            console.log('API POST request to:', API_BASE_URL + endpoint);
+            console.log('Data being sent:', JSON.stringify(data, null, 2));
+
             const url = endpoint.endsWith('/') ? endpoint : `${endpoint}/`;
             const response = await fetch(`${API_BASE_URL}${url}`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify(data)
+                body: JSON.stringify(data),
             });
 
+            // Save response text
+            const responseText = await response.text();
+            let responseData;
+
+            try {
+                // Try to parse JSON
+                responseData = JSON.parse(responseText);
+            } catch (e) {
+                // If parsing fails, use text
+                responseData = responseText;
+            }
+
             if (!response.ok) {
-                const errorData = await response.json().catch(() => ({ detail: 'Ошибка сети' }));
-                const error = new Error(errorData.detail || 'Ошибка при отправке данных');
-                error.response = { data: errorData, status: response.status };
+                console.error('API error response:', {
+                    status: response.status,
+                    statusText: response.statusText,
+                    data: responseData
+                });
+
+                const error = new Error(`API Error: ${response.status} ${response.statusText}`);
+                error.response = {
+                    status: response.status,
+                    statusText: response.statusText,
+                    data: responseData
+                };
                 throw error;
             }
 
-            return await response.json();
+            // If successful, return data
+            return responseData;
         } catch (error) {
             console.error('Error posting data:', error);
             throw error;
@@ -260,25 +294,25 @@ const api = {
                 try {
                     errorData = await response.json();
                 } catch {
-                    errorData = { detail: 'Ошибка сети или пустой ответ' };
+                    errorData = { detail: 'Network error or empty response' };
                 }
-                const error = new Error(errorData.detail || 'Ошибка при удалении данных');
+                const error = new Error(errorData.detail || 'Error deleting data');
                 error.response = { data: errorData, status: response.status };
                 throw error;
             }
 
-            // Проверяем, есть ли контент для парсинга
+            // Check if there is content to parse
             const contentType = response.headers.get('content-type');
             if (contentType && contentType.includes('application/json') && response.status !== 204) {
                 try {
                     return await response.json();
                 } catch (e) {
-                    console.log('Ответ не содержит JSON данных, возвращаем успешный результат');
+                    console.log('Response does not contain JSON data, returning success result');
                     return { success: true };
                 }
             }
 
-            // Если ответ пустой или статус 204 No Content, возвращаем успех
+            // If response is empty or status is 204 No Content, return success
             return { success: true };
         } catch (error) {
             console.error('Error deleting data:', error);
@@ -493,10 +527,10 @@ function formatEquipmentRow(item) {
         <tr>
             <td>
                 <div class="fw-bold">${item.name}</div>
-                <small class="text-muted">${item.description}</small>
+                <small class="text-muted">${item.description || ''}</small>
             </td>
             <td>${item.category_name}</td>
-            <td>${item.barcode}</td>
+            <td>${item.serial_number || ''}</td>
             <td>
                 <span class="badge bg-${getStatusColor(item.status)}">
                     ${item.status}

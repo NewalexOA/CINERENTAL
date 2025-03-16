@@ -52,7 +52,7 @@ class DocumentResponse(BaseModel):
     booking_id: Optional[int] = None
     type: DocumentType
     title: str
-    description: str
+    description: Optional[str] = None
     file_path: str
     file_name: str
     file_size: int

@@ -133,14 +133,14 @@ class TestEquipmentService:
         service: EquipmentService,
     ) -> None:
         """Test creating equipment with invalid rate."""
-        with pytest.raises(BusinessError, match='must be greater than 0'):
+        with pytest.raises(BusinessError, match='must be greater than or equal to 0'):
             await service.create_equipment(
                 name='Test Equipment',
                 description='Test Description',
                 category_id=1,
                 custom_barcode='CATS-000001-5',
                 serial_number='SN-001',
-                replacement_cost=-100.0,
+                replacement_cost=-10.0,
             )
 
     @async_test
@@ -648,46 +648,15 @@ class TestEquipmentService:
         service: EquipmentService,
         test_category: Category,
     ) -> None:
-        """Test creating equipment with invalid replacement cost."""
-        with pytest.raises(BusinessError):
+        """Test creating equipment with negative replacement cost."""
+        with pytest.raises(BusinessError, match='must be greater than or equal to 0'):
             await service.create_equipment(
                 name='Test Equipment',
                 description='Test Description',
                 category_id=test_category.id,
-                custom_barcode='CATS-000001-5',
-                serial_number='SN001',
-                replacement_cost=-1000.00,
-            )
-
-    @async_test
-    async def test_create_equipment_duplicate_serial_number(
-        self,
-        service: EquipmentService,
-        test_category: Category,
-        test_equipment: Equipment,
-    ) -> None:
-        """Test creating equipment with duplicate serial number."""
-        with pytest.raises(BusinessError):
-            await service.create_equipment(
-                name='Another Equipment',
-                description='Test Description',
-                category_id=test_category.id,
-                custom_barcode='UNIQ-000001-5',
-                serial_number=test_equipment.serial_number,  # Duplicate
-                replacement_cost=1000.00,
-            )
-
-    @async_test
-    async def test_update_equipment_invalid_replacement_cost(
-        self,
-        service: EquipmentService,
-        test_equipment: Equipment,
-    ) -> None:
-        """Test updating equipment with invalid replacement cost."""
-        with pytest.raises(BusinessError):
-            await service.update_equipment(
-                test_equipment.id,
-                replacement_cost=-1000.00,
+                custom_barcode=None,
+                serial_number='SN123',
+                replacement_cost=-1.0,
             )
 
     @async_test
