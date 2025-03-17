@@ -49,10 +49,9 @@
                         <div class="col-md-3">
                             <label class="form-label">Статус оплаты</label>
                             <select class="form-select" name="payment_status">
-                                <option value="">Все статусы</option>
-                                {% for status in payment_statuses %}
-                                <option value="{{ status }}">{{ status }}</option>
-                                {% endfor %}
+                                <option value="">Все</option>
+                                <option value="PAID">Оплачено</option>
+                                <option value="PENDING">Не оплачено</option>
                             </select>
                         </div>
                         <div class="col-md-6">

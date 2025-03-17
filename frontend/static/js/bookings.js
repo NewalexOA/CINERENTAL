@@ -219,7 +219,7 @@ const bookingManager = {
                 notes: formData.get('notes') || ''
             };
 
-            // Send reques
+            // Send request to create booking
             await api.post('/bookings', data);
 
             // Show success message
@@ -354,7 +354,7 @@ const bookingManager = {
         return {
             start_date: moment(start, 'DD.MM.YYYY').format('YYYY-MM-DDT00:00:00'),
             end_date: moment(end, 'DD.MM.YYYY').format('YYYY-MM-DDT00:00:00'),
-            total_amount: 0 // Будет рассчитано на сервере
+            total_amount: 0
         };
     },
 
@@ -367,69 +367,84 @@ const bookingManager = {
      * Initialize booking manager
      */
     init: function() {
-        // Initialize date range picker for new bookings
+        // Setup event handlers
+        this.setupEventHandlers();
+
+        // Initialize date range picker
         this.initDateRangePicker();
 
-        // Load clients and equipmen
+        // Load clients
         this.loadClients();
+
+        // Load equipment
         this.loadEquipment();
 
-        // Load bookings if we're on the bookings list page
+        // Load bookings if on bookings lis
         if (document.getElementById('bookingsTableBody')) {
             this.loadBookings();
         }
 
-        // Initialize event listeners
-        this.initEventListeners();
+        // Setup websocket for real-time updates
+        // this.setupWebSocket();
     },
 
     /**
-     * Initialize event listeners
+     * Setup event handlers
      */
-    initEventListeners: function() {
-        // Submit new booking form
-        const newBookingForm = document.getElementById('newBookingForm');
-        if (newBookingForm) {
-            document.getElementById('submitBooking').addEventListener('click', () => {
+    setupEventHandlers: function() {
+        // New booking form submission
+        const submitBookingBtn = document.getElementById('submitBooking');
+        if (submitBookingBtn) {
+            submitBookingBtn.addEventListener('click', () => {
                 this.createBooking();
+            });
+        }
+
+        // Edit booking form submission
+        const updateBookingBtn = document.getElementById('updateBooking');
+        if (updateBookingBtn) {
+            updateBookingBtn.addEventListener('click', () => {
+                this.updateBooking();
             });
         }
 
         // Filter bookings
         const filterForm = document.getElementById('filterForm');
         if (filterForm) {
-            filterForm.addEventListener('submit', (e) => {
-                e.preventDefault();
+            filterForm.addEventListener('submit', (event) => {
+                event.preventDefault();
                 this.filterBookings();
             });
+        }
 
-            document.getElementById('resetFilter').addEventListener('click', () => {
+        // Reset filters
+        const resetFilterBtn = document.getElementById('resetFilter');
+        if (resetFilterBtn) {
+            resetFilterBtn.addEventListener('click', () => {
                 filterForm.reset();
                 this.loadBookings();
             });
         }
 
-        // Update booking
-        const updateBookingBtn = document.getElementById('updateBooking');
-        if (updateBookingBtn) {
-            updateBookingBtn.addEventListener('click', () => {
-                const form = document.getElementById('editBookingForm');
-                const bookingId = form.querySelector('input[name="id"]').value;
-                this.updateBooking(form, bookingId);
+        // Delete booking
+        const deleteBookingBtn = document.getElementById('deleteBooking');
+        if (deleteBookingBtn) {
+            deleteBookingBtn.addEventListener('click', () => {
+                const modalElement = document.getElementById('deleteBookingModal');
+                const modal = bootstrap.Modal.getInstance(modalElement);
+                const bookingId = modalElement.getAttribute('data-booking-id');
+                this.deleteBooking(bookingId);
+                modal.hide();
             });
         }
 
-        // Delete booking
-        const deleteBookingBtn = document.getElementById('deleteBooking');
-        if (deleteBookingBtn && !deleteBookingBtn.hasAttribute('data-event-attached')) {
-            deleteBookingBtn.setAttribute('data-event-attached', 'true');
-            deleteBookingBtn.addEventListener('click', () => {
-                const bookingId = deleteBookingBtn.getAttribute('data-booking-id');
-                if (bookingId) {
-                    this.deleteBooking(bookingId);
-                }
+        // Show delete modal and set booking ID
+        document.querySelectorAll('[data-bs-target="#deleteBookingModal"]').forEach(button => {
+            button.addEventListener('click', (event) => {
+                const bookingId = event.currentTarget.getAttribute('data-booking-id');
+                document.getElementById('deleteBookingModal').setAttribute('data-booking-id', bookingId);
             });
-        }
+        });
 
         // Change booking status
         const changeStatusBtn = document.getElementById('changeStatus');
@@ -442,15 +457,14 @@ const bookingManager = {
             });
         }
 
-        // Process paymen
+        // Process payment
         const savePaymentBtn = document.getElementById('savePayment');
         if (savePaymentBtn) {
             savePaymentBtn.addEventListener('click', () => {
                 const form = document.getElementById('paymentForm');
                 const bookingId = form.querySelector('input[name="booking_id"]').value;
-                const amount = parseFloat(form.querySelector('input[name="amount"]').value);
-                const paymentStatus = form.querySelector('select[name="payment_status"]').value;
-                this.processPayment(bookingId, amount, paymentStatus);
+                const status = form.querySelector('select[name="payment_status"]').value;
+                this.processPayment(bookingId, status);
             });
         }
     },
@@ -485,6 +499,8 @@ const bookingManager = {
             const statusClass = this.getStatusClass(booking.status);
             const paymentStatusClass = this.getPaymentStatusClass(booking.payment_status);
 
+            const paymentStatusText = booking.payment_status === 'PAID' ? 'Оплачено' : 'Не оплачено';
+
             row.innerHTML = `
                 <td>
                     <a href="/bookings/${booking.id}" class="text-decoration-none fw-bold">
@@ -495,7 +511,7 @@ const bookingManager = {
                 <td>${booking.equipment_name}</td>
                 <td>${startDate} - ${endDate}</td>
                 <td><span class="badge bg-${statusClass}">${booking.status}</span></td>
-                <td><span class="badge bg-${paymentStatusClass}">${booking.payment_status}</span></td>
+                <td><span class="badge bg-${paymentStatusClass}">${paymentStatusText}</span></td>
                 <td>
                     <div class="d-flex gap-1">
                         <a href="/bookings/${booking.id}" class="btn btn-sm btn-outline-primary">
@@ -518,57 +534,56 @@ const bookingManager = {
 
         // Add event listeners for edit buttons
         document.querySelectorAll('[data-bs-target="#editBookingModal"]').forEach(button => {
-            button.addEventListener('click', () => {
-                const bookingId = button.getAttribute('data-booking-id');
-                this.loadBookingForEdit(bookingId, 'editBookingForm', 'editEquipmentSelection');
+            button.addEventListener('click', (event) => {
+                const bookingId = event.currentTarget.getAttribute('data-booking-id');
+                this.loadBookingForEdit(bookingId);
             });
         });
 
         // Add event listeners for delete buttons
         document.querySelectorAll('[data-bs-target="#deleteBookingModal"]').forEach(button => {
-            button.addEventListener('click', () => {
-                const bookingId = button.getAttribute('data-booking-id');
-                document.getElementById('deleteBooking').setAttribute('data-booking-id', bookingId);
+            button.addEventListener('click', (event) => {
+                const bookingId = event.currentTarget.getAttribute('data-booking-id');
+                document.getElementById('deleteBookingModal').setAttribute('data-booking-id', bookingId);
             });
-        });
-
-        // Set up delete confirmation
-        document.getElementById('deleteBooking').addEventListener('click', () => {
-            const bookingId = document.getElementById('deleteBooking').getAttribute('data-booking-id');
-            this.deleteBooking(bookingId);
         });
     },
 
     /**
-     * Get Bootstrap color class for booking status
+     * Get status class for badge
      * @param {string} status - Booking status
      * @returns {string} - Bootstrap color class
      */
     getStatusClass: function(status) {
-        const statusMap = {
-            'PENDING': 'warning',
-            'CONFIRMED': 'info',
-            'ACTIVE': 'primary',
-            'COMPLETED': 'success',
-            'CANCELLED': 'danger',
-            'OVERDUE': 'dark'
-        };
-        return statusMap[status] || 'secondary';
+        switch (status) {
+            case 'PENDING':
+                return 'warning';
+            case 'CONFIRMED':
+                return 'info';
+            case 'ACTIVE':
+                return 'primary';
+            case 'COMPLETED':
+                return 'success';
+            case 'CANCELLED':
+                return 'danger';
+            case 'OVERDUE':
+                return 'dark';
+            default:
+                return 'secondary';
+        }
     },
 
     /**
-     * Get Bootstrap color class for payment status
+     * Get payment status class for badge
      * @param {string} status - Payment status
      * @returns {string} - Bootstrap color class
      */
     getPaymentStatusClass: function(status) {
-        const statusMap = {
-            'PENDING': 'warning',
-            'PARTIAL': 'info',
-            'PAID': 'success',
-            'REFUNDED': 'danger'
-        };
-        return statusMap[status] || 'secondary';
+        if (status === 'PAID') {
+            return 'success';
+        } else {
+            return 'danger';
+        }
     },
 
     /**
@@ -673,11 +688,12 @@ const bookingManager = {
      * @param {number} bookingId - ID of the booking
      * @param {string} status - New status
      */
-    changeBookingStatus: async function(bookingId, status) {
+    async changeBookingStatus(bookingId, status) {
         try {
-            await api.put(`/bookings/${bookingId}/status`, { booking_status: status });
-            showToast('Статус бронирования успешно изменен', 'success');
-            location.reload();
+            await api.patch(`/bookings/${bookingId}/status`, { booking_status: status });
+
+            showToast(`Статус бронирования обновлен на "${status}"`, 'success');
+            setTimeout(() => window.location.reload(), 1000);
         } catch (error) {
             console.error('Error changing booking status:', error);
             showToast('Ошибка при изменении статуса бронирования', 'danger');
@@ -685,27 +701,26 @@ const bookingManager = {
     },
 
     /**
-     * Process payment for booking
-     * @param {number} bookingId - ID of the booking
-     * @param {number} amount - Payment amoun
-     * @param {string} paymentStatus - New payment status
+     * Process payment for a booking
+     * @param {number} bookingId - Booking ID
+     * @param {string} status - Payment status
      */
-    processPayment: async function(bookingId, amount, paymentStatus) {
+    processPayment: async function(bookingId, status) {
         try {
-            await api.put(`/bookings/${bookingId}/payment`, {
-                paid_amount: amount,
-                payment_status: paymentStatus
+            await api.patch(`/bookings/${bookingId}/payment`, {
+                paid_amount: 0,
+                payment_status: status
             });
-            showToast('Оплата успешно обработана', 'success');
-            location.reload();
+            showToast('Статус оплаты успешно обновлен', 'success');
+            setTimeout(() => window.location.reload(), 1000);
         } catch (error) {
             console.error('Error processing payment:', error);
-            showToast('Ошибка при обработке оплаты', 'danger');
+            showToast('Ошибка при обновлении статуса оплаты', 'danger');
         }
     },
 };
 
-// Initialize booking manager when DOM is loaded
+// Initialize event listeners
 document.addEventListener('DOMContentLoaded', () => {
     bookingManager.init();
 });
