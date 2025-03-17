@@ -7,14 +7,14 @@ if (typeof window.showToast !== 'function') {
         const toastContainer = document.getElementById('toastContainer');
 
         if (!toastContainer) {
-            // Create toast container if it doesn't exis
+            // Create toast container if it doesn't exist
             const container = document.createElement('div');
             container.id = 'toastContainer';
             container.className = 'toast-container position-fixed bottom-0 end-0 p-3';
             document.body.appendChild(container);
         }
 
-        // Create toast elemen
+        // Create toast element
         const toastId = `toast-${Date.now()}`;
         const toast = document.createElement('div');
         toast.className = `toast align-items-center text-white bg-${type} border-0`;
@@ -35,7 +35,7 @@ if (typeof window.showToast !== 'function') {
         // Add toast to container
         document.getElementById('toastContainer').appendChild(toast);
 
-        // Initialize and show toas
+        // Initialize and show toast
         const bsToast = new bootstrap.Toast(toast);
         bsToast.show();
 
@@ -46,24 +46,76 @@ if (typeof window.showToast !== 'function') {
     }
 }
 
-// Booking managemen
+// Booking management
 const bookingManager = {
+    // Main initialization
+    init() {
+        // Initialize date range pickers
+        this.initDateRangePicker('input[name="date_range"]');
+
+        // Load clients for the forms
+        this.loadClients();
+
+        // Initialize form handlers
+        this.initFormHandlers();
+
+        // Initialize for specific elements if they exist
+        if (document.getElementById('newBookingForm')) {
+            this.initNewBookingForm();
+        }
+
+        if (document.getElementById('editBookingForm')) {
+            this.initEditBookingForm();
+        }
+
+        if (document.getElementById('paymentForm')) {
+            this.initPaymentForm();
+        }
+
+        // Booking details page specific
+        const completeBookingBtn = document.getElementById('completeBookingBtn');
+        if (completeBookingBtn) {
+            completeBookingBtn.addEventListener('click', () => {
+                const bookingId = completeBookingBtn.getAttribute('data-booking-id');
+                this.changeBookingStatus(bookingId, 'COMPLETED');
+            });
+        }
+    },
+
     // Initialize date range picker
-    initDateRangePicker(selector) {
-        $(selector).daterangepicker({
+    initDateRangePicker(selector = 'input[name="date_range"]') {
+        const inputs = document.querySelectorAll(selector);
+
+        inputs.forEach(input => {
+            $(input).daterangepicker({
+                autoUpdateInput: false,
             locale: {
                 format: 'DD.MM.YYYY',
                 separator: ' - ',
                 applyLabel: 'Применить',
                 cancelLabel: 'Отмена',
-                fromLabel: 'От',
-                toLabel: 'До',
+                    fromLabel: 'С',
+                    toLabel: 'По',
                 customRangeLabel: 'Произвольный',
                 weekLabel: 'Н',
                 daysOfWeek: ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'],
-                monthNames: ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'],
+                    monthNames: [
+                        'Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
+                        'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'
+                    ],
                 firstDay: 1
             }
+            });
+
+            $(input).on('apply.daterangepicker', function(ev, picker) {
+                $(this).val(picker.startDate.format('DD.MM.YYYY') + ' - ' + picker.endDate.format('DD.MM.YYYY'));
+                $(this).trigger('change'); // Trigger change event for search updates
+            });
+
+            $(input).on('cancel.daterangepicker', function(ev, picker) {
+                $(this).val('');
+                $(this).trigger('change'); // Trigger change event for search updates
+            });
         });
     },
 
@@ -86,13 +138,88 @@ const bookingManager = {
                 clients.forEach(client => {
                     const option = document.createElement('option');
                     option.value = client.id;
-                    option.textContent = `${client.first_name} ${client.last_name}`;
+                    option.textContent = client.name;
                     select.appendChild(option);
                 });
             });
         } catch (error) {
             console.error('Error loading clients:', error);
             showToast('Ошибка при загрузке клиентов', 'danger');
+        }
+    },
+
+    // Initialize form handlers for various actions
+    initFormHandlers() {
+        // Setup form submission for new bookings
+        const submitBookingBtn = document.getElementById('submitBooking');
+        if (submitBookingBtn) {
+            submitBookingBtn.addEventListener('click', () => {
+                this.createBooking();
+            });
+        }
+
+        // Setup form submission for editing bookings
+        const updateBookingBtn = document.getElementById('updateBooking');
+        if (updateBookingBtn) {
+            updateBookingBtn.addEventListener('click', () => {
+                this.updateBooking();
+            });
+        }
+
+        // Setup delete booking handler
+        const deleteBookingBtn = document.getElementById('deleteBooking');
+        if (deleteBookingBtn) {
+            deleteBookingBtn.addEventListener('click', () => {
+                const modal = bootstrap.Modal.getInstance(document.getElementById('deleteBookingModal'));
+                const bookingId = modal._element.getAttribute('data-booking-id');
+                this.deleteBooking(bookingId);
+            });
+        }
+    },
+
+    // Initialize the new booking form
+    initNewBookingForm() {
+        // Load equipment options
+        this.loadEquipment('equipmentSelection');
+
+        // Add event listener to the form
+        document.getElementById('newBookingForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            this.createBooking();
+        });
+    },
+
+    // Initialize the edit booking form
+    initEditBookingForm() {
+        // Setup form load when modal is shown
+        document.getElementById('editBookingModal').addEventListener('show.bs.modal', (event) => {
+            const button = event.relatedTarget;
+            const bookingId = button.getAttribute('data-booking-id');
+            this.loadBookingDetails(bookingId);
+        });
+
+        // Add event listener to the form
+        document.getElementById('editBookingForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            this.updateBooking();
+        });
+    },
+
+    // Initialize the payment form
+    initPaymentForm() {
+        const savePaymentBtn = document.getElementById('savePayment');
+        if (savePaymentBtn) {
+            savePaymentBtn.addEventListener('click', () => {
+                const form = document.getElementById('paymentForm');
+                const bookingId = form.elements.booking_id.value;
+                const paymentStatus = form.elements.payment_status.value;
+                this.processPayment(bookingId, paymentStatus).then(() => {
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('paymentModal'));
+                    if (modal) modal.hide();
+                    // Reload the page after a short delay
+                    setTimeout(() => window.location.reload(), 1000);
+                });
+            });
         }
     },
 
@@ -152,34 +279,35 @@ const bookingManager = {
         }
     },
 
-    // Load equipment list for modal
-    async loadEquipmentList(bookingId, containerId) {
-        const container = document.getElementById(containerId);
-
+    // Load booking details for editing
+    async loadBookingDetails(bookingId) {
         try {
             const booking = await api.get(`/bookings/${bookingId}`);
 
-            container.innerHTML = booking.equipment.map(item => `
-                <div class="list-group-item">
-                    <div class="d-flex w-100 justify-content-between">
-                        <h6 class="mb-1">${item.name}</h6>
-                        <small class="text-muted">${item.category_name}</small>
-                    </div>
-                    <p class="mb-1">
-                        <small>
-                            <span class="me-3">S/N: ${item.serial_number}</span>
-                            <span>Штрих-код: ${item.barcode}</span>
-                        </small>
-                    </p>
-                </div>
-            `).join('');
+            // Populate form fields
+            const form = document.getElementById('editBookingForm');
+            form.elements.id.value = booking.id;
+            form.elements.client_id.value = booking.client_id;
+
+            // Set date range
+            const startDate = moment(booking.start_date).format('DD.MM.YYYY');
+            const endDate = moment(booking.end_date).format('DD.MM.YYYY');
+            form.elements.date_range.value = `${startDate} - ${endDate}`;
+
+            // Load equipment options and set selected equipment
+            await this.loadEquipment('editEquipmentSelection');
+            const equipmentInput = document.querySelector(`#editEquipmentSelection input[value="${booking.equipment_id}"]`);
+            if (equipmentInput) {
+                equipmentInput.checked = true;
+            }
+
+            // Set notes
+            if (form.elements.notes) {
+                form.elements.notes.value = booking.notes || '';
+            }
         } catch (error) {
-            console.error('Error loading equipment list:', error);
-            container.innerHTML = `
-                <div class="alert alert-danger">
-                    Ошибка загрузки списка оборудования
-                </div>
-            `;
+            console.error('Error loading booking details:', error);
+            showToast('Ошибка при загрузке данных бронирования', 'danger');
         }
     },
 
@@ -187,7 +315,6 @@ const bookingManager = {
     async createBooking() {
         try {
             const form = document.getElementById('newBookingForm');
-            const formData = new FormData(form);
 
             // Validate form
             if (!form.checkValidity()) {
@@ -195,7 +322,9 @@ const bookingManager = {
                 return;
             }
 
-            // Get selected equipmen
+            const formData = new FormData(form);
+
+            // Get selected equipment
             const selectedEquipment = form.querySelector('input[name="equipment_id"]:checked');
             if (!selectedEquipment) {
                 showToast('Выберите оборудование', 'warning');
@@ -215,479 +344,108 @@ const bookingManager = {
                 equipment_id: parseInt(selectedEquipment.value),
                 start_date: moment(dateRange[0], 'DD.MM.YYYY').format('YYYY-MM-DDT00:00:00'),
                 end_date: moment(dateRange[1], 'DD.MM.YYYY').format('YYYY-MM-DDT00:00:00'),
-                total_amount: 0,
+                total_amount: 0, // This will be calculated on the server
                 notes: formData.get('notes') || ''
             };
 
-            // Send request to create booking
-            await api.post('/bookings', data);
+            // Create booking
+            await api.post('/bookings/', data);
 
             // Show success message
             showToast('Бронирование успешно создано', 'success');
 
-            // Reset form and close modal
+            // Close modal and reset form
+            const modal = bootstrap.Modal.getInstance(document.getElementById('newBookingModal'));
+            if (modal) modal.hide();
             form.reset();
-            $('#newBookingModal').modal('hide');
 
-            // Reload bookings
-            this.loadBookings();
+            // Reload page
+            setTimeout(() => window.location.reload(), 1000);
         } catch (error) {
             console.error('Error creating booking:', error);
             showToast('Ошибка при создании бронирования', 'danger');
         }
     },
 
-    /**
-     * Load booking data for editing
-     * @param {number} bookingId - ID of the booking to edi
-     * @param {string} formId - ID of the form elemen
-     * @param {string} equipmentContainerId - ID of the container for equipment selection
-     */
-    loadBookingForEdit: async function(bookingId, formId, equipmentContainerId) {
+    // Update existing booking
+    async updateBooking() {
         try {
-            // Load clients for dropdown
-            await this.loadClients(`#${formId} select[name="client_id"]`);
+            const form = document.getElementById('editBookingForm');
 
-            // Load equipment options
-            await this.loadEquipment(equipmentContainerId);
-
-            // Get booking details
-            const booking = await api.get(`/bookings/${bookingId}`);
-
-            // Set form values
-            const form = document.getElementById(formId);
-            form.querySelector('select[name="client_id"]').value = booking.client_id;
-
-            // Set date range
-            const startDate = moment(booking.start_date);
-            const endDate = moment(booking.end_date);
-            const dateRangeInput = form.querySelector('input[name="date_range"]');
-
-            $(dateRangeInput).daterangepicker({
-                startDate: startDate,
-                endDate: endDate,
-                locale: {
-                    format: 'DD.MM.YYYY',
-                    separator: ' - ',
-                    applyLabel: 'Применить',
-                    cancelLabel: 'Отмена'
-                }
-            });
-
-            // Set equipment selection
-            const equipmentContainer = document.getElementById(equipmentContainerId);
-            const equipmentCheckbox = equipmentContainer.querySelector(`input[value="${booking.equipment_id}"]`);
-            if (equipmentCheckbox) {
-                equipmentCheckbox.checked = true;
+            // Validate form
+            if (!form.checkValidity()) {
+                form.reportValidity();
+                return;
             }
 
-            // Set up update button
-            document.getElementById('updateBooking').addEventListener('click', () => {
-                this.updateBooking(form, bookingId);
-            });
-
-            // Set up delete button
-            document.getElementById('deleteBooking').addEventListener('click', () => {
-                this.deleteBooking(bookingId);
-            });
-        } catch (error) {
-            console.error('Error loading booking data:', error);
-            showToast('Ошибка при загрузке данных бронирования', 'danger');
-        }
-    },
-
-    /**
-     * Update booking
-     * @param {HTMLFormElement} form - Form element with booking data
-     * @param {number} bookingId - ID of the booking to update
-     */
-    updateBooking: async function(form, bookingId) {
-        try {
             const formData = new FormData(form);
-            const dateRange = formData.get('date_range').split(' - ');
+            const bookingId = formData.get('id');
 
-            // Get selected equipmen
-            const equipmentContainer = document.getElementById('editEquipmentSelection');
-            const selectedEquipment = equipmentContainer.querySelector('input[type="radio"]:checked');
-
+            // Get selected equipment
+            const selectedEquipment = document.querySelector('#editEquipmentSelection input[name="equipment_id"]:checked');
             if (!selectedEquipment) {
                 showToast('Выберите оборудование', 'warning');
                 return;
             }
 
+            // Parse date range
+            const dateRange = formData.get('date_range').split(' - ');
+            if (dateRange.length !== 2) {
+                showToast('Выберите период бронирования', 'warning');
+                return;
+            }
+
+            // Prepare data
             const data = {
                 client_id: parseInt(formData.get('client_id')),
                 equipment_id: parseInt(selectedEquipment.value),
                 start_date: moment(dateRange[0], 'DD.MM.YYYY').format('YYYY-MM-DDT00:00:00'),
                 end_date: moment(dateRange[1], 'DD.MM.YYYY').format('YYYY-MM-DDT00:00:00'),
-                total_amount: 0,
-                notes: formData.get('notes')
+                notes: formData.get('notes') || ''
             };
 
+            // Update booking
             await api.put(`/bookings/${bookingId}`, data);
+
+            // Show success message
             showToast('Бронирование успешно обновлено', 'success');
-            location.reload();
+
+            // Close modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('editBookingModal'));
+            if (modal) modal.hide();
+
+            // Reload page
+            setTimeout(() => window.location.reload(), 1000);
         } catch (error) {
             console.error('Error updating booking:', error);
             showToast('Ошибка при обновлении бронирования', 'danger');
         }
     },
 
-    /**
-     * Delete booking
-     * @param {number} bookingId - ID of the booking to delete
-     */
-    deleteBooking: async function(bookingId) {
+    // Delete booking
+    async deleteBooking(bookingId) {
         try {
             await api.delete(`/bookings/${bookingId}`);
+
             showToast('Бронирование успешно удалено', 'success');
+
+            // Close modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('deleteBookingModal'));
+            if (modal) modal.hide();
+
+            // Redirect to bookings list or reload page
+            if (window.location.pathname === `/bookings/${bookingId}`) {
             window.location.href = '/bookings';
+            } else {
+                setTimeout(() => window.location.reload(), 1000);
+            }
         } catch (error) {
             console.error('Error deleting booking:', error);
             showToast('Ошибка при удалении бронирования', 'danger');
         }
     },
 
-    // Helper function to parse date range
-    parseDateRange(dateRange) {
-        const [start, end] = dateRange.split(' - ');
-        return {
-            start_date: moment(start, 'DD.MM.YYYY').format('YYYY-MM-DDT00:00:00'),
-            end_date: moment(end, 'DD.MM.YYYY').format('YYYY-MM-DDT00:00:00'),
-            total_amount: 0
-        };
-    },
-
-    // Helper function to format date range
-    formatDateRange(start, end) {
-        return `${moment(start).format('DD.MM.YYYY')} - ${moment(end).format('DD.MM.YYYY')}`;
-    },
-
-    /**
-     * Initialize booking manager
-     */
-    init: function() {
-        // Setup event handlers
-        this.setupEventHandlers();
-
-        // Initialize date range picker
-        this.initDateRangePicker();
-
-        // Load clients
-        this.loadClients();
-
-        // Load equipment
-        this.loadEquipment();
-
-        // Load bookings if on bookings lis
-        if (document.getElementById('bookingsTableBody')) {
-            this.loadBookings();
-        }
-
-        // Setup websocket for real-time updates
-        // this.setupWebSocket();
-    },
-
-    /**
-     * Setup event handlers
-     */
-    setupEventHandlers: function() {
-        // New booking form submission
-        const submitBookingBtn = document.getElementById('submitBooking');
-        if (submitBookingBtn) {
-            submitBookingBtn.addEventListener('click', () => {
-                this.createBooking();
-            });
-        }
-
-        // Edit booking form submission
-        const updateBookingBtn = document.getElementById('updateBooking');
-        if (updateBookingBtn) {
-            updateBookingBtn.addEventListener('click', () => {
-                this.updateBooking();
-            });
-        }
-
-        // Filter bookings
-        const filterForm = document.getElementById('filterForm');
-        if (filterForm) {
-            filterForm.addEventListener('submit', (event) => {
-                event.preventDefault();
-                this.filterBookings();
-            });
-        }
-
-        // Reset filters
-        const resetFilterBtn = document.getElementById('resetFilter');
-        if (resetFilterBtn) {
-            resetFilterBtn.addEventListener('click', () => {
-                filterForm.reset();
-                this.loadBookings();
-            });
-        }
-
-        // Delete booking
-        const deleteBookingBtn = document.getElementById('deleteBooking');
-        if (deleteBookingBtn) {
-            deleteBookingBtn.addEventListener('click', () => {
-                const modalElement = document.getElementById('deleteBookingModal');
-                const modal = bootstrap.Modal.getInstance(modalElement);
-                const bookingId = modalElement.getAttribute('data-booking-id');
-                this.deleteBooking(bookingId);
-                modal.hide();
-            });
-        }
-
-        // Show delete modal and set booking ID
-        document.querySelectorAll('[data-bs-target="#deleteBookingModal"]').forEach(button => {
-            button.addEventListener('click', (event) => {
-                const bookingId = event.currentTarget.getAttribute('data-booking-id');
-                document.getElementById('deleteBookingModal').setAttribute('data-booking-id', bookingId);
-            });
-        });
-
-        // Change booking status
-        const changeStatusBtn = document.getElementById('changeStatus');
-        if (changeStatusBtn) {
-            changeStatusBtn.addEventListener('click', () => {
-                const form = document.getElementById('changeStatusForm');
-                const bookingId = form.querySelector('input[name="booking_id"]').value;
-                const status = form.querySelector('select[name="status"]').value;
-                this.changeBookingStatus(bookingId, status);
-            });
-        }
-
-        // Process payment
-        const savePaymentBtn = document.getElementById('savePayment');
-        if (savePaymentBtn) {
-            savePaymentBtn.addEventListener('click', () => {
-                const form = document.getElementById('paymentForm');
-                const bookingId = form.querySelector('input[name="booking_id"]').value;
-                const status = form.querySelector('select[name="payment_status"]').value;
-                this.processPayment(bookingId, status);
-            });
-        }
-    },
-
-    /**
-     * Render bookings in the table
-     * @param {Array} bookings - Array of booking objects
-     */
-    renderBookings: function(bookings) {
-        const tableBody = document.getElementById('bookingsTableBody');
-        if (!tableBody) return;
-
-        tableBody.innerHTML = '';
-
-        if (bookings.length === 0) {
-            tableBody.innerHTML = `
-                <tr>
-                    <td colspan="7" class="text-center">Нет бронирований</td>
-                </tr>
-            `;
-            return;
-        }
-
-        bookings.forEach(booking => {
-            const row = document.createElement('tr');
-
-            // Format dates
-            const startDate = moment(booking.start_date).format('DD.MM.YYYY');
-            const endDate = moment(booking.end_date).format('DD.MM.YYYY');
-
-            // Create status badge
-            const statusClass = this.getStatusClass(booking.status);
-            const paymentStatusClass = this.getPaymentStatusClass(booking.payment_status);
-
-            const paymentStatusText = booking.payment_status === 'PAID' ? 'Оплачено' : 'Не оплачено';
-
-            row.innerHTML = `
-                <td>
-                    <a href="/bookings/${booking.id}" class="text-decoration-none fw-bold">
-                        #${booking.id}
-                    </a>
-                </td>
-                <td>${booking.client_name}</td>
-                <td>${booking.equipment_name}</td>
-                <td>${startDate} - ${endDate}</td>
-                <td><span class="badge bg-${statusClass}">${booking.status}</span></td>
-                <td><span class="badge bg-${paymentStatusClass}">${paymentStatusText}</span></td>
-                <td>
-                    <div class="d-flex gap-1">
-                        <a href="/bookings/${booking.id}" class="btn btn-sm btn-outline-primary">
-                            <i class="fas fa-eye"></i>
-                        </a>
-                        <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal"
-                            data-bs-target="#editBookingModal" data-booking-id="${booking.id}">
-                            <i class="fas fa-edit"></i>
-                        </button>
-                        <button class="btn btn-sm btn-outline-danger" data-bs-toggle="modal"
-                            data-bs-target="#deleteBookingModal" data-booking-id="${booking.id}">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </div>
-                </td>
-            `;
-
-            tableBody.appendChild(row);
-        });
-
-        // Add event listeners for edit buttons
-        document.querySelectorAll('[data-bs-target="#editBookingModal"]').forEach(button => {
-            button.addEventListener('click', (event) => {
-                const bookingId = event.currentTarget.getAttribute('data-booking-id');
-                this.loadBookingForEdit(bookingId);
-            });
-        });
-
-        // Add event listeners for delete buttons
-        document.querySelectorAll('[data-bs-target="#deleteBookingModal"]').forEach(button => {
-            button.addEventListener('click', (event) => {
-                const bookingId = event.currentTarget.getAttribute('data-booking-id');
-                document.getElementById('deleteBookingModal').setAttribute('data-booking-id', bookingId);
-            });
-        });
-    },
-
-    /**
-     * Get status class for badge
-     * @param {string} status - Booking status
-     * @returns {string} - Bootstrap color class
-     */
-    getStatusClass: function(status) {
-        switch (status) {
-            case 'PENDING':
-                return 'warning';
-            case 'CONFIRMED':
-                return 'info';
-            case 'ACTIVE':
-                return 'primary';
-            case 'COMPLETED':
-                return 'success';
-            case 'CANCELLED':
-                return 'danger';
-            case 'OVERDUE':
-                return 'dark';
-            default:
-                return 'secondary';
-        }
-    },
-
-    /**
-     * Get payment status class for badge
-     * @param {string} status - Payment status
-     * @returns {string} - Bootstrap color class
-     */
-    getPaymentStatusClass: function(status) {
-        if (status === 'PAID') {
-            return 'success';
-        } else {
-            return 'danger';
-        }
-    },
-
-    /**
-     * Load bookings from API
-     */
-    loadBookings: async function() {
-        try {
-            const bookings = await api.get('/bookings');
-            this.renderBookings(bookings);
-        } catch (error) {
-            console.error('Error loading bookings:', error);
-            showToast('Ошибка при загрузке бронирований', 'danger');
-        }
-    },
-
-    /**
-     * Filter bookings
-     */
-    filterBookings: async function() {
-        const form = document.getElementById('filterForm');
-        const formData = new FormData(form);
-
-        const filters = {
-            client_id: formData.get('client_id') || undefined,
-            equipment_id: formData.get('equipment_id') || undefined,
-            booking_status: formData.get('booking_status') || undefined,
-            payment_status: formData.get('payment_status') || undefined
-        };
-
-        // Remove undefined values
-        Object.keys(filters).forEach(key => {
-            if (filters[key] === undefined) {
-                delete filters[key];
-            }
-        });
-
-        // Add date range if provided
-        const dateRange = formData.get('date_range');
-        if (dateRange) {
-            const [start, end] = dateRange.split(' - ');
-            filters.start_date = moment(start, 'DD.MM.YYYY').format('YYYY-MM-DDT00:00:00');
-            filters.end_date = moment(end, 'DD.MM.YYYY').format('YYYY-MM-DDT00:00:00');
-        }
-
-        try {
-            // Convert filters to query string
-            const queryParams = new URLSearchParams();
-            Object.entries(filters).forEach(([key, value]) => {
-                queryParams.append(key, value);
-            });
-
-            const bookings = await api.get(`/bookings?${queryParams.toString()}`);
-            this.renderBookings(bookings);
-
-            showToast('Фильтры применены', 'success');
-        } catch (error) {
-            console.error('Error filtering bookings:', error);
-            showToast('Ошибка при фильтрации бронирований', 'danger');
-        }
-    },
-
-    /**
-     * Initialize date range picker
-     * @param {string} [selector='input[name="date_range"]'] - Selector for date range inpu
-     */
-    initDateRangePicker: function(selector = 'input[name="date_range"]') {
-        const inputs = document.querySelectorAll(selector);
-
-        inputs.forEach(input => {
-            $(input).daterangepicker({
-                autoUpdateInput: false,
-                locale: {
-                    format: 'DD.MM.YYYY',
-                    separator: ' - ',
-                    applyLabel: 'Применить',
-                    cancelLabel: 'Отмена',
-                    fromLabel: 'С',
-                    toLabel: 'По',
-                    customRangeLabel: 'Произвольный',
-                    weekLabel: 'Н',
-                    daysOfWeek: ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'],
-                    monthNames: [
-                        'Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
-                        'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'
-                    ],
-                    firstDay: 1
-                }
-            });
-
-            $(input).on('apply.daterangepicker', function(ev, picker) {
-                $(this).val(picker.startDate.format('DD.MM.YYYY') + ' - ' + picker.endDate.format('DD.MM.YYYY'));
-            });
-
-            $(input).on('cancel.daterangepicker', function(ev, picker) {
-                $(this).val('');
-            });
-        });
-    },
-
-    /**
-     * Change booking status
-     * @param {number} bookingId - ID of the booking
-     * @param {string} status - New status
-     */
+    // Change booking status
     async changeBookingStatus(bookingId, status) {
         try {
             await api.patch(`/bookings/${bookingId}/status`, { booking_status: status });
@@ -700,27 +458,286 @@ const bookingManager = {
         }
     },
 
-    /**
-     * Process payment for a booking
-     * @param {number} bookingId - Booking ID
-     * @param {string} status - Payment status
-     */
-    processPayment: async function(bookingId, status) {
+    // Process payment
+    async processPayment(bookingId, paymentStatus) {
         try {
-            await api.patch(`/bookings/${bookingId}/payment`, {
-                paid_amount: 0,
-                payment_status: status
+            const response = await api.patch(`/bookings/${bookingId}/payment`, {
+                payment_status: paymentStatus,
+                paid_amount: 0 // Dummy value for now
             });
-            showToast('Статус оплаты успешно обновлен', 'success');
-            setTimeout(() => window.location.reload(), 1000);
+
+            showToast('Статус оплаты обновлен', 'success');
+            return response;
         } catch (error) {
             console.error('Error processing payment:', error);
             showToast('Ошибка при обновлении статуса оплаты', 'danger');
+            throw error;
         }
-    },
+    }
 };
 
-// Initialize event listeners
-document.addEventListener('DOMContentLoaded', () => {
+// Bookings search functionality
+const bookingSearch = {
+    init() {
+        const clientSearchInput = document.querySelector('#clientSearchInput');
+        const bookingStatusFilter = document.querySelector('select[name="booking_status"]');
+        const paymentStatusFilter = document.querySelector('select[name="payment_status"]');
+        const dateRangeInput = document.querySelector('input[name="date_range"]');
+        const searchSpinner = document.querySelector('#search-spinner');
+
+        // Skip if not on the bookings list page
+        if (!clientSearchInput) return;
+
+        // Get initial values from URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const initialClientSearch = urlParams.get('client_search') || '';
+        const initialBookingStatus = urlParams.get('booking_status') || '';
+        const initialPaymentStatus = urlParams.get('payment_status') || '';
+        const initialDateRange = urlParams.get('date_range') || '';
+
+        // Set initial values
+        clientSearchInput.value = initialClientSearch;
+        if (bookingStatusFilter) bookingStatusFilter.value = initialBookingStatus;
+        if (paymentStatusFilter) paymentStatusFilter.value = initialPaymentStatus;
+        if (dateRangeInput) dateRangeInput.value = initialDateRange;
+
+        // Using the debounce function from main.js
+        const updateResults = debounce(async () => {
+            const clientSearch = clientSearchInput.value.trim();
+            const bookingStatus = bookingStatusFilter ? bookingStatusFilter.value : '';
+            const paymentStatus = paymentStatusFilter ? paymentStatusFilter.value : '';
+            const dateRange = dateRangeInput ? dateRangeInput.value : '';
+
+            console.log('Search parameters:', {
+                clientSearch,
+                bookingStatus,
+                paymentStatus,
+                dateRange
+            });
+
+            if (searchSpinner) searchSpinner.classList.remove('d-none');
+
+            try {
+                const apiParams = new URLSearchParams();
+                const urlParams = new URLSearchParams();
+
+                // Add search query if it has sufficient length
+                if (clientSearch.length >= 3) {
+                    urlParams.append('client_search', clientSearch);
+                    // Use the query parameter for client search in API request
+                    apiParams.append('query', clientSearch);
+                    console.log('Added client search query:', clientSearch);
+                }
+
+                // Add filters
+                if (bookingStatus) {
+                    urlParams.append('booking_status', bookingStatus);
+                    apiParams.append('booking_status', bookingStatus);
+                    console.log('Added booking status filter:', bookingStatus);
+                }
+
+                if (paymentStatus) {
+                    urlParams.append('payment_status', paymentStatus);
+                    apiParams.append('payment_status', paymentStatus);
+                    console.log('Added payment status filter:', paymentStatus);
+                }
+
+                if (dateRange) {
+                    urlParams.append('date_range', dateRange);
+                    // Parse dates for API request, if available
+                    if (dateRange.includes(' - ')) {
+                        const [startStr, endStr] = dateRange.split(' - ');
+                        const startDate = new Date(startStr);
+                        const endDate = new Date(endStr);
+                        if (!isNaN(startDate.getTime())) {
+                            apiParams.append('start_date', startDate.toISOString());
+                            console.log('Added start_date:', startDate.toISOString());
+                        }
+                        if (!isNaN(endDate.getTime())) {
+                            apiParams.append('end_date', endDate.toISOString());
+                            console.log('Added end_date:', endDate.toISOString());
+                        }
+                    }
+                }
+
+                // Add timestamp for cache prevention
+                apiParams.append('_t', Date.now());
+
+                // Update browser URL without reloading the page
+                const newUrl = urlParams.toString() ? `?${urlParams.toString()}` : window.location.pathname;
+                window.history.replaceState({}, '', newUrl);
+
+                // Request data through API - ensure correct path formation with leading slash
+                // Based on how API_BASE_URL is concatenated in api.get()
+                const apiUrl = `/bookings?${apiParams.toString()}`;
+                console.log('API Request URL:', apiUrl);
+
+                // Check if api object exists
+                if (typeof api === 'undefined') {
+                    console.error('API object is not defined. Check if api.js is included.');
+                    showToast('Ошибка: API объект не определен', 'danger');
+                    return;
+                }
+
+                console.log('Full API URL will be:', '/api/v1' + apiUrl);
+                console.log('Sending API request...');
+                const response = await api.get(apiUrl);
+                console.log('API response received:', response);
+
+                // Get list of bookings from API response
+                if (Array.isArray(response)) {
+                    console.log(`Received ${response.length} bookings from API`);
+        const tableBody = document.getElementById('bookingsTableBody');
+
+                    if (!tableBody) {
+                        console.error('Table body element not found: #bookingsTableBody');
+            return;
+        }
+
+                    console.log('Clearing table body...');
+                    // Clear current table content
+                    tableBody.innerHTML = '';
+
+                    if (response.length === 0) {
+                        // If no data, show message
+                        console.log('No bookings found, adding empty row message');
+                        const emptyRow = document.createElement('tr');
+                        emptyRow.innerHTML = '<td colspan="7" class="text-center">Бронирования не найдены</td>';
+                        tableBody.appendChild(emptyRow);
+                    } else {
+                        // Fill table with data from API
+                        console.log('Adding booking rows to table...');
+                        response.forEach((booking, index) => {
+                            console.log(`Processing booking ${index + 1}/${response.length}:`, booking);
+                            console.log(`Booking status field:`, booking.booking_status || booking.status);
+                            console.log(`Payment status field:`, booking.payment_status || booking.payment);
+            const row = document.createElement('tr');
+
+                            // Format date
+                            const startDate = new Date(booking.start_date);
+                            const endDate = new Date(booking.end_date);
+                            const formattedStartDate = startDate.toLocaleDateString('ru-RU');
+                            const formattedEndDate = endDate.toLocaleDateString('ru-RU');
+
+                            // Create table row with booking data
+            row.innerHTML = `
+                <td>
+                                    <a href="/bookings/${booking.id}" class="text-primary">
+                                        ${booking.id}
+                    </a>
+                </td>
+                                <td>${booking.client_name || 'Н/Д'}</td>
+                                <td>${booking.equipment_name || 'Н/Д'}</td>
+                                <td>${formattedStartDate} - ${formattedEndDate}</td>
+                                <td>
+                                    <span class="badge ${getStatusBadgeClass(booking.booking_status || booking.status)}">
+                                        ${getStatusDisplayName(booking.booking_status || booking.status)}
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="badge ${getPaymentStatusBadgeClass(booking.payment_status || booking.payment)}">
+                                        ${getPaymentStatusDisplayName(booking.payment_status || booking.payment)}
+                                    </span>
+                                </td>
+                                <td class="text-right">
+                        <a href="/bookings/${booking.id}" class="btn btn-sm btn-outline-primary">
+                            <i class="fas fa-eye"></i>
+                        </a>
+                </td>
+            `;
+            tableBody.appendChild(row);
+        });
+                        console.log('Finished adding all booking rows to table');
+                    }
+                } else {
+                    console.error('API response is not an array:', response);
+                    throw new Error('API response format is invalid');
+                }
+        } catch (error) {
+                console.error('Search error:', error);
+                console.error('Error details:', error.message);
+                if (error.response) {
+                    console.error('Error response:', error.response);
+                }
+                showToast('Ошибка при поиске бронирований', 'danger');
+            } finally {
+                if (searchSpinner) searchSpinner.classList.add('d-none');
+                console.log('Search operation completed');
+            }
+        }, 300);
+
+        // Helper functions for status formatting
+        function getStatusBadgeClass(status) {
+            const statusClasses = {
+                'PENDING': 'badge-warning',
+                'ACTIVE': 'badge-success',
+                'COMPLETED': 'badge-primary',
+                'CANCELED': 'badge-danger',
+                'OVERDUE': 'badge-dark'
+            };
+            return statusClasses[status] || 'badge-secondary';
+        }
+
+        function getStatusDisplayName(status) {
+            const statusNames = {
+                'PENDING': 'Ожидает',
+                'ACTIVE': 'Активно',
+                'COMPLETED': 'Завершено',
+                'CANCELED': 'Отменено',
+                'OVERDUE': 'Просрочено'
+            };
+            return statusNames[status] || status;
+        }
+
+        function getPaymentStatusBadgeClass(status) {
+            const statusClasses = {
+                'PENDING': 'badge-warning',
+                'PAID': 'badge-success',
+                'PARTIALLY_PAID': 'badge-info',
+                'REFUNDED': 'badge-secondary',
+                'OVERDUE': 'badge-danger'
+            };
+            return statusClasses[status] || 'badge-secondary';
+        }
+
+        function getPaymentStatusDisplayName(status) {
+            const statusNames = {
+                'PENDING': 'Ожидает',
+                'PAID': 'Оплачено',
+                'PARTIALLY_PAID': 'Частично',
+                'REFUNDED': 'Возврат',
+                'OVERDUE': 'Просрочено'
+            };
+            return statusNames[status] || status;
+        }
+
+        // Add event listeners
+        if (clientSearchInput) clientSearchInput.addEventListener('input', updateResults);
+        if (bookingStatusFilter) bookingStatusFilter.addEventListener('change', updateResults);
+        if (paymentStatusFilter) paymentStatusFilter.addEventListener('change', updateResults);
+        if (dateRangeInput) dateRangeInput.addEventListener('change', updateResults);
+
+        // Handle reset button
+        const resetButton = document.getElementById('resetFilter');
+        if (resetButton) {
+            resetButton.addEventListener('click', function() {
+                if (clientSearchInput) clientSearchInput.value = '';
+                if (bookingStatusFilter) bookingStatusFilter.value = '';
+                if (paymentStatusFilter) paymentStatusFilter.value = '';
+                if (dateRangeInput) dateRangeInput.value = '';
+                updateResults();
+            });
+        }
+
+        // Load initial data if needed
+        if (initialClientSearch || initialBookingStatus || initialPaymentStatus || initialDateRange) {
+            updateResults();
+        }
+    }
+};
+
+// Initialize when DOM is loaded
+document.addEventListener('DOMContentLoaded', function() {
     bookingManager.init();
+    bookingSearch.init();
 });
