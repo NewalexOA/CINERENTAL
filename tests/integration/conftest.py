@@ -136,8 +136,7 @@ async def test_client(db_session: AsyncSession) -> AsyncGenerator[Client, None]:
     """Create test client."""
     client_service = ClientService(db_session)
     client = await client_service.create_client(
-        first_name='John',
-        last_name='Doe',
+        name='John Doe',
         email='john.doe@example.com',
         phone='+1234567890',
         passport_number='AB123456',

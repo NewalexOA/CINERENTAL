@@ -33,8 +33,7 @@ class TestClientService:
     async def client(self, service: ClientService) -> Client:
         """Create test client."""
         return await service.create_client(
-            first_name='John',
-            last_name='Doe',
+            name='John Doe',
             email='john.doe@example.com',
             phone='+1234567890',
             passport_number='AB123456',
@@ -108,8 +107,7 @@ class TestClientService:
         """Test client creation."""
         # Create client
         client = await service.create_client(
-            first_name='Jane',
-            last_name='Smith',
+            name='Jane Smith',
             email='jane.smith@example.com',
             phone='+0987654321',
             passport_number='CD789012',
@@ -119,8 +117,7 @@ class TestClientService:
         )
 
         # Check client properties
-        assert client.first_name == 'Jane'
-        assert client.last_name == 'Smith'
+        assert client.name == 'Jane Smith'
         assert client.email == 'jane.smith@example.com'
         assert client.phone == '+0987654321'
         assert client.passport_number == 'CD789012'
@@ -132,8 +129,7 @@ class TestClientService:
         # Try to create client with existing email
         with pytest.raises(ConflictError, match='Client with email .* already exists'):
             await service.create_client(
-                first_name='Jane',
-                last_name='Smith',
+                name='Jane Smith',
                 email='jane.smith@example.com',  # Same email
                 phone='+1111111111',  # Different phone
                 passport_number='EF345678',
@@ -143,8 +139,7 @@ class TestClientService:
         # Try to create client with existing phone
         with pytest.raises(ConflictError, match='Client with phone .* already exists'):
             await service.create_client(
-                first_name='Jane',
-                last_name='Smith',
+                name='Jane Smith',
                 email='other.email@example.com',  # Different email
                 phone='+0987654321',  # Same phone
                 passport_number='EF345678',
@@ -159,8 +154,7 @@ class TestClientService:
         # Check that the client was retrieved correctly
         assert result is not None
         assert result.id == client.id
-        assert result.first_name == client.first_name
-        assert result.last_name == client.last_name
+        assert result.name == client.name
         assert result.email == client.email
         assert result.phone == client.phone
         assert result.passport_number == client.passport_number
@@ -179,8 +173,7 @@ class TestClientService:
         # Update client details
         updated = await service.update_client(
             client.id,
-            first_name='John Updated',
-            last_name='Doe Updated',
+            name='John Doe Updated',
             email='john.updated@example.com',
             phone='+9999999999',
             passport_number='XY987654',
@@ -192,8 +185,7 @@ class TestClientService:
         # Check that the client was updated correctly
         assert updated is not None
         assert updated.id == client.id
-        assert updated.first_name == 'John Updated'
-        assert updated.last_name == 'Doe Updated'
+        assert updated.name == 'John Doe Updated'
         assert updated.email == 'john.updated@example.com'
         assert updated.phone == '+9999999999'
         assert updated.passport_number == 'XY987654'
@@ -203,8 +195,7 @@ class TestClientService:
 
         # Try to update to existing email
         other_client = await service.create_client(
-            first_name='Other',
-            last_name='Client',
+            name='Other Client',
             email='other@example.com',
             phone='+8888888888',
             passport_number='ZZ111111',
@@ -226,7 +217,7 @@ class TestClientService:
 
         # Test updating non-existent client
         with pytest.raises(NotFoundError, match='Client with ID 999 not found'):
-            await service.update_client(999, first_name='Non-existent')
+            await service.update_client(999, name='Non-existent')
 
     @async_test
     async def test_change_status(self, service: ClientService, client: Client) -> None:
@@ -256,8 +247,7 @@ class TestClientService:
 
         # Create another client
         other_client = await service.create_client(
-            first_name='Other',
-            last_name='Client',
+            name='Other Client',
             email='other@example.com',
             phone='+8888888888',
             passport_number='ZZ111111',
@@ -274,13 +264,8 @@ class TestClientService:
 
     async def test_search_clients(self, service: ClientService, client: Client) -> None:
         """Test searching clients."""
-        # Search by first name
+        # Search by name
         results = await service.search_clients('John')
-        assert len(results) >= 1
-        assert any(c.id == client.id for c in results)
-
-        # Search by last name
-        results = await service.search_clients('Doe')
         assert len(results) >= 1
         assert any(c.id == client.id for c in results)
 

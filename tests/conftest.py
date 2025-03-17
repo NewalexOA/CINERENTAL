@@ -243,8 +243,7 @@ async def test_category(db_session: AsyncSession) -> Category:
 async def test_client(db_session: AsyncSession) -> AsyncGenerator[Client, None]:
     """Create a test client."""
     client = Client(
-        first_name='Test',
-        last_name='Client',
+        name='Test Client',
         email='test@example.com',
         phone='+1234567890',
         passport_number='TEST123',

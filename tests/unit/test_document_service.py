@@ -38,8 +38,7 @@ class TestDocumentService:
         """Create test client."""
         client_service = ClientService(db_session)
         return await client_service.create_client(
-            first_name='John',
-            last_name='Doe',
+            name='John Doe',
             email='john.doe@example.com',
             phone='+1234567890',
             passport_number='AB123456',

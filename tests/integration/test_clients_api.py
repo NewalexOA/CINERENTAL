@@ -14,8 +14,7 @@ class ClientResponse(TypedDict):
     """Client response type."""
 
     id: int
-    first_name: str
-    last_name: str
+    name: str
     email: str
     phone: str
     passport_number: str
@@ -29,8 +28,7 @@ async def test_create_client(
 ) -> None:
     """Test creating new client."""
     data = {
-        'first_name': 'John',
-        'last_name': 'Doe',
+        'name': 'John Doe',
         'email': 'john.doe@example.com',
         'phone': '+1234567890',
         'passport_number': 'AB123456',
@@ -41,8 +39,7 @@ async def test_create_client(
     assert response.status_code == http_status.HTTP_201_CREATED
     result = cast(ClientResponse, response.json())
 
-    assert result['first_name'] == data['first_name']
-    assert result['last_name'] == data['last_name']
+    assert result['name'] == data['name']
     assert result['email'] == data['email']
     assert result['phone'] == data['phone']
     assert result['passport_number'] == data['passport_number']
@@ -57,8 +54,7 @@ async def test_create_client_duplicate_email(
 ) -> None:
     """Test creating client with duplicate email."""
     data = {
-        'first_name': 'Jane',
-        'last_name': 'Smith',
+        'name': 'Jane Smith',
         'email': test_client.email,  # Using existing email
         'phone': '+9876543210',
         'passport_number': 'CD654321',
@@ -77,8 +73,7 @@ async def test_create_client_duplicate_phone(
 ) -> None:
     """Test creating client with duplicate phone."""
     data = {
-        'first_name': 'Jane',
-        'last_name': 'Smith',
+        'name': 'Jane Smith',
         'email': 'jane.smith@example.com',
         'phone': test_client.phone,  # Using existing phone
         'passport_number': 'CD654321',
@@ -119,8 +114,7 @@ async def test_get_client_by_id(
 
     client = cast(ClientResponse, response.json())
     assert client['id'] == test_client.id
-    assert client['first_name'] == test_client.first_name
-    assert client['last_name'] == test_client.last_name
+    assert client['name'] == test_client.name
     assert client['email'] == test_client.email
     assert client['phone'] == test_client.phone
     assert client['passport_number'] == test_client.passport_number
@@ -141,8 +135,7 @@ async def test_update_client(
 ) -> None:
     """Test updating client details."""
     data = {
-        'first_name': 'Updated',
-        'last_name': 'Name',
+        'name': 'Updated Name',
         'address': 'New Address, City',
     }
 
@@ -151,8 +144,7 @@ async def test_update_client(
 
     client = cast(ClientResponse, response.json())
     assert client['id'] == test_client.id
-    assert client['first_name'] == data['first_name']
-    assert client['last_name'] == data['last_name']
+    assert client['name'] == data['name']
     assert client['address'] == data['address']
     # These fields should remain unchanged
     assert client['email'] == test_client.email
@@ -163,7 +155,7 @@ async def test_update_client(
 @async_test
 async def test_update_client_not_found(async_client: AsyncClient) -> None:
     """Test updating non-existent client."""
-    data = {'first_name': 'Updated'}
+    data = {'name': 'Updated Name'}
     response = await async_client.put('/api/v1/clients/9999/', json=data)
     assert response.status_code == http_status.HTTP_404_NOT_FOUND
 
@@ -177,8 +169,7 @@ async def test_update_client_duplicate_email(
     """Test updating client with duplicate email."""
     # Create another client first
     other_client = Client(
-        first_name='Other',
-        last_name='Client',
+        name='Other Client',
         email='other.client@example.com',
         phone='+5555555555',
         passport_number='XY987654',
@@ -203,8 +194,7 @@ async def test_delete_client(
     """Test deleting client."""
     # Create a client to delete
     client_to_delete = Client(
-        first_name='Delete',
-        last_name='Me',
+        name='Delete Me',
         email='delete.me@example.com',
         phone='+1122334455',
         passport_number='ZZ111222',
@@ -259,7 +249,7 @@ async def test_search_clients(
 ) -> None:
     """Test searching clients."""
     # Search by part of name
-    query = test_client.first_name[:3]
+    query = test_client.name[:3]
     response = await async_client.get(f'/api/v1/clients/?query={query}')
     assert response.status_code == http_status.HTTP_200_OK
 
@@ -281,8 +271,7 @@ async def test_clients_pagination(
     # Create multiple clients for pagination testing
     for i in range(5):
         client = Client(
-            first_name=f'Page{i}',
-            last_name=f'Test{i}',
+            name=f'Page{i} Test{i}',
             email=f'page.test{i}@example.com',
             phone=f'+1000000{i:04d}',
             passport_number=f'PT{i:06d}',
