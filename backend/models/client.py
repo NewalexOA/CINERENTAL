@@ -42,8 +42,7 @@ class Client(TimestampMixin, SoftDeleteMixin, Base):
 
     Attributes:
         id: Primary key
-        first_name: Client's first name
-        last_name: Client's last name
+        name: Client's full name
         email: Client's email address
         phone: Client's phone number
         passport_number: Client's passport number
@@ -58,8 +57,7 @@ class Client(TimestampMixin, SoftDeleteMixin, Base):
     __tablename__ = 'clients'
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    first_name: Mapped[str] = mapped_column(String(100), nullable=False)
-    last_name: Mapped[str] = mapped_column(String(100), nullable=False)
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
     email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
     phone: Mapped[str] = mapped_column(String(20), unique=True, nullable=False)
     passport_number: Mapped[str] = mapped_column(
