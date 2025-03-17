@@ -225,7 +225,116 @@
 
 {% block extra_js %}
 <script>
-// Handle view type switching
+function showLocalLoader() {
+    const loader = document.getElementById('clients-loader');
+    if (loader) {
+        loader.style.display = 'flex';
+    }
+}
+
+function hideLocalLoader() {
+    const loader = document.getElementById('clients-loader');
+    if (loader) {
+        loader.style.display = 'none';
+    }
+}
+
+async function loadClientsWithoutGlobalLoader() {
+    try {
+        showLocalLoader();
+
+        const clients = await api.get('/clients');
+        const container = document.getElementById('clientsGrid');
+
+        if (clients && clients.length > 0) {
+            container.innerHTML = '';
+
+            clients.forEach(client => {
+                const bookingsCount = client.bookings_count || 0;
+                const companyText = client.company ? client.company : 'Нет компании';
+                const createdDate = new Date(client.created_at).toLocaleDateString();
+
+                container.innerHTML += `
+                    <div class="col-md-6 col-lg-4">
+                        <div class="card h-100">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-start mb-3">
+                                    <div>
+                                        <h5 class="card-title mb-1">${client.name}</h5>
+                                        <h6 class="card-subtitle text-muted">${companyText}</h6>
+                                    </div>
+                                    <div class="dropdown">
+                                        <button class="btn btn-link text-dark" type="button" data-bs-toggle="dropdown">
+                                            <i class="fas fa-ellipsis-v"></i>
+                                        </button>
+                                        <ul class="dropdown-menu">
+                                            <li>
+                                                <a class="dropdown-item" href="/clients/${client.id}">
+                                                    <i class="fas fa-info-circle"></i> Подробнее
+                                                </a>
+                                            </li>
+                                            <li>
+                                                <a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#editClientModal" data-client-id="${client.id}">
+                                                    <i class="fas fa-edit"></i> Редактировать
+                                                </a>
+                                            </li>
+                                            <li>
+                                                <hr class="dropdown-divider">
+                                            </li>
+                                            <li>
+                                                <a class="dropdown-item text-danger" href="#" data-bs-toggle="modal" data-bs-target="#deleteClientModal" data-client-id="${client.id}">
+                                                    <i class="fas fa-trash"></i> Удалить
+                                                </a>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <div class="text-muted mb-2">
+                                        <i class="fas fa-envelope"></i> ${client.email || 'Нет email'}
+                                    </div>
+                                    <div class="text-muted">
+                                        <i class="fas fa-phone"></i> ${client.phone || 'Нет телефона'}
+                                    </div>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span class="badge bg-primary">${bookingsCount} бронирований</span>
+                                    <small class="text-muted">Создан: ${createdDate}</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+        } else {
+            container.innerHTML = `
+                <div class="col-12">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i> Нет клиентов для отображения
+                    </div>
+                </div>
+            `;
+        }
+    } catch (error) {
+        console.error('Error loading clients:', error);
+        const container = document.getElementById('clientsGrid');
+        container.innerHTML = `
+            <div class="col-12">
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle me-2"></i> Ошибка при загрузке данных клиентов
+                </div>
+            </div>
+        `;
+        showToast('Ошибка при загрузке клиентов', 'danger');
+    } finally {
+        hideLocalLoader();
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    loadClientsWithoutGlobalLoader();
+});
+
 document.querySelectorAll('[data-view]').forEach(button => {
     button.addEventListener('click', () => {
         document.querySelectorAll('[data-view]').forEach(btn => btn.classList.remove('active'));
@@ -246,7 +355,6 @@ document.querySelectorAll('[data-view]').forEach(button => {
     });
 });
 
-// Transform to list view
 function transformToListView() {
     const container = document.getElementById('clientsGrid');
     const clients = Array.from(container.children);
@@ -284,72 +392,205 @@ function transformToListView() {
     });
 }
 
-// Transform to grid view
 function transformToGridView() {
     const container = document.getElementById('clientsGrid');
     const clients = Array.from(container.children);
 
     container.innerHTML = '';
     clients.forEach(client => {
-        // Восстановление оригинальной карточки из данных
-        // Этот код нужно адаптировать под вашу структуру данных
+        const id = client.querySelector('.dropdown-item[data-client-id]')?.dataset.clientId ||
+                  client.querySelector('a[data-client-id]')?.dataset.clientId;
+        const fullNameText = client.querySelector('h5')?.textContent || '';
+        const companyText = client.querySelector('p.text-muted')?.textContent || '';
+        const contactInfo = client.querySelectorAll('small span');
+        let emailText = 'Нет email';
+        let phoneText = 'Нет телефона';
+        if (contactInfo.length >= 1) {
+            emailText = contactInfo[0].textContent.trim();
+        }
+        if (contactInfo.length >= 2) {
+            phoneText = contactInfo[1].textContent.trim();
+        }
+        const bookingsText = client.querySelector('.badge')?.textContent || '0 бронирований';
+        const createdText = client.querySelector('small.text-muted')?.textContent || '';
+
+        container.innerHTML += `
+            <div class="col-md-6 col-lg-4">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start mb-3">
+                            <div>
+                                <h5 class="card-title mb-1">${fullNameText}</h5>
+                                <h6 class="card-subtitle text-muted">${companyText}</h6>
+                            </div>
+                            <div class="dropdown">
+                                <button class="btn btn-link text-dark" type="button" data-bs-toggle="dropdown">
+                                    <i class="fas fa-ellipsis-v"></i>
+                                </button>
+                                <ul class="dropdown-menu">
+                                    <li>
+                                        <a class="dropdown-item" href="/clients/${id}">
+                                            <i class="fas fa-info-circle"></i> Подробнее
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#editClientModal" data-client-id="${id}">
+                                            <i class="fas fa-edit"></i> Редактировать
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <hr class="dropdown-divider">
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item text-danger" href="#" data-bs-toggle="modal" data-bs-target="#deleteClientModal" data-client-id="${id}">
+                                            <i class="fas fa-trash"></i> Удалить
+                                        </a>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <div class="text-muted mb-2">
+                                <i class="fas fa-envelope"></i> ${emailText}
+                            </div>
+                            <div class="text-muted">
+                                <i class="fas fa-phone"></i> ${phoneText}
+                            </div>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="badge bg-primary">${bookingsText}</span>
+                            <small class="text-muted">${createdText}</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
     });
 }
 
-// Handle client form submission
 document.getElementById('saveClient').addEventListener('click', async () => {
     const form = document.getElementById('addClientForm');
     const formData = new FormData(form);
     const data = Object.fromEntries(formData.entries());
 
+    const saveButton = document.getElementById('saveClient');
+    const originalButtonText = saveButton.innerHTML;
+    saveButton.disabled = true;
+    saveButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Сохранение...';
+
     try {
         await api.post('/clients', data);
         showToast('Клиент успешно добавлен', 'success');
-        location.reload();
+
+        const modal = bootstrap.Modal.getInstance(document.getElementById('addClientModal'));
+        modal.hide();
+        form.reset();
+
+        loadClientsWithoutGlobalLoader();
     } catch (error) {
         console.error('Error saving client:', error);
         showToast('Ошибка при сохранении', 'danger');
+    } finally {
+        saveButton.disabled = false;
+        saveButton.innerHTML = originalButtonText;
     }
 });
 
-// Handle client update
 document.getElementById('updateClient').addEventListener('click', async () => {
     const form = document.getElementById('editClientForm');
     const formData = new FormData(form);
     const data = Object.fromEntries(formData.entries());
 
+    const updateButton = document.getElementById('updateClient');
+    const originalButtonText = updateButton.innerHTML;
+    updateButton.disabled = true;
+    updateButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Обновление...';
+
     try {
         await api.put(`/clients/${data.id}`, data);
         showToast('Клиент успешно обновлен', 'success');
-        location.reload();
+
+        const modal = bootstrap.Modal.getInstance(document.getElementById('editClientModal'));
+        modal.hide();
+
+        loadClientsWithoutGlobalLoader();
     } catch (error) {
         console.error('Error updating client:', error);
         showToast('Ошибка при обновлении', 'danger');
+    } finally {
+        updateButton.disabled = false;
+        updateButton.innerHTML = originalButtonText;
     }
 });
 
-// Handle client deletion
 document.getElementById('deleteClient').addEventListener('click', async () => {
     const clientId = document.querySelector('#deleteClientModal').dataset.clientId;
+
+    const deleteButton = document.getElementById('deleteClient');
+    const originalButtonText = deleteButton.innerHTML;
+    deleteButton.disabled = true;
+    deleteButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Удаление...';
 
     try {
         await api.delete(`/clients/${clientId}`);
         showToast('Клиент успешно удален', 'success');
-        location.reload();
+
+        const modal = bootstrap.Modal.getInstance(document.getElementById('deleteClientModal'));
+        modal.hide();
+
+        loadClientsWithoutGlobalLoader();
     } catch (error) {
         console.error('Error deleting client:', error);
         showToast('Ошибка при удалении', 'danger');
+    } finally {
+        deleteButton.disabled = false;
+        deleteButton.innerHTML = originalButtonText;
     }
 });
 
-// Load client data for editing
 document.getElementById('editClientModal').addEventListener('show.bs.modal', async (event) => {
     const button = event.relatedTarget;
     const clientId = button.dataset.clientId;
 
+    const form = document.getElementById('editClientForm');
+    form.innerHTML = `
+        <div class="d-flex justify-content-center my-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Загрузка...</span>
+            </div>
+        </div>
+    `;
+
     try {
         const client = await api.get(`/clients/${clientId}`);
-        const form = document.getElementById('editClientForm');
+
+        form.innerHTML = `
+            <input type="hidden" name="id">
+            <div class="mb-3">
+                <label class="form-label">ФИО</label>
+                <input type="text" class="form-control" name="name" required>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Компания</label>
+                <input type="text" class="form-control" name="company">
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Email</label>
+                <input type="email" class="form-control" name="email" required>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Телефон</label>
+                <input type="tel" class="form-control" name="phone" required>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Адрес</label>
+                <textarea class="form-control" name="address" rows="2"></textarea>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Заметки</label>
+                <textarea class="form-control" name="notes" rows="3"></textarea>
+            </div>
+        `;
 
         Object.entries(client).forEach(([key, value]) => {
             const input = form.elements[key];
@@ -360,10 +601,12 @@ document.getElementById('editClientModal').addEventListener('show.bs.modal', asy
     } catch (error) {
         console.error('Error loading client:', error);
         showToast('Ошибка загрузки данных клиента', 'danger');
+
+        const modal = bootstrap.Modal.getInstance(document.getElementById('editClientModal'));
+        modal.hide();
     }
 });
 
-// Set client ID for deletion
 document.getElementById('deleteClientModal').addEventListener('show.bs.modal', (event) => {
     const button = event.relatedTarget;
     const clientId = button.dataset.clientId;
