@@ -455,7 +455,8 @@ class BookingService:
             BookingStatus.PENDING: [
                 BookingStatus.CONFIRMED,
                 BookingStatus.CANCELLED,
-                BookingStatus.ACTIVE,  # Allow direct activation for quick bookings
+                BookingStatus.ACTIVE,
+                BookingStatus.COMPLETED,
             ],
             BookingStatus.CONFIRMED: [
                 BookingStatus.ACTIVE,
@@ -466,8 +467,8 @@ class BookingService:
                 BookingStatus.OVERDUE,
                 BookingStatus.CANCELLED,
             ],
-            BookingStatus.COMPLETED: [],  # Terminal state
-            BookingStatus.CANCELLED: [],  # Terminal state
+            BookingStatus.COMPLETED: [],
+            BookingStatus.CANCELLED: [],
             BookingStatus.OVERDUE: [
                 BookingStatus.COMPLETED,
                 BookingStatus.CANCELLED,
@@ -558,10 +559,16 @@ class BookingService:
                 PaymentStatus.PARTIAL.value,
                 PaymentStatus.PAID.value,
             ],
-            PaymentStatus.PARTIAL.value: [PaymentStatus.PAID.value],
-            PaymentStatus.PAID.value: [],
+            PaymentStatus.PARTIAL.value: [
+                PaymentStatus.PAID.value,
+                PaymentStatus.PENDING.value,
+            ],
+            PaymentStatus.PAID.value: [PaymentStatus.PENDING.value],
             PaymentStatus.REFUNDED.value: [],
-            PaymentStatus.OVERDUE.value: [PaymentStatus.PAID.value],
+            PaymentStatus.OVERDUE.value: [
+                PaymentStatus.PAID.value,
+                PaymentStatus.PENDING.value,
+            ],
         }
 
         current_status = booking.payment_status.value
