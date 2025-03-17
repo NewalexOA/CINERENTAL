@@ -21,7 +21,7 @@ test_db:
   volumes:
     - postgres_test_data:/var/lib/postgresql/data  # Отдельный volume для тестовой БД
   environment:
-    - POSTGRES_DB=cinerental_test                  # Имя тестовой БД
+    - POSTGRES_DB=act_rental_test                  # Имя тестовой БД
   ports:
     - "5433:5432"                                  # Порт 5433 на хосте, 5432 в контейнере
 ```
@@ -45,7 +45,7 @@ test:
     - ./htmlcov:/app/htmlcov                       # Монтируем отчеты о покрытии
   environment:
     - POSTGRES_SERVER=test_db                      # Используем тестовую БД
-    - POSTGRES_DB=cinerental_test
+    - POSTGRES_DB=act_rental_test
     - TESTING=1                                    # Флаг тестового режима
 ```
 

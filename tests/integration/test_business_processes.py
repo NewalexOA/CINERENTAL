@@ -1,4 +1,4 @@
-"""Integration tests for business processes in the CINERENTAL system.
+"""Integration tests for business processes in the ACT-RENTAL system.
 
 Tests verify that complex business processes work correctly.
 """

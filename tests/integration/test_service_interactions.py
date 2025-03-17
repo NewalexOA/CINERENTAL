@@ -1,4 +1,4 @@
-"""Integration tests for service interactions in the CINERENTAL system.
+"""Integration tests for service interactions in the ACT-RENTAL system.
 
 Tests verify that different services work together correctly.
 """

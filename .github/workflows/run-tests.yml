@@ -31,7 +31,7 @@ jobs:
           echo "ENVIRONMENT=testing" > .env
           echo "POSTGRES_USER=postgres" >> .env
           echo "POSTGRES_PASSWORD=postgres" >> .env
-          echo "POSTGRES_DB=act-rental_test" >> .env
+          echo "POSTGRES_DB=act_rental_test" >> .env
           echo "POSTGRES_HOST_AUTH_METHOD=trust" >> .env
           echo "SECRET_KEY=test-secret-key" >> .env
           echo "DEBUG=false" >> .env

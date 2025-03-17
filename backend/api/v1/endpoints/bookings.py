@@ -19,12 +19,9 @@ from backend.api.v1.decorators import (
     typed_put,
 )
 from backend.core.database import get_db
-from backend.exceptions import (
-    AvailabilityError,
-    NotFoundError,
-    StatusTransitionError,
-    ValidationError,
-)
+from backend.exceptions import AvailabilityError, NotFoundError, StatusTransitionError
+from backend.exceptions.state_exceptions import StateError
+from backend.exceptions.validation_exceptions import ValidationError
 from backend.models import Booking, BookingStatus, PaymentStatus
 from backend.schemas import BookingCreate, BookingResponse, BookingUpdate
 from backend.services import BookingService
@@ -163,26 +160,39 @@ async def get_bookings(
     """
     booking_service = BookingService(db)
     try:
-        # Apply filters sequentially
-        filtered_bookings = []
+        # Apply all filters
+        filtered_bookings = await booking_service.repository.get_all()
 
-        # If client_id is specified, get bookings by client
+        # Filter by client if specified
         if client_id is not None:
-            filtered_bookings = await booking_service.get_by_client(client_id)
-        # If equipment_id is specified, get bookings by equipment
-        elif equipment_id is not None:
-            filtered_bookings = await booking_service.get_by_equipment(equipment_id)
-        # If booking_status is specified, get bookings by status
-        elif booking_status is not None:
-            filtered_bookings = await booking_service.get_by_status(booking_status)
-        # If payment_status is specified, get bookings by payment status
-        elif payment_status is not None:
-            filtered_bookings = await booking_service.get_by_payment_status(
+            client_bookings = await booking_service.get_by_client(client_id)
+            filtered_bookings = [b for b in filtered_bookings if b in client_bookings]
+
+        # Filter by equipment if specified
+        if equipment_id is not None:
+            equipment_bookings = await booking_service.get_by_equipment(equipment_id)
+            filtered_bookings = [
+                b for b in filtered_bookings if b in equipment_bookings
+            ]
+
+        # Filter by booking status if specified
+        if booking_status is not None:
+            status_bookings = await booking_service.get_by_status(booking_status)
+            filtered_bookings = [b for b in filtered_bookings if b in status_bookings]
+
+        # Filter by payment status if specified
+        if payment_status is not None:
+            payment_bookings = await booking_service.get_by_payment_status(
                 payment_status
             )
-        # If no filters are specified, get all bookings
-        else:
-            filtered_bookings = await booking_service.repository.get_all()
+            filtered_bookings = [b for b in filtered_bookings if b in payment_bookings]
+
+        # Filter by date range if specified
+        if start_date is not None and end_date is not None:
+            date_bookings = await booking_service.get_active_for_period(
+                start_date, end_date
+            )
+            filtered_bookings = [b for b in filtered_bookings if b in date_bookings]
 
         # Apply pagination
         paginated_bookings = filtered_bookings[skip : skip + limit]
@@ -315,7 +325,7 @@ async def update_booking(
             detail=str(e),
         )
     except Exception as e:
-        await db.rollback()  # Добавляем явный откат транзакции при ошибке
+        await db.rollback()  # Explicit transaction rollback on error
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f'Failed to update booking: {str(e)}',
@@ -349,7 +359,7 @@ async def delete_booking(
             detail=f'Booking with ID {booking_id} not found',
         )
     except Exception as e:
-        await db.rollback()  # Добавляем явный откат транзакции при ошибке
+        await db.rollback()  # Explicit transaction rollback on error
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f'Failed to delete booking: {str(e)}',
@@ -400,8 +410,77 @@ async def update_booking_status(
             detail=str(e),
         )
     except Exception as e:
-        await db.rollback()  # Добавляем явный откат транзакции при ошибке
+        await db.rollback()  # Explicit transaction rollback on error
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f'Failed to update booking status: {str(e)}',
+        )
+
+
+@typed_patch(
+    bookings_router,
+    '/{booking_id}/payment',
+    response_model=BookingResponse,
+)
+async def update_payment_status(
+    booking_id: int,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    payment_data: dict = Body(...),
+) -> BookingResponse:
+    """Update booking payment status.
+
+    Args:
+        booking_id: Booking ID
+        db: Database session
+        payment_data: Payment data with payment_status
+
+    Returns:
+        Updated booking
+
+    Raises:
+        HTTPException: If booking not found or payment status transition invalid
+    """
+    booking_service = BookingService(db)
+    try:
+        # Extract payment status from data
+        payment_status = payment_data.get('payment_status')
+        if not payment_status:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail='Payment status is required',
+            )
+
+        # Convert string to enum if needed
+        if isinstance(payment_status, str):
+            try:
+                payment_status = PaymentStatus(payment_status)
+            except ValueError:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f'Invalid payment status: {payment_status}',
+                )
+
+        booking_obj = await booking_service.change_payment_status(
+            booking_id=booking_id, status=payment_status
+        )
+
+        # Convert Booking object to BookingResponse
+        response = _booking_to_response(booking_obj)
+
+        return response
+    except NotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f'Booking with ID {booking_id} not found',
+        )
+    except StateError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        )
+    except Exception as e:
+        await db.rollback()  # Explicit transaction rollback on error
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f'Failed to update payment status: {str(e)}',
         )

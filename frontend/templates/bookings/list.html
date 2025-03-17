@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Бронирования - CINERENTAL{% endblock %}
+{% block title %}Бронирования - {{ APP_NAME }}{% endblock %}
 
 {% block content %}
 <div class="row mb-4">
@@ -23,21 +23,21 @@
             <div class="card-body">
                 <form id="filterForm">
                     <div class="row g-3">
-                        <div class="col-md-3">
-                            <label class="form-label">Клиент</label>
-                            <select class="form-select" name="client_id">
-                                <option value="">Все клиенты</option>
-                                <!-- Заполняется через API -->
-                            </select>
+                        <div class="col-md-4">
+                            <label class="form-label">Поиск по клиентам</label>
+                            <div class="position-relative">
+                                <input type="text"
+                                       class="form-control rounded"
+                                       id="clientSearchInput"
+                                       name="client_search"
+                                       placeholder="Поиск по имени, телефону или email клиента..."
+                                       minlength="3">
+                                <div id="search-spinner" class="spinner-border spinner-border-sm d-none text-primary position-absolute" style="right: 10px; top: 50%; transform: translateY(-50%)" role="status">
+                                    <span class="visually-hidden">Поиск...</span>
+                                </div>
+                            </div>
                         </div>
-                        <div class="col-md-3">
-                            <label class="form-label">Оборудование</label>
-                            <select class="form-select" name="equipment_id">
-                                <option value="">Все оборудование</option>
-                                <!-- Заполняется через API -->
-                            </select>
-                        </div>
-                        <div class="col-md-3">
+                        <div class="col-md-4">
                             <label class="form-label">Статус бронирования</label>
                             <select class="form-select" name="booking_status">
                                 <option value="">Все статусы</option>
@@ -46,13 +46,12 @@
                                 {% endfor %}
                             </select>
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-md-4">
                             <label class="form-label">Статус оплаты</label>
                             <select class="form-select" name="payment_status">
-                                <option value="">Все статусы</option>
-                                {% for status in payment_statuses %}
-                                <option value="{{ status }}">{{ status }}</option>
-                                {% endfor %}
+                                <option value="">Все</option>
+                                <option value="PAID">Оплачено</option>
+                                <option value="PENDING">Не оплачено</option>
                             </select>
                         </div>
                         <div class="col-md-6">

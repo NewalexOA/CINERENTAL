@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Бронирование #{{ booking.id }} - CINERENTAL{% endblock %}
+{% block title %}Бронирование #{{ booking.id }} - {{ APP_NAME }}{% endblock %}
 
 {% block content %}
 <div class="row mb-4">
@@ -35,8 +35,8 @@
                     </div>
                     <div class="col-md-6">
                         <h6>Статус оплаты</h6>
-                        <span class="badge {% if booking.payment_status == 'PENDING' %}bg-warning{% elif booking.payment_status == 'PARTIAL' %}bg-info{% elif booking.payment_status == 'PAID' %}bg-success{% elif booking.payment_status == 'REFUNDED' %}bg-danger{% else %}bg-secondary{% endif %}">
-                            {{ booking.payment_status }}
+                        <span class="badge {% if booking.payment_status == 'PAID' %}bg-success{% else %}bg-danger{% endif %}">
+                            {% if booking.payment_status == 'PAID' %}Оплачено{% else %}Не оплачено{% endif %}
                         </span>
                     </div>
                 </div>
@@ -48,26 +48,6 @@
                     <div class="col-md-6">
                         <h6>Дата окончания</h6>
                         <p>{{ booking.end_date | date }}</p>
-                    </div>
-                </div>
-                <div class="row mb-3">
-                    <div class="col-md-6">
-                        <h6>Общая стоимость</h6>
-                        <p>{{ booking.total_amount }} ₽</p>
-                    </div>
-                    <div class="col-md-6">
-                        <h6>Депозит</h6>
-                        <p>{{ booking.deposit_amount }} ₽</p>
-                    </div>
-                </div>
-                <div class="row mb-3">
-                    <div class="col-md-6">
-                        <h6>Оплачено</h6>
-                        <p>{{ booking.paid_amount }} ₽</p>
-                    </div>
-                    <div class="col-md-6">
-                        <h6>Осталось оплатить</h6>
-                        <p>{{ booking.total_amount - booking.paid_amount }} ₽</p>
                     </div>
                 </div>
                 {% if booking.notes %}
@@ -143,11 +123,13 @@
             </div>
             <div class="card-body">
                 <div class="d-grid gap-2">
-                    <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#changeStatusModal">
-                        <i class="fas fa-exchange-alt"></i> Изменить статус
+                    {% if booking.status != 'COMPLETED' %}
+                    <button class="btn btn-outline-success" id="completeBookingBtn" data-booking-id="{{ booking.id }}">
+                        <i class="fas fa-check-circle"></i> Завершить
                     </button>
+                    {% endif %}
                     <button class="btn btn-outline-success" data-bs-toggle="modal" data-bs-target="#paymentModal">
-                        <i class="fas fa-money-bill-wave"></i> Оплата
+                        <i class="fas fa-money-bill-wave"></i> Статус оплаты
                     </button>
                     <button class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteBookingModal" data-booking-id="{{ booking.id }}">
                         <i class="fas fa-trash"></i> Удалить бронирование
@@ -173,7 +155,7 @@
                         <div class="col-md-6">
                             <label class="form-label">Клиент</label>
                             <select class="form-select" name="client_id" required>
-                                <!-- Заполняется через API -->
+                                <!-- Populated via API -->
                             </select>
                         </div>
                         <div class="col-md-6">
@@ -185,7 +167,7 @@
                     <div class="mb-3">
                         <label class="form-label">Оборудование</label>
                         <div id="editEquipmentSelection">
-                            <!-- Заполняется через API -->
+                            <!-- Populated via API -->
                         </div>
                     </div>
                     <div class="mb-3">
@@ -202,59 +184,23 @@
     </div>
 </div>
 
-<!-- Change Status Modal -->
-<div class="modal fade" id="changeStatusModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Изменить статус бронирования</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <form id="changeStatusForm">
-                    <input type="hidden" name="booking_id" value="{{ booking.id }}">
-                    <div class="mb-3">
-                        <label class="form-label">Новый статус</label>
-                        <select class="form-select" name="status" required>
-                            <option value="PENDING" {% if booking.status == 'PENDING' %} selected {% endif %}>Ожидает подтверждения</option>
-                            <option value="CONFIRMED" {% if booking.status == 'CONFIRMED' %} selected {% endif %}>Подтверждено</option>
-                            <option value="ACTIVE" {% if booking.status == 'ACTIVE' %} selected {% endif %}>Активно</option>
-                            <option value="COMPLETED" {% if booking.status == 'COMPLETED' %} selected {% endif %}>Завершено</option>
-                            <option value="CANCELLED" {% if booking.status == 'CANCELLED' %} selected {% endif %}>Отменено</option>
-                        </select>
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
-                <button type="button" class="btn btn-primary" id="changeStatus">Сохранить</button>
-            </div>
-        </div>
-    </div>
-</div>
-
 <!-- Payment Modal -->
 <div class="modal fade" id="paymentModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Оплата бронирования</h5>
+                <h5 class="modal-title">Статус оплаты</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
                 <form id="paymentForm">
                     <input type="hidden" name="booking_id" value="{{ booking.id }}">
-                    <div class="mb-3">
-                        <label class="form-label">Сумма оплаты</label>
-                        <input type="number" class="form-control" name="amount" min="0" step="0.01" required>
-                    </div>
+                    <input type="hidden" name="amount" value="0">
                     <div class="mb-3">
                         <label class="form-label">Статус оплаты</label>
-                        <select class="form-select" name="payment_status" required>
-                            <option value="PENDING" {% if booking.payment_status == 'PENDING' %} selected {% endif %}>Ожидает оплаты</option>
-                            <option value="PARTIAL" {% if booking.payment_status == 'PARTIAL' %} selected {% endif %}>Частично оплачено</option>
-                            <option value="PAID" {% if booking.payment_status == 'PAID' %} selected {% endif %}>Полностью оплачено</option>
-                            <option value="REFUNDED" {% if booking.payment_status == 'REFUNDED' %} selected {% endif %}>Возвращено</option>
+                        <select class="form-select" name="payment_status" required data-current="{{ booking.payment_status }}">
+                            <option value="PENDING" {% if booking.payment_status != 'PAID' %}selected="selected"{% endif %}>Не оплачено</option>
+                            <option value="PAID" {% if booking.payment_status == 'PAID' %}selected="selected"{% endif %}>Оплачено</option>
                         </select>
                     </div>
                 </form>
@@ -294,15 +240,6 @@
 <script src="{{ url_for('static', path='js/bookings.js') }}"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Pre-fill payment amoun
-    const paymentModal = document.getElementById('paymentModal');
-    if (paymentModal) {
-        paymentModal.addEventListener('show.bs.modal', function() {
-            const remainingAmount = parseFloat('{{ booking.total_amount - booking.paid_amount }}');
-            document.querySelector('#paymentForm input[name="amount"]').value = remainingAmount.toFixed(2);
-        });
-    }
-
     // Local toast function if global is not available
     if (typeof showToast !== 'function') {
         window.showToast = function(message, type = 'info') {
