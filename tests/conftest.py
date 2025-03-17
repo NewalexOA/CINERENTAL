@@ -163,7 +163,7 @@ def async_fixture(
 # Test database URL
 TEST_DATABASE_URL = (
     f'postgresql+asyncpg://{settings.POSTGRES_USER}:{settings.POSTGRES_PASSWORD}'
-    f'@{settings.POSTGRES_SERVER}:{settings.POSTGRES_PORT}/cinerental_test'
+    f'@{settings.POSTGRES_SERVER}:{settings.POSTGRES_PORT}/act_rental_test'
 )
 
 
@@ -182,12 +182,12 @@ async def create_test_database() -> None:
         await sys_conn.execute(
             '''SELECT pg_terminate_backend(pg_stat_activity.pid)
                 FROM pg_stat_activity
-                WHERE pg_stat_activity.datname = 'cinerental_test'
+                WHERE pg_stat_activity.datname = 'act_rental_test'
                 AND pid <> pg_backend_pid();
             '''
         )
-        await sys_conn.execute('DROP DATABASE IF EXISTS cinerental_test')
-        await sys_conn.execute('CREATE DATABASE cinerental_test')
+        await sys_conn.execute('DROP DATABASE IF EXISTS act_rental_test')
+        await sys_conn.execute('CREATE DATABASE act_rental_test')
     except asyncpg.exceptions.DuplicateDatabaseError:
         pass
     finally:
