@@ -261,8 +261,7 @@ async def create_clients(session: AsyncSession) -> None:
     # Define clients
     clients = [
         {
-            'first_name': 'Иван',
-            'last_name': 'Иванов',
+            'name': 'Иван Иванов',
             'email': 'ivan@example.com',
             'phone': '+7 (999) 123-45-67',
             'company': 'ООО "Медиа Продакшн"',
@@ -270,8 +269,7 @@ async def create_clients(session: AsyncSession) -> None:
             'passport_number': '1234 567890',
         },
         {
-            'first_name': 'Анна',
-            'last_name': 'Смирнова',
+            'name': 'Анна Смирнова',
             'email': 'anna@example.com',
             'phone': '+7 (999) 987-65-43',
             'company': 'Студия "АртФильм"',
@@ -279,8 +277,7 @@ async def create_clients(session: AsyncSession) -> None:
             'passport_number': '2345 678901',
         },
         {
-            'first_name': 'Сергей',
-            'last_name': 'Петров',
+            'name': 'Сергей Петров',
             'email': 'sergey@example.com',
             'phone': '+7 (999) 456-78-90',
             'company': 'Независимый режиссер',
@@ -294,16 +291,14 @@ async def create_clients(session: AsyncSession) -> None:
         existing = await repository.get_by_email(client_data['email'])
         if existing:
             logger.info(
-                'Client already exists: {} {}',
-                client_data['first_name'],
-                client_data['last_name'],
+                'Client already exists: {}',
+                client_data['name'],
             )
             continue
 
         # Create client
         client = Client(
-            first_name=client_data['first_name'],
-            last_name=client_data['last_name'],
+            name=client_data['name'],
             email=client_data['email'],
             phone=client_data['phone'],
             company=client_data['company'],
@@ -312,7 +307,7 @@ async def create_clients(session: AsyncSession) -> None:
             status=ClientStatus.ACTIVE,
         )
         await repository.create(client)
-        logger.info('Created client: {} {}', client.first_name, client.last_name)
+        logger.info('Created client: {}', client.name)
 
 
 async def create_bookings(session: AsyncSession) -> None:
@@ -348,9 +343,8 @@ async def create_bookings(session: AsyncSession) -> None:
     bookings = await booking_repository.get_all()
     if bookings:
         logger.info(
-            'Booking already exists for client {} {}',
-            client.first_name,
-            client.last_name,
+            'Booking already exists for client {}',
+            client.name,
         )
         return
 
@@ -368,9 +362,8 @@ async def create_bookings(session: AsyncSession) -> None:
     await booking_repository.create(booking)
 
     logger.info(
-        'Created booking for client {} {} with equipment {}',
-        client.first_name,
-        client.last_name,
+        'Created booking for client {} with equipment {}',
+        client.name,
         equipment.name,
     )
 

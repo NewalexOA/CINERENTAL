@@ -29,8 +29,7 @@ class ClientService:
 
     async def create_client(
         self,
-        first_name: str,
-        last_name: str,
+        name: str,
         email: str,
         phone: str,
         passport_number: str,
@@ -41,8 +40,7 @@ class ClientService:
         """Create new client.
 
         Args:
-            first_name: Client's first name
-            last_name: Client's last name
+            name: Client's full name
             email: Client's email
             phone: Client's phone number
             passport_number: Client's passport number
@@ -72,8 +70,7 @@ class ClientService:
             )
 
         client = Client(
-            first_name=first_name,
-            last_name=last_name,
+            name=name,
             email=email,
             phone=phone,
             passport_number=passport_number,
@@ -87,8 +84,7 @@ class ClientService:
     async def update_client(
         self,
         client_id: int,
-        first_name: Optional[str] = None,
-        last_name: Optional[str] = None,
+        name: Optional[str] = None,
         email: Optional[str] = None,
         phone: Optional[str] = None,
         passport_number: Optional[str] = None,
@@ -100,8 +96,7 @@ class ClientService:
 
         Args:
             client_id: Client ID
-            first_name: New first name (optional)
-            last_name: New last name (optional)
+            name: New full name (optional)
             email: New email (optional)
             phone: New phone number (optional)
             passport_number: New passport number (optional)
@@ -141,10 +136,8 @@ class ClientService:
                 )
 
         # Update fields
-        if first_name is not None:
-            client.first_name = first_name
-        if last_name is not None:
-            client.last_name = last_name
+        if name is not None:
+            client.name = name
         if email is not None:
             client.email = email
         if phone is not None:
