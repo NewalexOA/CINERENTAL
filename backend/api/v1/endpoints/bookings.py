@@ -44,7 +44,7 @@ def _booking_to_response(booking_obj: Booking) -> BookingResponse:
 
     client_name = ''
     if booking_obj.client is not None:
-        client_name = f'{booking_obj.client.first_name} {booking_obj.client.last_name}'
+        client_name = booking_obj.client.name
 
     return BookingResponse(
         id=booking_obj.id,

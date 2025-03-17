@@ -136,8 +136,7 @@ async def create_client(
     try:
         service = ClientService(db)
         created_client = await service.create_client(
-            first_name=client.first_name,
-            last_name=client.last_name,
+            name=client.name,
             email=client.email,
             phone=client.phone,
             passport_number=client.passport_number,
@@ -185,8 +184,7 @@ async def update_client(
         service = ClientService(db)
         updated_client = await service.update_client(
             client_id=client_id,
-            first_name=client.first_name,
-            last_name=client.last_name,
+            name=client.name,
             email=client.email,
             phone=client.phone,
             passport_number=client.passport_number,
@@ -321,7 +319,7 @@ async def get_client_bookings(
         booking_responses = []
         for booking in bookings[skip_val : skip_val + limit_val]:
             # Create base fields required for BookingResponse schema
-            client_name = f'{client.first_name} {client.last_name}'
+            client_name = client.name
             equipment_name = f'Equipment {booking.equipment_id}'
 
             booking_dict = {
