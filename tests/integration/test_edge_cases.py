@@ -1,4 +1,4 @@
-"""Integration tests for edge cases in the CINERENTAL system.
+"""Integration tests for edge cases in the ACT-RENTAL system.
 
 Tests verify system behavior in non-standard situations and edge cases.
 """

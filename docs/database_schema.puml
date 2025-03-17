@@ -1,4 +1,4 @@
-@startuml CINERENTAL Database Schema
+@startuml ACT-RENTAL Database Schema
 
 !define table(x) class x << (T,#FFAAAA) >>
 !define primary_key(x) <b>x</b>
