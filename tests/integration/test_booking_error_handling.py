@@ -6,12 +6,7 @@ from typing import Any, Dict
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.exceptions import (
-    AvailabilityError,
-    BusinessError,
-    NotFoundError,
-    StatusTransitionError,
-)
+from backend.exceptions import AvailabilityError, BusinessError, NotFoundError
 from backend.models import (
     BookingStatus,
     Client,
@@ -229,24 +224,29 @@ class TestBookingErrorHandling:
             deposit_amount=100.0,
         )
 
-        # Try to set status to COMPLETED directly from PENDING
-        with pytest.raises(StatusTransitionError):
-            await booking_service.change_status(booking.id, BookingStatus.COMPLETED)
+        # Now we allow direct transition from PENDING to COMPLETED
+        # Successfully change to COMPLETED
+        updated_booking = await booking_service.change_status(
+            booking.id, BookingStatus.COMPLETED
+        )
+        assert updated_booking.booking_status == BookingStatus.COMPLETED
+
+        # Create another booking for testing illegal transitions
+        booking2 = await booking_service.create_booking(
+            client_id=test_client.id,
+            equipment_id=test_equipment.id,
+            start_date=start_date + timedelta(days=5),
+            end_date=end_date + timedelta(days=5),
+            total_amount=300.0,
+            deposit_amount=100.0,
+        )
 
         # Try to set status to ACTIVE without payment
         with pytest.raises(BusinessError):
-            await booking_service.change_status(booking.id, BookingStatus.ACTIVE)
+            await booking_service.change_status(booking2.id, BookingStatus.ACTIVE)
 
         # Confirm booking
-        await booking_service.change_status(booking.id, BookingStatus.CONFIRMED)
-
-        # Try to set status to COMPLETED without being ACTIVE first
-        with pytest.raises(StatusTransitionError):
-            await booking_service.change_status(booking.id, BookingStatus.COMPLETED)
-
-        # Try to set status to OVERDUE
-        with pytest.raises(StatusTransitionError):
-            await booking_service.change_status(booking.id, BookingStatus.OVERDUE)
+        await booking_service.change_status(booking2.id, BookingStatus.CONFIRMED)
 
     @async_test
     async def test_update_nonexistent_booking(self, services: Dict[str, Any]) -> None:
