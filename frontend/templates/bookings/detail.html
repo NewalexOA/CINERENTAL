@@ -240,15 +240,6 @@
 <script src="{{ url_for('static', path='js/bookings.js') }}"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Setup complete booking button
-    const completeBookingBtn = document.getElementById('completeBookingBtn');
-    if (completeBookingBtn) {
-        completeBookingBtn.addEventListener('click', function() {
-            const bookingId = this.getAttribute('data-booking-id');
-            bookingManager.changeBookingStatus(bookingId, 'COMPLETED');
-        });
-    }
-
     // Local toast function if global is not available
     if (typeof showToast !== 'function') {
         window.showToast = function(message, type = 'info') {
