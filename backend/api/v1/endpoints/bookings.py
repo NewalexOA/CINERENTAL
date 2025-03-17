@@ -160,26 +160,39 @@ async def get_bookings(
     """
     booking_service = BookingService(db)
     try:
-        # Apply filters sequentially
-        filtered_bookings = []
+        # Apply all filters
+        filtered_bookings = await booking_service.repository.get_all()
 
-        # If client_id is specified, get bookings by client
+        # Filter by client if specified
         if client_id is not None:
-            filtered_bookings = await booking_service.get_by_client(client_id)
-        # If equipment_id is specified, get bookings by equipment
-        elif equipment_id is not None:
-            filtered_bookings = await booking_service.get_by_equipment(equipment_id)
-        # If booking_status is specified, get bookings by status
-        elif booking_status is not None:
-            filtered_bookings = await booking_service.get_by_status(booking_status)
-        # If payment_status is specified, get bookings by payment status
-        elif payment_status is not None:
-            filtered_bookings = await booking_service.get_by_payment_status(
+            client_bookings = await booking_service.get_by_client(client_id)
+            filtered_bookings = [b for b in filtered_bookings if b in client_bookings]
+
+        # Filter by equipment if specified
+        if equipment_id is not None:
+            equipment_bookings = await booking_service.get_by_equipment(equipment_id)
+            filtered_bookings = [
+                b for b in filtered_bookings if b in equipment_bookings
+            ]
+
+        # Filter by booking status if specified
+        if booking_status is not None:
+            status_bookings = await booking_service.get_by_status(booking_status)
+            filtered_bookings = [b for b in filtered_bookings if b in status_bookings]
+
+        # Filter by payment status if specified
+        if payment_status is not None:
+            payment_bookings = await booking_service.get_by_payment_status(
                 payment_status
             )
-        # If no filters are specified, get all bookings
-        else:
-            filtered_bookings = await booking_service.repository.get_all()
+            filtered_bookings = [b for b in filtered_bookings if b in payment_bookings]
+
+        # Filter by date range if specified
+        if start_date is not None and end_date is not None:
+            date_bookings = await booking_service.get_active_for_period(
+                start_date, end_date
+            )
+            filtered_bookings = [b for b in filtered_bookings if b in date_bookings]
 
         # Apply pagination
         paginated_bookings = filtered_bookings[skip : skip + limit]
