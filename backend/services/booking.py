@@ -461,6 +461,7 @@ class BookingService:
             BookingStatus.CONFIRMED: [
                 BookingStatus.ACTIVE,
                 BookingStatus.CANCELLED,
+                BookingStatus.COMPLETED,
             ],
             BookingStatus.ACTIVE: [
                 BookingStatus.COMPLETED,
