@@ -669,13 +669,14 @@ const bookingSearch = {
         // Helper functions for status formatting
         function getStatusBadgeClass(status) {
             const statusClasses = {
-                'PENDING': 'badge-warning',
-                'ACTIVE': 'badge-success',
-                'COMPLETED': 'badge-primary',
-                'CANCELED': 'badge-danger',
-                'OVERDUE': 'badge-dark'
+                'PENDING': 'bg-warning',
+                'ACTIVE': 'bg-success',
+                'COMPLETED': 'bg-primary',
+                'CANCELED': 'bg-danger',
+                'OVERDUE': 'bg-dark',
+                'CONFIRMED': 'bg-info'
             };
-            return statusClasses[status] || 'badge-secondary';
+            return statusClasses[status] || 'bg-secondary';
         }
 
         function getStatusDisplayName(status) {
@@ -684,20 +685,22 @@ const bookingSearch = {
                 'ACTIVE': 'Активно',
                 'COMPLETED': 'Завершено',
                 'CANCELED': 'Отменено',
-                'OVERDUE': 'Просрочено'
+                'OVERDUE': 'Просрочено',
+                'CONFIRMED': 'Подтверждено'
             };
             return statusNames[status] || status;
         }
 
         function getPaymentStatusBadgeClass(status) {
             const statusClasses = {
-                'PENDING': 'badge-warning',
-                'PAID': 'badge-success',
-                'PARTIALLY_PAID': 'badge-info',
-                'REFUNDED': 'badge-secondary',
-                'OVERDUE': 'badge-danger'
+                'PENDING': 'bg-warning',
+                'PAID': 'bg-success',
+                'PARTIALLY_PAID': 'bg-info',
+                'PARTIAL': 'bg-info',
+                'REFUNDED': 'bg-secondary',
+                'OVERDUE': 'bg-danger'
             };
-            return statusClasses[status] || 'badge-secondary';
+            return statusClasses[status] || 'bg-secondary';
         }
 
         function getPaymentStatusDisplayName(status) {
@@ -705,6 +708,7 @@ const bookingSearch = {
                 'PENDING': 'Ожидает',
                 'PAID': 'Оплачено',
                 'PARTIALLY_PAID': 'Частично',
+                'PARTIAL': 'Частично',
                 'REFUNDED': 'Возврат',
                 'OVERDUE': 'Просрочено'
             };
@@ -731,6 +735,9 @@ const bookingSearch = {
 
         // Load initial data if needed
         if (initialClientSearch || initialBookingStatus || initialPaymentStatus || initialDateRange) {
+            updateResults();
+        } else {
+            // Always load initial data even if no filters are applied
             updateResults();
         }
     }
