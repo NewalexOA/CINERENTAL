@@ -19,12 +19,9 @@ from backend.api.v1.decorators import (
     typed_put,
 )
 from backend.core.database import get_db
-from backend.exceptions import (
-    AvailabilityError,
-    NotFoundError,
-    StatusTransitionError,
-    ValidationError,
-)
+from backend.exceptions import AvailabilityError, NotFoundError, StatusTransitionError
+from backend.exceptions.state_exceptions import StateError
+from backend.exceptions.validation_exceptions import ValidationError
 from backend.models import Booking, BookingStatus, PaymentStatus
 from backend.schemas import BookingCreate, BookingResponse, BookingUpdate
 from backend.services import BookingService
@@ -315,7 +312,7 @@ async def update_booking(
             detail=str(e),
         )
     except Exception as e:
-        await db.rollback()  # Добавляем явный откат транзакции при ошибке
+        await db.rollback()  # Explicit transaction rollback on error
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f'Failed to update booking: {str(e)}',
@@ -349,7 +346,7 @@ async def delete_booking(
             detail=f'Booking with ID {booking_id} not found',
         )
     except Exception as e:
-        await db.rollback()  # Добавляем явный откат транзакции при ошибке
+        await db.rollback()  # Explicit transaction rollback on error
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f'Failed to delete booking: {str(e)}',
@@ -400,8 +397,77 @@ async def update_booking_status(
             detail=str(e),
         )
     except Exception as e:
-        await db.rollback()  # Добавляем явный откат транзакции при ошибке
+        await db.rollback()  # Explicit transaction rollback on error
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f'Failed to update booking status: {str(e)}',
+        )
+
+
+@typed_patch(
+    bookings_router,
+    '/{booking_id}/payment',
+    response_model=BookingResponse,
+)
+async def update_payment_status(
+    booking_id: int,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    payment_data: dict = Body(...),
+) -> BookingResponse:
+    """Update booking payment status.
+
+    Args:
+        booking_id: Booking ID
+        db: Database session
+        payment_data: Payment data with payment_status
+
+    Returns:
+        Updated booking
+
+    Raises:
+        HTTPException: If booking not found or payment status transition invalid
+    """
+    booking_service = BookingService(db)
+    try:
+        # Extract payment status from data
+        payment_status = payment_data.get('payment_status')
+        if not payment_status:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail='Payment status is required',
+            )
+
+        # Convert string to enum if needed
+        if isinstance(payment_status, str):
+            try:
+                payment_status = PaymentStatus(payment_status)
+            except ValueError:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f'Invalid payment status: {payment_status}',
+                )
+
+        booking_obj = await booking_service.change_payment_status(
+            booking_id=booking_id, status=payment_status
+        )
+
+        # Convert Booking object to BookingResponse
+        response = _booking_to_response(booking_obj)
+
+        return response
+    except NotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f'Booking with ID {booking_id} not found',
+        )
+    except StateError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        )
+    except Exception as e:
+        await db.rollback()  # Explicit transaction rollback on error
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f'Failed to update payment status: {str(e)}',
         )
