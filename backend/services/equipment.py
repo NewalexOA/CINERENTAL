@@ -73,11 +73,9 @@ class EquipmentService:
         name: str,
         description: Optional[str],
         category_id: int,
-        daily_rate: float = 0.0,
         replacement_cost: float = 0.0,
         custom_barcode: Optional[str] = None,
         serial_number: Optional[str] = None,
-        purchase_date: Optional[datetime] = None,
         notes: Optional[str] = None,
         validate_barcode_format: bool = True,
     ) -> EquipmentResponse:
@@ -87,11 +85,9 @@ class EquipmentService:
             name: Equipment name
             description: Equipment description
             category_id: Category ID
-            daily_rate: Daily rental rate
             replacement_cost: Equipment replacement cost
             custom_barcode: Optional custom barcode
             serial_number: Equipment serial number
-            purchase_date: Purchase date
             notes: Additional notes
             validate_barcode_format: Whether to validate custom barcode format
 
