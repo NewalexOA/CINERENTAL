@@ -109,17 +109,10 @@ class TestBookingProcess:
             PaymentStatus.PAID,
         )
 
-        # Confirm booking
-        await services['booking'].change_status(booking.id, BookingStatus.CONFIRMED)
-        booking = await services['booking'].get_booking(booking.id)
-        assert booking.booking_status == BookingStatus.CONFIRMED
+        # Skip the transition from ACTIVE to CONFIRMED,
+        # and proceed directly to check the completion
 
-        # Start rental
-        await services['booking'].change_status(booking.id, BookingStatus.ACTIVE)
-        booking = await services['booking'].get_booking(booking.id)
-        assert booking.booking_status == BookingStatus.ACTIVE
-
-        # Return equipmen
+        # Complete the booking
         await services['booking'].change_status(booking.id, BookingStatus.COMPLETED)
         booking = await services['booking'].get_booking(booking.id)
         assert booking.booking_status == BookingStatus.COMPLETED
@@ -298,30 +291,20 @@ class TestBookingLifecycle:
             deposit_amount=100.0,
             notes='Test booking',
         )
-        assert booking.booking_status == BookingStatus.PENDING
+        assert booking.booking_status == BookingStatus.ACTIVE
         assert booking.payment_status == PaymentStatus.PENDING
 
-        # Confirm booking
-        booking = await booking_service.change_status(
-            booking.id, BookingStatus.CONFIRMED
-        )
-        assert booking.booking_status == BookingStatus.CONFIRMED
-
-        # Make partial paymen
+        # Make partial payment
         booking = await booking_service.change_payment_status(
             booking.id, PaymentStatus.PARTIAL
         )
         assert booking.payment_status == PaymentStatus.PARTIAL
 
-        # Complete paymen
+        # Complete payment
         booking = await booking_service.change_payment_status(
             booking.id, PaymentStatus.PAID
         )
         assert booking.payment_status == PaymentStatus.PAID
-
-        # Activate booking
-        booking = await booking_service.change_status(booking.id, BookingStatus.ACTIVE)
-        assert booking.booking_status == BookingStatus.ACTIVE
 
         # Complete booking
         booking = await booking_service.change_status(
@@ -380,24 +363,17 @@ class TestBookingLifecycle:
             total_amount=300.0,
             deposit_amount=100.0,
         )
-        assert booking.booking_status == BookingStatus.PENDING
+        assert booking.booking_status == BookingStatus.ACTIVE
 
-        # Confirm and activate booking
-        booking = await booking_service.change_status(
-            booking.id, BookingStatus.CONFIRMED
-        )
-
-        # Set payment status to PAID before activating
+        # Set payment status to PAID
         await booking_service.update_booking(
             booking.id,
-            paid_amount=300.0,  # Full paymen
+            paid_amount=300.0,  # Full payment
         )
         await booking_service.change_payment_status(
             booking.id,
             PaymentStatus.PAID,
         )
-
-        booking = await booking_service.change_status(booking.id, BookingStatus.ACTIVE)
 
         # Cannot retire equipment with active booking
         with pytest.raises(BusinessError):
@@ -645,8 +621,16 @@ class TestEquipmentBusinessRules:
             deposit_amount=200.00,
         )
 
-        # Confirm the booking to make it affect availability
-        await booking_service.change_status(booking.id, BookingStatus.CONFIRMED)
+        # Set payment status to PAID to make booking fully active and
+        # affect availability
+        await booking_service.update_booking(
+            booking.id,
+            paid_amount=300.0,  # Full payment
+        )
+        await booking_service.change_payment_status(
+            booking.id,
+            PaymentStatus.PAID,
+        )
 
         # Try to create overlapping booking
         with pytest.raises(AvailabilityError, match='not available'):

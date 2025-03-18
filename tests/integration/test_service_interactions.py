@@ -141,9 +141,6 @@ class TestBookingFlow:
             PaymentStatus.PARTIAL,
         )
 
-        # Confirm booking
-        await services['booking'].change_status(booking.id, BookingStatus.CONFIRMED)
-
         # Pay remaining amount
         await services['booking'].update_booking(
             booking.id,
@@ -153,9 +150,6 @@ class TestBookingFlow:
             booking.id,
             PaymentStatus.PAID,
         )
-
-        # Start rental
-        await services['booking'].change_status(booking.id, BookingStatus.ACTIVE)
 
         # Return equipment
         await services['booking'].change_status(booking.id, BookingStatus.COMPLETED)
@@ -199,10 +193,10 @@ class TestEquipmentAvailability:
             deposit_amount=deposit_amount,
         )
 
-        # Confirm the booking to make it affect availability
-        await services['booking'].change_status(booking.id, BookingStatus.CONFIRMED)
+        # Refresh equipment status
+        await services['equipment'].refresh_equipment_status(test_equipment.id)
 
-        # Try to create overlapping booking
+        # Try to create a second booking with overlapping dates
         with pytest.raises(
             AvailabilityError,
             match=f'Equipment {test_equipment.id} is not available',
@@ -222,3 +216,16 @@ class TestEquipmentAvailability:
             start_date + timedelta(days=1),
             end_date + timedelta(days=1),
         )
+
+        # Set payment status to PAID before completing the booking
+        await services['booking'].update_booking(
+            booking.id,
+            paid_amount=total_amount,  # Full payment
+        )
+        await services['booking'].change_payment_status(
+            booking.id,
+            PaymentStatus.PAID,
+        )
+
+        # In the end of the test, change the status of the booking to COMPLETED
+        await services['booking'].change_status(booking.id, BookingStatus.COMPLETED)

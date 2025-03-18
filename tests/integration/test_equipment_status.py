@@ -6,6 +6,7 @@ from typing import Any, Dict
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from backend.exceptions.exceptions_base import BusinessError
 from backend.models import (
     BookingStatus,
     Client,
@@ -59,35 +60,20 @@ class TestEquipmentStatusManagement:
         # After creation, equipment status should still be AVAILABLE
         equipment = await equipment_service.get_equipment(test_equipment.id)
         assert equipment.status == EquipmentStatus.AVAILABLE
-        assert booking.booking_status == BookingStatus.PENDING
+        assert booking.booking_status == BookingStatus.ACTIVE
 
-        # Confirm booking
-        booking = await booking_service.change_status(
-            booking.id, BookingStatus.CONFIRMED
-        )
+        # Refresh equipment status to update it to RENTED
+        await equipment_service.refresh_equipment_status(test_equipment.id)
 
-        # After confirmation, equipment status should still be AVAILABLE
-        equipment = await equipment_service.get_equipment(test_equipment.id)
-        assert equipment.status == EquipmentStatus.AVAILABLE
-        assert booking.booking_status == BookingStatus.CONFIRMED
-
-        # Set payment status to PAID before activating
-        await booking_service.update_booking(
-            booking.id,
-            paid_amount=300.0,  # Full payment
-        )
-        await booking_service.change_payment_status(
-            booking.id,
-            PaymentStatus.PAID,
-        )
-
-        # Activate booking (equipment is handed over to client)
-        booking = await booking_service.change_status(booking.id, BookingStatus.ACTIVE)
-
-        # After activation, equipment status should be RENTED
+        # After refresh, equipment status should be RENTED because booking is ACTIVE
         equipment = await equipment_service.get_equipment(test_equipment.id)
         assert equipment.status == EquipmentStatus.RENTED
-        assert booking.booking_status == BookingStatus.ACTIVE
+
+        # Set payment status to PAID before completing booking
+        await booking_service.update_booking(
+            booking.id, paid_amount=300.0  # Full payment
+        )
+        await booking_service.change_payment_status(booking.id, PaymentStatus.PAID)
 
         # Complete booking (equipment is returned)
         booking = await booking_service.change_status(
@@ -119,20 +105,8 @@ class TestEquipmentStatusManagement:
             deposit_amount=100.0,
         )
 
-        await booking_service.change_status(booking.id, BookingStatus.CONFIRMED)
-
-        # Set payment status to PAID before activating
-        await booking_service.update_booking(
-            booking.id,
-            paid_amount=300.0,
-        )
-        await booking_service.change_payment_status(
-            booking.id,
-            PaymentStatus.PAID,
-        )
-
-        # Activate booking
-        await booking_service.change_status(booking.id, BookingStatus.ACTIVE)
+        # Refresh equipment status to update it to RENTED
+        await equipment_service.refresh_equipment_status(test_equipment.id)
 
         # Verify equipment is RENTED
         equipment = await equipment_service.get_equipment(test_equipment.id)
@@ -177,15 +151,18 @@ class TestEquipmentStatusManagement:
             deposit_amount=100.0,
         )
 
-        # Confirm and activate first booking
-        await booking_service.change_status(booking1.id, BookingStatus.CONFIRMED)
-        await booking_service.update_booking(booking1.id, paid_amount=300.0)
-        await booking_service.change_payment_status(booking1.id, PaymentStatus.PAID)
-        await booking_service.change_status(booking1.id, BookingStatus.ACTIVE)
+        # Refresh equipment status to update it to RENTED based on first booking
+        await equipment_service.refresh_equipment_status(test_equipment.id)
 
         # Equipment should be RENTED
         equipment = await equipment_service.get_equipment(test_equipment.id)
         assert equipment.status == EquipmentStatus.RENTED
+
+        # Set payment status for first booking to PAID before completing it
+        await booking_service.update_booking(
+            booking1.id, paid_amount=300.0  # Full payment
+        )
+        await booking_service.change_payment_status(booking1.id, PaymentStatus.PAID)
 
         # Complete first booking
         await booking_service.change_status(booking1.id, BookingStatus.COMPLETED)
@@ -194,15 +171,19 @@ class TestEquipmentStatusManagement:
         equipment = await equipment_service.get_equipment(test_equipment.id)
         assert equipment.status == EquipmentStatus.AVAILABLE
 
-        # Confirm and activate second booking
-        await booking_service.change_status(booking2.id, BookingStatus.CONFIRMED)
-        await booking_service.update_booking(booking2.id, paid_amount=200.0)
-        await booking_service.change_payment_status(booking2.id, PaymentStatus.PAID)
-        await booking_service.change_status(booking2.id, BookingStatus.ACTIVE)
+        # Second booking is already ACTIVE by default
+        # Refresh equipment status to update it to RENTED based on second booking
+        await equipment_service.refresh_equipment_status(test_equipment.id)
 
         # Equipment should be RENTED again
         equipment = await equipment_service.get_equipment(test_equipment.id)
         assert equipment.status == EquipmentStatus.RENTED
+
+        # Set payment status for second booking to PAID before completing it
+        await booking_service.update_booking(
+            booking2.id, paid_amount=200.0  # Full payment
+        )
+        await booking_service.change_payment_status(booking2.id, PaymentStatus.PAID)
 
         # Complete second booking
         await booking_service.change_status(booking2.id, BookingStatus.COMPLETED)
@@ -231,63 +212,20 @@ class TestEquipmentStatusManagement:
             deposit_amount=100.0,
         )
 
-        # Try to set equipment to maintenance while it has a pending booking
-        # This should be allowed since the booking is only PENDING
-        await equipment_service.change_status(
-            test_equipment.id,
-            EquipmentStatus.MAINTENANCE,
-        )
-
-        equipment = await equipment_service.get_equipment(test_equipment.id)
-        assert equipment.status == EquipmentStatus.MAINTENANCE
-
-        # Set equipment back to available
-        await equipment_service.change_status(
-            test_equipment.id,
-            EquipmentStatus.AVAILABLE,
-        )
-
-        # Now confirm booking
-        await booking_service.change_status(booking.id, BookingStatus.CONFIRMED)
-
-        # Try to set equipment to maintenance while it has a confirmed booking
-        # This should be allowed for CONFIRMED bookings with our new logic
-        await equipment_service.change_status(
-            test_equipment.id,
-            EquipmentStatus.MAINTENANCE,
-        )
-
-        # Equipment status should now be MAINTENANCE
-        equipment = await equipment_service.get_equipment(test_equipment.id)
-        assert equipment.status == EquipmentStatus.MAINTENANCE
-
-        # Set equipment back to available
-        await equipment_service.change_status(
-            test_equipment.id,
-            EquipmentStatus.AVAILABLE,
-        )
-
-        # Set payment status to PAID before activating
-        await booking_service.update_booking(
-            booking.id,
-            paid_amount=300.0,
-        )
-        await booking_service.change_payment_status(
-            booking.id,
-            PaymentStatus.PAID,
-        )
-
-        # Activate booking
-        await booking_service.change_status(booking.id, BookingStatus.ACTIVE)
-
-        # Try to set equipment to maintenance while it has an ACTIVE booking
-        # This should fail
-        with pytest.raises(Exception):
+        # Then try to put equipment in maintenance
+        with pytest.raises(
+            BusinessError,
+            match='Cannot change status of equipment with active bookings',
+        ):
             await equipment_service.change_status(
-                test_equipment.id,
-                EquipmentStatus.MAINTENANCE,
+                test_equipment.id, EquipmentStatus.MAINTENANCE
             )
 
-        # Equipment status should be RENTED after activation
-        equipment = await equipment_service.get_equipment(test_equipment.id)
-        assert equipment.status == EquipmentStatus.RENTED
+        # Try to cancel the booking first
+        await booking_service.change_status(booking.id, BookingStatus.CANCELLED)
+
+        # Now maintenance should be allowed
+        equipment = await equipment_service.change_status(
+            test_equipment.id, EquipmentStatus.MAINTENANCE
+        )
+        assert equipment.status == EquipmentStatus.MAINTENANCE
