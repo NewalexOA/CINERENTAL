@@ -140,10 +140,6 @@
                         <input type="tel" class="form-control" name="phone" required>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Адрес</label>
-                        <textarea class="form-control" name="address" rows="2"></textarea>
-                    </div>
-                    <div class="mb-3">
                         <label class="form-label">Заметки</label>
                         <textarea class="form-control" name="notes" rows="3"></textarea>
                     </div>
@@ -183,10 +179,6 @@
                     <div class="mb-3">
                         <label class="form-label">Телефон</label>
                         <input type="tel" class="form-control" name="phone" required>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Адрес</label>
-                        <textarea class="form-control" name="address" rows="2"></textarea>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Заметки</label>
@@ -368,7 +360,7 @@ function transformToListView() {
             email: client.querySelector('.fa-envelope').parentNode.textContent.trim(),
             phone: client.querySelector('.fa-phone').parentNode.textContent.trim(),
             bookings: client.querySelector('.badge').textContent,
-            created: client.querySelector('small').textConten
+            created: client.querySelector('small').textContent
         };
 
         container.innerHTML += `
@@ -581,10 +573,6 @@ document.getElementById('editClientModal').addEventListener('show.bs.modal', asy
             <div class="mb-3">
                 <label class="form-label">Телефон</label>
                 <input type="tel" class="form-control" name="phone" required>
-            </div>
-            <div class="mb-3">
-                <label class="form-label">Адрес</label>
-                <textarea class="form-control" name="address" rows="2"></textarea>
             </div>
             <div class="mb-3">
                 <label class="form-label">Заметки</label>

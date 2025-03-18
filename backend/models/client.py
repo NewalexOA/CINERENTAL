@@ -56,10 +56,8 @@ class Client(TimestampMixin, SoftDeleteMixin, Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(String(200), nullable=False)
-    email: Mapped[Optional[str]] = mapped_column(
-        String(255), unique=True, nullable=True
-    )
-    phone: Mapped[Optional[str]] = mapped_column(String(20), unique=True, nullable=True)
+    email: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    phone: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
     company: Mapped[Optional[str]] = mapped_column(String(200))
     status: Mapped[ClientStatus] = mapped_column(
         client_status_enum,
