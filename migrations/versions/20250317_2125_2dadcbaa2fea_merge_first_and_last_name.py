@@ -191,9 +191,9 @@ def downgrade() -> None:
     op.alter_column('clients', 'last_name', nullable=False)
 
     # Now drop name column
-    op.drop_constraint(None, 'clients', type_='unique')
-    op.drop_constraint(None, 'clients', type_='unique')
-    op.drop_constraint(None, 'clients', type_='unique')
+    op.drop_constraint('clients_email_key', 'clients', type_='unique')
+    op.drop_constraint('clients_phone_key', 'clients', type_='unique')
+    op.drop_constraint('clients_passport_number_key', 'clients', type_='unique')
     op.create_index('ix_clients_email', 'clients', ['email'], unique=True)
     op.alter_column(
         'clients',
@@ -203,7 +203,7 @@ def downgrade() -> None:
         existing_nullable=False,
     )
     op.drop_column('clients', 'name')
-    op.drop_constraint(None, 'categories', type_='foreignkey')
+    op.drop_constraint('categories_parent_id_fkey', 'categories', type_='foreignkey')
     op.create_foreign_key(
         'categories_parent_id_fkey',
         'categories',
@@ -212,7 +212,7 @@ def downgrade() -> None:
         ['id'],
         ondelete='SET NULL',
     )
-    op.drop_constraint(None, 'categories', type_='unique')
+    op.drop_constraint('categories_name_key', 'categories', type_='unique')
     op.create_index('ix_categories_name', 'categories', ['name'], unique=False)
     op.create_index(
         'ix_categories_deleted_at', 'categories', ['deleted_at'], unique=False
