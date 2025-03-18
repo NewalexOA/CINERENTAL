@@ -139,8 +139,6 @@ async def create_client(
             name=client.name,
             email=client.email,
             phone=client.phone,
-            passport_number=client.passport_number,
-            address=client.address,
             company=getattr(client, 'company', None),
             notes=getattr(client, 'notes', None),
         )
@@ -187,8 +185,6 @@ async def update_client(
             name=client.name,
             email=client.email,
             phone=client.phone,
-            passport_number=client.passport_number,
-            address=client.address,
             company=getattr(client, 'company', None),
             notes=getattr(client, 'notes', None),
         )

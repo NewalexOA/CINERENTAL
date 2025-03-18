@@ -7,6 +7,7 @@ including client registration, profile updates, and rental history tracking.
 from datetime import datetime, timezone
 from typing import List, Optional
 
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.exceptions import ConflictError, NotFoundError, StatusTransitionError
@@ -30,10 +31,8 @@ class ClientService:
     async def create_client(
         self,
         name: str,
-        email: str,
-        phone: str,
-        passport_number: str,
-        address: str,
+        email: Optional[str] = None,
+        phone: Optional[str] = None,
         company: Optional[str] = None,
         notes: Optional[str] = None,
     ) -> Client:
@@ -41,10 +40,8 @@ class ClientService:
 
         Args:
             name: Client's full name
-            email: Client's email
-            phone: Client's phone number
-            passport_number: Client's passport number
-            address: Client's address
+            email: Client's email (optional)
+            phone: Client's phone number (optional)
             company: Client's company name (optional)
             notes: Additional notes (optional)
 
@@ -52,34 +49,23 @@ class ClientService:
             Created client
 
         Raises:
-            ConflictError: If client with given email or phone already exists
-            ValidationError: If validation fails
+            ConflictError: If client with the same email already exists
         """
-        # Check if client with given email exists
-        existing = await self.repository.get_by_email(email)
-        if existing:
-            raise ConflictError(
-                f'Client with email {email} already exists', {'email': email}
+        try:
+            client = Client(
+                name=name,
+                email=email,
+                phone=phone,
+                company=company,
+                notes=notes,
             )
-
-        # Check if client with given phone exists
-        existing = await self.repository.get_by_phone(phone)
-        if existing:
-            raise ConflictError(
-                f'Client with phone {phone} already exists', {'phone': phone}
-            )
-
-        client = Client(
-            name=name,
-            email=email,
-            phone=phone,
-            passport_number=passport_number,
-            address=address,
-            company=company,
-            notes=notes,
-            status=ClientStatus.ACTIVE,
-        )
-        return await self.repository.create(client)
+            return await self.repository.create(client)
+        except IntegrityError as e:
+            if 'clients_email_key' in str(e):
+                raise ConflictError(f'Client with email {email} already exists')
+            if 'clients_phone_key' in str(e):
+                raise ConflictError(f'Client with phone {phone} already exists')
+            raise
 
     async def update_client(
         self,
@@ -87,8 +73,6 @@ class ClientService:
         name: Optional[str] = None,
         email: Optional[str] = None,
         phone: Optional[str] = None,
-        passport_number: Optional[str] = None,
-        address: Optional[str] = None,
         company: Optional[str] = None,
         notes: Optional[str] = None,
     ) -> Client:
@@ -99,8 +83,6 @@ class ClientService:
             name: New full name (optional)
             email: New email (optional)
             phone: New phone number (optional)
-            passport_number: New passport number (optional)
-            address: New address (optional)
             company: New company name (optional)
             notes: New notes (optional)
 
@@ -142,10 +124,6 @@ class ClientService:
             client.email = email
         if phone is not None:
             client.phone = phone
-        if passport_number is not None:
-            client.passport_number = passport_number
-        if address is not None:
-            client.address = address
         if company is not None:
             client.company = company
         if notes is not None:

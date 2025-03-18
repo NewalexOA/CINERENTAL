@@ -265,24 +265,18 @@ async def create_clients(session: AsyncSession) -> None:
             'email': 'ivan@example.com',
             'phone': '+7 (999) 123-45-67',
             'company': 'ООО "Медиа Продакшн"',
-            'address': 'г. Москва, ул. Примерная, д. 1',
-            'passport_number': '1234 567890',
         },
         {
             'name': 'Анна Смирнова',
             'email': 'anna@example.com',
             'phone': '+7 (999) 987-65-43',
             'company': 'Студия "АртФильм"',
-            'address': 'г. Санкт-Петербург, пр. Тестовый, д. 2',
-            'passport_number': '2345 678901',
         },
         {
             'name': 'Сергей Петров',
             'email': 'sergey@example.com',
             'phone': '+7 (999) 456-78-90',
             'company': 'Независимый режиссер',
-            'address': 'г. Екатеринбург, ул. Образцовая, д. 3',
-            'passport_number': '3456 789012',
         },
     ]
 
@@ -302,8 +296,6 @@ async def create_clients(session: AsyncSession) -> None:
             email=client_data['email'],
             phone=client_data['phone'],
             company=client_data['company'],
-            address=client_data['address'],
-            passport_number=client_data['passport_number'],
             status=ClientStatus.ACTIVE,
         )
         await repository.create(client)
