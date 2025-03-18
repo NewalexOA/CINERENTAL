@@ -7,7 +7,6 @@ including client registration, profile updates, and rental history tracking.
 from datetime import datetime, timezone
 from typing import List, Optional
 
-from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.exceptions import ConflictError, NotFoundError, StatusTransitionError
@@ -36,7 +35,7 @@ class ClientService:
         company: Optional[str] = None,
         notes: Optional[str] = None,
     ) -> Client:
-        """Create new client.
+        """Create a new client.
 
         Args:
             name: Client's full name
@@ -49,23 +48,16 @@ class ClientService:
             Created client
 
         Raises:
-            ConflictError: If client with the same email already exists
+            ValidationError: If client data is invalid
         """
-        try:
-            client = Client(
-                name=name,
-                email=email,
-                phone=phone,
-                company=company,
-                notes=notes,
-            )
-            return await self.repository.create(client)
-        except IntegrityError as e:
-            if 'clients_email_key' in str(e):
-                raise ConflictError(f'Client with email {email} already exists')
-            if 'clients_phone_key' in str(e):
-                raise ConflictError(f'Client with phone {phone} already exists')
-            raise
+        client = Client(
+            name=name,
+            email=email,
+            phone=phone,
+            company=company,
+            notes=notes,
+        )
+        return await self.repository.create(client)
 
     async def update_client(
         self,

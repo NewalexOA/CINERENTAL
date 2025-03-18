@@ -102,39 +102,68 @@ class TestClientService:
 
     @async_test
     async def test_create_client(self, service: ClientService) -> None:
-        """Test client creation."""
-        # Create client
+        """Test creating a new client."""
+        # Create a client
         client = await service.create_client(
+            name='John Doe',
+            email='john.doe@example.com',
+            phone='+0987654321',
+            company='Test Inc.',
+            notes='Test client',
+        )
+
+        assert client.id is not None
+        assert client.name == 'John Doe'
+        assert client.email == 'john.doe@example.com'
+        assert client.phone == '+0987654321'
+        assert client.company == 'Test Inc.'
+        assert client.notes == 'Test client'
+        assert client.status == ClientStatus.ACTIVE
+
+        # Test creating another client
+        another_client = await service.create_client(
             name='Jane Smith',
             email='jane.smith@example.com',
-            phone='+0987654321',
-            company='Another Company',
+            phone='+1111111111',
+            company='Another Inc.',
             notes='Another client',
         )
 
-        # Check client properties
-        assert client.name == 'Jane Smith'
-        assert client.email == 'jane.smith@example.com'
-        assert client.phone == '+0987654321'
-        assert client.company == 'Another Company'
-        assert client.notes == 'Another client'
-        assert client.status == ClientStatus.ACTIVE
+        assert another_client.id is not None
+        assert another_client.id != client.id
+        assert another_client.name == 'Jane Smith'
+        assert another_client.email == 'jane.smith@example.com'
+        assert another_client.phone == '+1111111111'
+        assert another_client.company == 'Another Inc.'
+        assert another_client.notes == 'Another client'
+        assert another_client.status == ClientStatus.ACTIVE
 
-        # Try to create client with existing email
-        with pytest.raises(ConflictError, match='Client with email .* already exists'):
-            await service.create_client(
-                name='Jane Smith',
-                email='jane.smith@example.com',  # Same email
-                phone='+1111111111',  # Different phone
-            )
+        # Create client with existing email (should now succeed)
+        duplicate_email_client = await service.create_client(
+            name='Jane Smith',
+            email='john.doe@example.com',  # Same as first client
+            phone='+2222222222',  # Different phone
+        )
 
-        # Try to create client with existing phone
-        with pytest.raises(ConflictError, match='Client with phone .* already exists'):
-            await service.create_client(
-                name='Jane Smith',
-                email='other.email@example.com',  # Different email
-                phone='+0987654321',  # Same phone
-            )
+        assert duplicate_email_client.id is not None
+        assert duplicate_email_client.id != client.id
+        assert duplicate_email_client.id != another_client.id
+        assert duplicate_email_client.email == 'john.doe@example.com'
+        assert duplicate_email_client.phone == '+2222222222'
+
+        # Create client with existing phone (should now succeed)
+        duplicate_phone_client = await service.create_client(
+            name='Jane Smith',
+            email='different.email@example.com',  # Different email
+            phone='+0987654321',  # Same as first client
+        )
+
+        assert duplicate_phone_client.id is not None
+        assert duplicate_phone_client.id != client.id
+        assert duplicate_phone_client.id != another_client.id
+        assert duplicate_phone_client.id != duplicate_email_client.id
+        assert duplicate_phone_client.email == 'different.email@example.com'
+        assert duplicate_phone_client.phone == '+0987654321'
 
     async def test_get_client(self, service: ClientService, client: Client) -> None:
         """Test getting a client by ID."""

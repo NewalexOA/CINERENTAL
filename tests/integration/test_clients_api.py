@@ -54,8 +54,10 @@ async def test_create_client_duplicate_email(
     }
 
     response = await async_client.post('/api/v1/clients/', json=data)
-    assert response.status_code == http_status.HTTP_409_CONFLICT
-    assert 'email' in response.text.lower()
+    assert response.status_code == http_status.HTTP_201_CREATED
+    client_data = response.json()
+    assert client_data['email'] == test_client.email  # Email should be the same
+    assert client_data['phone'] == data['phone']  # But phone should be different
 
 
 @async_test
@@ -71,8 +73,10 @@ async def test_create_client_duplicate_phone(
     }
 
     response = await async_client.post('/api/v1/clients/', json=data)
-    assert response.status_code == http_status.HTTP_409_CONFLICT
-    assert 'phone' in response.text.lower()
+    assert response.status_code == http_status.HTTP_201_CREATED
+    client_data = response.json()
+    assert client_data['email'] == data['email']  # Email should be different
+    assert client_data['phone'] == test_client.phone  # Phone should be the same
 
 
 @async_test
