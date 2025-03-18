@@ -743,8 +743,40 @@ const bookingSearch = {
     }
 };
 
-// Initialize when DOM is loaded
-document.addEventListener('DOMContentLoaded', function() {
+// Initialize
+document.addEventListener('DOMContentLoaded', () => {
+    // Check if there is an equipment parameter in the URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const equipmentId = urlParams.get('equipment');
+
+    // Initialize bookings functionality
     bookingManager.init();
     bookingSearch.init();
+
+    // If equipment parameter exists, open the booking modal with preselected equipment
+    if (equipmentId) {
+        // We need to wait for the equipment to load before opening the modal
+        const checkEquipmentLoaded = setInterval(() => {
+            const equipmentSelection = document.getElementById('equipmentSelection');
+            if (equipmentSelection && equipmentSelection.querySelector('input[type="radio"]')) {
+                clearInterval(checkEquipmentLoaded);
+
+                // Find the equipment radio button
+                const equipmentRadio = equipmentSelection.querySelector(`input[value="${equipmentId}"]`);
+                if (equipmentRadio) {
+                    equipmentRadio.checked = true;
+
+                    // Open the modal
+                    const modal = new bootstrap.Modal(document.getElementById('newBookingModal'));
+                    modal.show();
+                } else {
+                    console.error(`Equipment with ID ${equipmentId} not found`);
+                    showToast('Оборудование не найдено или недоступно для бронирования', 'warning');
+                }
+            }
+        }, 100);
+
+        // Set a timeout to avoid infinite loop if equipment doesn't load
+        setTimeout(() => clearInterval(checkEquipmentLoaded), 5000);
+    }
 });

@@ -359,7 +359,7 @@ document.getElementById('viewHistory').addEventListener('click', () => {
 
 document.getElementById('createBooking').addEventListener('click', () => {
     if (currentEquipment) {
-        window.location.href = `/bookings/new?equipment=${currentEquipment.id}`;
+        window.location.href = `/bookings/?equipment=${currentEquipment.id}`;
     }
 });
 
