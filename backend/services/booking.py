@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.exceptions import (
     AvailabilityError,
+    BusinessError,
     DateError,
     DurationError,
     NotFoundError,
@@ -513,6 +514,17 @@ class BookingService:
             )
             if not is_available:
                 raise StateError('Equipment is already booked for this period')
+
+        # Check payment status for COMPLETED transition
+        elif new_status == BookingStatus.COMPLETED:
+            if booking.payment_status != PaymentStatus.PAID:
+                raise BusinessError(
+                    'Cannot complete booking without payment',
+                    details={
+                        'booking_id': booking.id,
+                        'payment_status': booking.payment_status,
+                    },
+                )
 
         booking.booking_status = new_status
 
