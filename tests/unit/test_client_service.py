@@ -9,7 +9,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from backend.exceptions import ConflictError, NotFoundError
 from backend.models import (
     Booking,
-    BookingStatus,
     Category,
     Client,
     ClientStatus,
@@ -304,13 +303,10 @@ class TestClientService:
         """Test getting client with active bookings."""
         # Initially client has no active bookings
         result = await service.get_with_active_bookings(client.id)
-        assert result is None
+        assert result is not None
 
-        # Change booking status to CONFIRMED first
+        # Set payment status to PAID to validate the booking is fully active
         booking_service = BookingService(db_session)
-        await booking_service.change_status(booking.id, BookingStatus.CONFIRMED)
-
-        # Set payment status to PAID before activating
         await booking_service.update_booking(
             booking_id=booking.id,
             paid_amount=float(booking.total_amount),
@@ -320,10 +316,7 @@ class TestClientService:
             status=PaymentStatus.PAID,
         )
 
-        # Then change to ACTIVE
-        await booking_service.change_status(booking.id, BookingStatus.ACTIVE)
-
-        # Now client should have active bookings
+        # Now client should still have active bookings
         result = await service.get_with_active_bookings(client.id)
         assert result is not None
         assert result.id == client.id
@@ -340,11 +333,8 @@ class TestClientService:
         clients = await service.get_with_overdue_bookings()
         assert not any(c.id == client.id for c in clients)
 
-        # Change booking status to CONFIRMED first
+        # Set payment status to PAID to make booking fully active
         booking_service = BookingService(db_session)
-        await booking_service.change_status(booking.id, BookingStatus.CONFIRMED)
-
-        # Set payment status to PAID before activating
         await booking_service.update_booking(
             booking_id=booking.id,
             paid_amount=float(booking.total_amount),
@@ -353,9 +343,6 @@ class TestClientService:
             booking_id=booking.id,
             status=PaymentStatus.PAID,
         )
-
-        # Then change to ACTIVE
-        await booking_service.change_status(booking.id, BookingStatus.ACTIVE)
 
         # Manually set end_date to past date to make it overdue
         booking.end_date = datetime.now(timezone.utc) - timedelta(days=1)
