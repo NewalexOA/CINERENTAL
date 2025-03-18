@@ -172,8 +172,16 @@ class TestBookingErrorHandling:
             deposit_amount=100.0,
         )
 
-        # Confirm first booking to make it affect availability
-        await booking_service.change_status(booking1.id, BookingStatus.CONFIRMED)
+        # Set payment status to PAID to make booking fully active and
+        # affect availability
+        await booking_service.update_booking(
+            booking1.id,
+            paid_amount=300.0,  # Full payment
+        )
+        await booking_service.change_payment_status(
+            booking1.id,
+            PaymentStatus.PAID,
+        )
 
         # Try to create second booking with overlapping dates
         start_date2 = start_date1 + timedelta(days=1)  # Inside first booking period
@@ -212,7 +220,7 @@ class TestBookingErrorHandling:
         """Test invalid booking status transitions."""
         booking_service = services['booking']
 
-        # Create booking
+        # First booking is fully paid and going through proper flow
         start_date = datetime.now(timezone.utc) + timedelta(days=1)
         end_date = start_date + timedelta(days=3)
         booking = await booking_service.create_booking(
@@ -222,10 +230,17 @@ class TestBookingErrorHandling:
             end_date=end_date,
             total_amount=300.0,
             deposit_amount=100.0,
+            notes='Testing booking status flows',
         )
 
-        # Now we allow direct transition from PENDING to COMPLETED
-        # Successfully change to COMPLETED
+        # Set payment information
+        await booking_service.update_booking(
+            booking.id,
+            paid_amount=300.0,
+        )
+        await booking_service.change_payment_status(booking.id, PaymentStatus.PAID)
+
+        # Complete booking since it's paid
         updated_booking = await booking_service.change_status(
             booking.id, BookingStatus.COMPLETED
         )
@@ -241,12 +256,17 @@ class TestBookingErrorHandling:
             deposit_amount=100.0,
         )
 
-        # Try to set status to ACTIVE without payment
-        with pytest.raises(BusinessError):
-            await booking_service.change_status(booking2.id, BookingStatus.ACTIVE)
+        # Booking is already in ACTIVE status but without payment.
+        # Attempting to transition to COMPLETED without payment should fail
+        with pytest.raises(
+            BusinessError,
+            match='Cannot complete booking without payment',
+        ):
+            await booking_service.change_status(booking2.id, BookingStatus.COMPLETED)
 
-        # Confirm booking
-        await booking_service.change_status(booking2.id, BookingStatus.CONFIRMED)
+        # Try invalid transition from ACTIVE to CONFIRMED (backward transition)
+        with pytest.raises(BusinessError):
+            await booking_service.change_status(booking2.id, BookingStatus.CONFIRMED)
 
     @async_test
     async def test_update_nonexistent_booking(self, services: Dict[str, Any]) -> None:

@@ -18,11 +18,12 @@
                 <div class="scanner-container">
                     <div class="scanner-status mb-3">
                         <div class="alert alert-info">
-                            <i class="fas fa-camera"></i> Наведите камеру на штрих-код
+                            <i class="fas fa-barcode"></i> Поднесите ручной сканер к штрих-коду
                         </div>
                     </div>
-                    <div class="scanner-preview mb-3">
-                        <video id="scanner-preview" class="w-100"></video>
+                    <div class="scanner-preview mb-3 text-center">
+                        <!-- Статичное изображение вместо видео -->
+                        <img src="{{ url_for('static', path='img/barcode-scan.png') }}" alt="Сканирование штрих-кода" class="img-fluid" style="max-height: 200px;">
                     </div>
                     <div class="scanner-controls">
                         <div class="btn-group w-100">
@@ -31,9 +32,6 @@
                             </button>
                             <button class="btn btn-danger" id="stopScanner" disabled>
                                 <i class="fas fa-stop"></i> Остановить
-                            </button>
-                            <button class="btn btn-secondary" id="switchCamera">
-                                <i class="fas fa-sync"></i> Сменить камеру
                             </button>
                         </div>
                     </div>
@@ -176,7 +174,8 @@ async function initScanner() {
         scanner.onScan = handleScan;
         scanner.onError = handleError;
 
-        await scanner.initialize('#scanner-preview');
+        // Start listening for scanner input
+        scanner.start();
         updateScannerControls(true);
     } catch (error) {
         console.error('Error initializing scanner:', error);
@@ -260,7 +259,6 @@ function addToScanHistory(equipment) {
 function updateScannerControls(isInitialized) {
     document.getElementById('startScanner').disabled = isInitialized;
     document.getElementById('stopScanner').disabled = !isInitialized;
-    document.getElementById('switchCamera').disabled = !isInitialized;
 }
 
 // Update quick action buttons
@@ -320,10 +318,6 @@ document.getElementById('stopScanner').addEventListener('click', () => {
     updateScannerControls(false);
 });
 
-document.getElementById('switchCamera').addEventListener('click', () => {
-    scanner.switchCamera();
-});
-
 document.getElementById('updateStatus').addEventListener('click', () => {
     if (currentEquipment) {
         const form = document.getElementById('updateStatusForm');
@@ -365,7 +359,7 @@ document.getElementById('viewHistory').addEventListener('click', () => {
 
 document.getElementById('createBooking').addEventListener('click', () => {
     if (currentEquipment) {
-        window.location.href = `/bookings/new?equipment=${currentEquipment.id}`;
+        window.location.href = `/bookings/?equipment=${currentEquipment.id}`;
     }
 });
 

@@ -317,10 +317,7 @@ class TestSoftDelete:
         ):
             await services['client'].delete_client(test_client.id)
 
-        # Complete the booking
-        await services['booking'].change_status(booking.id, BookingStatus.CONFIRMED)
-
-        # Set payment status to PAID before activating
+        # Set payment status to PAID before completing the booking
         await services['booking'].update_booking(
             booking.id,
             paid_amount=300.0,  # Full payment
@@ -330,7 +327,7 @@ class TestSoftDelete:
             PaymentStatus.PAID,
         )
 
-        await services['booking'].change_status(booking.id, BookingStatus.ACTIVE)
+        # Complete the booking
         await services['booking'].change_status(booking.id, BookingStatus.COMPLETED)
 
         # Now try to delete client
@@ -419,7 +416,10 @@ class TestEquipmentStatus:
             PaymentStatus.PAID,
         )
 
-        await services['booking'].change_status(booking.id, BookingStatus.ACTIVE)
+        # Booking is already ACTIVE by default, no need to set status again
+        # Refresh equipment status to make sure it's updated to RENTED
+        await services['equipment'].refresh_equipment_status(test_equipment.id)
+
         equipment = await services['equipment'].get_equipment(test_equipment.id)
         assert equipment.status == EquipmentStatus.RENTED
 

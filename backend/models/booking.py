@@ -96,7 +96,7 @@ class Booking(TimestampMixin, Base):
     end_date: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     booking_status: Mapped[BookingStatus] = mapped_column(
         booking_status_enum,
-        default=BookingStatus.PENDING,
+        default=BookingStatus.ACTIVE,
         nullable=False,
         index=True,
     )

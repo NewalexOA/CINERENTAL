@@ -63,7 +63,11 @@ class Equipment(TimestampMixin, SoftDeleteMixin, Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(String(200), nullable=False, index=True)
     description: Mapped[Optional[str]] = mapped_column(String(1000))
-    serial_number: Mapped[str] = mapped_column(String(100), index=True)
+    serial_number: Mapped[Optional[str]] = mapped_column(
+        String(100),
+        nullable=True,
+        index=True,
+    )
     barcode: Mapped[str] = mapped_column(String(100), unique=True, index=True)
     category_id: Mapped[int] = mapped_column(
         ForeignKey('categories.id', ondelete='RESTRICT')

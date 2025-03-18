@@ -134,21 +134,21 @@
     {% block extra_js %}{% endblock %}
 
     <script>
-        // Initialize scanner
-        const scanner = new BarcodeScanner();
+        // Initialize scanner for modal
+        const modalScanner = new BarcodeScanner();
 
         // Handle scanner modal
         const scannerModal = document.getElementById('scannerModal');
         scannerModal.addEventListener('show.bs.modal', () => {
-            scanner.start();
+            modalScanner.start();
         });
 
         scannerModal.addEventListener('hide.bs.modal', () => {
-            scanner.stop();
+            modalScanner.stop();
         });
 
         // Override scanner handlers
-        scanner.onScan = (equipment) => {
+        modalScanner.onScan = (equipment) => {
             const resultDiv = document.getElementById('scannerResult');
             resultDiv.innerHTML = `
                 <div class="alert alert-success">
@@ -161,7 +161,7 @@
             showToast('Оборудование успешно отсканировано', 'success');
         };
 
-        scanner.onError = (error) => {
+        modalScanner.onError = (error) => {
             const resultDiv = document.getElementById('scannerResult');
             resultDiv.innerHTML = `
                 <div class="alert alert-danger">

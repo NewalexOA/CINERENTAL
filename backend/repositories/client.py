@@ -69,8 +69,7 @@ class ClientRepository(BaseRepository[Client]):
         query = query_str.lower()
         stmt: Select[Tuple[Client]] = select(self.model).where(
             or_(
-                func.lower(self.model.first_name).contains(query),
-                func.lower(self.model.last_name).contains(query),
+                func.lower(self.model.name).contains(query),
                 func.lower(self.model.email).contains(query),
                 func.lower(self.model.phone).contains(query),
             )
