@@ -36,8 +36,6 @@ class TestClientService:
             name='John Doe',
             email='john.doe@example.com',
             phone='+1234567890',
-            passport_number='AB123456',
-            address='123 Test St',
             company='Test Company',
             notes='Test client',
         )
@@ -110,8 +108,6 @@ class TestClientService:
             name='Jane Smith',
             email='jane.smith@example.com',
             phone='+0987654321',
-            passport_number='CD789012',
-            address='456 Test Ave',
             company='Another Company',
             notes='Another client',
         )
@@ -120,8 +116,6 @@ class TestClientService:
         assert client.name == 'Jane Smith'
         assert client.email == 'jane.smith@example.com'
         assert client.phone == '+0987654321'
-        assert client.passport_number == 'CD789012'
-        assert client.address == '456 Test Ave'
         assert client.company == 'Another Company'
         assert client.notes == 'Another client'
         assert client.status == ClientStatus.ACTIVE
@@ -132,8 +126,6 @@ class TestClientService:
                 name='Jane Smith',
                 email='jane.smith@example.com',  # Same email
                 phone='+1111111111',  # Different phone
-                passport_number='EF345678',
-                address='789 Test Blvd',
             )
 
         # Try to create client with existing phone
@@ -142,8 +134,6 @@ class TestClientService:
                 name='Jane Smith',
                 email='other.email@example.com',  # Different email
                 phone='+0987654321',  # Same phone
-                passport_number='EF345678',
-                address='789 Test Blvd',
             )
 
     async def test_get_client(self, service: ClientService, client: Client) -> None:
@@ -157,8 +147,6 @@ class TestClientService:
         assert result.name == client.name
         assert result.email == client.email
         assert result.phone == client.phone
-        assert result.passport_number == client.passport_number
-        assert result.address == client.address
         assert result.company == client.company
         assert result.notes == client.notes
         assert result.status == client.status
@@ -176,8 +164,6 @@ class TestClientService:
             name='John Doe Updated',
             email='john.updated@example.com',
             phone='+9999999999',
-            passport_number='XY987654',
-            address='321 Updated St',
             company='Updated Company',
             notes='Updated notes',
         )
@@ -188,8 +174,6 @@ class TestClientService:
         assert updated.name == 'John Doe Updated'
         assert updated.email == 'john.updated@example.com'
         assert updated.phone == '+9999999999'
-        assert updated.passport_number == 'XY987654'
-        assert updated.address == '321 Updated St'
         assert updated.company == 'Updated Company'
         assert updated.notes == 'Updated notes'
 
@@ -198,8 +182,6 @@ class TestClientService:
             name='Other Client',
             email='other@example.com',
             phone='+8888888888',
-            passport_number='ZZ111111',
-            address='888 Other St',
         )
 
         with pytest.raises(ConflictError, match='Client with email .* already exists'):
@@ -250,8 +232,8 @@ class TestClientService:
             name='Other Client',
             email='other@example.com',
             phone='+8888888888',
-            passport_number='ZZ111111',
-            address='888 Other St',
+            company='Test Company',
+            notes='Test client',
         )
 
         # Get all clients again

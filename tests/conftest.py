@@ -246,8 +246,6 @@ async def test_client(db_session: AsyncSession) -> AsyncGenerator[Client, None]:
         name='Test Client',
         email='test@example.com',
         phone='+1234567890',
-        passport_number='TEST123',
-        address='Test Address',
         company='Test Company',
         notes='Test notes',
     )

@@ -41,8 +41,6 @@ class TestDocumentService:
             name='John Doe',
             email='john.doe@example.com',
             phone='+1234567890',
-            passport_number='AB123456',
-            address='123 Test St',
             company='Test Company',
             notes='Test client',
         )

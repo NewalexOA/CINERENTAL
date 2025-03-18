@@ -17,8 +17,6 @@ class ClientResponse(TypedDict):
     name: str
     email: str
     phone: str
-    passport_number: str
-    address: str
     status: str
 
 
@@ -31,8 +29,6 @@ async def test_create_client(
         'name': 'John Doe',
         'email': 'john.doe@example.com',
         'phone': '+1234567890',
-        'passport_number': 'AB123456',
-        'address': '123 Main St, City',
     }
 
     response = await async_client.post('/api/v1/clients/', json=data)
@@ -42,8 +38,6 @@ async def test_create_client(
     assert result['name'] == data['name']
     assert result['email'] == data['email']
     assert result['phone'] == data['phone']
-    assert result['passport_number'] == data['passport_number']
-    assert result['address'] == data['address']
     assert result['status'] == 'ACTIVE'
 
 
@@ -57,8 +51,6 @@ async def test_create_client_duplicate_email(
         'name': 'Jane Smith',
         'email': test_client.email,  # Using existing email
         'phone': '+9876543210',
-        'passport_number': 'CD654321',
-        'address': '456 Oak St, Town',
     }
 
     response = await async_client.post('/api/v1/clients/', json=data)
@@ -76,8 +68,6 @@ async def test_create_client_duplicate_phone(
         'name': 'Jane Smith',
         'email': 'jane.smith@example.com',
         'phone': test_client.phone,  # Using existing phone
-        'passport_number': 'CD654321',
-        'address': '456 Oak St, Town',
     }
 
     response = await async_client.post('/api/v1/clients/', json=data)
@@ -117,8 +107,6 @@ async def test_get_client_by_id(
     assert client['name'] == test_client.name
     assert client['email'] == test_client.email
     assert client['phone'] == test_client.phone
-    assert client['passport_number'] == test_client.passport_number
-    assert client['address'] == test_client.address
 
 
 @async_test
@@ -136,7 +124,6 @@ async def test_update_client(
     """Test updating client details."""
     data = {
         'name': 'Updated Name',
-        'address': 'New Address, City',
     }
 
     response = await async_client.put(f'/api/v1/clients/{test_client.id}/', json=data)
@@ -145,11 +132,9 @@ async def test_update_client(
     client = cast(ClientResponse, response.json())
     assert client['id'] == test_client.id
     assert client['name'] == data['name']
-    assert client['address'] == data['address']
     # These fields should remain unchanged
     assert client['email'] == test_client.email
     assert client['phone'] == test_client.phone
-    assert client['passport_number'] == test_client.passport_number
 
 
 @async_test
@@ -172,8 +157,6 @@ async def test_update_client_duplicate_email(
         name='Other Client',
         email='other.client@example.com',
         phone='+5555555555',
-        passport_number='XY987654',
-        address='789 Pine St, Village',
     )
     db_session.add(other_client)
     await db_session.commit()
@@ -197,8 +180,6 @@ async def test_delete_client(
         name='Delete Me',
         email='delete.me@example.com',
         phone='+1122334455',
-        passport_number='ZZ111222',
-        address='999 Delete St, Nowhere',
     )
     db_session.add(client_to_delete)
     await db_session.commit()
@@ -274,8 +255,6 @@ async def test_clients_pagination(
             name=f'Page{i} Test{i}',
             email=f'page.test{i}@example.com',
             phone=f'+1000000{i:04d}',
-            passport_number=f'PT{i:06d}',
-            address=f'{i} Pagination St, Testville',
         )
         db_session.add(client)
     await db_session.commit()
