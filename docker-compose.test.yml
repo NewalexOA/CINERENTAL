@@ -1,0 +1,77 @@
+name: act-rental-test
+
+services:
+  test:
+    build:
+      context: .
+      target: runtime
+      args:
+        ENV_TYPE: test
+        INSTALL_PLAYWRIGHT_DEPS: true
+        INSTALL_PLAYWRIGHT: true
+    entrypoint: ./docker/run-tests.sh
+    volumes:
+      - .:/app
+      - ./htmlcov:/app/htmlcov
+    environment:
+      - POSTGRES_SERVER=test_db
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=act_rental_test
+      - REDIS_HOST=redis
+      - REDIS_PASSWORD=
+      - TESTING=1
+      - SECRET_KEY=test-secret-key
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+    depends_on:
+      test_db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - act-rental_network
+
+  test_db:
+    image: postgres:14-alpine
+    tmpfs:
+      - /var/lib/postgresql/data
+    environment:
+      - POSTGRES_DB=act_rental_test
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_HOST_AUTH_METHOD=trust
+    ports:
+      - "5433:5432"
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+    networks:
+      - act-rental_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    # Используем тот же образ redis, что и в основном docker-compose
+    # Для тестов достаточно простой конфигурации
+    image: redis:6-alpine
+    command: redis-server --appendonly yes
+    networks:
+      - act-rental_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+networks:
+  act-rental_network:
+    driver: bridge
