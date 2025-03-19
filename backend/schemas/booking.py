@@ -31,6 +31,11 @@ class BookingBase(BaseModel):
     total_amount: Decimal = Field(
         ..., title='Total Amount', description='Total amount for the booking'
     )
+    project_id: Optional[int] = Field(
+        None,
+        title='Project ID',
+        description='ID of the project this booking belongs to',
+    )
 
     model_config = ConfigDict(
         from_attributes=True,
@@ -61,6 +66,11 @@ class BookingUpdate(BaseModel):
     payment_status: Optional[PaymentStatus] = Field(
         None, title='Payment Status', description='Payment status'
     )
+    project_id: Optional[int] = Field(
+        None,
+        title='Project ID',
+        description='ID of the project this booking belongs to',
+    )
 
     model_config = ConfigDict(
         from_attributes=True,
@@ -80,6 +90,7 @@ class BookingResponse(BookingBase):
     updated_at: datetime
     equipment_name: str
     client_name: str
+    project_name: Optional[str] = None
 
     model_config = ConfigDict(
         from_attributes=True,

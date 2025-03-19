@@ -14,6 +14,7 @@ from backend.api.v1.endpoints.clients import clients_router
 from backend.api.v1.endpoints.documents import documents_router
 from backend.api.v1.endpoints.equipment import equipment_router
 from backend.api.v1.endpoints.health import health_router
+from backend.api.v1.endpoints.projects import projects_router
 
 __all__ = [
     'auth_router',
@@ -24,4 +25,5 @@ __all__ = [
     'documents_router',
     'equipment_router',
     'health_router',
+    'projects_router',
 ]

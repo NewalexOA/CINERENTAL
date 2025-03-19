@@ -10,6 +10,7 @@ from backend.repositories.client import ClientRepository
 from backend.repositories.document import DocumentRepository
 from backend.repositories.equipment import EquipmentRepository
 from backend.repositories.global_barcode import GlobalBarcodeSequenceRepository
+from backend.repositories.project import ProjectRepository
 
 __all__ = [
     'BaseRepository',
@@ -19,4 +20,5 @@ __all__ = [
     'DocumentRepository',
     'EquipmentRepository',
     'GlobalBarcodeSequenceRepository',
+    'ProjectRepository',
 ]

@@ -20,6 +20,7 @@ if TYPE_CHECKING:
     from backend.models.client import Client
     from backend.models.document import Document
     from backend.models.equipment import Equipment
+    from backend.models.project import Project
 
 
 class BookingStatus(str, enum.Enum):
@@ -68,6 +69,7 @@ class Booking(TimestampMixin, Base):
         id: Primary key
         client_id: Reference to client
         equipment_id: Reference to equipment
+        project_id: Reference to project (optional)
         start_date: Rental start date
         end_date: Rental end date
         booking_status: Current booking status
@@ -79,6 +81,7 @@ class Booking(TimestampMixin, Base):
         client: Client relationship
         equipment: Equipment relationship
         documents: Documents relationship
+        project: Project relationship
     """
 
     __tablename__ = 'bookings'
@@ -89,6 +92,11 @@ class Booking(TimestampMixin, Base):
     )
     equipment_id: Mapped[int] = mapped_column(
         ForeignKey('equipment.id', ondelete='RESTRICT')
+    )
+    project_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey('projects.id', ondelete='CASCADE'),
+        nullable=True,
+        index=True,
     )
     start_date: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False
@@ -117,6 +125,7 @@ class Booking(TimestampMixin, Base):
     client: Mapped['Client'] = relationship(back_populates='bookings')
     equipment: Mapped['Equipment'] = relationship(back_populates='bookings')
     documents: Mapped[List['Document']] = relationship(back_populates='booking')
+    project: Mapped[Optional['Project']] = relationship(back_populates='bookings')
 
     def is_active(self) -> bool:
         """Check if booking is active.
