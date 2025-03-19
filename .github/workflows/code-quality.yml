@@ -27,7 +27,7 @@ jobs:
           pip install black==24.1.0 isort==5.13.2 flake8==7.0.0 mypy==1.8.0
           pip install flake8-docstrings flake8-quotes
           pip install types-redis types-passlib types-python-jose
-          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
 
       - name: Run Black
         run: |

@@ -162,7 +162,14 @@ docker compose -f docker-compose.prod.yml up -d
 
 3. Install dependencies:
    ```bash
-   pip install -r requirements.txt
+   # For production environment
+   pip install -r requirements-prod.txt
+
+   # For development environment
+   pip install -r requirements-dev.txt
+
+   # For testing environment
+   pip install -r requirements-test.txt
    ```
 
 4. Copy environment example and configure:
