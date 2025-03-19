@@ -46,7 +46,6 @@ class ScanSessionResponse(ScanSessionBase):
     updated_at: datetime
     expires_at: datetime
 
-    class Config:
-        """Pydantic configuration."""
-
-        from_attributes = True
+    model_config = {
+        'from_attributes': True,
+    }
