@@ -49,6 +49,12 @@ from backend.schemas.project import (
     ProjectUpdate,
     ProjectWithBookings,
 )
+from backend.schemas.scan_session import (
+    EquipmentItem,
+    ScanSessionCreate,
+    ScanSessionResponse,
+    ScanSessionUpdate,
+)
 
 __all__ = [
     # Status enums
@@ -87,6 +93,7 @@ __all__ = [
     'CategoryResponse',
     'CategoryUpdate',
     'CategoryWithEquipmentCount',
+    'CategoryTree',
     # Project schemas
     'ProjectBase',
     'ProjectCreate',
@@ -94,4 +101,9 @@ __all__ = [
     'ProjectUpdate',
     'ProjectWithBookings',
     'BookingInProject',
+    # Scan Session
+    'EquipmentItem',
+    'ScanSessionCreate',
+    'ScanSessionUpdate',
+    'ScanSessionResponse',
 ]

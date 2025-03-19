@@ -19,6 +19,7 @@ from backend.models.equipment import Equipment, EquipmentStatus
 from backend.models.global_barcode import GlobalBarcodeSequence
 from backend.models.mixins import SoftDeleteMixin, TimestampMixin
 from backend.models.project import Project, ProjectStatus
+from backend.models.scan_session import ScanSession
 from backend.models.user import User
 
 __all__ = [
@@ -35,6 +36,7 @@ __all__ = [
     'User',
     'GlobalBarcodeSequence',
     'Project',
+    'ScanSession',
     # Status and type enums
     'BookingStatus',
     'PaymentStatus',
