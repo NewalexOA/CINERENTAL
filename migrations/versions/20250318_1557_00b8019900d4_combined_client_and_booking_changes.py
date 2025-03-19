@@ -134,6 +134,20 @@ def upgrade() -> None:
         "SET DEFAULT 'ACTIVE'::bookingstatus"
     )
 
+    # === Add project_id column to bookings table ===
+    op.add_column('bookings', sa.Column('project_id', sa.Integer(), nullable=True))
+    op.create_index(
+        op.f('ix_bookings_project_id'), 'bookings', ['project_id'], unique=False
+    )
+    op.create_foreign_key(
+        'fk_bookings_project_id_projects',
+        'bookings',
+        'projects',
+        ['project_id'],
+        ['id'],
+        ondelete='CASCADE',
+    )
+
 
 def downgrade() -> None:
     """Combined downgrade operations for all migrations.
@@ -141,6 +155,13 @@ def downgrade() -> None:
     Note: This operation is complex and may not work perfectly in all cases
     due to data dependencies and constraints.
     """
+    # === Remove project_id column from bookings table ===
+    op.drop_constraint(
+        'fk_bookings_project_id_projects', 'bookings', type_='foreignkey'
+    )
+    op.drop_index(op.f('ix_bookings_project_id'), table_name='bookings')
+    op.drop_column('bookings', 'project_id')
+
     # === From migration 1776b619f139 (reverse) ===
     op.execute(
         "ALTER TABLE bookings ALTER COLUMN booking_status "
