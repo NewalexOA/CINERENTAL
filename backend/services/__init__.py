@@ -10,6 +10,7 @@ from backend.services.client import ClientService
 from backend.services.document import DocumentService
 from backend.services.equipment import EquipmentService
 from backend.services.project import ProjectService
+from backend.services.scan_session import ScanSessionService
 
 __all__ = [
     # Business services
@@ -20,4 +21,5 @@ __all__ = [
     'DocumentService',
     'EquipmentService',
     'ProjectService',
+    'ScanSessionService',
 ]

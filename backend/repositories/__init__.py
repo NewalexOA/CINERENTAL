@@ -11,14 +11,16 @@ from backend.repositories.document import DocumentRepository
 from backend.repositories.equipment import EquipmentRepository
 from backend.repositories.global_barcode import GlobalBarcodeSequenceRepository
 from backend.repositories.project import ProjectRepository
+from backend.repositories.scan_session import ScanSessionRepository
 
 __all__ = [
     'BaseRepository',
-    'BookingRepository',
     'CategoryRepository',
-    'ClientRepository',
-    'DocumentRepository',
     'EquipmentRepository',
+    'ClientRepository',
+    'BookingRepository',
+    'DocumentRepository',
     'GlobalBarcodeSequenceRepository',
     'ProjectRepository',
+    'ScanSessionRepository',
 ]
