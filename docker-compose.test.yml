@@ -60,8 +60,8 @@ services:
       retries: 5
 
   redis:
-    # Используем тот же образ redis, что и в основном docker-compose
-    # Для тестов достаточно простой конфигурации
+    # Use the same redis image as in the main docker-compose
+    # for tests, a simple configuration is sufficient
     image: redis:6-alpine
     command: redis-server --appendonly yes
     networks:

@@ -134,6 +134,39 @@ def upgrade() -> None:
         "SET DEFAULT 'ACTIVE'::bookingstatus"
     )
 
+    # === Create projects table first ===
+    op.create_table(
+        'projects',
+        sa.Column('id', sa.Integer(), nullable=False),
+        sa.Column('name', sa.String(length=255), nullable=False),
+        sa.Column('description', sa.String(length=1000), nullable=True),
+        sa.Column('client_id', sa.Integer(), nullable=False),
+        sa.Column('start_date', sa.DateTime(timezone=True), nullable=False),
+        sa.Column('end_date', sa.DateTime(timezone=True), nullable=False),
+        sa.Column(
+            'status',
+            sa.Enum('DRAFT', 'ACTIVE', 'COMPLETED', 'CANCELLED', name='projectstatus'),
+            nullable=False,
+            server_default='DRAFT',
+        ),
+        sa.Column('notes', sa.String(length=1000), nullable=True),
+        sa.Column(
+            'created_at',
+            sa.DateTime(timezone=True),
+            server_default=sa.text('now()'),
+            nullable=False,
+        ),
+        sa.Column(
+            'updated_at',
+            sa.DateTime(timezone=True),
+            server_default=sa.text('now()'),
+            nullable=False,
+        ),
+        sa.ForeignKeyConstraint(['client_id'], ['clients.id'], ondelete='RESTRICT'),
+        sa.PrimaryKeyConstraint('id'),
+    )
+    op.create_index(op.f('ix_projects_status'), 'projects', ['status'], unique=False)
+
     # === Add project_id column to bookings table ===
     op.add_column('bookings', sa.Column('project_id', sa.Integer(), nullable=True))
     op.create_index(
@@ -161,6 +194,10 @@ def downgrade() -> None:
     )
     op.drop_index(op.f('ix_bookings_project_id'), table_name='bookings')
     op.drop_column('bookings', 'project_id')
+
+    # === Drop projects table ===
+    op.drop_index(op.f('ix_projects_status'), table_name='projects')
+    op.drop_table('projects')
 
     # === From migration 1776b619f139 (reverse) ===
     op.execute(
