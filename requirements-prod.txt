@@ -39,3 +39,6 @@ python-dateutil>=2.8.2
 
 # Slug generation
 python-slugify==8.0.4
+
+# APScheduler
+apscheduler==3.11.0
