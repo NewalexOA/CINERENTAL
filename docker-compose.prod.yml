@@ -7,6 +7,9 @@ services:
       target: runtime
       args:
         BUILDKIT_INLINE_CACHE: 1
+        ENV_TYPE: prod
+        INSTALL_PLAYWRIGHT_DEPS: false
+        INSTALL_PLAYWRIGHT: false
     command: ./docker/start.sh
     restart: unless-stopped
     ports:
