@@ -370,7 +370,7 @@ async def cleanup_test_data(engine) -> AsyncGenerator[None, None]:
         async with cleanup_session.begin():
             # Disable foreign key checks
             await cleanup_session.execute(
-                text('SET session_replication_role = \'replica\'')
+                text('SET session_replication_role = "replica"')
             )
 
             # Clean tables in the correct order
@@ -393,7 +393,7 @@ async def cleanup_test_data(engine) -> AsyncGenerator[None, None]:
 
             # Enable foreign key checks again
             await cleanup_session.execute(
-                text('SET session_replication_role = \'origin\'')
+                text('SET session_replication_role = "origin"')
             )
 
     except Exception as e:
@@ -482,8 +482,7 @@ async def equipment_with_special_chars(
     """Create equipment with special characters."""
     equipment = Equipment(
         name='Test <script>alert("XSS")</script> Equipment',
-        description='Test equipment with !@#$%^&*() special chars '
-        'OR "1"="1"',
+        description='Test equipment with !@#$%^&*() special chars ' 'OR "1"="1"',
         barcode='DROP TABLE equipment;--',
         serial_number='Test & Equipment',
         category_id=test_category.id,
