@@ -11,8 +11,7 @@ services:
         INSTALL_PLAYWRIGHT: true
     entrypoint: ./docker/run-tests.sh
     volumes:
-      - .:/app
-      - ./htmlcov:/app/htmlcov
+      - ./:/app
     environment:
       - POSTGRES_SERVER=test_db
       - POSTGRES_USER=postgres
@@ -22,6 +21,7 @@ services:
       - REDIS_PASSWORD=
       - TESTING=1
       - SECRET_KEY=test-secret-key
+      - ENVIRONMENT=testing
     deploy:
       resources:
         limits:
@@ -34,6 +34,15 @@ services:
         condition: service_healthy
     networks:
       - act-rental_network
+    command: >
+      bash -c "
+        ./docker/wait-for.sh test_db:5432 -t 60 -- echo 'Waiting for PostgreSQL...' &&
+        ./docker/wait-for.sh redis:6379 -t 60 -- echo 'Waiting for Redis...' &&
+        echo 'Running migrations...' &&
+        alembic stamp head &&
+        echo 'Running tests...' &&
+        pytest ${TEST_PATH:-tests/} -v
+      "
 
   test_db:
     image: postgres:14-alpine
