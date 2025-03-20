@@ -1,22 +1,22 @@
-"""Add scan sessions table
+"""add_scan_sessions
 
-Revision ID: 20240319_1500_add_scan_sessions
-Revises: 20250318_1557_00b8019900d4
-Create Date: 2024-03-19 15:00:00.000000
+Revision ID: 2a58625a591b
+Revises: 00b8019900d4
+Create Date: 2025-03-20 15:10:49.283384+00:00
 
 """
 
-from typing import Optional
+from typing import Sequence, Union
 
 import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision = '20240319_1500_add_scan_sessions'
-down_revision = '20250318_1557_00b8019900d4'
-branch_labels: Optional[str] = None
-depends_on: Optional[str] = None
+revision: str = '2a58625a591b'
+down_revision: Union[str, None] = '00b8019900d4'
+branch_labels: Union[str, Sequence[str], None] = None
+depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
