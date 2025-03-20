@@ -12,9 +12,23 @@ from pydantic import BaseModel, Field
 class EquipmentItem(BaseModel):
     """Schema for scanned equipment item."""
 
-    equipment_id: Optional[int] = None
+    equipment_id: int
     barcode: str
     name: str
+    category_id: Optional[int] = None
+    category_name: Optional[str] = None
+    booking_start_date: Optional[datetime] = None
+    booking_end_date: Optional[datetime] = None
+
+
+class ScanSessionEquipmentAdd(BaseModel):
+    """Schema for adding equipment to a scan session."""
+
+    equipment_id: int = Field(..., description='Equipment ID')
+    booking_start_date: Optional[datetime] = Field(
+        None, description='Booking start date'
+    )
+    booking_end_date: Optional[datetime] = Field(None, description='Booking end date')
 
 
 class ScanSessionBase(BaseModel):

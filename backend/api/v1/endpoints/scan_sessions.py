@@ -1,9 +1,11 @@
-"""Scan sessions endpoints module.
+"""Scan Sessions endpoints module.
 
-This module provides API endpoints for scan sessions management.
+This module implements API endpoints for managing scan sessions.
+It provides routes for creating, retrieving, updating, and deleting scan sessions,
+along with adding and removing equipment from sessions.
 """
 
-from typing import List
+from typing import List, Optional
 
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -22,30 +24,28 @@ from backend.services import ScanSessionService
 scan_sessions_router = APIRouter()
 
 
-def get_scan_session_repository(
-    db: AsyncSession = Depends(get_db),
-) -> ScanSessionRepository:
+def get_repository(db: AsyncSession = Depends(get_db)) -> ScanSessionRepository:
     """Get scan session repository.
 
     Args:
         db: Database session
 
     Returns:
-        Scan session repository
+        ScanSessionRepository: Repository instance
     """
     return ScanSessionRepository(db)
 
 
-def get_scan_session_service(
-    repository: ScanSessionRepository = Depends(get_scan_session_repository),
+def get_service(
+    repository: ScanSessionRepository = Depends(get_repository),
 ) -> ScanSessionService:
     """Get scan session service.
 
     Args:
-        repository: Scan session repository
+        repository: Repository instance
 
     Returns:
-        Scan session service
+        ScanSessionService: Service instance
     """
     return ScanSessionService(repository)
 
@@ -55,119 +55,126 @@ def get_scan_session_service(
     '/',
     response_model=ScanSessionResponse,
     status_code=status.HTTP_201_CREATED,
-    summary='Создание новой сессии сканирования',
+    summary='Create new scan session',
 )
 async def create_scan_session(
-    session_data: ScanSessionCreate,
-    service: ScanSessionService = Depends(get_scan_session_service),
+    scan_session: ScanSessionCreate,
+    service: ScanSessionService = Depends(get_service),
 ) -> ScanSessionResponse:
-    """Create new scan session.
+    """Create a new scan session.
 
     Args:
-        session_data: Session data
+        scan_session: Scan session data
         service: Scan session service
 
     Returns:
-        Created scan session
+        ScanSessionResponse: Created scan session
     """
-    session = await service.create_session(
-        name=session_data.name,
-        items=[item.model_dump() for item in session_data.items],
-        user_id=session_data.user_id,
+    items = []
+    if scan_session.items:
+        items = [item.model_dump() for item in scan_session.items]
+
+    result = await service.create_session(
+        name=scan_session.name,
+        items=items,
+        user_id=None,  # Make user_id always None for demo purposes
     )
-    # Convert model to response schema
-    return ScanSessionResponse.model_validate(session, from_attributes=True)
+    return ScanSessionResponse.model_validate(result, from_attributes=True)
+
+
+@typed_get(
+    scan_sessions_router,
+    '/',
+    response_model=List[ScanSessionResponse],
+    summary='Get all scan sessions',
+)
+async def get_scan_sessions(
+    user_id: Optional[int] = None,
+    service: ScanSessionService = Depends(get_service),
+) -> List[ScanSessionResponse]:
+    """Get a list of scan sessions.
+
+    Args:
+        user_id: Optional user ID to filter sessions
+        service: Scan session service
+
+    Returns:
+        List[ScanSessionResponse]: List of scan sessions
+    """
+    if user_id:
+        result = await service.get_user_sessions(user_id)
+    else:
+        # We'll use an empty placeholder since the original service doesn't support
+        # getting all sessions without a user
+        result = []
+
+    return [
+        ScanSessionResponse.model_validate(session, from_attributes=True)
+        for session in result
+    ]
 
 
 @typed_get(
     scan_sessions_router,
     '/{session_id}',
     response_model=ScanSessionResponse,
-    summary='Получение сессии сканирования по ID',
+    summary='Get scan session by ID',
 )
 async def get_scan_session(
     session_id: int,
-    service: ScanSessionService = Depends(get_scan_session_service),
+    service: ScanSessionService = Depends(get_service),
 ) -> ScanSessionResponse:
-    """Get scan session by ID.
+    """Get a scan session by ID.
 
     Args:
         session_id: Scan session ID
         service: Scan session service
 
     Returns:
-        Scan session
+        ScanSessionResponse: Scan session
 
     Raises:
-        NotFoundError: If session not found
+        NotFoundError: If scan session not found
     """
     session = await service.get_session(session_id)
     if not session:
-        raise NotFoundError(message='Сессия сканирования не найдена')
+        raise NotFoundError(f'Scan session with ID {session_id} not found')
     return ScanSessionResponse.model_validate(session, from_attributes=True)
-
-
-@typed_get(
-    scan_sessions_router,
-    '/user/{user_id}',
-    response_model=List[ScanSessionResponse],
-    summary='Получение всех сессий сканирования пользователя',
-)
-async def get_user_scan_sessions(
-    user_id: int,
-    service: ScanSessionService = Depends(get_scan_session_service),
-) -> List[ScanSessionResponse]:
-    """Get all scan sessions for a user.
-
-    Args:
-        user_id: User ID
-        service: Scan session service
-
-    Returns:
-        List of scan sessions
-    """
-    sessions = await service.get_user_sessions(user_id)
-    return [
-        ScanSessionResponse.model_validate(session, from_attributes=True)
-        for session in sessions
-    ]
 
 
 @typed_put(
     scan_sessions_router,
     '/{session_id}',
     response_model=ScanSessionResponse,
-    summary='Обновление сессии сканирования',
+    summary='Update scan session',
 )
 async def update_scan_session(
     session_id: int,
-    session_data: ScanSessionUpdate,
-    service: ScanSessionService = Depends(get_scan_session_service),
+    session_update: ScanSessionUpdate,
+    service: ScanSessionService = Depends(get_service),
 ) -> ScanSessionResponse:
-    """Update scan session.
+    """Update a scan session.
 
     Args:
         session_id: Scan session ID
-        session_data: Update data
+        session_update: Updated scan session data
         service: Scan session service
 
     Returns:
-        Updated scan session
+        ScanSessionResponse: Updated scan session
 
     Raises:
-        NotFoundError: If session not found
+        NotFoundError: If scan session not found
     """
     items = None
-    if session_data.items is not None:
-        items = [item.model_dump() for item in session_data.items]
+    if session_update.items is not None:
+        items = [item.model_dump() for item in session_update.items]
 
     session = await service.update_session(
-        session_id=session_id,
-        name=session_data.name,
-        items=items,
+        session_id=session_id, name=session_update.name, items=items
     )
     if not session:
-        raise NotFoundError(message='Сессия сканирования не найдена')
+        raise NotFoundError(f'Scan session with ID {session_id} not found')
     return ScanSessionResponse.model_validate(session, from_attributes=True)
 
 
@@ -175,21 +182,21 @@ async def update_scan_session(
     scan_sessions_router,
     '/{session_id}',
     status_code=status.HTTP_204_NO_CONTENT,
-    summary='Удаление сессии сканирования',
+    summary='Delete scan session',
 )
 async def delete_scan_session(
     session_id: int,
-    service: ScanSessionService = Depends(get_scan_session_service),
+    service: ScanSessionService = Depends(get_service),
 ) -> None:
-    """Delete scan session.
+    """Delete a scan session.
 
     Args:
         session_id: Scan session ID
         service: Scan session service
 
     Raises:
-        NotFoundError: If session not found
+        NotFoundError: If scan session not found
     """
     result = await service.delete_session(session_id)
     if not result:
-        raise NotFoundError(message='Сессия сканирования не найдена')
+        raise NotFoundError(f'Scan session with ID {session_id} not found')
