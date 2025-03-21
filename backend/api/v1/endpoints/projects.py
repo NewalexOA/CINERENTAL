@@ -260,3 +260,32 @@ async def remove_booking_from_project(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
     except ValidationError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+
+@typed_get(
+    projects_router,
+    '/{project_id}/bookings',
+    response_model=List[dict],
+    summary='Get project bookings',
+)
+async def get_project_bookings(
+    project_id: int,
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> List[dict]:
+    """Get bookings for a project.
+
+    Args:
+        project_id: Project ID
+        db: Database session
+
+    Returns:
+        List of bookings
+    """
+    service = ProjectService(db)
+    try:
+        bookings = await service.get_project_bookings(project_id)
+        return bookings
+    except NotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except ValidationError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))

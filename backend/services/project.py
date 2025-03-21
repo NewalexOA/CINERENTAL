@@ -323,3 +323,47 @@ class ProjectService:
 
         # Refresh project with bookings
         return await self.get_project(project_id, with_bookings=True)
+
+    async def get_project_bookings(self, project_id: int) -> List[dict]:
+        """Get bookings for a project.
+
+        Args:
+            project_id: Project ID
+
+        Returns:
+            List of bookings as dictionaries with extended information
+
+        Raises:
+            NotFoundError: If project not found
+        """
+        # Check if project exists
+        project = await self.repository.get_by_id(project_id)
+        if project is None:
+            msg = f'Project with ID {project_id} not found'
+            raise NotFoundError(msg)
+
+        # Get project with bookings
+        project_with_bookings = await self.repository.get_by_id_with_bookings(
+            project_id
+        )
+        if not project_with_bookings or not project_with_bookings.bookings:
+            return []
+
+        # Format bookings with additional information
+        result = []
+        for booking in project_with_bookings.bookings:
+            # Get equipment details
+            equipment = await self.booking_repository.get_equipment_for_booking(
+                booking.id
+            )
+
+            booking_dict = {
+                'id': booking.id,
+                'start_date': booking.start_date,
+                'end_date': booking.end_date,
+                'status': booking.status.value if hasattr(booking, 'status') else None,
+                'equipment': equipment,
+            }
+            result.append(booking_dict)
+
+        return result
