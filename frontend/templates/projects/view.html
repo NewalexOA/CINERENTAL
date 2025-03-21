@@ -1,0 +1,453 @@
+{% extends "layout/base.html" %}
+
+{% block title %}Просмотр проекта{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row mb-4">
+        <div class="col">
+            <h1 id="project-name">Загрузка...</h1>
+            <p class="text-muted" id="project-client">Клиент: загрузка...</p>
+            <div class="badge bg-secondary mb-2" id="project-status">статус</div>
+        </div>
+        <div class="col-auto">
+            <button class="btn btn-primary" id="edit-project-btn">
+                <i class="bi bi-pencil"></i> Редактировать
+            </button>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">Информация о проекте</div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <strong>Даты проекта:</strong>
+                        <div id="project-dates">Загрузка...</div>
+                    </div>
+                    <div class="mb-3">
+                        <strong>Описание:</strong>
+                        <div id="project-description">Загрузка...</div>
+                    </div>
+                    <div>
+                        <strong>Заметки:</strong>
+                        <div id="project-notes">Загрузка...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">Статистика</div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <div class="statistic-item">
+                                <h3 id="total-bookings">0</h3>
+                                <p>Всего бронирований</p>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <div class="statistic-item">
+                                <h3 id="total-equipment">0</h3>
+                                <p>Единиц оборудования</p>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="statistic-item">
+                                <h3 id="project-duration">0</h3>
+                                <p>Дней проекта</p>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="statistic-item">
+                                <h3 id="total-cost">0 ₽</h3>
+                                <p>Общая стоимость</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <span>Бронирования оборудования</span>
+            <button class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#addEquipmentModal">
+                <i class="bi bi-plus"></i> Добавить оборудование
+            </button>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Оборудование</th>
+                            <th>Категория</th>
+                            <th>Период</th>
+                            <th>Статус</th>
+                            <th>Действия</th>
+                        </tr>
+                    </thead>
+                    <tbody id="bookings-table-body">
+                        <tr>
+                            <td colspan="5" class="text-center">Загрузка бронирований...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal for adding equipment -->
+<div class="modal fade" id="addEquipmentModal" tabindex="-1" aria-labelledby="addEquipmentModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addEquipmentModalLabel">Добавить оборудование в проект</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="add-equipment-form">
+                    <div class="mb-3">
+                        <label for="booking-select" class="form-label">Выберите бронирование</label>
+                        <select class="form-select" id="booking-select" required>
+                            <option value="" selected disabled>Выберите бронирование</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                <button type="button" class="btn btn-primary" id="add-equipment-btn">Добавить</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal for editing booking -->
+<div class="modal fade" id="editBookingModal" tabindex="-1" aria-labelledby="editBookingModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="editBookingModalLabel">Редактировать бронирование</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="edit-booking-form">
+                    <input type="hidden" id="edit-booking-id">
+                    <div class="mb-3">
+                        <label for="edit-start-date" class="form-label">Дата начала</label>
+                        <input type="date" class="form-control" id="edit-start-date" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="edit-end-date" class="form-label">Дата окончания</label>
+                        <input type="date" class="form-control" id="edit-end-date" required>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                <button type="button" class="btn btn-danger" id="remove-booking-btn">Удалить из проекта</button>
+                <button type="button" class="btn btn-primary" id="save-booking-btn">Сохранить</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+const projectId = Number('{{ project_id }}');
+
+document.addEventListener('DOMContentLoaded', function() {
+    loadProjectData();
+
+    loadProjectBookings();
+
+    // Event handlers
+    document.getElementById('add-equipment-btn').addEventListener('click', addBookingToProject);
+    document.getElementById('save-booking-btn').addEventListener('click', saveBooking);
+    document.getElementById('remove-booking-btn').addEventListener('click', removeBookingFromProject);
+    document.getElementById('edit-project-btn').addEventListener('click', function() {
+        window.location.href = `/projects/edit/${projectId}`;
+    });
+
+    // Load available bookings when modal is opened
+    const addEquipmentModal = document.getElementById('addEquipmentModal');
+    addEquipmentModal.addEventListener('show.bs.modal', loadAvailableBookings);
+});
+
+async function loadProjectData() {
+    try {
+        const response = await fetch(`/api/v1/projects/${projectId}`);
+        if (!response.ok) throw new Error('Не удалось загрузить данные проекта');
+
+        const project = await response.json();
+
+        // Fill project data
+        document.getElementById('project-name').textContent = project.name;
+        document.getElementById('project-client').textContent = `Клиент: ${project.client_name}`;
+        document.getElementById('project-status').textContent = getStatusText(project.status);
+        document.getElementById('project-status').className = getStatusClass(project.status);
+
+        const startDate = new Date(project.start_date).toLocaleDateString('ru-RU');
+        const endDate = new Date(project.end_date).toLocaleDateString('ru-RU');
+        document.getElementById('project-dates').textContent = `${startDate} - ${endDate}`;
+
+        document.getElementById('project-description').textContent = project.description || 'Описание отсутствует';
+        document.getElementById('project-notes').textContent = project.notes || 'Заметки отсутствуют';
+
+        // Calculate statistics
+        const start = new Date(project.start_date);
+        const end = new Date(project.end_date);
+        const durationDays = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
+        document.getElementById('project-duration').textContent = durationDays;
+
+    } catch (error) {
+        console.error('Ошибка при загрузке данных проекта:', error);
+        showAlert('danger', 'Не удалось загрузить данные проекта');
+    }
+}
+
+async function loadProjectBookings() {
+    try {
+        const response = await fetch(`/api/v1/projects/${projectId}/bookings`);
+        if (!response.ok) throw new Error('Не удалось загрузить бронирования');
+
+        const bookings = await response.json();
+
+        // Update statistics
+        document.getElementById('total-bookings').textContent = bookings.length;
+        document.getElementById('total-equipment').textContent = bookings.length;
+
+        let totalCost = 0;
+        // Rendering bookings table
+        const tableBody = document.getElementById('bookings-table-body');
+        tableBody.innerHTML = '';
+
+        if (bookings.length === 0) {
+            tableBody.innerHTML = '<tr><td colspan="5" class="text-center">Нет бронирований</td></tr>';
+            return;
+        }
+
+        bookings.forEach(booking => {
+            const startDate = new Date(booking.start_date).toLocaleDateString('ru-RU');
+            const endDate = new Date(booking.end_date).toLocaleDateString('ru-RU');
+
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${booking.equipment.name}</td>
+                <td>${booking.equipment.category}</td>
+                <td>${startDate} - ${endDate}</td>
+                <td><span class="badge ${getBookingStatusClass(booking.status)}">${getBookingStatusText(booking.status)}</span></td>
+                <td>
+                    <button class="btn btn-sm btn-outline-primary edit-booking" data-booking-id="${booking.id}">
+                        <i class="bi bi-pencil"></i>
+                    </button>
+                </td>
+            `;
+
+            tableBody.appendChild(row);
+
+            // Add handler for edit button
+            row.querySelector('.edit-booking').addEventListener('click', () => openEditBookingModal(booking));
+        });
+
+        document.getElementById('total-cost').textContent = `${totalCost.toFixed(2)} ₽`;
+
+    } catch (error) {
+        console.error('Ошибка при загрузке бронирований:', error);
+        const tableBody = document.getElementById('bookings-table-body');
+        tableBody.innerHTML = '<tr><td colspan="5" class="text-center text-danger">Ошибка при загрузке бронирований</td></tr>';
+    }
+}
+
+async function loadAvailableBookings() {
+    try {
+        // In a real application, you need to load available bookings that are not attached to projects
+        const response = await fetch('/api/v1/bookings?available=true');
+        if (!response.ok) throw new Error('Не удалось загрузить доступные бронирования');
+
+        const bookings = await response.json();
+
+        const select = document.getElementById('booking-select');
+        select.innerHTML = '<option value="" selected disabled>Выберите бронирование</option>';
+
+        bookings.results.forEach(booking => {
+            const option = document.createElement('option');
+            option.value = booking.id;
+            option.textContent = `${booking.equipment.name} (${new Date(booking.start_date).toLocaleDateString('ru-RU')} - ${new Date(booking.end_date).toLocaleDateString('ru-RU')})`;
+            select.appendChild(option);
+        });
+
+    } catch (error) {
+        console.error('Ошибка при загрузке доступных бронирований:', error);
+        showAlert('danger', 'Не удалось загрузить доступные бронирования');
+    }
+}
+
+async function addBookingToProject() {
+    const bookingId = document.getElementById('booking-select').value;
+
+    if (!bookingId) {
+        showAlert('warning', 'Выберите бронирование');
+        return;
+    }
+
+    try {
+        const response = await fetch(`/api/v1/projects/${projectId}/bookings/${bookingId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+
+        if (!response.ok) throw new Error('Не удалось добавить бронирование в проект');
+
+        const modal = bootstrap.Modal.getInstance(document.getElementById('addEquipmentModal'));
+        modal.hide();
+
+        loadProjectBookings();
+
+        showAlert('success', 'Оборудование успешно добавлено в проект');
+
+    } catch (error) {
+        console.error('Ошибка при добавлении бронирования:', error);
+        showAlert('danger', 'Не удалось добавить бронирование в проект');
+    }
+}
+
+function openEditBookingModal(booking) {
+    document.getElementById('edit-booking-id').value = booking.id;
+
+    const startDate = new Date(booking.start_date);
+    const endDate = new Date(booking.end_date);
+
+    document.getElementById('edit-start-date').value = startDate.toISOString().split('T')[0];
+    document.getElementById('edit-end-date').value = endDate.toISOString().split('T')[0];
+
+    const modal = new bootstrap.Modal(document.getElementById('editBookingModal'));
+    modal.show();
+}
+
+async function saveBooking() {
+    const bookingId = document.getElementById('edit-booking-id').value;
+    const startDate = document.getElementById('edit-start-date').value;
+    const endDate = document.getElementById('edit-end-date').value;
+
+    try {
+        const response = await fetch(`/api/v1/bookings/${bookingId}`, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                start_date: startDate,
+                end_date: endDate
+            })
+        });
+
+        if (!response.ok) throw new Error('Не удалось обновить бронирование');
+
+        const modal = bootstrap.Modal.getInstance(document.getElementById('editBookingModal'));
+        modal.hide();
+
+        loadProjectBookings();
+
+        showAlert('success', 'Бронирование успешно обновлено');
+
+    } catch (error) {
+        console.error('Ошибка при обновлении бронирования:', error);
+        showAlert('danger', 'Не удалось обновить бронирование');
+    }
+}
+
+async function removeBookingFromProject() {
+    const bookingId = document.getElementById('edit-booking-id').value;
+
+    try {
+        const response = await fetch(`/api/v1/projects/${projectId}/bookings/${bookingId}`, {
+            method: 'DELETE'
+        });
+
+        if (!response.ok) throw new Error('Не удалось удалить бронирование из проекта');
+
+        const modal = bootstrap.Modal.getInstance(document.getElementById('editBookingModal'));
+        modal.hide();
+
+        loadProjectBookings();
+
+        showAlert('success', 'Оборудование успешно удалено из проекта');
+
+    } catch (error) {
+        console.error('Ошибка при удалении бронирования из проекта:', error);
+        showAlert('danger', 'Не удалось удалить бронирование из проекта');
+    }
+}
+
+function showAlert(type, message) {
+    const alertContainer = document.createElement('div');
+    alertContainer.className = `alert alert-${type} alert-dismissible fade show position-fixed top-0 end-0 m-3`;
+    alertContainer.style.zIndex = '9999';
+    alertContainer.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    `;
+
+    document.body.appendChild(alertContainer);
+
+    // Automatic closing after 3 seconds
+    setTimeout(() => {
+        const alert = bootstrap.Alert.getOrCreateInstance(alertContainer);
+        alert.close();
+    }, 3000);
+}
+
+function getStatusText(status) {
+    const statuses = {
+        'DRAFT': 'Черновик',
+        'PLANNED': 'Запланирован',
+        'IN_PROGRESS': 'В процессе',
+        'COMPLETED': 'Завершен',
+        'CANCELLED': 'Отменен'
+    };
+    return statuses[status] || status;
+}
+
+function getStatusClass(status) {
+    const classes = {
+        'DRAFT': 'badge bg-secondary',
+        'PLANNED': 'badge bg-info',
+        'IN_PROGRESS': 'badge bg-primary',
+        'COMPLETED': 'badge bg-success',
+        'CANCELLED': 'badge bg-danger'
+    };
+    return classes[status] || 'badge bg-secondary';
+}
+
+function getBookingStatusText(status) {
+    const statuses = {
+        'PENDING': 'Ожидает',
+        'CONFIRMED': 'Подтверждено',
+        'CANCELLED': 'Отменено',
+        'COMPLETED': 'Завершено'
+    };
+    return statuses[status] || status;
+}
+
+function getBookingStatusClass(status) {
+    const classes = {
+        'PENDING': 'bg-warning',
+        'CONFIRMED': 'bg-success',
+        'CANCELLED': 'bg-danger',
+        'COMPLETED': 'bg-info'
+    };
+    return classes[status] || 'bg-secondary';
+}
+</script>
+{% endblock %}

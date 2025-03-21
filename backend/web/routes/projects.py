@@ -56,3 +56,24 @@ async def new_project(
         'projects/new.html',
         {'request': request, 'session_id': session_id},
     )
+
+
+@router.get('/{project_id}', response_class=HTMLResponse)
+async def view_project(
+    request: Request,
+    project_id: int,
+    db: AsyncSession = Depends(get_db),
+) -> _TemplateResponse:
+    """Render project details page.
+
+    Args:
+        request: FastAPI request object
+        project_id: Project ID
+        db: Database session
+
+    Returns:
+        Rendered template for project details
+    """
+    return templates.TemplateResponse(
+        'projects/view.html', {'request': request, 'project_id': project_id}
+    )
