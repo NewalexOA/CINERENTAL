@@ -165,9 +165,6 @@
             </div>
             <div class="card-body">
                 <div class="d-grid gap-2">
-                    <button class="btn btn-outline-primary" id="addToSessionBtn" disabled>
-                        <i class="fas fa-plus-circle"></i> Добавить в сессию
-                    </button>
                     <button class="btn btn-outline-primary" id="createBooking" disabled>
                         <i class="fas fa-calendar-plus"></i> Создать бронирование
                     </button>
@@ -433,7 +430,6 @@ function initSessionManagement() {
     document.getElementById('createProjectBtn').addEventListener('click', createProjectFromSession);
     document.getElementById('createSessionBtn').addEventListener('click', createNewSession);
     document.getElementById('saveRenameBtn').addEventListener('click', renameActiveSession);
-    document.getElementById('addToSessionBtn').addEventListener('click', addCurrentEquipmentToSession);
     document.getElementById('refreshSessionsListBtn').addEventListener('click', refreshSessionsList);
     document.getElementById('cleanExpiredSessionsBtn').addEventListener('click', cleanExpiredSessions);
     document.getElementById('resetAllSessionsBtn').addEventListener('click', resetAllSessions);
@@ -443,7 +439,6 @@ function initSessionManagement() {
 function updateSessionUI(session) {
     const noActiveSessionMessage = document.getElementById('noActiveSessionMessage');
     const activeSessionInfo = document.getElementById('activeSessionInfo');
-    const addToSessionBtn = document.getElementById('addToSessionBtn');
 
     if (session) {
         // Hide message, show session info
@@ -453,9 +448,6 @@ function updateSessionUI(session) {
         // Update session info
         document.getElementById('sessionName').textContent = session.name;
         document.getElementById('itemCount').textContent = `${session.items.length} позиций`;
-
-        // Enable add to session button if equipment is scanned
-        addToSessionBtn.disabled = !currentEquipment;
 
         // Update items list
         const itemsList = document.getElementById('sessionItemsList');
@@ -491,9 +483,6 @@ function updateSessionUI(session) {
         // Show message, hide session info
         noActiveSessionMessage.classList.remove('d-none');
         activeSessionInfo.classList.add('d-none');
-
-        // Disable add to session button
-        addToSessionBtn.disabled = true;
     }
 }
 
@@ -680,31 +669,6 @@ function createProjectFromSession() {
     window.location.href = `/projects/new?session_id=${activeSession.id}`;
 }
 
-// Add current equipment to session
-function addCurrentEquipmentToSession() {
-    if (!currentEquipment) return;
-
-    const activeSession = scanStorage.getActiveSession();
-    if (!activeSession) {
-        showToast('Сначала создайте или загрузите сессию', 'warning');
-        return;
-    }
-
-    // Format equipment for session
-    const equipmentItem = {
-        equipment_id: currentEquipment.id,
-        barcode: currentEquipment.barcode,
-        name: currentEquipment.name,
-        category_name: currentEquipment.category_name
-    };
-
-    // Add to session
-    const updatedSession = scanStorage.addEquipment(activeSession.id, equipmentItem);
-    updateSessionUI(updatedSession);
-
-    showToast('Оборудование добавлено в сессию', 'success');
-}
-
 // Remove equipment from session
 function removeEquipmentFromSession(equipmentId) {
     const activeSession = scanStorage.getActiveSession();
@@ -722,6 +686,24 @@ async function handleScan(equipment) {
     updateScanResult(equipment);
     updateQuickActions(true);
     addToScanHistory(equipment);
+
+    // Add equipment to active session
+    const activeSession = scanStorage.getActiveSession();
+    if (activeSession) {
+        // Format equipment for session
+        const equipmentItem = {
+            equipment_id: currentEquipment.id,
+            barcode: currentEquipment.barcode,
+            name: currentEquipment.name,
+            category_name: currentEquipment.category_name
+        };
+
+        // Add to session
+        const updatedSession = scanStorage.addEquipment(activeSession.id, equipmentItem);
+        updateSessionUI(updatedSession);
+
+        showToast('Оборудование автоматически добавлено в сессию', 'success');
+    }
 }
 
 // Handle scan error
@@ -805,11 +787,7 @@ function addToScanHistory(equipment) {
 
 // Update scanner control buttons
 function updateScannerControls(isInitialized) {
-    // Эти элементы больше не существуют в DOM, поэтому просто пропускаем обновление
-    // document.getElementById('startScanner').disabled = isInitialized;
-    // document.getElementById('stopScanner').disabled = !isInitialized;
 
-    // Вместо этого просто логируем состояние сканера
     console.log(`Сканер ${isInitialized ? 'активен' : 'остановлен'}`);
 }
 
@@ -819,10 +797,6 @@ function updateQuickActions(enabled) {
     document.getElementById('createBooking').disabled = !enabled;
     document.getElementById('updateStatus').disabled = !enabled;
     document.getElementById('viewHistory').disabled = !enabled;
-
-    // Update add to session button
-    const activeSession = scanStorage.getActiveSession();
-    document.getElementById('addToSessionBtn').disabled = !enabled || !activeSession;
 }
 
 // Load equipment history

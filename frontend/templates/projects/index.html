@@ -244,54 +244,60 @@ async function loadProjects() {
 
 // Render projects list
 function renderProjects(projects) {
-    const container = document.getElementById('projectsList');
+    const projectsList = document.getElementById('projectsList');
+    projectsList.innerHTML = '';
 
     if (projects.length === 0) {
-        container.innerHTML = `
-            <tr>
-                <td colspan="6" class="text-center py-4 text-muted">
-                    <i class="fas fa-search fa-2x mb-2"></i>
-                    <p>Проекты не найдены. Измените параметры поиска или создайте новый проект.</p>
-                </td>
-            </tr>
+        const emptyMessage = document.createElement('div');
+        emptyMessage.className = 'text-center text-muted py-5';
+        emptyMessage.innerHTML = `
+            <i class="fas fa-folder-open fa-3x mb-3"></i>
+            <p>Нет проектов, соответствующих условиям поиска</p>
         `;
+        projectsList.appendChild(emptyMessage);
         return;
     }
 
-    container.innerHTML = '';
-
     projects.forEach(project => {
-        const row = document.createElement('tr');
-        const statusBadgeClass = getStatusBadgeClass(project.status);
-        const period = formatDateRange(project.start_date, project.end_date);
+        const card = document.createElement('div');
+        card.className = 'card mb-3 project-card';
+        card.dataset.projectId = project.id;
 
-        row.innerHTML = `
-            <td>
-                <a href="/projects/${project.id}" class="fw-medium text-decoration-none">
-                    ${project.name}
-                </a>
-            </td>
-            <td>${project.client ? project.client.name : '-'}</td>
-            <td>${period}</td>
-            <td>${project.booking_count || 0}</td>
-            <td>
-                <span class="badge ${statusBadgeClass}">
-                    ${getStatusName(project.status)}
-                </span>
-            </td>
-            <td>
-                <div class="btn-group btn-group-sm">
-                    <a href="/projects/${project.id}" class="btn btn-outline-primary">
-                        <i class="fas fa-eye"></i>
-                    </a>
-                    <a href="/projects/${project.id}/edit" class="btn btn-outline-secondary">
-                        <i class="fas fa-edit"></i>
-                    </a>
+        card.innerHTML = `
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <h5 class="card-title mb-0">${project.name}</h5>
+                    <span class="badge bg-${getStatusColor(project.status)}">${project.status}</span>
                 </div>
-            </td>
+                <p class="card-text text-muted">${project.client_name}</p>
+                <div class="row mb-2">
+                    <div class="col-md-6">
+                        <small><strong>Период:</strong> ${formatDate(project.start_date)} - ${formatDate(project.end_date)}</small>
+                    </div>
+                    <div class="col-md-6">
+                        <small><strong>Создан:</strong> ${formatDateTime(project.created_at)}</small>
+                    </div>
+                </div>
+                <div class="d-flex justify-content-end">
+                    <button class="btn btn-sm btn-outline-primary view-project-btn" data-project-id="${project.id}">
+                        <i class="fas fa-eye"></i> Просмотр
+                    </button>
+                </div>
+            </div>
         `;
 
-        container.appendChild(row);
+        projectsList.appendChild(card);
+
+        // Add click event to the whole card
+        card.addEventListener('click', () => {
+            window.location.href = `/projects/${project.id}`;
+        });
+
+        // Prevent button click from triggering card click
+        card.querySelector('.view-project-btn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            window.location.href = `/projects/${project.id}`;
+        });
     });
 }
 
