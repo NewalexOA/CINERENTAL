@@ -623,7 +623,7 @@ async def test_scan_session(
 
     scan_session = ScanSession.create_with_expiration(
         name='Test Session',
-        user_id=test_user.id,  # Use the test user ID instead of hardcoded 1
+        user_id=None,  # In MVP, there are no users
         items=items,
         days=7,
     )

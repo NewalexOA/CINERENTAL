@@ -11,7 +11,16 @@ services:
         INSTALL_PLAYWRIGHT: true
     entrypoint: ./docker/run-tests.sh
     volumes:
-      - ./:/app
+      - ./app:/app/app
+      - ./tests:/app/tests
+      - ./alembic:/app/alembic
+      - ./docker:/app/docker
+      - ./media:/app/media
+      - ./static:/app/static
+      - ./templates:/app/templates
+      - ./alembic.ini:/app/alembic.ini
+      - ./pyproject.toml:/app/pyproject.toml
+      - ./htmlcov:/app/htmlcov
     environment:
       - POSTGRES_SERVER=test_db
       - POSTGRES_USER=postgres
