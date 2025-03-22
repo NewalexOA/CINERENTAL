@@ -92,7 +92,14 @@ async def get_project(
     service = ProjectService(db)
     try:
         project = await service.get_project(project_id, with_bookings=True)
-        return ProjectWithBookings.model_validate(project)
+
+        # Ensure client data is loaded
+        await db.refresh(project, ['client'])
+
+        # Create response with client data
+        response_data = {**project.__dict__, 'client_name': project.client.name}
+
+        return ProjectWithBookings.model_validate(response_data)
     except NotFoundError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
 
@@ -127,7 +134,17 @@ async def create_project(
             description=project.description,
             notes=project.notes,
         )
-        return ProjectResponse.model_validate(created_project)
+
+        await db.commit()
+
+        await db.refresh(created_project, ['client'])
+
+        response_data = {
+            **created_project.__dict__,
+            'client_name': created_project.client.name,
+        }
+
+        return ProjectResponse.model_validate(response_data)
     except NotFoundError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
     except ValidationError as e:

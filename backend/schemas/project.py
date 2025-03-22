@@ -43,7 +43,7 @@ class ProjectBase(BaseModel):
 class ProjectCreate(ProjectBase):
     """Create project request schema."""
 
-    pass
+    status: ProjectStatus = Field(default=ProjectStatus.DRAFT, title='Project Status')
 
 
 class ProjectUpdate(BaseModel):
