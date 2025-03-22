@@ -37,9 +37,21 @@ from backend.core.config import settings
 from backend.core.database import get_db
 from backend.core.logging import configure_logging
 from backend.main import app as main_app
-from backend.models import Booking, Category, Client, Document, Equipment
+from backend.models import (
+    Booking,
+    Category,
+    Client,
+    Document,
+    Equipment,
+    ScanSession,
+    User,
+)
 from backend.models.core import Base
-from backend.repositories import BookingRepository, EquipmentRepository
+from backend.repositories import (
+    BookingRepository,
+    EquipmentRepository,
+    ScanSessionRepository,
+)
 from backend.repositories.global_barcode import GlobalBarcodeSequenceRepository
 from backend.schemas import (
     BookingStatus,
@@ -55,6 +67,7 @@ from backend.services import (
     ClientService,
     DocumentService,
     EquipmentService,
+    ScanSessionService,
 )
 
 
@@ -133,6 +146,13 @@ def async_fixture(
 ) -> Callable[P, Generator[T, None, None]]: ...
 
 
+async def async_for_first(gen: AsyncGenerator[T, None]) -> T:
+    """Get first item from async generator."""
+    async for item in gen:
+        return item
+    raise StopAsyncIteration
+
+
 def async_fixture(
     func: Callable[P, AsyncGenerator[T, None] | Coroutine[Any, Any, T]],
 ) -> Callable[P, Generator[T, None, None]]:
@@ -144,26 +164,26 @@ def async_fixture(
     Returns:
         Decorated fixture function with preserved signature and metadata
     """
-    fixture = pytest_asyncio.fixture(func)
 
     @wraps(func)
-    async def wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
-        result = await fixture(*args, **kwargs)
-        if isinstance(result, AsyncGenerator):
-            async for item in result:
-                return cast(T, item)
-        return cast(T, result)
+    def wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
+        coro_or_gen = func(*args, **kwargs)
+        if hasattr(coro_or_gen, '__aiter__'):
+            async_gen = cast(AsyncGenerator[T, None], coro_or_gen)
+            return cast(T, run_sync(async_for_first(async_gen)))
+        else:
+            return cast(T, run_sync(cast(Coroutine[Any, Any, T], coro_or_gen)))
 
     return cast(
         Callable[P, Generator[T, None, None]],
-        wrapper,
+        pytest_asyncio.fixture(wrapper),
     )
 
 
 # Test database URL
 TEST_DATABASE_URL = (
     f'postgresql+asyncpg://{settings.POSTGRES_USER}:{settings.POSTGRES_PASSWORD}'
-    f'@{settings.POSTGRES_SERVER}:{settings.POSTGRES_PORT}/cinerental_test'
+    f'@{settings.POSTGRES_SERVER}:{settings.POSTGRES_PORT}/act_rental_test'
 )
 
 
@@ -182,12 +202,12 @@ async def create_test_database() -> None:
         await sys_conn.execute(
             '''SELECT pg_terminate_backend(pg_stat_activity.pid)
                 FROM pg_stat_activity
-                WHERE pg_stat_activity.datname = 'cinerental_test'
+                WHERE pg_stat_activity.datname = 'act_rental_test'
                 AND pid <> pg_backend_pid();
             '''
         )
-        await sys_conn.execute('DROP DATABASE IF EXISTS cinerental_test')
-        await sys_conn.execute('CREATE DATABASE cinerental_test')
+        await sys_conn.execute('DROP DATABASE IF EXISTS act_rental_test')
+        await sys_conn.execute('CREATE DATABASE act_rental_test')
     except asyncpg.exceptions.DuplicateDatabaseError:
         pass
     finally:
@@ -243,12 +263,9 @@ async def test_category(db_session: AsyncSession) -> Category:
 async def test_client(db_session: AsyncSession) -> AsyncGenerator[Client, None]:
     """Create a test client."""
     client = Client(
-        first_name='Test',
-        last_name='Client',
+        name='Test Client',
         email='test@example.com',
         phone='+1234567890',
-        passport_number='TEST123',
-        address='Test Address',
         company='Test Company',
         notes='Test notes',
     )
@@ -343,7 +360,7 @@ async def cleanup_test_data(engine) -> AsyncGenerator[None, None]:
     """Clean up test data after each test."""
     yield
 
-    # Создаем новую сессию специально для очистки
+    # Create a new session specifically for cleanup
     session_factory = async_sessionmaker(
         engine, class_=AsyncSession, expire_on_commit=False, autoflush=True
     )
@@ -351,12 +368,12 @@ async def cleanup_test_data(engine) -> AsyncGenerator[None, None]:
 
     try:
         async with cleanup_session.begin():
-            # Отключаем проверку внешних ключей
+            # Disable foreign key checks
             await cleanup_session.execute(
-                text("SET session_replication_role = 'replica'")
+                text('SET session_replication_role = "replica"')
             )
 
-            # Очищаем таблицы в правильном порядке
+            # Clean tables in the correct order
             tables = [
                 'documents',
                 'bookings',
@@ -374,9 +391,9 @@ async def cleanup_test_data(engine) -> AsyncGenerator[None, None]:
                 except Exception as e:
                     print(f'Error cleaning up table {table}: {str(e)}')
 
-            # Включаем обратно проверку внешних ключей
+            # Enable foreign key checks again
             await cleanup_session.execute(
-                text("SET session_replication_role = 'origin'")
+                text('SET session_replication_role = "origin"')
             )
 
     except Exception as e:
@@ -388,7 +405,11 @@ async def cleanup_test_data(engine) -> AsyncGenerator[None, None]:
 
 def run_sync(coro):
     """Run coroutine in synchronous context."""
-    loop = asyncio.get_event_loop()
+    try:
+        loop = asyncio.get_event_loop()
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
     return loop.run_until_complete(coro)
 
 
@@ -460,8 +481,8 @@ async def equipment_with_special_chars(
 ) -> Equipment:
     """Create equipment with special characters."""
     equipment = Equipment(
-        name="Test <script>alert('XSS')</script> Equipment",
-        description="Test equipment with !@#$%^&*() special chars ' OR '1'='1",
+        name='Test <script>alert("XSS")</script> Equipment',
+        description='Test equipment with !@#$%^&*() special chars ' 'OR "1"="1"',
         barcode='DROP TABLE equipment;--',
         serial_number='Test & Equipment',
         category_id=test_category.id,
@@ -559,3 +580,60 @@ async def barcode_service(db_session: AsyncSession) -> BarcodeService:
     """Create a barcode service."""
     repo = GlobalBarcodeSequenceRepository(db_session)
     return BarcodeService(repo)
+
+
+@pytest_asyncio.fixture
+async def scan_session_repository(db_session: AsyncSession) -> ScanSessionRepository:
+    """Fixture for scan session repository."""
+    return ScanSessionRepository(db_session)
+
+
+@pytest_asyncio.fixture
+async def scan_session_service(db_session: AsyncSession) -> ScanSessionService:
+    """Create scan session service instance for testing."""
+    repo = ScanSessionRepository(db_session)
+    return ScanSessionService(repo)
+
+
+@pytest_asyncio.fixture
+async def test_user(db_session: AsyncSession) -> AsyncGenerator[User, None]:
+    """Create a test user for testing."""
+    user = User(
+        email='test@example.com',
+        hashed_password='hashed_password',
+        is_active=True,
+        is_superuser=False,
+        full_name='Test User',
+    )
+    db_session.add(user)
+    await db_session.commit()
+    await db_session.refresh(user)
+
+    yield user
+
+    # Cleanup is handled by the cleanup_test_data fixture
+
+
+@pytest_asyncio.fixture
+async def test_scan_session(
+    db_session: AsyncSession, test_user: User
+) -> AsyncGenerator[ScanSession, None]:
+    """Create a test scan session for testing."""
+    items = [{'equipment_id': 1, 'barcode': 'TEST123', 'name': 'Test Equipment'}]
+
+    scan_session = ScanSession.create_with_expiration(
+        name='Test Session',
+        user_id=None,  # In MVP, there are no users
+        items=items,
+        days=7,
+    )
+
+    db_session.add(scan_session)
+    await db_session.commit()
+    await db_session.refresh(scan_session)
+
+    yield scan_session
+
+    # Cleanup
+    await db_session.delete(scan_session)
+    await db_session.commit()

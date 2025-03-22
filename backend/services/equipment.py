@@ -73,11 +73,9 @@ class EquipmentService:
         name: str,
         description: Optional[str],
         category_id: int,
-        daily_rate: float = 0.0,
         replacement_cost: float = 0.0,
         custom_barcode: Optional[str] = None,
         serial_number: Optional[str] = None,
-        purchase_date: Optional[datetime] = None,
         notes: Optional[str] = None,
         validate_barcode_format: bool = True,
     ) -> EquipmentResponse:
@@ -87,11 +85,9 @@ class EquipmentService:
             name: Equipment name
             description: Equipment description
             category_id: Category ID
-            daily_rate: Daily rental rate
             replacement_cost: Equipment replacement cost
             custom_barcode: Optional custom barcode
             serial_number: Equipment serial number
-            purchase_date: Purchase date
             notes: Additional notes
             validate_barcode_format: Whether to validate custom barcode format
 
@@ -892,3 +888,40 @@ class EquipmentService:
         query = select(Booking).where(Booking.equipment_id == equipment_id)
         result = await self.session.execute(query)
         return list(result.scalars().all())
+
+    async def refresh_equipment_status(self, equipment_id: int) -> Equipment:
+        """Refresh equipment status based on its active bookings.
+
+        Args:
+            equipment_id: Equipment ID
+
+        Returns:
+            Updated equipment
+
+        Raises:
+            NotFoundError: If equipment not found
+        """
+        equipment = await self.get_equipment(equipment_id)
+
+        # Get active bookings for this equipment
+        active_bookings = await self.booking_repository.get_active_by_equipment(
+            equipment_id
+        )
+
+        # Filter to truly active bookings (only ACTIVE status matters, not payment)
+        active_bookings = [
+            b for b in active_bookings if b.booking_status == BookingStatus.ACTIVE
+        ]
+
+        # If there are active bookings, set status to RENTED
+        if active_bookings and equipment.status == EquipmentStatus.AVAILABLE:
+            equipment.status = EquipmentStatus.RENTED
+            updated_equipment = await self.repository.update(equipment)
+            return updated_equipment
+        # If no active bookings and equipment is RENTED, set it back to AVAILABLE
+        elif not active_bookings and equipment.status == EquipmentStatus.RENTED:
+            equipment.status = EquipmentStatus.AVAILABLE
+            updated_equipment = await self.repository.update(equipment)
+            return updated_equipment
+
+        return equipment

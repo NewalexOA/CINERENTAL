@@ -1,7 +1,13 @@
-.PHONY: install test lint format clean run migrate
+.PHONY: install install-dev install-test lint format clean run migrate
 
 install:
-	pip install -r requirements.txt
+	pip install -r requirements-prod.txt
+
+install-dev:
+	pip install -r requirements-dev.txt
+
+install-test:
+	pip install -r requirements-test.txt
 
 test:
 	pytest tests/ -v --cov=src.app

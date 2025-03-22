@@ -1,7 +1,7 @@
 {
     "info": {
-        "name": "CineRental API",
-        "description": "API collection for testing CineRental endpoints",
+        "name": "ACT-Rental API",
+        "description": "API collection for testing ACT-Rental endpoints",
         "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
     },
     "item": [

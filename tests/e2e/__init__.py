@@ -1,1 +1,1 @@
-"""End-to-end tests for the CINERENTAL application."""
+"""End-to-end tests for the ACT-RENTAL application."""

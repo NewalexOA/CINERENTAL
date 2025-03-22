@@ -7,6 +7,7 @@ from backend.models.booking import BookingStatus, PaymentStatus
 from backend.models.client import ClientStatus
 from backend.models.document import DocumentStatus, DocumentType
 from backend.models.equipment import EquipmentStatus
+from backend.models.project import ProjectStatus
 from backend.schemas.booking import (
     BookingBase,
     BookingCreate,
@@ -40,26 +41,46 @@ from backend.schemas.equipment import (
     RegenerateBarcodeRequest,
     StatusTimelineResponse,
 )
+from backend.schemas.project import (
+    BookingInProject,
+    ProjectBase,
+    ProjectCreate,
+    ProjectResponse,
+    ProjectUpdate,
+    ProjectWithBookings,
+)
+from backend.schemas.scan_session import (
+    EquipmentItem,
+    ScanSessionCreate,
+    ScanSessionResponse,
+    ScanSessionUpdate,
+)
 
 __all__ = [
+    # Status enums
     'BookingStatus',
     'PaymentStatus',
     'ClientStatus',
     'DocumentStatus',
     'DocumentType',
     'EquipmentStatus',
+    'ProjectStatus',
+    # Booking schemas
     'BookingBase',
     'BookingCreate',
     'BookingResponse',
     'BookingUpdate',
+    # Client schemas
     'ClientBase',
     'ClientCreate',
     'ClientResponse',
     'ClientUpdate',
+    # Document schemas
     'DocumentBase',
     'DocumentCreate',
     'DocumentResponse',
     'DocumentUpdate',
+    # Equipment schemas
     'EquipmentBase',
     'EquipmentCreate',
     'EquipmentResponse',
@@ -67,8 +88,22 @@ __all__ = [
     'EquipmentWithCategory',
     'RegenerateBarcodeRequest',
     'StatusTimelineResponse',
+    # Category schemas
     'CategoryCreate',
     'CategoryResponse',
     'CategoryUpdate',
     'CategoryWithEquipmentCount',
+    'CategoryTree',
+    # Project schemas
+    'ProjectBase',
+    'ProjectCreate',
+    'ProjectResponse',
+    'ProjectUpdate',
+    'ProjectWithBookings',
+    'BookingInProject',
+    # Scan Session
+    'EquipmentItem',
+    'ScanSessionCreate',
+    'ScanSessionUpdate',
+    'ScanSessionResponse',
 ]

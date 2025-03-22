@@ -19,9 +19,12 @@ from backend.api.v1.exceptions import (
 )
 from backend.core.cache import close_redis, init_redis
 from backend.core.config import settings
+from backend.core.database import AsyncSessionLocal
 from backend.core.logging import configure_logging
+from backend.core.scheduler import setup_scheduler
 from backend.core.templates import static_files
 from backend.exceptions import BusinessError
+from backend.repositories import ScanSessionRepository
 from backend.web.router import web_router
 
 
@@ -89,6 +92,16 @@ def create_app() -> FastAPI:
     # Include routers
     app.include_router(api_router, prefix=settings.API_V1_STR)
     app.include_router(web_router)
+
+    # Setup scheduler for background tasks
+    if settings.ENVIRONMENT != 'testing':
+
+        def get_scan_session_repository() -> ScanSessionRepository:
+            db = AsyncSessionLocal()
+            return ScanSessionRepository(db)
+
+        setup_scheduler(app, get_scan_session_repository)
+        logger.info('Scheduled background tasks')
 
     return app
 

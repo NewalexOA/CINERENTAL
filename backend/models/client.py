@@ -17,6 +17,7 @@ from backend.models.mixins import SoftDeleteMixin, TimestampMixin
 if TYPE_CHECKING:
     from backend.models.booking import Booking
     from backend.models.document import Document
+    from backend.models.project import Project
 
 
 class ClientStatus(str, enum.Enum):
@@ -42,30 +43,23 @@ class Client(TimestampMixin, SoftDeleteMixin, Base):
 
     Attributes:
         id: Primary key
-        first_name: Client's first name
-        last_name: Client's last name
-        email: Client's email address
-        phone: Client's phone number
-        passport_number: Client's passport number
-        address: Client's address
-        company: Client's company name
+        name: Client's full name
+        email: Client's email address (optional)
+        phone: Client's phone number (optional)
+        company: Client's company name (optional)
         status: Client's status
         notes: Optional internal notes
         bookings: Client's bookings relationship
         documents: Client's documents relationship
+        projects: Client's projects relationship
     """
 
     __tablename__ = 'clients'
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    first_name: Mapped[str] = mapped_column(String(100), nullable=False)
-    last_name: Mapped[str] = mapped_column(String(100), nullable=False)
-    email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
-    phone: Mapped[str] = mapped_column(String(20), unique=True, nullable=False)
-    passport_number: Mapped[str] = mapped_column(
-        String(20), unique=True, nullable=False
-    )
-    address: Mapped[str] = mapped_column(String(500), nullable=False)
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    email: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    phone: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
     company: Mapped[Optional[str]] = mapped_column(String(200))
     status: Mapped[ClientStatus] = mapped_column(
         client_status_enum,
@@ -78,3 +72,4 @@ class Client(TimestampMixin, SoftDeleteMixin, Base):
     # Relationships
     bookings: Mapped[List['Booking']] = relationship(back_populates='client')
     documents: Mapped[List['Document']] = relationship(back_populates='client')
+    projects: Mapped[List['Project']] = relationship(back_populates='client')

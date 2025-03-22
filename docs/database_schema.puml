@@ -1,4 +1,4 @@
-@startuml CINERENTAL Database Schema
+@startuml ACT-RENTAL Database Schema
 
 !define table(x) class x << (T,#FFAAAA) >>
 !define primary_key(x) <b>x</b>
@@ -8,70 +8,119 @@ hide methods
 hide stereotypes
 
 table(categories) {
-  primary_key(id): UUID
+  primary_key(id): INTEGER
   name: VARCHAR(255)
   description: TEXT
-  foreign_key(parent_id): UUID
+  foreign_key(parent_id): INTEGER
   created_at: TIMESTAMP
   updated_at: TIMESTAMP
+  deleted_at: TIMESTAMP
 }
 
 table(equipment) {
-  primary_key(id): UUID
-  foreign_key(category_id): UUID
-  name: VARCHAR(255)
-  description: TEXT
-  barcode: VARCHAR(50)
-  status: VARCHAR(20)
+  primary_key(id): INTEGER
+  foreign_key(category_id): INTEGER
+  name: VARCHAR(200)
+  description: VARCHAR(1000)
+  serial_number: VARCHAR(100)
+  barcode: VARCHAR(100)
+  status: ENUM
+  replacement_cost: NUMERIC(10,2)
+  notes: VARCHAR(5000)
   created_at: TIMESTAMP
   updated_at: TIMESTAMP
+  deleted_at: TIMESTAMP
 }
 
 table(clients) {
-  primary_key(id): UUID
+  primary_key(id): INTEGER
   first_name: VARCHAR(100)
   last_name: VARCHAR(100)
   email: VARCHAR(255)
   phone: VARCHAR(20)
-  address: TEXT
+  passport_number: VARCHAR(20)
+  address: VARCHAR(500)
+  company: VARCHAR(200)
+  status: ENUM
+  notes: VARCHAR(1000)
   created_at: TIMESTAMP
   updated_at: TIMESTAMP
+  deleted_at: TIMESTAMP
 }
 
 table(bookings) {
-  primary_key(id): UUID
-  foreign_key(client_id): UUID
+  primary_key(id): INTEGER
+  foreign_key(client_id): INTEGER
+  foreign_key(equipment_id): INTEGER
   start_date: TIMESTAMP
   end_date: TIMESTAMP
-  status: VARCHAR(20)
-  total_price: DECIMAL
-  created_at: TIMESTAMP
-  updated_at: TIMESTAMP
-}
-
-table(booking_items) {
-  primary_key(id): UUID
-  foreign_key(booking_id): UUID
-  foreign_key(equipment_id): UUID
+  actual_return_date: TIMESTAMP
+  booking_status: ENUM
+  payment_status: ENUM
+  total_amount: NUMERIC(10,2)
+  paid_amount: NUMERIC(10,2)
+  deposit_amount: NUMERIC(10,2)
+  notes: VARCHAR(1000)
   created_at: TIMESTAMP
   updated_at: TIMESTAMP
 }
 
 table(documents) {
-  primary_key(id): UUID
-  foreign_key(booking_id): UUID
-  type: VARCHAR(50)
-  number: VARCHAR(100)
-  content: TEXT
+  primary_key(id): INTEGER
+  foreign_key(client_id): INTEGER
+  foreign_key(booking_id): INTEGER
+  type: ENUM
+  title: VARCHAR(200)
+  description: VARCHAR(1000)
+  file_path: VARCHAR(500)
+  file_name: VARCHAR(255)
+  file_size: INTEGER
+  mime_type: VARCHAR(100)
+  notes: VARCHAR(1000)
+  status: ENUM
   created_at: TIMESTAMP
   updated_at: TIMESTAMP
 }
 
+table(users) {
+  primary_key(id): INTEGER
+  email: VARCHAR(255)
+  hashed_password: VARCHAR(255)
+  is_active: BOOLEAN
+  is_superuser: BOOLEAN
+  full_name: VARCHAR(255)
+  created_at: TIMESTAMP
+  updated_at: TIMESTAMP
+  deleted_at: TIMESTAMP
+}
+
+table(global_barcode_sequence) {
+  primary_key(id): INTEGER
+  last_number: INTEGER
+  created_at: TIMESTAMP
+  updated_at: TIMESTAMP
+  deleted_at: TIMESTAMP
+}
+
+table(barcode_sequences) {
+  primary_key(id): INTEGER
+  foreign_key(category_id): INTEGER
+  last_number: INTEGER
+  created_at: TIMESTAMP
+  updated_at: TIMESTAMP
+  deleted_at: TIMESTAMP
+}
+
+table(alembic_version) {
+  version_num: VARCHAR(32)
+}
+
 categories "1" -- "0..*" categories : parent >
 categories "1" -- "0..*" equipment : contains >
+categories "1" -- "0..*" barcode_sequences : has >
 clients "1" -- "0..*" bookings : makes >
-bookings "1" -- "0..*" booking_items : contains >
+clients "1" -- "0..*" documents : has >
+equipment "1" -- "0..*" bookings : used in >
 bookings "1" -- "0..*" documents : has >
-equipment "1" -- "0..*" booking_items : included in >
 
 @enduml

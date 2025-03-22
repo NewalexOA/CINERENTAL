@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.exceptions import (
     AvailabilityError,
+    BusinessError,
     DateError,
     DurationError,
     NotFoundError,
@@ -455,19 +456,21 @@ class BookingService:
             BookingStatus.PENDING: [
                 BookingStatus.CONFIRMED,
                 BookingStatus.CANCELLED,
-                BookingStatus.ACTIVE,  # Allow direct activation for quick bookings
+                BookingStatus.ACTIVE,
+                BookingStatus.COMPLETED,
             ],
             BookingStatus.CONFIRMED: [
                 BookingStatus.ACTIVE,
                 BookingStatus.CANCELLED,
+                BookingStatus.COMPLETED,
             ],
             BookingStatus.ACTIVE: [
                 BookingStatus.COMPLETED,
                 BookingStatus.OVERDUE,
                 BookingStatus.CANCELLED,
             ],
-            BookingStatus.COMPLETED: [],  # Terminal state
-            BookingStatus.CANCELLED: [],  # Terminal state
+            BookingStatus.COMPLETED: [],
+            BookingStatus.CANCELLED: [],
             BookingStatus.OVERDUE: [
                 BookingStatus.COMPLETED,
                 BookingStatus.CANCELLED,
@@ -511,6 +514,17 @@ class BookingService:
             )
             if not is_available:
                 raise StateError('Equipment is already booked for this period')
+
+        # Check payment status for COMPLETED transition
+        elif new_status == BookingStatus.COMPLETED:
+            if booking.payment_status != PaymentStatus.PAID:
+                raise BusinessError(
+                    'Cannot complete booking without payment',
+                    details={
+                        'booking_id': booking.id,
+                        'payment_status': booking.payment_status,
+                    },
+                )
 
         booking.booking_status = new_status
 
@@ -558,10 +572,16 @@ class BookingService:
                 PaymentStatus.PARTIAL.value,
                 PaymentStatus.PAID.value,
             ],
-            PaymentStatus.PARTIAL.value: [PaymentStatus.PAID.value],
-            PaymentStatus.PAID.value: [],
+            PaymentStatus.PARTIAL.value: [
+                PaymentStatus.PAID.value,
+                PaymentStatus.PENDING.value,
+            ],
+            PaymentStatus.PAID.value: [PaymentStatus.PENDING.value],
             PaymentStatus.REFUNDED.value: [],
-            PaymentStatus.OVERDUE.value: [PaymentStatus.PAID.value],
+            PaymentStatus.OVERDUE.value: [
+                PaymentStatus.PAID.value,
+                PaymentStatus.PENDING.value,
+            ],
         }
 
         current_status = booking.payment_status.value

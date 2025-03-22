@@ -2,20 +2,25 @@
 
 import logging
 import os
+import subprocess
 import sys
 import time
-from typing import Any, Callable, Optional
+from typing import Any, Callable, Optional, cast
 
 from docker_manager import DockerManager
 from PyQt5.QtCore import QEvent, QSettings, QThread, pyqtSignal
 from PyQt5.QtGui import QFont, QIcon
 from PyQt5.QtWidgets import (
+    QAction,
     QApplication,
     QFileDialog,
     QGroupBox,
     QHBoxLayout,
     QLabel,
+    QLayout,
     QMainWindow,
+    QMenu,
+    QMenuBar,
     QMessageBox,
     QProgressBar,
     QPushButton,
@@ -125,6 +130,7 @@ class MainWindow(QMainWindow):
         # Initialize Docker manager with the project path
         self.docker = DockerManager(project_path=project_path)
         self.log_monitor_thread = None
+        self.container_log_monitor: Optional[QThread] = None
 
         # Initialize UI and check status
         self.init_ui()
@@ -192,16 +198,16 @@ class MainWindow(QMainWindow):
             self.setWindowIcon(QIcon(icon_path))
 
         # Set up menubar
-        menubar = self.menuBar()
-        file_menu = menubar.addMenu('Файл')
+        menubar = cast(QMenuBar, self.menuBar())
+        file_menu = cast(QMenu, menubar.addMenu('Файл'))
 
         # Add menu actions
-        change_path_action = file_menu.addAction('Изменить путь проекта')
+        change_path_action = cast(QAction, file_menu.addAction('Изменить путь проекта'))
         change_path_action.triggered.connect(self.change_project_path)
 
         file_menu.addSeparator()
-        exit_action = file_menu.addAction('Выход')
-        exit_action.triggered.connect(self.close)
+        exit_action = cast(QAction, file_menu.addAction('Выход'))
+        exit_action.triggered.connect(self.close_window)
 
         # Main layout setup
         main_widget = QWidget()
@@ -212,7 +218,7 @@ class MainWindow(QMainWindow):
         header_layout = QHBoxLayout()
         logo_label = QLabel()
         # A logo can be added here if available
-        # logo_pixmap = QPixmap("assets/logo.png")
+        # logo_pixmap = QPixmap('assets/logo.png')
         # logo_label.setPixmap(logo_pixmap.scaled(64, 64, Qt.KeepAspectRatio))
 
         title_label = QLabel('ACT-Rental Launcher')
@@ -248,12 +254,16 @@ class MainWindow(QMainWindow):
         self.restart_button = QPushButton('Перезапустить')
         self.restart_button.clicked.connect(self.restart_containers)
 
+        self.rebuild_button = QPushButton('Пересобрать')
+        self.rebuild_button.clicked.connect(self.rebuild_containers)
+
         self.open_button = QPushButton('Открыть в браузере')
         self.open_button.clicked.connect(self.open_in_browser)
 
         buttons_layout.addWidget(self.start_button)
         buttons_layout.addWidget(self.stop_button)
         buttons_layout.addWidget(self.restart_button)
+        buttons_layout.addWidget(self.rebuild_button)
         buttons_layout.addWidget(self.open_button)
 
         control_layout.addLayout(buttons_layout)
@@ -280,8 +290,12 @@ class MainWindow(QMainWindow):
         view_docker_logs_button = QPushButton('Показать логи контейнера')
         view_docker_logs_button.clicked.connect(self.show_container_logs)
 
+        monitor_logs_button = QPushButton('Мониторинг логов')
+        monitor_logs_button.clicked.connect(self.start_container_log_monitoring)
+
         log_buttons_layout.addWidget(clear_log_button)
         log_buttons_layout.addWidget(view_docker_logs_button)
+        log_buttons_layout.addWidget(monitor_logs_button)
         logs_layout.addLayout(log_buttons_layout)
 
         main_layout.addWidget(logs_group)
@@ -299,6 +313,33 @@ class MainWindow(QMainWindow):
         self.log_monitor = LogMonitorThread(self.docker.log_file)
         self.log_monitor.update_signal.connect(self.update_log)
         self.log_monitor.start()
+
+        # Show welcome message in logs
+        self.log_text.append('=== Лаунчер запущен ===')
+
+        # Automatically start container log monitoring if it's running
+        if self.docker.check_act_rental_running():
+            self.log_text.append('Запуск мониторинга логов контейнера...')
+            self.start_container_log_monitoring(auto_start=True)
+        else:
+            self.log_text.append(
+                'Контейнеры не запущены. Запустите контейнеры для просмотра логов.'
+            )
+
+    def update_container_logs(self) -> None:
+        """Fetch and display container logs."""
+        logs = self.docker.get_container_logs(lines=100)
+        if logs and logs != 'Ошибка при получении логов':
+            self.log_text.clear()
+            self.log_text.append('=== Логи контейнера ===')
+            self.log_text.append(logs)
+
+            # Scroll to the bottom
+            scrollbar = self.log_text.verticalScrollBar()
+            if scrollbar is not None:
+                scrollbar.setValue(scrollbar.maximum())
+        else:
+            self.log_text.append('Ошибка при получении логов контейнера')
 
     def update_log(self, text: str) -> None:
         """Update log display with new text."""
@@ -338,6 +379,7 @@ class MainWindow(QMainWindow):
         self.start_button.setEnabled(docker_running and not running)
         self.stop_button.setEnabled(docker_running and running)
         self.restart_button.setEnabled(docker_running and running)
+        self.rebuild_button.setEnabled(docker_running)
         self.open_button.setEnabled(running)
 
     def start_containers(self) -> None:
@@ -365,6 +407,9 @@ class MainWindow(QMainWindow):
             self.status_label.setStyleSheet('color: green;')
             self.update_buttons_state(True, running=True)
             self.status_bar.showMessage(message)
+
+            # Start log monitoring
+            self.start_container_log_monitoring(auto_start=True)
 
             reply = QMessageBox.question(
                 self,
@@ -424,6 +469,16 @@ class MainWindow(QMainWindow):
             self.status_label.setStyleSheet('color: orange;')
             self.update_buttons_state(True, running=False)
             self.status_bar.showMessage(message)
+
+            if (
+                hasattr(self, 'container_log_monitor')
+                and isinstance(self.container_log_monitor, QThread)
+                and self.container_log_monitor.isRunning()
+                and hasattr(self.container_log_monitor, 'running')
+            ):
+                self.container_log_monitor.running = False
+                self.container_log_monitor.wait()
+                self.log_text.append('=== Контейнеры остановлены ===')
         else:
             self.status_label.setText('Ошибка при остановке ACT-Rental')
             self.status_label.setStyleSheet('color: red;')
@@ -472,6 +527,8 @@ class MainWindow(QMainWindow):
             self.status_label.setStyleSheet('color: green;')
             self.update_buttons_state(True, running=True)
             self.status_bar.showMessage(message)
+
+            self.start_container_log_monitoring(auto_start=True)
         else:
             self.status_label.setText('Ошибка при перезапуске ACT-Rental')
             self.status_label.setStyleSheet('color: red;')
@@ -498,6 +555,12 @@ class MainWindow(QMainWindow):
         """Show container logs."""
         logs = self.docker.get_container_logs()
 
+        # Show logs directly in the main log panel
+        self.log_text.clear()
+        self.log_text.append('=== Логи контейнера ===')
+        self.log_text.append(logs)
+
+        # Create and show a dialog with logs
         log_dialog = QMainWindow(self)
         log_dialog.setWindowTitle('Логи контейнера')
         log_dialog.setMinimumSize(700, 500)
@@ -522,11 +585,132 @@ class MainWindow(QMainWindow):
         log_dialog.setCentralWidget(central_widget)
         log_dialog.show()
 
+    def start_container_log_monitoring(self, auto_start: bool = False) -> None:
+        """Start real-time monitoring of container logs.
+
+        Args:
+            auto_start: Whether this is an automatic start at launcher initialization
+        """
+        if not auto_start:
+            self.log_text.clear()
+        self.log_text.append('=== Запуск мониторинга логов контейнера ===')
+
+        if not self.docker.check_act_rental_running():
+            self.log_text.append('Контейнер не запущен. Мониторинг невозможен.')
+            return
+
+        class ContainerLogMonitorThread(QThread):
+            update_signal = pyqtSignal(str)
+
+            def __init__(self, docker_manager: DockerManager) -> None:
+                super().__init__()
+                self.docker = docker_manager
+                self.running = True
+
+            def run(self) -> None:
+                docker_compose_cmd = self.docker.get_docker_compose_cmd()
+                cmd = f'{docker_compose_cmd} logs -f web'
+
+                try:
+                    process = subprocess.Popen(
+                        cmd,
+                        shell=True,
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.STDOUT,
+                        text=True,
+                        bufsize=1,
+                        universal_newlines=True,
+                    )
+
+                    if process.stdout:
+                        for line in iter(process.stdout.readline, ''):
+                            if not self.running:
+                                process.terminate()
+                                break
+                            self.update_signal.emit(line.rstrip())
+                    else:
+                        self.update_signal.emit(
+                            'Ошибка: не удалось получить вывод команды'
+                        )
+
+                except Exception as e:
+                    self.update_signal.emit(f'Ошибка мониторинга: {str(e)}')
+
+            def stop(self) -> None:
+                self.running = False
+
+        if (
+            hasattr(self, 'container_log_monitor')
+            and isinstance(self.container_log_monitor, QThread)
+            and self.container_log_monitor.isRunning()
+            and hasattr(self.container_log_monitor, 'running')
+        ):
+            self.container_log_monitor.running = False
+            self.container_log_monitor.wait()
+
+        self.container_log_monitor = ContainerLogMonitorThread(self.docker)
+        self.container_log_monitor.update_signal.connect(self.update_log)
+        self.container_log_monitor.start()
+
+        if not hasattr(self, 'stop_monitoring_button'):
+            self.stop_monitoring_button = QPushButton('Остановить мониторинг')
+            self.stop_monitoring_button.clicked.connect(
+                self.stop_container_log_monitoring
+            )
+
+            central_widget = self.centralWidget()
+            if central_widget and central_widget.layout():
+                layout = cast(QLayout, central_widget.layout())
+                for i in range(layout.count()):
+                    item = layout.itemAt(i)
+                    if item and item.widget():
+                        widget = item.widget()
+                        if isinstance(widget, QGroupBox) and widget.title() == 'Логи':
+                            if widget.layout():
+                                logs_layout = cast(QLayout, widget.layout())
+                                for j in range(logs_layout.count()):
+                                    layout_item = logs_layout.itemAt(j)
+                                    if layout_item and isinstance(
+                                        layout_item, QHBoxLayout
+                                    ):
+                                        layout_item.addWidget(
+                                            self.stop_monitoring_button
+                                        )
+                                        break
+                        break
+        else:
+            self.stop_monitoring_button.setVisible(True)
+
+    def stop_container_log_monitoring(self) -> None:
+        """Stop container log monitoring."""
+        if (
+            hasattr(self, 'container_log_monitor')
+            and isinstance(self.container_log_monitor, QThread)
+            and self.container_log_monitor.isRunning()
+            and hasattr(self.container_log_monitor, 'running')
+        ):
+            self.container_log_monitor.running = False
+            self.container_log_monitor.wait()
+            self.log_text.append('=== Мониторинг остановлен ===')
+            if hasattr(self, 'stop_monitoring_button'):
+                self.stop_monitoring_button.setVisible(False)
+
     def closeEvent(self, event: Optional[QEvent]) -> None:
         """Handle window close event."""
+        # Stop log file monitoring
         if hasattr(self, 'log_monitor'):
             self.log_monitor.stop()
             self.log_monitor.wait()
+
+        # Stop container log monitoring
+        if (
+            hasattr(self, 'container_log_monitor')
+            and isinstance(self.container_log_monitor, QThread)
+            and self.container_log_monitor.isRunning()
+            and hasattr(self.container_log_monitor, 'running')
+        ):
+            self.container_log_monitor.running = False
+            self.container_log_monitor.wait()
 
         if event:
             event.accept()
@@ -551,6 +735,107 @@ class MainWindow(QMainWindow):
             # Restart the application
             python = sys.executable
             os.execl(python, python, *sys.argv)
+
+    def rebuild_containers(self) -> None:
+        """Rebuild ACT-Rental containers."""
+        reply = QMessageBox.question(
+            self,
+            'Пересборка контейнеров',
+            'Вы уверены, что хотите пересобрать контейнеры?\n'
+            'Это займет некоторое время и требует доступа к интернету.',
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No,
+        )
+
+        if reply != QMessageBox.Yes:
+            return
+
+        self.status_bar.showMessage('Пересборка контейнеров...')
+        self.status_label.setText('Пересборка контейнеров...')
+        self.status_label.setStyleSheet('color: orange;')
+
+        self.update_buttons_state(False)
+
+        self.progress_bar.setVisible(True)
+        self.progress_bar.setRange(0, 0)  # Infinite progress
+
+        self.worker = WorkerThread(self.docker.rebuild_containers)
+        self.worker.update_signal.connect(self.update_log)
+        self.worker.finished_signal.connect(self.on_rebuild_finished)
+        self.worker.start()
+
+    def on_rebuild_finished(self, success: bool, message: str) -> None:
+        """Handle container rebuild operation completion."""
+        self.progress_bar.setVisible(False)
+
+        if success:
+            self.status_label.setText('ACT-Rental пересобран')
+            self.status_label.setStyleSheet('color: green;')
+            self.update_buttons_state(True, running=False)
+            self.status_bar.showMessage(message)
+
+            reply = QMessageBox.question(
+                self,
+                'Пересборка завершена',
+                'Контейнеры успешно пересобраны. Хотите запустить контейнеры?',
+                QMessageBox.Yes | QMessageBox.No,
+                QMessageBox.Yes,
+            )
+
+            if reply == QMessageBox.Yes:
+                self.start_containers()
+            else:
+                QMessageBox.information(
+                    self,
+                    'Пересборка завершена',
+                    'Образы пересобраны. Используйте кнопку "Запустить" для '
+                    'запуска контейнеров.',
+                )
+        else:
+            self.status_label.setText('Ошибка при пересборке ACT-Rental')
+            self.status_label.setStyleSheet('color: red;')
+            self.check_status()
+            self.status_bar.showMessage(message)
+
+            reply = QMessageBox.question(
+                self,
+                'Ошибка пересборки',
+                f'Не удалось пересобрать ACT-Rental: {message}\n\n'
+                'Хотите запустить контейнеры без пересборки?',
+                QMessageBox.Yes | QMessageBox.No,
+                QMessageBox.Yes,
+            )
+
+            if reply == QMessageBox.Yes:
+                self.start_without_rebuild()
+            else:
+                QMessageBox.critical(
+                    self,
+                    'Ошибка пересборки',
+                    'Не удалось пересобрать ACT-Rental. '
+                    'Попробуйте запустить скрипт run_dev.sh вручную.',
+                )
+
+    def start_without_rebuild(self) -> None:
+        """Start containers without rebuilding."""
+        self.status_bar.showMessage('Запуск контейнеров без пересборки...')
+        self.status_label.setText('Запуск контейнеров...')
+        self.status_label.setStyleSheet('color: orange;')
+
+        self.update_buttons_state(False)
+
+        self.progress_bar.setVisible(True)
+        self.progress_bar.setRange(0, 0)  # Infinite progress
+
+        # Common method to start containers
+        self.worker = WorkerThread(self.docker.start_containers)
+        self.worker.update_signal.connect(self.update_log)
+        self.worker.finished_signal.connect(self.on_start_finished)
+        self.worker.start()
+
+    def close_window(self) -> None:
+        """Close the application window."""
+        self.close()
 
 
 if __name__ == '__main__':

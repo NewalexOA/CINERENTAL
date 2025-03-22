@@ -1,6 +1,26 @@
 #!/bin/bash
 set -e
 
+# Устанавливаем утилиты PostgreSQL, если они не установлены
+if ! command -v psql &> /dev/null; then
+    echo "Installing PostgreSQL client..."
+    apt-get update -qq
+    apt-get install -y --no-install-recommends postgresql-client
+fi
+
+# Проверяем, запущены ли необходимые сервисы
+if ! nc -z test_db 5432 &> /dev/null; then
+    echo "ОШИБКА: Сервис test_db не доступен. Запустите тесты через docker-compose.test.yml:"
+    echo "docker compose -f docker-compose.test.yml run --rm test [test_path/and_options]"
+    exit 1
+fi
+
+if ! nc -z redis 6379 &> /dev/null; then
+    echo "ОШИБКА: Сервис redis не доступен. Запустите тесты через docker-compose.test.yml:"
+    echo "docker compose -f docker-compose.test.yml run --rm test [test_path/and_options]"
+    exit 1
+fi
+
 # Wait for services to be ready
 echo "Waiting for PostgreSQL..."
 ./docker/wait-for.sh postgres test_db 5432

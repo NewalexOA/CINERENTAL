@@ -23,7 +23,7 @@ class DockerManager:
             compose_file: Docker compose file name
             log_folder: Path to log folder
         """
-        self.project_path = project_path or os.path.expanduser('~/Github/ACT-Rental')
+        self.project_path = project_path or os.path.expanduser('~/Github/CINERENTAL')
         self.compose_file = compose_file
 
         self.log_folder = log_folder or os.path.join(self.project_path, 'logs')
@@ -91,31 +91,108 @@ class DockerManager:
             path_string = ':'.join(paths)
             env['PATH'] = path_string + ((':' + env['PATH']) if 'PATH' in env else '')
 
-            result = subprocess.run(
-                command,
-                shell=True,
-                capture_output=capture_output,
-                text=True,
-                check=check,
-                env=env,
-            )
-
-            os.chdir(cwd)
-
-            if result.returncode == 0:
-                self.logger.debug(f'Команда выполнена успешно: {command}')
-            else:
-                self.logger.warning(
-                    f'Команда завершилась с ошибкой (код {result.returncode}): '
-                    f'{command}'
+            # Check if it's a build command which might need real-time output
+            if 'build' in command and capture_output:
+                self.logger.debug(
+                    'Выполнение команды сборки с выводом в реальном времени'
                 )
-                self.logger.warning(f'Stderr: {result.stderr}')
+                with open(
+                    os.path.join(self.log_folder, 'build_output.log'), 'w'
+                ) as build_log:
+                    process = subprocess.Popen(
+                        command,
+                        shell=True,
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.PIPE,
+                        text=True,
+                        env=env,
+                        bufsize=1,
+                        universal_newlines=True,
+                    )
 
-            return result
+                    stdout_lines = []
+                    stderr_lines = []
+
+                    # Process stdout
+                    if process.stdout:
+                        for line in process.stdout:
+                            line = line.rstrip()
+                            stdout_lines.append(line)
+                            build_log.write(line + '\n')
+                            build_log.flush()
+                            self.logger.debug(f'BUILD OUT: {line}')
+                    else:
+                        self.logger.warning('No stdout from build process')
+
+                    # Process stderr
+                    if process.stderr:
+                        for line in process.stderr:
+                            line = line.rstrip()
+                            stderr_lines.append(line)
+                            build_log.write(f'ERROR: {line}\n')
+                            build_log.flush()
+                            self.logger.error(f'BUILD ERROR: {line}')
+                    else:
+                        self.logger.warning('No stderr from build process')
+
+                    process.wait()
+                    returncode = process.returncode
+
+                    # Create a CompletedProcess-like object for compatibility
+                    result = subprocess.CompletedProcess(
+                        args=command,
+                        returncode=returncode,
+                        stdout='\n'.join(stdout_lines),
+                        stderr='\n'.join(stderr_lines),
+                    )
+
+                    if returncode == 0:
+                        self.logger.debug(
+                            f'Команда сборки выполнена успешно: {command}'
+                        )
+                    else:
+                        self.logger.warning(
+                            f'Команда сборки завершилась с ошибкой '
+                            f'(код {returncode}): {command}'
+                        )
+                        self.logger.warning(f'Stderr: {result.stderr}')
+
+                    os.chdir(cwd)
+                    return result
+            else:
+                # Standard execution for non-build commands
+                result = subprocess.run(
+                    command,
+                    shell=True,
+                    capture_output=capture_output,
+                    text=True,
+                    check=check,
+                    env=env,
+                )
+
+                os.chdir(cwd)
+
+                if result.returncode == 0:
+                    self.logger.debug(f'Команда выполнена успешно: {command}')
+                else:
+                    self.logger.warning(
+                        f'Команда завершилась с ошибкой (код {result.returncode}): '
+                        f'{command}'
+                    )
+                    if hasattr(result, 'stderr') and result.stderr:
+                        self.logger.warning(f'Stderr: {result.stderr}')
+                    if hasattr(result, 'stdout') and result.stdout:
+                        self.logger.debug(f'Stdout: {result.stdout}')
+
+                return result
 
         except subprocess.CalledProcessError as e:
             self.logger.error(f'Ошибка при выполнении команды: {command}')
             self.logger.error(f'Сообщение: {str(e)}')
+            if hasattr(e, 'stderr') and e.stderr:
+                self.logger.error(f'Stderr: {e.stderr}')
+            if hasattr(e, 'stdout') and e.stdout:
+                self.logger.debug(f'Stdout: {e.stdout}')
             return e
         except Exception as e:
             self.logger.error(f'Неожиданная ошибка при выполнении команды: {command}')
@@ -452,3 +529,139 @@ class DockerManager:
             return str(result.stdout)
         else:
             return 'Ошибка при получении логов'
+
+    def rebuild_containers(self) -> Tuple[bool, str]:
+        """Rebuild ACT-Rental containers with fresh code."""
+        self.logger.info('Пересборка контейнеров ACT-Rental...')
+
+        if not self.is_docker_running():
+            return False, 'Docker не запущен'
+
+        docker_compose_cmd = self.get_docker_compose_cmd()
+
+        # Stop containers
+        self.logger.info('Stopping containers...')
+        result_stop = self.run_command(f'{docker_compose_cmd} down')
+
+        if not result_stop or result_stop.returncode != 0:
+            error_msg = 'Ошибка при остановке контейнеров'
+            self.logger.error(error_msg)
+            return False, error_msg
+
+        # Remove old images
+        self.logger.info('Удаляем старые образы...')
+        self.run_command('docker image prune -f')
+
+        # Check for required build files and verify project path
+        self.logger.info('Проверка файлов для сборки и пути проекта...')
+
+        # Log the current working directory
+        current_dir = os.getcwd()
+        self.logger.info(f'Текущий рабочий каталог: {current_dir}')
+        self.logger.info(f'Путь проекта в конфигурации: {self.project_path}')
+
+        # Ensure absolute path
+        if not os.path.isabs(self.project_path):
+            abs_path = os.path.abspath(self.project_path)
+            self.logger.info(f'Преобразование пути проекта в абсолютный: {abs_path}')
+            self.project_path = abs_path
+
+        # Create list of files to check
+        files_to_check = ['Dockerfile', self.compose_file, 'app', 'requirements.txt']
+
+        for file_name in files_to_check:
+            file_path = os.path.join(self.project_path, file_name)
+            if os.path.exists(file_path):
+                self.logger.info(f'✓ Файл/каталог найден: {file_name}')
+            else:
+                self.logger.error(f'✗ Файл/каталог не найден: {file_name}')
+                # Continue checking but log the issue
+
+        dockerfile_path = os.path.join(self.project_path, 'Dockerfile')
+        compose_path = os.path.join(self.project_path, self.compose_file)
+
+        if not os.path.exists(dockerfile_path):
+            error_msg = f'Dockerfile не найден в {self.project_path}'
+            self.logger.error(error_msg)
+            return False, error_msg
+
+        if not os.path.exists(compose_path):
+            error_msg = f'Файл {self.compose_file} не найден в {self.project_path}'
+            self.logger.error(error_msg)
+            return False, error_msg
+
+        # Explicitly set working directory for build command
+        self.logger.info(f'Используем каталог проекта для сборки: {self.project_path}')
+        try:
+            os.chdir(self.project_path)
+            current_after_chdir = os.getcwd()
+            self.logger.info(f'Текущий каталог после chdir: {current_after_chdir}')
+        except Exception as e:
+            error_msg = f'Ошибка при смене рабочего каталога: {str(e)}'
+            self.logger.error(error_msg)
+            return False, error_msg
+
+        # Test docker and docker-compose availability
+        self.logger.info('Проверка доступности docker...')
+        docker_test = self.run_command('docker --version', capture_output=True)
+        if docker_test and docker_test.returncode == 0:
+            self.logger.info(f'Docker version: {docker_test.stdout.strip()}')
+        else:
+            error_msg = 'Docker не найден или не доступен'
+            self.logger.error(error_msg)
+            return False, error_msg
+
+        # Rebuild images
+        self.logger.info('Пересборка образов...')
+        build_command = f'{docker_compose_cmd} build --no-cache'
+        self.logger.info(f'Команда сборки: {build_command}')
+
+        # Save the build command for debugging
+        with open(os.path.join(self.log_folder, 'last_build_command.txt'), 'w') as f:
+            f.write(f'Working directory: {current_after_chdir}\n')
+            f.write(f'Command: {build_command}\n')
+            f.write(f'Timestamp: {time.strftime("%Y-%m-%d %H:%M:%S")}\n')
+
+        result_build = self.run_command(build_command)
+
+        if not result_build or result_build.returncode != 0:
+            stderr = (
+                result_build.stderr
+                if result_build and hasattr(result_build, 'stderr')
+                else 'Неизвестная ошибка'
+            )
+            error_msg = f'Ошибка при пересборке образов: {stderr}'
+            self.logger.error(error_msg)
+
+            # If error output is too long, write it to a separate file
+            if len(stderr) > 200:
+                error_log_file = os.path.join(self.log_folder, 'build_error.log')
+                try:
+                    with open(error_log_file, 'w', encoding='utf-8') as f:
+                        f.write(stderr)
+                    self.logger.error(
+                        f'Подробный лог ошибки записан в {error_log_file}'
+                    )
+                except Exception as e:
+                    self.logger.error(f'Не удалось записать лог ошибки: {str(e)}')
+
+            # Also check if we have any stdout
+            if result_build and hasattr(result_build, 'stdout') and result_build.stdout:
+                stdout_log_file = os.path.join(self.log_folder, 'build_stdout.log')
+                try:
+                    with open(stdout_log_file, 'w', encoding='utf-8') as f:
+                        f.write(result_build.stdout)
+                    self.logger.info(f'Вывод сборки записан в {stdout_log_file}')
+                except Exception as e:
+                    self.logger.error(f'Не удалось записать вывод сборки: {str(e)}')
+
+            return False, (
+                f'Ошибка при пересборке образов: {stderr[:200]}... '
+                f'(смотрите полный лог в {self.log_folder})'
+            )
+
+        self.logger.info('Пересборка успешно завершена!')
+        return True, (
+            'Образы успешно пересобраны. '
+            'Используйте кнопку "Запустить" для запуска контейнеров.'
+        )

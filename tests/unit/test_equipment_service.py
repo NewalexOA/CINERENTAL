@@ -288,13 +288,11 @@ class TestEquipmentService:
             deposit_amount=float(Decimal('100.00')),
         )
 
-        # Confirm booking and set payment status to PAID
-        await booking_service.change_status(booking.id, BookingStatus.CONFIRMED)
+        # Set payment status to PAID to make booking fully active
         await booking_service.update_booking(booking.id, paid_amount=300.0)
         await booking_service.change_payment_status(booking.id, PaymentStatus.PAID)
 
-        # Activate booking (now it's ACTIVE, not just PENDING or CONFIRMED)
-        await booking_service.change_status(booking.id, BookingStatus.ACTIVE)
+        # Booking is already ACTIVE by default, no need to change status
 
         # Should not be able to change status when booking is ACTIVE
         with pytest.raises(BusinessError, match='Cannot change status'):
@@ -627,13 +625,11 @@ class TestEquipmentService:
             deposit_amount=float(Decimal('100.00')),
         )
 
-        # Confirm booking and set payment status to PAID
-        await booking_service.change_status(booking.id, BookingStatus.CONFIRMED)
+        # Set payment status to PAID to make booking fully active
         await booking_service.update_booking(booking.id, paid_amount=300.0)
         await booking_service.change_payment_status(booking.id, PaymentStatus.PAID)
 
-        # Activate booking (now it's ACTIVE, not just PENDING or CONFIRMED)
-        await booking_service.change_status(booking.id, BookingStatus.ACTIVE)
+        # Booking is already ACTIVE by default, no need to change status
 
         # Try to change status to maintenance with ACTIVE booking
         with pytest.raises(BusinessError):

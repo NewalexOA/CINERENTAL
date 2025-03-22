@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Оборудование - CINERENTAL{% endblock %}
+{% block title %}Оборудование - {{ APP_NAME }}{% endblock %}
 
 {% block content %}
 <div class="container mt-4">
@@ -78,8 +78,8 @@
                                     <a href="/equipment/{{ item.id }}" class="btn btn-sm btn-outline-primary">
                                         <i class="fas fa-info-circle"></i>
                                     </a>
-                                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="copyBarcode('{{ item.barcode }}')">
-                                        <i class="fas fa-copy"></i>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="printBarcode('{{ item.id }}', '{{ item.barcode }}')">
+                                        <i class="fas fa-print"></i>
                                     </button>
                                 </div>
                             </td>
@@ -152,6 +152,102 @@
         </div>
     </div>
 </div>
+
+<!-- Barcode Print Modal -->
+<div class="modal fade" id="barcodePrintModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Выбор типа штрих-кода</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="print-barcode-equipment-id">
+                <input type="hidden" id="print-barcode-value">
+
+                <div class="mb-3 d-flex align-items-center">
+                    <button type="button" class="btn btn-outline-primary flex-grow-1" onclick="doPrintBarcode('code128')">
+                        <i class="fas fa-barcode me-1"></i> Линейный штрих-код
+                    </button>
+                    <div class="ms-3 barcode-preview-container" id="code128-preview-container">
+                        <div class="barcode-preview-inner barcode-container-linear">
+                            <img id="code128-preview" class="barcode-preview-image" alt="Предпросмотр Code128">
+                            <div class="barcode-preview-text" id="code128-text"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="d-flex align-items-center">
+                    <button type="button" class="btn btn-outline-primary flex-grow-1" onclick="doPrintBarcode('datamatrix')">
+                        <i class="fas fa-qrcode me-1"></i> DataMatrix
+                    </button>
+                    <div class="ms-3 barcode-preview-container" id="datamatrix-preview-container">
+                        <div class="barcode-preview-inner barcode-container-datamatrix">
+                            <img id="datamatrix-preview" class="barcode-preview-image" alt="Предпросмотр DataMatrix">
+                            <div class="barcode-preview-text" id="datamatrix-text"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* Existing styles... */
+
+    /* Barcode preview styles */
+    .barcode-preview-container {
+        width: 150px;
+        height: 80px;
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+    }
+
+    .barcode-preview-inner {
+        width: 100%;
+        height: 100%;
+        padding: 5px;
+    }
+
+    .barcode-container-linear {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .barcode-container-datamatrix {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        justify-content: flex-start;
+    }
+
+    .barcode-preview-image {
+        max-width: 140px;
+        max-height: 50px;
+        object-fit: contain;
+    }
+
+    .barcode-preview-text {
+        font-size: 8px;
+        font-family: monospace;
+        text-align: center;
+        margin-top: 2px;
+    }
+
+    #datamatrix-text {
+        margin-left: 5px;
+    }
+</style>
 {% endblock %}
 
 {% block extra_js %}
@@ -442,13 +538,139 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-// Copy barcode to clipboard
-function copyBarcode(barcode) {
-    navigator.clipboard.writeText(barcode).then(() => {
-        showToast('Штрих-код скопирован', 'success');
-    }).catch(() => {
-        showToast('Ошибка при копировании', 'danger');
-    });
+// barcode print
+function printBarcode(equipmentId, barcode) {
+    // Show modal for barcode type selection
+    const barcodeModal = new bootstrap.Modal(document.getElementById('barcodePrintModal'));
+
+    // Store barcode info to use when printing
+    document.getElementById('print-barcode-equipment-id').value = equipmentId;
+    document.getElementById('print-barcode-value').value = barcode;
+
+    // Load preview images
+    loadBarcodePreviews(barcode);
+
+    // Show the modal
+    barcodeModal.show();
+}
+
+// Function to load barcode preview images
+function loadBarcodePreviews(barcode) {
+    const baseUrl = '/api/v1/barcodes/';
+
+    // Load Code128 preview
+    const code128Preview = document.getElementById('code128-preview');
+    code128Preview.src = `${baseUrl}${barcode}/image?barcode_type=code128`;
+
+    // Set barcode text for Code128
+    const code128Text = document.getElementById('code128-text');
+    code128Text.textContent = barcode;
+
+    // Load DataMatrix preview
+    const datamatrixPreview = document.getElementById('datamatrix-preview');
+    datamatrixPreview.src = `${baseUrl}${barcode}/image?barcode_type=datamatrix`;
+
+    // Set barcode text for DataMatrix
+    const datamatrixText = document.getElementById('datamatrix-text');
+    datamatrixText.textContent = barcode;
+}
+
+// Function to handle the actual printing after selection
+function doPrintBarcode(barcodeType) {
+    const equipmentId = document.getElementById('print-barcode-equipment-id').value;
+    const barcode = document.getElementById('print-barcode-value').value;
+
+    // create invisible iframe for print
+    const iframe = document.createElement('iframe');
+    iframe.style.display = 'none';
+    document.body.appendChild(iframe);
+
+    // Define styles depending on the barcode type
+    const containerStyleClass = barcodeType === 'datamatrix'
+        ? 'barcode-container-datamatrix'
+        : 'barcode-container-linear';
+
+    // create print content
+    const printContent = `
+        <html>
+        <head>
+            <title>Печать штрих-кода для оборудования ${equipmentId}</title>
+            <style>
+                @page {
+                    size: 30mm 10mm;
+                    margin: 0;
+                }
+                body {
+                    font-family: Arial, sans-serif;
+                    text-align: center;
+                    padding: 0;
+                    margin: 0;
+                    width: 30mm;
+                    height: 10mm;
+                }
+                .barcode-container-linear {
+                    margin: 0;
+                    padding: 0;
+                    width: 100%;
+                    height: 100%;
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    justify-content: center;
+                }
+                .barcode-container-datamatrix {
+                    margin: 0;
+                    padding: 0;
+                    width: 100%;
+                    height: 100%;
+                    display: flex;
+                    flex-direction: row;
+                    align-items: center;
+                    justify-content: flex-start;
+                }
+                .barcode-image {
+                    max-width: ${barcodeType === 'datamatrix' ? '10mm' : '28mm'};
+                    height: ${barcodeType === 'datamatrix' ? '10mm' : '7mm'};
+                    object-fit: contain;
+                }
+                .barcode {
+                    font-size: 6px;
+                    font-family: monospace;
+                    ${barcodeType === 'datamatrix' ? 'margin-left: 2mm;' : 'margin-top: 1px;'}
+                }
+            </style>
+        </head>
+        <body>
+            <div class="${containerStyleClass}">
+                <img class="barcode-image" src="/api/v1/barcodes/${barcode}/image?barcode_type=${barcodeType}" alt="Штрих-код ${barcode}">
+                <div class="barcode">${barcode}</div>
+            </div>
+        </body>
+        </html>
+    `;
+
+    // fill iframe with content and print
+    iframe.contentWindow.document.open();
+    iframe.contentWindow.document.write(printContent);
+    iframe.contentWindow.document.close();
+
+    iframe.onload = function() {
+        // print content of iframe
+        iframe.contentWindow.print();
+
+        // remove iframe after print
+        setTimeout(function() {
+            document.body.removeChild(iframe);
+        }, 1000);
+    };
+
+    // Close modal
+    const barcodeModal = bootstrap.Modal.getInstance(document.getElementById('barcodePrintModal'));
+    if (barcodeModal) {
+        barcodeModal.hide();
+    }
+
+    showToast('Штрих-код отправлен на печать', 'success');
 }
 
 // Initialize

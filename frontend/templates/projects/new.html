@@ -1,0 +1,448 @@
+{% extends "base.html" %}
+
+{% block title %}Новый проект - {{ APP_NAME }}{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <h1>Создание нового проекта</h1>
+        <p class="lead">Создайте новый проект на основе отсканированного оборудования</p>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <!-- Project Form -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Информация о проекте</h5>
+            </div>
+            <div class="card-body">
+                <form id="projectForm">
+                    <div class="mb-3">
+                        <label for="projectName" class="form-label">Название проекта</label>
+                        <input type="text" class="form-control" id="projectName" name="name" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="clientSelect" class="form-label">Клиент</label>
+                        <select class="form-select" id="clientSelect" name="client_id" required>
+                            <option value="">Выберите клиента</option>
+                            <!-- Список клиентов будет загружен динамически -->
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="projectDates" class="form-label">Период проекта</label>
+                        <input type="text" class="form-control" id="projectDates" name="project_dates" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="projectDescription" class="form-label">Описание</label>
+                        <textarea class="form-control" id="projectDescription" name="description" rows="3"></textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="projectNotes" class="form-label">Примечания</label>
+                        <textarea class="form-control" id="projectNotes" name="notes" rows="2"></textarea>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Equipment List -->
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">Оборудование в проекте</h5>
+                <div class="text-muted" id="equipmentCount">0 позиций</div>
+            </div>
+            <div class="card-body">
+                <div id="noEquipmentMessage" class="text-center text-muted py-4">
+                    <i class="fas fa-exclamation-circle fa-2x mb-2"></i>
+                    <p>Нет оборудования для создания проекта.<br>Вернитесь к сканеру и добавьте оборудование в сессию.</p>
+                </div>
+
+                <div id="equipmentList" class="d-none">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Оборудование</th>
+                                <th>Период бронирования</th>
+                                <th>Действия</th>
+                            </tr>
+                        </thead>
+                        <tbody id="equipmentItems">
+                            <!-- Equipment list will be added dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Booking Summary -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Сводка бронирований</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-flex justify-content-between mb-3">
+                    <div>Всего позиций:</div>
+                    <div><strong id="totalItems">0</strong></div>
+                </div>
+            </div>
+            <div class="card-footer d-grid">
+                <button type="button" class="btn btn-primary" id="createProjectBtn">
+                    <i class="fas fa-project-diagram"></i> Создать проект
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <!-- Session Information -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Сессия сканирования</h5>
+            </div>
+            <div class="card-body">
+                <div id="sessionInfo">
+                    <div class="d-flex justify-content-between mb-3">
+                        <div>Название:</div>
+                        <div><strong id="sessionName">-</strong></div>
+                    </div>
+                    <div class="d-flex justify-content-between mb-3">
+                        <div>Создана:</div>
+                        <div><strong id="sessionCreated">-</strong></div>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <div>Оборудование:</div>
+                        <div><strong id="sessionItems">0</strong></div>
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer d-grid">
+                <a href="/scanner" class="btn btn-outline-primary">
+                    <i class="fas fa-barcode"></i> Вернуться к сканеру
+                </a>
+            </div>
+        </div>
+
+        <!-- Help Information -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Информация</h5>
+            </div>
+            <div class="card-body">
+                <p>Для создания проекта на основе сессии сканирования:</p>
+                <ol>
+                    <li>Заполните информацию о проекте</li>
+                    <li>Укажите период бронирования для каждой единицы оборудования</li>
+                    <li>Нажмите кнопку "Создать проект"</li>
+                </ol>
+                <p class="mb-0 mt-3 text-muted">После создания проекта вы сможете управлять им в разделе Проекты.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Equipment Period Modal -->
+<div class="modal fade" id="equipmentPeriodModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Период бронирования</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="equipmentPeriodForm">
+                    <input type="hidden" id="editEquipmentId" name="equipment_id">
+                    <div class="mb-3">
+                        <p class="mb-1" id="equipmentName"></p>
+                        <small class="text-muted" id="equipmentBarcode"></small>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Период бронирования</label>
+                        <input type="text" class="form-control" id="equipmentPeriod" name="booking_period" required>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                <button type="button" class="btn btn-primary" id="saveEquipmentPeriodBtn">Сохранить</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Connect the script for working with scanning sessions -->
+<script src="{{ url_for('static', path='js/scan-storage.js') }}"></script>
+<script>
+let sessionData = null;
+let equipmentList = [];
+let projectDateRange = null;
+
+// Initialize page
+document.addEventListener('DOMContentLoaded', () => {
+    // Get session ID from URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const sessionId = urlParams.get('session_id');
+
+    if (!sessionId) {
+        showToast('ID сессии не указан', 'danger');
+        setTimeout(() => {
+            window.location.href = '/scanner';
+        }, 2000);
+        return;
+    }
+
+    // Load session data
+    loadSessionData(sessionId);
+
+    // Load clients for dropdown
+    loadClients();
+
+    // Initialize project date range picker
+    initProjectDateRangePicker();
+
+    // Add event listeners
+    document.getElementById('createProjectBtn').addEventListener('click', createProject);
+});
+
+// Load session data
+function loadSessionData(sessionId) {
+    sessionData = scanStorage.getSession(sessionId);
+
+    if (!sessionData) {
+        showToast('Сессия не найдена', 'danger');
+        setTimeout(() => {
+            window.location.href = '/scanner';
+        }, 2000);
+        return;
+    }
+
+    // Update session info
+    document.getElementById('sessionName').textContent = sessionData.name;
+    document.getElementById('sessionCreated').textContent = new Date(sessionData.updatedAt).toLocaleString();
+    document.getElementById('sessionItems').textContent = sessionData.items.length;
+
+    // Load equipment list
+    loadEquipmentList(sessionData.items);
+}
+
+// Load equipment list
+function loadEquipmentList(items) {
+    equipmentList = items.map(item => ({
+        ...item,
+        bookingPeriod: null // Will be set by user
+    }));
+
+    updateEquipmentUI();
+}
+
+// Update equipment UI
+function updateEquipmentUI() {
+    const equipmentCount = document.getElementById('equipmentCount');
+    const noEquipmentMessage = document.getElementById('noEquipmentMessage');
+    const equipmentListContainer = document.getElementById('equipmentList');
+    const equipmentItems = document.getElementById('equipmentItems');
+    const totalItems = document.getElementById('totalItems');
+
+    // Update counts
+    equipmentCount.textContent = `${equipmentList.length} позиций`;
+    totalItems.textContent = equipmentList.length;
+
+    // Show/hide containers
+    if (equipmentList.length === 0) {
+        noEquipmentMessage.classList.remove('d-none');
+        equipmentListContainer.classList.add('d-none');
+    } else {
+        noEquipmentMessage.classList.add('d-none');
+        equipmentListContainer.classList.remove('d-none');
+
+        // Render equipment list
+        equipmentItems.innerHTML = '';
+        equipmentList.forEach(item => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>
+                    <div>${item.name}</div>
+                    <small class="text-muted">${item.barcode}</small>
+                </td>
+                <td>
+                    ${item.bookingPeriod
+                        ? `<span class="badge bg-success">${item.bookingPeriod}</span>`
+                        : '<span class="badge bg-warning">Не указан</span>'}
+                </td>
+                <td>
+                    <button type="button" class="btn btn-sm btn-outline-primary set-period-btn" data-equipment-id="${item.equipment_id}">
+                        <i class="fas fa-calendar"></i> Указать период
+                    </button>
+                </td>
+            `;
+            equipmentItems.appendChild(row);
+        });
+
+        // Add event listeners for set period buttons
+        document.querySelectorAll('.set-period-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const equipmentId = parseInt(e.currentTarget.getAttribute('data-equipment-id'));
+                showEquipmentPeriodModal(equipmentId);
+            });
+        });
+    }
+}
+
+// Initialize project date range picker
+function initProjectDateRangePicker() {
+    const startDate = moment().startOf('day');
+    const endDate = moment().add(7, 'days').endOf('day');
+
+    projectDateRange = {
+        startDate: startDate,
+        endDate: endDate
+    };
+
+    $('#projectDates').daterangepicker({
+        startDate: startDate,
+        endDate: endDate,
+        locale: {
+            format: 'DD.MM.YYYY',
+            applyLabel: 'Применить',
+            cancelLabel: 'Отмена',
+            fromLabel: 'С',
+            toLabel: 'По',
+            customRangeLabel: 'Произвольный период',
+            daysOfWeek: ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'],
+            monthNames: [
+                'Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
+                'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'
+            ],
+            firstDay: 1
+        }
+    }, (start, end) => {
+        projectDateRange = {
+            startDate: start,
+            endDate: end
+        };
+    });
+}
+
+// Load clients for select dropdown
+async function loadClients() {
+    try {
+        const clients = await api.get('/clients');
+        const select = document.getElementById('clientSelect');
+
+        clients.forEach(client => {
+            const option = document.createElement('option');
+            option.value = client.id;
+            option.textContent = client.name;
+            select.appendChild(option);
+        });
+    } catch (error) {
+        console.error('Error loading clients:', error);
+        showToast('Ошибка загрузки списка клиентов', 'danger');
+    }
+}
+
+// Show equipment period modal
+function showEquipmentPeriodModal(equipmentId) {
+    const equipment = equipmentList.find(item => item.equipment_id === equipmentId);
+    if (!equipment) return;
+
+    // Set modal data
+    document.getElementById('editEquipmentId').value = equipment.equipment_id;
+    document.getElementById('equipmentName').textContent = equipment.name;
+    document.getElementById('equipmentBarcode').textContent = `Штрих-код: ${equipment.barcode}`;
+
+    // Initialize date range picker
+    const startDate = equipment.bookingPeriod
+        ? moment(equipment.bookingPeriod.split(' - ')[0], 'DD.MM.YYYY')
+        : (projectDateRange ? projectDateRange.startDate : moment().startOf('day'));
+
+    const endDate = equipment.bookingPeriod
+        ? moment(equipment.bookingPeriod.split(' - ')[1], 'DD.MM.YYYY')
+        : (projectDateRange ? projectDateRange.endDate : moment().add(7, 'days').endOf('day'));
+
+    $('#equipmentPeriod').daterangepicker({
+        startDate: startDate,
+        endDate: endDate,
+        locale: {
+            format: 'DD.MM.YYYY',
+            applyLabel: 'Применить',
+            cancelLabel: 'Отмена',
+            fromLabel: 'С',
+            toLabel: 'По',
+            customRangeLabel: 'Произвольный период',
+            daysOfWeek: ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'],
+            monthNames: [
+                'Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
+                'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'
+            ],
+            firstDay: 1
+        }
+    });
+
+    // Set up save button
+    document.getElementById('saveEquipmentPeriodBtn').onclick = saveEquipmentPeriod;
+
+    // Show modal
+    new bootstrap.Modal('#equipmentPeriodModal').show();
+}
+
+// Save equipment period
+function saveEquipmentPeriod() {
+    const equipmentId = parseInt(document.getElementById('editEquipmentId').value);
+    const periodValue = document.getElementById('equipmentPeriod').value;
+
+    // Update equipment list
+    const index = equipmentList.findIndex(item => item.equipment_id === equipmentId);
+    if (index !== -1) {
+        equipmentList[index].bookingPeriod = periodValue;
+        updateEquipmentUI();
+    }
+
+    // Hide modal
+    bootstrap.Modal.getInstance('#equipmentPeriodModal').hide();
+}
+
+// Create project
+function createProject(e) {
+    e.preventDefault();
+
+    // Get dates from date range picker
+    const dateRange = $('#projectDates').data('daterangepicker');
+
+    const projectData = {
+        name: $('#projectName').val().trim(),
+        client_id: parseInt($('#clientSelect').val()),
+        description: $('#projectDescription').val().trim(),
+        notes: $('#projectNotes').val().trim(),
+        start_date: dateRange.startDate.format('YYYY-MM-DDTHH:mm:ss'),
+        end_date: dateRange.endDate.format('YYYY-MM-DDTHH:mm:ss'),
+        status: 'DRAFT'
+    };
+
+    console.log('Sending project data:', projectData);
+
+    // Make POST request to create project
+    $.ajax({
+        url: '/api/v1/projects/',
+        type: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify(projectData),
+        success: function(response) {
+            console.log('Project created successfully:', response);
+            // Redirect to the project page
+            window.location.href = '/projects/' + response.id;
+        },
+        error: function(xhr, status, error) {
+            console.error('Error creating project:', xhr.responseText);
+            alert('Ошибка создания проекта: ' + (xhr.responseJSON?.detail || error));
+        }
+    });
+}
+</script>
+{% endblock %}

@@ -15,14 +15,15 @@ from backend.models.client import ClientStatus
 class ClientBase(BaseModel):
     """Base client schema."""
 
-    first_name: str = Field(..., title='First Name', description='Client first name')
-    last_name: str = Field(..., title='Last Name', description='Client last name')
-    email: str = Field(..., title='Email', description='Client email address')
-    phone: str = Field(..., title='Phone', description='Client phone number')
-    passport_number: str = Field(
-        ..., title='Passport', description='Client passport number'
+    name: str = Field(..., title='Full Name', description='Client full name')
+    email: Optional[str] = Field(
+        None, title='Email', description='Client email address'
     )
-    address: str = Field(..., title='Address', description='Client address')
+    phone: Optional[str] = Field(None, title='Phone', description='Client phone number')
+    company: Optional[str] = Field(
+        None, title='Company', description='Client company name'
+    )
+    notes: Optional[str] = Field(None, title='Notes', description='Additional notes')
 
 
 class ClientCreate(ClientBase):
@@ -34,20 +35,15 @@ class ClientCreate(ClientBase):
 class ClientUpdate(BaseModel):
     """Update client request schema."""
 
-    first_name: Optional[str] = Field(
-        None, title='First Name', description='Client first name'
-    )
-    last_name: Optional[str] = Field(
-        None, title='Last Name', description='Client last name'
-    )
+    name: Optional[str] = Field(None, title='Full Name', description='Client full name')
     email: Optional[str] = Field(
         None, title='Email', description='Client email address'
     )
     phone: Optional[str] = Field(None, title='Phone', description='Client phone number')
-    passport_number: Optional[str] = Field(
-        None, title='Passport', description='Client passport number'
+    company: Optional[str] = Field(
+        None, title='Company', description='Client company name'
     )
-    address: Optional[str] = Field(None, title='Address', description='Client address')
+    notes: Optional[str] = Field(None, title='Notes', description='Additional notes')
     status: Optional[ClientStatus] = Field(
         None, title='Status', description='Client status'
     )

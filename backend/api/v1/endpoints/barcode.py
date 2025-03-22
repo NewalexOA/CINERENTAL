@@ -3,15 +3,15 @@
 This module provides API endpoints for barcode generation and validation.
 """
 
-from typing import Any, Dict, Optional
-
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, Query, Response
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from backend.api.v1.decorators import typed_get, typed_post
 from backend.core.database import get_db
 from backend.exceptions import ValidationError
 from backend.services import BarcodeService
+from backend.services.barcode import BarcodeType
 
 barcode_router = APIRouter()
 
@@ -57,20 +57,11 @@ class NextSequenceResponse(ApiResponse):
     )
 
 
-class ErrorResponse(BaseModel):
-    """Error response schema."""
-
-    success: bool = Field(False, description='Operation failed')
-    error: str = Field(..., description='Error message')
-    details: Optional[Dict[str, Any]] = Field(None, description='Error details')
-
-
-@barcode_router.post(
+@typed_post(
+    barcode_router,
     '/generate',
     response_model=BarcodeGenerateResponse,
-    responses={400: {'model': ErrorResponse}},
     summary='Generate barcode',
-    description='Generate a new barcode for equipment',
 )
 async def generate_barcode(
     db: AsyncSession = Depends(get_db),
@@ -86,29 +77,20 @@ async def generate_barcode(
         Generated barcode
 
     Raises:
-        HTTPException: If barcode generation fails
+        ValidationError: If barcode generation fails
     """
     service = BarcodeService(db)
-    try:
-        barcode = await service.generate_barcode()
-        return BarcodeGenerateResponse(
-            success=True, barcode=barcode, message='Barcode generated successfully'
-        )
-    except ValidationError as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=ErrorResponse(
-                success=False, error=str(e), details=getattr(e, 'details', None)
-            ).dict(),
-        )
+    barcode = await service.generate_barcode()
+    return BarcodeGenerateResponse(
+        success=True, barcode=barcode, message='Barcode generated successfully'
+    )
 
 
-@barcode_router.post(
+@typed_post(
+    barcode_router,
     '/validate',
     response_model=BarcodeValidateResponse,
-    responses={400: {'model': ErrorResponse}},
     summary='Validate barcode',
-    description='Validate a barcode and return its sequence number',
 )
 async def validate_barcode(
     request: BarcodeValidateRequest,
@@ -155,12 +137,11 @@ async def validate_barcode(
         )
 
 
-@barcode_router.get(
+@typed_get(
+    barcode_router,
     '/next',
     response_model=NextSequenceResponse,
-    responses={400: {'model': ErrorResponse}},
     summary='Get next sequence number',
-    description='Get the next sequence number that will be used for a barcode',
 )
 async def get_next_sequence_number(
     db: AsyncSession = Depends(get_db),
@@ -175,20 +156,51 @@ async def get_next_sequence_number(
     Returns:
         Response with the next sequence number
     """
-    try:
-        service = BarcodeService(db)
-        next_number = await service.get_next_sequence_number()
-        return NextSequenceResponse(
-            success=True,
-            message='Next sequence number retrieved successfully',
-            next_sequence_number=next_number,
+    service = BarcodeService(db)
+    next_number = await service.get_next_sequence_number()
+    return NextSequenceResponse(
+        success=True,
+        message='Next sequence number retrieved successfully',
+        next_sequence_number=next_number,
+    )
+
+
+@barcode_router.get(
+    '/{barcode}/image',
+    response_class=Response,
+    summary='Get barcode image',
+    description='Get a barcode image by its value',
+)
+async def get_barcode_image(
+    barcode: str,
+    barcode_type: BarcodeType = Query(
+        BarcodeType.CODE128,
+        description='Type of barcode to generate',
+    ),
+    db: AsyncSession = Depends(get_db),
+) -> Response:
+    """Get a barcode image by its value.
+
+    Args:
+        barcode: Barcode value
+        barcode_type: Type of barcode to generate (code128 or datamatrix)
+        db: Database session
+
+    Returns:
+        PNG image of the barcode or datamatrix
+
+    Raises:
+        ValidationError: If barcode is invalid or image generation fails
+    """
+    service = BarcodeService(db)
+
+    # Validate barcode format
+    if not service.validate_barcode_format(barcode):
+        raise ValidationError(
+            'Invalid barcode format',
+            details={'barcode': barcode},
         )
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=ErrorResponse(
-                success=False,
-                error='Failed to retrieve next sequence number',
-                details={'error': str(e)},
-            ).dict(),
-        )
+
+    # Generate barcode image
+    image_data, content_type = service.generate_barcode_image(barcode, barcode_type)
+    return Response(content=image_data, media_type=content_type)

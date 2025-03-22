@@ -321,61 +321,160 @@ const api = {
     }
 };
 
-// Scanner integration
+/**
+ * Class for barcode scanner functionality.
+ * Handles scanner input and processes equipment data.
+ */
 class BarcodeScanner {
-    constructor() {
+    /**
+     * Initialize barcode scanner.
+     * @param {Function} onScan - Callback function for successful scan
+     * @param {Function} onError - Callback function for scan errors
+     */
+    constructor(onScan = null, onError = null) {
         this.isListening = false;
         this.buffer = '';
-        this.lastScan = null;
+        this.lastChar = '';
+        this.lastTime = 0;
+        this.THRESHOLD = 20; // Maximum ms between keystrokes to be considered from scanner
+
+        // Default handlers
+        this.onScan = onScan || ((equipment) => console.log('Scanned equipment:', equipment));
+        this.onError = onError || ((error) => console.error('Scanner error:', error));
+
+        // Initialize session if scanStorage is available
+        this.sessionId = null;
+        if (window.scanStorage) {
+            const activeSession = window.scanStorage.getActiveSession();
+            if (activeSession) {
+                this.sessionId = activeSession.id;
+            } else {
+                // Create new session if none exists
+                const newSession = window.scanStorage.createSession('New Session ' + new Date().toLocaleString());
+                this.sessionId = newSession.id;
+            }
+        }
+
+        // Bind methods to keep this context
+        this.handleKeyPress = this.handleKeyPress.bind(this);
+        this.processBarcode = this.processBarcode.bind(this);
     }
 
+    /**
+     * Start listening for scanner input.
+     */
     start() {
-        if (this.isListening) return;
-        this.isListening = true;
-        document.addEventListener('keypress', this.handleKeyPress.bind(this));
-        console.log('Barcode scanner listening started');
-    }
-
-    stop() {
-        this.isListening = false;
-        document.removeEventListener('keypress', this.handleKeyPress.bind(this));
-        console.log('Barcode scanner listening stopped');
-    }
-
-    handleKeyPress(event) {
-        if (!this.isListening) return;
-
-        // Ignore if the event target is an input field
-        if (event.target.tagName === 'INPUT') return;
-
-        if (event.key === 'Enter') {
-            this.processBarcode(this.buffer);
-            this.buffer = '';
-        } else {
-            this.buffer += event.key;
+        if (!this.isListening) {
+            document.addEventListener('keypress', this.handleKeyPress);
+            this.isListening = true;
+            console.log('Barcode scanner started');
         }
     }
 
-    async processBarcode(barcode) {
-        if (!barcode) return;
+    /**
+     * Stop listening for scanner input.
+     */
+    stop() {
+        if (this.isListening) {
+            document.removeEventListener('keypress', this.handleKeyPress);
+            this.isListening = false;
+            console.log('Barcode scanner stopped');
+        }
+    }
 
+    /**
+     * Handle keypress events to capture scanner input.
+     * @param {KeyboardEvent} event - Keyboard event
+     */
+    handleKeyPress(event) {
+        const currentTime = new Date().getTime();
+
+        // Reset buffer if too much time has passed
+        if (currentTime - this.lastTime > 500) {
+            this.buffer = '';
+        }
+
+        // Check if key was pressed in rapid succession
+        const isScanner = currentTime - this.lastTime <= this.THRESHOLD;
+        this.lastTime = currentTime;
+
+        // If Enter key and buffer has content, process the barcode
+        if (event.key === 'Enter' && this.buffer.length > 0) {
+            // Only process if likely from a scanner
+            if (isScanner || this.buffer.length >= 8) {
+                event.preventDefault();
+                const barcode = this.buffer;
+                this.buffer = '';
+
+                if (this.isValidBarcode(barcode)) {
+                    this.processBarcode(barcode);
+                } else {
+                    this.onError(new Error('Invalid barcode format: ' + barcode));
+                }
+            }
+        } else {
+            // Add character to buffer
+            this.buffer += event.key;
+        }
+
+        this.lastChar = event.key;
+    }
+
+    /**
+     * Validate barcode format.
+     * @param {string} barcode - Barcode to validate
+     * @returns {boolean} True if valid
+     */
+    isValidBarcode(barcode) {
+        return barcode && barcode.length >= 3 && /^[A-Za-z0-9\-]+$/.test(barcode);
+    }
+
+    /**
+     * Process scanned barcode.
+     * @param {string} barcode - Scanned barcode
+     */
+    async processBarcode(barcode) {
+        console.log('Processing barcode:', barcode);
         try {
-            const equipment = await api.get(`/equipment/barcode/${barcode}`);
+            const response = await fetch(`/api/v1/equipment/barcode/${barcode}`);
+            if (!response.ok) {
+                if (response.status === 404) {
+                    throw new Error(`Оборудование со штрих-кодом ${barcode} не найдено`);
+                } else {
+                    throw new Error(`Ошибка при получении данных: ${response.status} ${response.statusText}`);
+                }
+            }
+            const equipment = await response.json();
+
+            // Save to session storage if available
+            if (window.scanStorage && this.sessionId) {
+                window.scanStorage.addEquipment(this.sessionId, equipment);
+            }
+
             this.onScan(equipment);
         } catch (error) {
-            console.error('Error processing barcode:', error);
+            console.error('Barcode scan error:', error);
             this.onError(error);
         }
     }
 
-    onScan(equipment) {
-        // Override this method to handle successful scans
-        console.log('Equipment scanned:', equipment);
+    /**
+     * Get the current session ID.
+     * @returns {string|null} Current session ID
+     */
+    getSessionId() {
+        return this.sessionId;
     }
 
-    onError(error) {
-        // Override this method to handle scan errors
-        console.error('Scan error:', error);
+    /**
+     * Set a new session ID.
+     * @param {string} id - New session ID
+     */
+    setSessionId(id) {
+        this.sessionId = id;
+        if (window.scanStorage) {
+            window.scanStorage.setActiveSession(id);
+        }
     }
 }
 
@@ -541,8 +640,8 @@ function formatEquipmentRow(item) {
                     <a href="/equipment/${item.id}" class="btn btn-sm btn-outline-primary">
                         <i class="fas fa-info-circle"></i>
                     </a>
-                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="copyBarcode('${item.barcode}')">
-                        <i class="fas fa-copy"></i>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="printBarcode('${item.id}', '${item.barcode}')">
+                        <i class="fas fa-print"></i>
                     </button>
                 </div>
             </td>
