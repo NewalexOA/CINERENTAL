@@ -273,18 +273,46 @@ class BookingRepository(BaseRepository[Booking]):
         return list(result.scalars().all())
 
     async def get_with_relations(self, booking_id: int) -> Optional[Booking]:
-        """Get booking by ID with related objects loaded.
+        """Get booking with related data.
 
         Args:
             booking_id: Booking ID
 
         Returns:
-            Booking with related objects loaded or None if not found
+            Booking with equipment and client or None if not found
         """
-        stmt = (
-            select(self.model)
-            .options(joinedload(self.model.client), joinedload(self.model.equipment))
-            .where(self.model.id == booking_id, self.model.deleted_at.is_(None))
+        query = (
+            select(Booking)
+            .where(Booking.id == booking_id)
+            .options(
+                joinedload(Booking.equipment),
+                joinedload(Booking.client),
+            )
         )
-        result = await self.session.execute(stmt)
+        result = await self.session.execute(query)
         return result.scalar_one_or_none()
+
+    async def get_equipment_for_booking(self, booking_id: int) -> dict:
+        """Get equipment information for a booking.
+
+        Args:
+            booking_id: Booking ID
+
+        Returns:
+            Equipment information as a dictionary
+        """
+        booking = await self.get_with_relations(booking_id)
+        if booking is None:
+            return {}
+
+        category_name = 'Не указана'
+        if booking.equipment.category:
+            category_name = booking.equipment.category.name
+
+        return {
+            'id': booking.equipment.id,
+            'name': booking.equipment.name,
+            'category': category_name,
+            'replacement_cost': booking.equipment.replacement_cost,
+            'serial_number': booking.equipment.serial_number,
+        }

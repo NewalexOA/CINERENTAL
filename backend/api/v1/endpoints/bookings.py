@@ -49,6 +49,7 @@ def _booking_to_response(booking_obj: Booking) -> BookingResponse:
     return BookingResponse(
         id=booking_obj.id,
         equipment_id=booking_obj.equipment_id,
+        project_id=booking_obj.project_id,
         client_id=booking_obj.client_id,
         start_date=booking_obj.start_date,
         end_date=booking_obj.end_date,

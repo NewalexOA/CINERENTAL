@@ -24,15 +24,27 @@ RUN echo "deb http://mirror.yandex.ru/debian/ bookworm main" > /etc/apt/sources.
         curl \
         libpq-dev \
         python3-dev \
+        ghostscript \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy only requirements files
-COPY pyproject.toml requirements.txt ./
+# Copy requirements files
+COPY pyproject.toml requirements*.txt ./
 
-# Install dependencies
-RUN pip install --no-cache-dir -r requirements.txt \
-    && pip install --no-cache-dir psycopg2-binary faker
+# ARG to control environment type
+ARG ENV_TYPE=prod
+
+# Install dependencies based on environment type
+RUN if [ "$ENV_TYPE" = "prod" ]; then \
+        pip install --no-cache-dir -r requirements-prod.txt; \
+    elif [ "$ENV_TYPE" = "dev" ]; then \
+        pip install --no-cache-dir -r requirements-dev.txt; \
+    else \
+        pip install --no-cache-dir -r requirements-test.txt; \
+    fi
+
+# Install additional dependencies
+RUN pip install --no-cache-dir psycopg2-binary faker
 
 # Stage 2: Runtime
 FROM python:3.12-slim AS runtime
@@ -45,14 +57,19 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 # Set work directory
 WORKDIR /app
 
-# Install runtime dependencies and Playwright system dependencies
+# ARG to control whether to install Playwright dependencies
+ARG INSTALL_PLAYWRIGHT_DEPS=false
+
+# Install runtime dependencies and optionally Playwright system dependencies
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         curl \
         netcat-traditional \
         libpq-dev \
         postgresql-client \
-        # Playwright dependencies
+        ghostscript \
+    && if [ "$INSTALL_PLAYWRIGHT_DEPS" = "true" ]; then \
+        apt-get install -y --no-install-recommends \
         libnss3 \
         libnspr4 \
         libatk1.0-0 \
@@ -69,7 +86,8 @@ RUN apt-get update \
         libpango-1.0-0 \
         libcairo2 \
         libasound2 \
-        libatspi2.0-0 \
+        libatspi2.0-0; \
+    fi \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* \
     && adduser --disabled-password --gecos '' appuser \
@@ -86,8 +104,11 @@ COPY --chown=appuser:appuser . .
 # Switch to non-root user
 USER appuser
 
-# Install Playwright browsers
-RUN playwright install chromium
+# Install Playwright browsers conditionally
+ARG INSTALL_PLAYWRIGHT=false
+RUN if [ "$INSTALL_PLAYWRIGHT" = "true" ]; then \
+        playwright install chromium; \
+    fi
 
 # Make scripts executable
 RUN chmod +x docker/start.sh docker/wait-for.sh docker/run-tests.sh

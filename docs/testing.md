@@ -8,8 +8,21 @@
 services:
   test:        # Сервис для запуска тестов
   test_db:     # Отдельная БД для тестов
-  redis:       # Redis для тестов и основного приложения
+  redis:       # Redis для тестов
 ```
+
+Тестовое окружение определено в отдельном файле `docker-compose.test.yml`, чтобы не замедлять сборку dev-окружения.
+
+### Организация Docker Compose файлов
+
+В проекте используются следующие Docker Compose файлы:
+
+1. **docker-compose.yml** - основной файл для разработки, содержит сервисы web, db, redis
+2. **docker-compose.override.yml** - файл с настройками для локальной разработки
+3. **docker-compose.prod.yml** - файл для production окружения
+4. **docker-compose.test.yml** - отдельный файл для тестового окружения
+
+Разделение на отдельные файлы позволяет избежать ненужной сборки тестовых контейнеров при обычной разработке.
 
 ### Тестовая база данных
 
@@ -51,6 +64,18 @@ test:
 
 ## Запуск тестов
 
+### Подготовка тестового окружения
+
+Перед запуском тестов необходимо подготовить тестовое окружение:
+
+```bash
+# Сборка тестовых контейнеров
+docker compose -f docker-compose.test.yml build
+
+# Запуск необходимых для тестирования сервисов
+docker compose -f docker-compose.test.yml up -d
+```
+
 ### Скрипт запуска
 
 Тесты запускаются через скрипт `docker/run-tests.sh`, который:
@@ -63,26 +88,34 @@ test:
 
 ```bash
 # Запуск конкретного теста
-docker compose run --rm test tests/unit/test_equipment_service.py::test_create_equipment
+docker compose -f docker-compose.test.yml run --rm test tests/unit/test_equipment_service.py::test_create_equipment
 
 # Запуск всех тестов в директории
-docker compose run --rm test tests/
+docker compose -f docker-compose.test.yml run --rm test tests/
 
 # Запуск всех e2e тестов
-docker compose run --rm test tests/e2e/ -v
+docker compose -f docker-compose.test.yml run --rm test tests/e2e/ -v
 
 # Запуск с дополнительными опциями pytest
-docker compose run --rm test tests/integration/ -v -x
+docker compose -f docker-compose.test.yml run --rm test tests/integration/ -v -x
 
 # Запуск тестов с определенной меткой
-docker compose run --rm test -m "integration"
+docker compose -f docker-compose.test.yml run --rm test -m "integration"
+```
+
+### Завершение тестирования
+
+После завершения тестирования рекомендуется остановить тестовые контейнеры:
+
+```bash
+docker compose -f docker-compose.test.yml down
 ```
 
 ### Опции запуска
 
 При запуске без аргументов скрипт показывает справку:
 ```bash
-docker compose run --rm test
+docker compose -f docker-compose.test.yml run --rm test
 ```
 
 Поддерживаются все стандартные опции pytest:

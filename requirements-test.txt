@@ -1,0 +1,15 @@
+# Import development dependencies
+-r requirements-dev.txt
+
+# Testing
+pytest==7.4.3
+pytest-asyncio==0.21.1
+pytest-cov==4.1.0
+httpx==0.25.1
+apscheduler==3.11.0
+treepoem==3.27.0
+
+# E2E Testing
+pytest-playwright==0.7.0
+playwright==1.50.0
+pytest-base-url==2.1.0

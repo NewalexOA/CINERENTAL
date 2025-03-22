@@ -1,9 +1,8 @@
 # FastAPI and ASGI server
-fastapi==0.104.1
-uvicorn[standard]==0.24.0
+fastapi==0.109.2
+uvicorn[standard]==0.27.1
 python-multipart==0.0.18
 asgiref==3.7.2
-
 
 # Database
 sqlalchemy==2.0.25
@@ -14,7 +13,7 @@ redis==5.0.1
 greenlet==3.1.1
 
 # Data validation
-pydantic==2.5.1
+pydantic==2.5.3
 pydantic-settings==2.1.0
 email-validator==2.1.0.post1
 
@@ -29,30 +28,22 @@ aiofiles==23.2.1
 # Logging
 loguru==0.7.2
 
-# Testing
-pytest==7.4.3
-pytest-asyncio==0.21.1
-pytest-cov==4.1.0
-httpx==0.25.1
-
-# Code quality
-black==24.3.0
-isort==5.12.0
-flake8==6.1.0
-mypy==1.7.0
-
-# Development tools
+# Production tools
 python-dotenv==1.0.0
-pre-commit==3.5.0
 
 # WebSocket support
 websockets==12.0
 
-# Added python-dateutil
+# Date manipulation
 python-dateutil>=2.8.2
 
-# E2E Testing
-pytest-playwright==0.7.0
-playwright==1.50.0
-pytest-base-url==2.1.0
+# Slug generation
 python-slugify==8.0.4
+
+# APScheduler
+apscheduler==3.11.0
+
+# Barcode generation
+ghostscript==0.7
+pillow==11.1.0
+treepoem==3.27.0

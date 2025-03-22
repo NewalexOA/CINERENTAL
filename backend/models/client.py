@@ -17,6 +17,7 @@ from backend.models.mixins import SoftDeleteMixin, TimestampMixin
 if TYPE_CHECKING:
     from backend.models.booking import Booking
     from backend.models.document import Document
+    from backend.models.project import Project
 
 
 class ClientStatus(str, enum.Enum):
@@ -50,6 +51,7 @@ class Client(TimestampMixin, SoftDeleteMixin, Base):
         notes: Optional internal notes
         bookings: Client's bookings relationship
         documents: Client's documents relationship
+        projects: Client's projects relationship
     """
 
     __tablename__ = 'clients'
@@ -70,3 +72,4 @@ class Client(TimestampMixin, SoftDeleteMixin, Base):
     # Relationships
     bookings: Mapped[List['Booking']] = relationship(back_populates='client')
     documents: Mapped[List['Document']] = relationship(back_populates='client')
+    projects: Mapped[List['Project']] = relationship(back_populates='client')
