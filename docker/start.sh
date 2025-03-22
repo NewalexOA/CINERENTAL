@@ -10,6 +10,11 @@ alembic upgrade head
 # Debug output
 echo "Current environment: $ENVIRONMENT"
 
+# Копирование JS и CSS библиотек
+echo "Копирование библиотек..."
+chmod +x ./docker/copy-assets.sh
+./docker/copy-assets.sh
+
 # Seed test data if environment is development
 if [ "$ENVIRONMENT" = "development" ]; then
     echo "Seeding test data..."

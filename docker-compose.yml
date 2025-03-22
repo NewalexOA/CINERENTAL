@@ -66,6 +66,7 @@ services:
       - POSTGRES_USER=${POSTGRES_USER:-postgres}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
       - POSTGRES_HOST_AUTH_METHOD=${POSTGRES_HOST_AUTH_METHOD:-md5}
+      - PGDATA=/var/lib/postgresql/data/pgdata
     ports:
       - "5432:5432"
     deploy:
@@ -105,9 +106,11 @@ services:
 
 volumes:
   postgres_data:
-    driver: local
+    name: act-rental_postgres_data
+    external: true
   redis_data:
-    driver: local
+    name: act-rental_redis_data
+    external: true
   media_volume:
     driver: local
 

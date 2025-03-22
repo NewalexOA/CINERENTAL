@@ -233,3 +233,12 @@ docs/Current_task/*
 # Explicitly include web manifest files
 !frontend/static/manifest/
 !frontend/static/manifest/*
+
+# Explicitly include our JS and CSS libraries
+!frontend/static/js/lib/
+!frontend/static/js/lib/moment.min.js
+!frontend/static/js/lib/daterangepicker.min.js
+!frontend/static/js/lib/README.md
+!frontend/static/css/lib/
+!frontend/static/css/lib/daterangepicker.min.css
+!frontend/static/css/lib/README.md
