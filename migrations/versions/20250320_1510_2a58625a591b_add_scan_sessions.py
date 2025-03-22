@@ -20,7 +20,7 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    """Add equipment_scan_sessions table."""
+    """Add equipment_scan_sessions table and deleted_at column to projects."""
     op.create_table(
         'equipment_scan_sessions',
         sa.Column('id', sa.Integer(), nullable=False),
@@ -63,9 +63,27 @@ def upgrade() -> None:
         unique=False,
     )
 
+    # Add deleted_at column to projects table
+    op.add_column(
+        'projects', sa.Column('deleted_at', sa.DateTime(timezone=True), nullable=True)
+    )
+
+    # Create index for deleted_at column for faster queries
+    op.create_index(
+        op.f('ix_projects_deleted_at'),
+        'projects',
+        ['deleted_at'],
+        unique=False,
+    )
+
 
 def downgrade() -> None:
-    """Remove equipment_scan_sessions table."""
+    """Remove equipment_scan_sessions table and deleted_at column from projects."""
+    # Drop index and column for projects table
+    op.drop_index(op.f('ix_projects_deleted_at'), table_name='projects')
+    op.drop_column('projects', 'deleted_at')
+
+    # Drop equipment_scan_sessions table and its indexes
     op.drop_index(
         op.f('ix_equipment_scan_sessions_user_id'), table_name='equipment_scan_sessions'
     )
