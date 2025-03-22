@@ -176,6 +176,8 @@
 {% endblock %}
 
 {% block extra_js %}
+<!-- Connect the script for working with scanning sessions -->
+<script src="{{ url_for('static', path='js/scan-storage.js') }}"></script>
 <script>
 let sessionData = null;
 let equipmentList = [];
@@ -407,72 +409,40 @@ function saveEquipmentPeriod() {
 }
 
 // Create project
-async function createProject() {
-    // Validate form
-    const form = document.getElementById('projectForm');
-    if (!form.checkValidity()) {
-        form.reportValidity();
-        return;
-    }
+function createProject(e) {
+    e.preventDefault();
 
-    // Validate equipment periods
-    const missingPeriods = equipmentList.some(item => !item.bookingPeriod);
-    if (missingPeriods) {
-        showToast('Укажите период бронирования для всего оборудования', 'warning');
-        return;
-    }
+    // Get dates from date range picker
+    const dateRange = $('#projectDates').data('daterangepicker');
 
-    try {
-        // Get form data
-        const formData = new FormData(form);
-        const projectData = {
-            name: formData.get('name'),
-            client_id: parseInt(formData.get('client_id')),
-            description: formData.get('description'),
-            notes: formData.get('notes')
-        };
+    const projectData = {
+        name: $('#projectName').val().trim(),
+        client_id: parseInt($('#clientSelect').val()),
+        description: $('#projectDescription').val().trim(),
+        notes: $('#projectNotes').val().trim(),
+        start_date: dateRange.startDate.format('YYYY-MM-DDTHH:mm:ss'),
+        end_date: dateRange.endDate.format('YYYY-MM-DDTHH:mm:ss'),
+        status: 'DRAFT'
+    };
 
-        // Get dates from range picker
-        const dateRange = $('#projectDates').data('daterangepicker');
-        projectData.start_date = dateRange.startDate.format('YYYY-MM-DD');
-        projectData.end_date = dateRange.endDate.format('YYYY-MM-DD');
+    console.log('Sending project data:', projectData);
 
-        // Create project
-        const project = await api.post('/projects', projectData);
-
-        // Create bookings for each equipment
-        const bookingPromises = equipmentList.map(async (item) => {
-            const [startDateStr, endDateStr] = item.bookingPeriod.split(' - ');
-            const startDate = moment(startDateStr, 'DD.MM.YYYY').format('YYYY-MM-DD');
-            const endDate = moment(endDateStr, 'DD.MM.YYYY').format('YYYY-MM-DD');
-
-            // Create booking
-            const bookingData = {
-                equipment_id: item.equipment_id,
-                client_id: projectData.client_id,
-                start_date: startDate,
-                end_date: endDate,
-                total_amount: 0, // This will be calculated by the backend
-                project_id: project.id
-            };
-
-            return api.post('/bookings', bookingData);
-        });
-
-        // Wait for all bookings to be created
-        await Promise.all(bookingPromises);
-
-        // Show success message
-        showToast('Проект успешно создан', 'success');
-
-        // Redirect to project page
-        setTimeout(() => {
-            window.location.href = `/projects/${project.id}`;
-        }, 1500);
-    } catch (error) {
-        console.error('Error creating project:', error);
-        showToast('Ошибка создания проекта: ' + (error.message || 'Неизвестная ошибка'), 'danger');
-    }
+    // Make POST request to create project
+    $.ajax({
+        url: '/api/v1/projects/',
+        type: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify(projectData),
+        success: function(response) {
+            console.log('Project created successfully:', response);
+            // Redirect to the project page
+            window.location.href = '/projects/' + response.id;
+        },
+        error: function(xhr, status, error) {
+            console.error('Error creating project:', xhr.responseText);
+            alert('Ошибка создания проекта: ' + (xhr.responseJSON?.detail || error));
+        }
+    });
 }
 </script>
 {% endblock %}

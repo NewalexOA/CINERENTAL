@@ -1,4 +1,4 @@
-{% extends "layout/base.html" %}
+{% extends "base.html" %}
 
 {% block title %}Просмотр проекта{% endblock %}
 
@@ -184,10 +184,16 @@ document.addEventListener('DOMContentLoaded', function() {
 
 async function loadProjectData() {
     try {
+        console.log('Loading project data for ID:', projectId);
         const response = await fetch(`/api/v1/projects/${projectId}`);
-        if (!response.ok) throw new Error('Не удалось загрузить данные проекта');
+
+        if (!response.ok) {
+            console.error('Failed to load project data. Status:', response.status);
+            throw new Error('Не удалось загрузить данные проекта');
+        }
 
         const project = await response.json();
+        console.log('Received project data:', project);
 
         // Fill project data
         document.getElementById('project-name').textContent = project.name;
