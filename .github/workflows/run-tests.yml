@@ -39,8 +39,8 @@ jobs:
 
       - name: Build and start containers
         run: |
-          docker compose build test test_db redis
-          docker compose up -d test_db redis
+          docker compose -f docker-compose.test.yml build test test_db redis
+          docker compose -f docker-compose.test.yml up -d test_db redis
 
       - name: Wait for services to be ready
         run: |
@@ -48,14 +48,14 @@ jobs:
           chmod +x docker/wait-for.sh
 
           # Wait for PostgreSQL using wait-for.sh
-          docker compose run --rm --no-deps --entrypoint "./docker/wait-for.sh" test postgres test_db 5432
+          docker compose -f docker-compose.test.yml run --rm --no-deps --entrypoint "./docker/wait-for.sh" test postgres test_db 5432
 
           # Wait for Redis using wait-for.sh
-          docker compose run --rm --no-deps --entrypoint "./docker/wait-for.sh" test redis redis 6379
+          docker compose -f docker-compose.test.yml run --rm --no-deps --entrypoint "./docker/wait-for.sh" test redis redis 6379
 
       - name: Run migrations
         run: |
-          docker compose run --rm --no-deps --entrypoint "alembic" test upgrade head
+          docker compose -f docker-compose.test.yml run --rm --no-deps --entrypoint "alembic" test upgrade head
 
       - name: Run tests
         run: |
@@ -103,7 +103,7 @@ jobs:
           chmod +x run_tests_ci.sh
 
           # Run tests with mounted coverage directory
-          docker compose run --rm --no-deps -v $(pwd)/run_tests_ci.sh:/tmp/run_tests_ci.sh -v $(pwd)/coverage:/coverage --entrypoint "bash" test /tmp/run_tests_ci.sh
+          docker compose -f docker-compose.test.yml run --rm --no-deps -v $(pwd)/run_tests_ci.sh:/tmp/run_tests_ci.sh -v $(pwd)/coverage:/coverage --entrypoint "bash" test /tmp/run_tests_ci.sh
 
       - name: Upload coverage report as artifact
         if: success()
@@ -118,4 +118,4 @@ jobs:
         if: always()
         run: |
           echo "Stopping all containers..."
-          docker compose down -v
+          docker compose -f docker-compose.test.yml down -v
