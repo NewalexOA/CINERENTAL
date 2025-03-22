@@ -24,6 +24,7 @@ RUN echo "deb http://mirror.yandex.ru/debian/ bookworm main" > /etc/apt/sources.
         curl \
         libpq-dev \
         python3-dev \
+        ghostscript \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
@@ -66,6 +67,7 @@ RUN apt-get update \
         netcat-traditional \
         libpq-dev \
         postgresql-client \
+        ghostscript \
     && if [ "$INSTALL_PLAYWRIGHT_DEPS" = "true" ]; then \
         apt-get install -y --no-install-recommends \
         libnss3 \

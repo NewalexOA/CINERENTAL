@@ -640,8 +640,8 @@ function formatEquipmentRow(item) {
                     <a href="/equipment/${item.id}" class="btn btn-sm btn-outline-primary">
                         <i class="fas fa-info-circle"></i>
                     </a>
-                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="copyBarcode('${item.barcode}')">
-                        <i class="fas fa-copy"></i>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="printBarcode('${item.id}', '${item.barcode}')">
+                        <i class="fas fa-print"></i>
                     </button>
                 </div>
             </td>
