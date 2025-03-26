@@ -8,7 +8,15 @@ from typing import TypeVar
 
 from fastapi import APIRouter
 
-from backend.web.routes import bookings, categories, clients, equipment, home, scanner
+from backend.web.routes import (
+    bookings,
+    categories,
+    clients,
+    equipment,
+    home,
+    projects,
+    scanner,
+)
 
 web_router = APIRouter()
 
@@ -48,4 +56,9 @@ web_router.include_router(
     scanner.router,
     prefix='/scanner',
     tags=['Scanner Web'],
+)
+web_router.include_router(
+    projects.router,
+    prefix='/projects',
+    tags=['Projects Web'],
 )

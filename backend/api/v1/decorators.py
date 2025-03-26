@@ -21,6 +21,7 @@ def typed_get(
     status_code: Optional[int] = None,
     response_class: Type[JSONResponse] = JSONResponse,
     response_model_exclude_none: bool = False,
+    summary: Optional[str] = None,
 ) -> Callable[[Callable[P, R]], Callable[P, R]]:
     """Typed GET decorator.
 
@@ -41,6 +42,7 @@ def typed_get(
         status_code=status_code,
         response_class=response_class,
         response_model_exclude_none=response_model_exclude_none,
+        summary=summary,
     )
     return cast(Callable[[Callable[P, R]], Callable[P, R]], decorator)
 
@@ -53,6 +55,7 @@ def typed_post(
     status_code: Optional[int] = None,
     response_class: Type[JSONResponse] = JSONResponse,
     response_model_exclude_none: bool = False,
+    summary: Optional[str] = None,
 ) -> Callable[[Callable[P, R]], Callable[P, R]]:
     """Typed POST decorator.
 
@@ -73,6 +76,7 @@ def typed_post(
         status_code=status_code,
         response_class=response_class,
         response_model_exclude_none=response_model_exclude_none,
+        summary=summary,
     )
     return cast(Callable[[Callable[P, R]], Callable[P, R]], decorator)
 
@@ -85,6 +89,7 @@ def typed_put(
     status_code: Optional[int] = None,
     response_class: Type[JSONResponse] = JSONResponse,
     response_model_exclude_none: bool = False,
+    summary: Optional[str] = None,
 ) -> Callable[[Callable[P, R]], Callable[P, R]]:
     """Typed PUT decorator.
 
@@ -105,6 +110,7 @@ def typed_put(
         status_code=status_code,
         response_class=response_class,
         response_model_exclude_none=response_model_exclude_none,
+        summary=summary,
     )
     return cast(Callable[[Callable[P, R]], Callable[P, R]], decorator)
 
@@ -117,6 +123,7 @@ def typed_delete(
     status_code: Optional[int] = None,
     response_class: Type[JSONResponse] = JSONResponse,
     response_model_exclude_none: bool = False,
+    summary: Optional[str] = None,
 ) -> Callable[[Callable[P, R]], Callable[P, R]]:
     """Typed DELETE decorator.
 
@@ -137,6 +144,7 @@ def typed_delete(
         status_code=status_code,
         response_class=response_class,
         response_model_exclude_none=response_model_exclude_none,
+        summary=summary,
     )
     return cast(Callable[[Callable[P, R]], Callable[P, R]], decorator)
 

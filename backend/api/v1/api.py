@@ -11,6 +11,8 @@ from backend.api.v1.endpoints import (
     documents,
     equipment,
     health,
+    projects,
+    scan_sessions,
 )
 
 api_router = APIRouter()
@@ -31,3 +33,9 @@ api_router.include_router(
     bookings.bookings_router, prefix='/bookings', tags=['Bookings']
 )
 api_router.include_router(barcode.barcode_router, prefix='/barcodes', tags=['Barcodes'])
+api_router.include_router(
+    projects.projects_router, prefix='/projects', tags=['Projects']
+)
+api_router.include_router(
+    scan_sessions.scan_sessions_router, prefix='/scan-sessions', tags=['Scan Sessions']
+)

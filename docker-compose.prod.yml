@@ -7,6 +7,9 @@ services:
       target: runtime
       args:
         BUILDKIT_INLINE_CACHE: 1
+        ENV_TYPE: prod
+        INSTALL_PLAYWRIGHT_DEPS: false
+        INSTALL_PLAYWRIGHT: false
     command: ./docker/start.sh
     restart: unless-stopped
     ports:
@@ -39,10 +42,10 @@ services:
           memory: 1G
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health"]
-      interval: 30s
+      interval: 5s
       timeout: 10s
-      retries: 3
-      start_period: 20s
+      retries: 10
+      start_period: 5s
     depends_on:
       db:
         condition: service_healthy

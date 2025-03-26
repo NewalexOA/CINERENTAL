@@ -29,24 +29,18 @@ class ClientService:
 
     async def create_client(
         self,
-        first_name: str,
-        last_name: str,
-        email: str,
-        phone: str,
-        passport_number: str,
-        address: str,
+        name: str,
+        email: Optional[str] = None,
+        phone: Optional[str] = None,
         company: Optional[str] = None,
         notes: Optional[str] = None,
     ) -> Client:
-        """Create new client.
+        """Create a new client.
 
         Args:
-            first_name: Client's first name
-            last_name: Client's last name
-            email: Client's email
-            phone: Client's phone number
-            passport_number: Client's passport number
-            address: Client's address
+            name: Client's full name
+            email: Client's email (optional)
+            phone: Client's phone number (optional)
             company: Client's company name (optional)
             notes: Additional notes (optional)
 
@@ -54,45 +48,23 @@ class ClientService:
             Created client
 
         Raises:
-            ConflictError: If client with given email or phone already exists
-            ValidationError: If validation fails
+            ValidationError: If client data is invalid
         """
-        # Check if client with given email exists
-        existing = await self.repository.get_by_email(email)
-        if existing:
-            raise ConflictError(
-                f'Client with email {email} already exists', {'email': email}
-            )
-
-        # Check if client with given phone exists
-        existing = await self.repository.get_by_phone(phone)
-        if existing:
-            raise ConflictError(
-                f'Client with phone {phone} already exists', {'phone': phone}
-            )
-
         client = Client(
-            first_name=first_name,
-            last_name=last_name,
+            name=name,
             email=email,
             phone=phone,
-            passport_number=passport_number,
-            address=address,
             company=company,
             notes=notes,
-            status=ClientStatus.ACTIVE,
         )
         return await self.repository.create(client)
 
     async def update_client(
         self,
         client_id: int,
-        first_name: Optional[str] = None,
-        last_name: Optional[str] = None,
+        name: Optional[str] = None,
         email: Optional[str] = None,
         phone: Optional[str] = None,
-        passport_number: Optional[str] = None,
-        address: Optional[str] = None,
         company: Optional[str] = None,
         notes: Optional[str] = None,
     ) -> Client:
@@ -100,12 +72,9 @@ class ClientService:
 
         Args:
             client_id: Client ID
-            first_name: New first name (optional)
-            last_name: New last name (optional)
+            name: New full name (optional)
             email: New email (optional)
             phone: New phone number (optional)
-            passport_number: New passport number (optional)
-            address: New address (optional)
             company: New company name (optional)
             notes: New notes (optional)
 
@@ -141,18 +110,12 @@ class ClientService:
                 )
 
         # Update fields
-        if first_name is not None:
-            client.first_name = first_name
-        if last_name is not None:
-            client.last_name = last_name
+        if name is not None:
+            client.name = name
         if email is not None:
             client.email = email
         if phone is not None:
             client.phone = phone
-        if passport_number is not None:
-            client.passport_number = passport_number
-        if address is not None:
-            client.address = address
         if company is not None:
             client.company = company
         if notes is not None:

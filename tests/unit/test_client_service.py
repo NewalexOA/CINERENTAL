@@ -9,7 +9,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from backend.exceptions import ConflictError, NotFoundError
 from backend.models import (
     Booking,
-    BookingStatus,
     Category,
     Client,
     ClientStatus,
@@ -33,12 +32,9 @@ class TestClientService:
     async def client(self, service: ClientService) -> Client:
         """Create test client."""
         return await service.create_client(
-            first_name='John',
-            last_name='Doe',
+            name='John Doe',
             email='john.doe@example.com',
             phone='+1234567890',
-            passport_number='AB123456',
-            address='123 Test St',
             company='Test Company',
             notes='Test client',
         )
@@ -105,51 +101,68 @@ class TestClientService:
 
     @async_test
     async def test_create_client(self, service: ClientService) -> None:
-        """Test client creation."""
-        # Create client
+        """Test creating a new client."""
+        # Create a client
         client = await service.create_client(
-            first_name='Jane',
-            last_name='Smith',
-            email='jane.smith@example.com',
+            name='John Doe',
+            email='john.doe@example.com',
             phone='+0987654321',
-            passport_number='CD789012',
-            address='456 Test Ave',
-            company='Another Company',
+            company='Test Inc.',
+            notes='Test client',
+        )
+
+        assert client.id is not None
+        assert client.name == 'John Doe'
+        assert client.email == 'john.doe@example.com'
+        assert client.phone == '+0987654321'
+        assert client.company == 'Test Inc.'
+        assert client.notes == 'Test client'
+        assert client.status == ClientStatus.ACTIVE
+
+        # Test creating another client
+        another_client = await service.create_client(
+            name='Jane Smith',
+            email='jane.smith@example.com',
+            phone='+1111111111',
+            company='Another Inc.',
             notes='Another client',
         )
 
-        # Check client properties
-        assert client.first_name == 'Jane'
-        assert client.last_name == 'Smith'
-        assert client.email == 'jane.smith@example.com'
-        assert client.phone == '+0987654321'
-        assert client.passport_number == 'CD789012'
-        assert client.address == '456 Test Ave'
-        assert client.company == 'Another Company'
-        assert client.notes == 'Another client'
-        assert client.status == ClientStatus.ACTIVE
+        assert another_client.id is not None
+        assert another_client.id != client.id
+        assert another_client.name == 'Jane Smith'
+        assert another_client.email == 'jane.smith@example.com'
+        assert another_client.phone == '+1111111111'
+        assert another_client.company == 'Another Inc.'
+        assert another_client.notes == 'Another client'
+        assert another_client.status == ClientStatus.ACTIVE
 
-        # Try to create client with existing email
-        with pytest.raises(ConflictError, match='Client with email .* already exists'):
-            await service.create_client(
-                first_name='Jane',
-                last_name='Smith',
-                email='jane.smith@example.com',  # Same email
-                phone='+1111111111',  # Different phone
-                passport_number='EF345678',
-                address='789 Test Blvd',
-            )
+        # Create client with existing email (should now succeed)
+        duplicate_email_client = await service.create_client(
+            name='Jane Smith',
+            email='john.doe@example.com',  # Same as first client
+            phone='+2222222222',  # Different phone
+        )
 
-        # Try to create client with existing phone
-        with pytest.raises(ConflictError, match='Client with phone .* already exists'):
-            await service.create_client(
-                first_name='Jane',
-                last_name='Smith',
-                email='other.email@example.com',  # Different email
-                phone='+0987654321',  # Same phone
-                passport_number='EF345678',
-                address='789 Test Blvd',
-            )
+        assert duplicate_email_client.id is not None
+        assert duplicate_email_client.id != client.id
+        assert duplicate_email_client.id != another_client.id
+        assert duplicate_email_client.email == 'john.doe@example.com'
+        assert duplicate_email_client.phone == '+2222222222'
+
+        # Create client with existing phone (should now succeed)
+        duplicate_phone_client = await service.create_client(
+            name='Jane Smith',
+            email='different.email@example.com',  # Different email
+            phone='+0987654321',  # Same as first client
+        )
+
+        assert duplicate_phone_client.id is not None
+        assert duplicate_phone_client.id != client.id
+        assert duplicate_phone_client.id != another_client.id
+        assert duplicate_phone_client.id != duplicate_email_client.id
+        assert duplicate_phone_client.email == 'different.email@example.com'
+        assert duplicate_phone_client.phone == '+0987654321'
 
     async def test_get_client(self, service: ClientService, client: Client) -> None:
         """Test getting a client by ID."""
@@ -159,12 +172,9 @@ class TestClientService:
         # Check that the client was retrieved correctly
         assert result is not None
         assert result.id == client.id
-        assert result.first_name == client.first_name
-        assert result.last_name == client.last_name
+        assert result.name == client.name
         assert result.email == client.email
         assert result.phone == client.phone
-        assert result.passport_number == client.passport_number
-        assert result.address == client.address
         assert result.company == client.company
         assert result.notes == client.notes
         assert result.status == client.status
@@ -179,12 +189,9 @@ class TestClientService:
         # Update client details
         updated = await service.update_client(
             client.id,
-            first_name='John Updated',
-            last_name='Doe Updated',
+            name='John Doe Updated',
             email='john.updated@example.com',
             phone='+9999999999',
-            passport_number='XY987654',
-            address='321 Updated St',
             company='Updated Company',
             notes='Updated notes',
         )
@@ -192,23 +199,17 @@ class TestClientService:
         # Check that the client was updated correctly
         assert updated is not None
         assert updated.id == client.id
-        assert updated.first_name == 'John Updated'
-        assert updated.last_name == 'Doe Updated'
+        assert updated.name == 'John Doe Updated'
         assert updated.email == 'john.updated@example.com'
         assert updated.phone == '+9999999999'
-        assert updated.passport_number == 'XY987654'
-        assert updated.address == '321 Updated St'
         assert updated.company == 'Updated Company'
         assert updated.notes == 'Updated notes'
 
         # Try to update to existing email
         other_client = await service.create_client(
-            first_name='Other',
-            last_name='Client',
+            name='Other Client',
             email='other@example.com',
             phone='+8888888888',
-            passport_number='ZZ111111',
-            address='888 Other St',
         )
 
         with pytest.raises(ConflictError, match='Client with email .* already exists'):
@@ -226,7 +227,7 @@ class TestClientService:
 
         # Test updating non-existent client
         with pytest.raises(NotFoundError, match='Client with ID 999 not found'):
-            await service.update_client(999, first_name='Non-existent')
+            await service.update_client(999, name='Non-existent')
 
     @async_test
     async def test_change_status(self, service: ClientService, client: Client) -> None:
@@ -256,12 +257,11 @@ class TestClientService:
 
         # Create another client
         other_client = await service.create_client(
-            first_name='Other',
-            last_name='Client',
+            name='Other Client',
             email='other@example.com',
             phone='+8888888888',
-            passport_number='ZZ111111',
-            address='888 Other St',
+            company='Test Company',
+            notes='Test client',
         )
 
         # Get all clients again
@@ -274,13 +274,8 @@ class TestClientService:
 
     async def test_search_clients(self, service: ClientService, client: Client) -> None:
         """Test searching clients."""
-        # Search by first name
+        # Search by name
         results = await service.search_clients('John')
-        assert len(results) >= 1
-        assert any(c.id == client.id for c in results)
-
-        # Search by last name
-        results = await service.search_clients('Doe')
         assert len(results) >= 1
         assert any(c.id == client.id for c in results)
 
@@ -308,13 +303,10 @@ class TestClientService:
         """Test getting client with active bookings."""
         # Initially client has no active bookings
         result = await service.get_with_active_bookings(client.id)
-        assert result is None
+        assert result is not None
 
-        # Change booking status to CONFIRMED first
+        # Set payment status to PAID to validate the booking is fully active
         booking_service = BookingService(db_session)
-        await booking_service.change_status(booking.id, BookingStatus.CONFIRMED)
-
-        # Set payment status to PAID before activating
         await booking_service.update_booking(
             booking_id=booking.id,
             paid_amount=float(booking.total_amount),
@@ -324,10 +316,7 @@ class TestClientService:
             status=PaymentStatus.PAID,
         )
 
-        # Then change to ACTIVE
-        await booking_service.change_status(booking.id, BookingStatus.ACTIVE)
-
-        # Now client should have active bookings
+        # Now client should still have active bookings
         result = await service.get_with_active_bookings(client.id)
         assert result is not None
         assert result.id == client.id
@@ -344,11 +333,8 @@ class TestClientService:
         clients = await service.get_with_overdue_bookings()
         assert not any(c.id == client.id for c in clients)
 
-        # Change booking status to CONFIRMED first
+        # Set payment status to PAID to make booking fully active
         booking_service = BookingService(db_session)
-        await booking_service.change_status(booking.id, BookingStatus.CONFIRMED)
-
-        # Set payment status to PAID before activating
         await booking_service.update_booking(
             booking_id=booking.id,
             paid_amount=float(booking.total_amount),
@@ -357,9 +343,6 @@ class TestClientService:
             booking_id=booking.id,
             status=PaymentStatus.PAID,
         )
-
-        # Then change to ACTIVE
-        await booking_service.change_status(booking.id, BookingStatus.ACTIVE)
 
         # Manually set end_date to past date to make it overdue
         booking.end_date = datetime.now(timezone.utc) - timedelta(days=1)

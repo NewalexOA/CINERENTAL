@@ -33,7 +33,7 @@ async def test_create_booking(
     result = cast(Dict[str, Any], response.json())
     assert result['equipment_id'] == data['equipment_id']
     assert result['client_id'] == data['client_id']
-    assert result['status'] == 'PENDING'
+    assert result['status'] == 'ACTIVE'
     assert result['payment_status'] == 'PENDING'
 
 
@@ -195,8 +195,14 @@ async def test_update_booking_status(
     create_response = await async_client.post('/api/v1/bookings/', json=create_data)
     booking_id = create_response.json()['id']
 
+    # Set payment status to PAID first
+    payment_data = {'payment_status': 'PAID'}
+    await async_client.patch(
+        f'/api/v1/bookings/{booking_id}/payment', json=payment_data
+    )
+
     # Update booking status
-    status_data = {'booking_status': 'CONFIRMED'}
+    status_data = {'booking_status': 'COMPLETED'}
 
     url = f'/api/v1/bookings/{booking_id}/status'
     response = await async_client.patch(url, json=status_data)
@@ -204,7 +210,7 @@ async def test_update_booking_status(
 
     updated_booking = response.json()
     assert updated_booking['id'] == booking_id
-    assert updated_booking['status'] == 'CONFIRMED'
+    assert updated_booking['status'] == 'COMPLETED'
 
 
 @async_test
@@ -246,9 +252,15 @@ async def test_update_booking_with_status(
     create_response = await async_client.post('/api/v1/bookings/', json=create_data)
     booking_id = create_response.json()['id']
 
+    # Set payment status to PAID first
+    payment_data = {'payment_status': 'PAID'}
+    await async_client.patch(
+        f'/api/v1/bookings/{booking_id}/payment', json=payment_data
+    )
+
     # Update booking with status
     new_end_date = start_date + timedelta(days=5)
-    update_data = {'end_date': new_end_date.isoformat(), 'status': 'CONFIRMED'}
+    update_data = {'end_date': new_end_date.isoformat(), 'status': 'COMPLETED'}
 
     url = f'/api/v1/bookings/{booking_id}'
     response = await async_client.put(url, json=update_data)
@@ -257,4 +269,4 @@ async def test_update_booking_with_status(
     updated_booking = response.json()
     assert updated_booking['id'] == booking_id
     assert updated_booking['end_date'].startswith(new_end_date.isoformat())
-    assert updated_booking['status'] == 'CONFIRMED'
+    assert updated_booking['status'] == 'COMPLETED'

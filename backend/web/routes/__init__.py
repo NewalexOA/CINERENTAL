@@ -7,7 +7,15 @@ Each module defines routes for a specific feature or section of the application.
 from typing import List
 
 # Import routes modules
-from backend.web.routes import bookings, categories, clients, equipment, home, scanner
+from backend.web.routes import (
+    bookings,
+    categories,
+    clients,
+    equipment,
+    home,
+    projects,
+    scanner,
+)
 
 __all__: List[str] = [
     'bookings',
@@ -15,5 +23,6 @@ __all__: List[str] = [
     'clients',
     'equipment',
     'home',
+    'projects',
     'scanner',
 ]

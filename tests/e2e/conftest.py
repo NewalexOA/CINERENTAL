@@ -58,7 +58,7 @@ def configure_test_logging():
 configure_test_logging()
 
 # Test database URL with trust auth method
-TEST_DATABASE_URL = 'postgresql+asyncpg://postgres@test_db:5432/cinerental_test'
+TEST_DATABASE_URL = 'postgresql+asyncpg://postgres@test_db:5432/act_rental_test'
 
 
 def wait_for_app(url: str, timeout: int = 30, interval: int = 1) -> bool:
@@ -116,7 +116,7 @@ def event_loop():
 def init_test_db() -> None:
     """Initialize test database with migrations."""
     sync_url = 'postgresql://postgres@test_db:5432/postgres'  # Connect to default db
-    db_name = 'cinerental_test'
+    db_name = 'act_rental_test'
 
     # Configure Alembic
     config = Config('alembic.ini')

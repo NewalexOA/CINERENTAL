@@ -91,8 +91,8 @@ def prepare_booking_data(
     booking_data = booking.__dict__.copy()
 
     # Convert status enums to string values for templates
-    if hasattr(booking, 'status') and booking.status:
-        booking_data['status'] = booking.status.value
+    if hasattr(booking, 'booking_status') and booking.booking_status:
+        booking_data['status'] = booking.booking_status.value
 
     if hasattr(booking, 'payment_status') and booking.payment_status:
         booking_data['payment_status'] = booking.payment_status.value
