@@ -63,12 +63,22 @@ jobs:
           mkdir -p $(pwd)/frontend/static $(pwd)/media $(pwd)/static $(pwd)/templates $(pwd)/alembic
           chmod -R 777 $(pwd)/coverage $(pwd)/frontend $(pwd)/media $(pwd)/static $(pwd)/templates $(pwd)/alembic
 
+      - name: Network diagnostics
+        run: |
+          echo "=== Docker network information ==="
+          docker network ls
+          docker network inspect $(docker network ls --filter name=test -q)
+
+          echo "=== DNS resolution from test container ==="
+          docker compose -f docker-compose.test.yml run --rm test bash -c "cat /etc/hosts && echo '---' && cat /etc/resolv.conf && echo '---' && ping -c 2 test-db || true"
+
       - name: Run tests
         run: |
           # Run all tests with coverage
           docker compose -f docker-compose.test.yml run --rm \
             -v $(pwd)/coverage:/app/coverage \
             -e ENVIRONMENT=testing \
+            -e PYTHONUNBUFFERED=1 \
             test bash -c "
               echo 'Running unit tests...' && \
               pytest tests/unit/ -v --cov=backend --cov-report=html:/app/coverage/htmlcov/unit || exit 1 && \
