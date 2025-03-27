@@ -28,7 +28,7 @@ jobs:
       - name: Install dependencies
         run: |
           uv pip install --system .
-          uv pip install --system black==24.1.0 isort==5.13.2 flake8==7.0.0 mypy==1.8.0 flake8-docstrings flake8-quotes types-redis types-passlib types-python-jose pytest-asyncio pytest-cov pytest-mock
+          uv pip install --system black==24.1.0 isort==6.0.0 flake8==7.0.0 mypy==1.8.0 flake8-docstrings flake8-quotes types-redis types-passlib types-python-jose pytest-asyncio pytest-cov pytest-mock
 
       - name: Run Black
         run: |
