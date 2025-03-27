@@ -28,21 +28,18 @@ RUN curl -LsSf https://astral.sh/uv/install.sh | sh && \
     echo 'export PATH="/root/.local/bin:$PATH"' >> ~/.bashrc && \
     export PATH="/root/.local/bin:$PATH"
 
-# Copy project files
-COPY pyproject.toml README.md ./
-COPY backend backend/
-COPY tests tests/
-COPY docker docker/
-COPY frontend frontend/
-COPY alembic alembic/
-COPY alembic.ini ./
-COPY media media/
-COPY static static/
-COPY templates templates/
+# Create all necessary directories
+RUN mkdir -p backend tests docker frontend frontend/static \
+    media static templates alembic && \
+    touch alembic.ini && \
+    chmod -R 777 frontend media static templates alembic
 
-# Create necessary directories with proper permissions
-RUN mkdir -p frontend/static && \
-    chmod -R 777 frontend
+# Copy files individually to avoid errors
+COPY pyproject.toml .
+COPY README.md .
+COPY backend/. backend/
+COPY tests/. tests/
+COPY docker/. docker/
 
 # Install test dependencies
 RUN export PATH="/root/.local/bin:$PATH" && \
