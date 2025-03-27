@@ -3,7 +3,11 @@ FROM python:3.12-slim AS builder
 
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1
+    PYTHONUNBUFFERED=1 \
+    UV_SYSTEM_PYTHON=1 \
+    PIP_INDEX_URL=https://pypi.org/simple/ \
+    PIP_TRUSTED_HOST=pypi.org \
+    UV_INDEX_URL=https://pypi.org/simple/
 
 # Set work directory
 WORKDIR /build
@@ -22,20 +26,38 @@ RUN apt-get update \
 # Copy project files
 COPY pyproject.toml README.md ./
 COPY backend backend/
+COPY docker docker/
+
+# Setup pip configuration for local mirrors if available
+RUN if [ -f "docker/pip.conf" ]; then mkdir -p /etc/pip && cp docker/pip.conf /etc/pip/pip.conf; fi
 
 # ARG to control environment type
 ARG ENV_TYPE=prod
 
-# Install dependencies
-RUN pip install --no-cache-dir . && \
-    pip install --no-cache-dir psycopg2-binary faker treepoem
+# Install uv and dependencies
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh && \
+    export PATH="/root/.local/bin:$PATH" && \
+    uv pip install --system . && \
+    uv pip install --system psycopg2-binary faker treepoem
+
+# Install Playwright if needed
+ARG INSTALL_PLAYWRIGHT=false
+RUN if [ "$INSTALL_PLAYWRIGHT" = "true" ]; then \
+        export PATH="/root/.local/bin:$PATH" && \
+        uv pip install --system playwright && \
+        playwright install chromium; \
+    fi
 
 # Stage 2: Runtime
 FROM python:3.12-slim AS runtime
 
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1
+    PYTHONUNBUFFERED=1 \
+    UV_SYSTEM_PYTHON=1 \
+    PIP_INDEX_URL=https://pypi.org/simple/ \
+    PIP_TRUSTED_HOST=pypi.org \
+    UV_INDEX_URL=https://pypi.org/simple/
 
 # Create non-root user
 RUN groupadd -r appuser && useradd -r -g appuser appuser
@@ -58,12 +80,6 @@ COPY --from=builder /usr/local/bin /usr/local/bin
 
 # Copy application code
 COPY --chown=appuser:appuser . .
-
-# Install Playwright if needed
-ARG INSTALL_PLAYWRIGHT=false
-RUN if [ "$INSTALL_PLAYWRIGHT" = "true" ]; then \
-        playwright install; \
-    fi
 
 # Make scripts executable
 RUN chmod +x docker/start.sh docker/wait-for.sh docker/run-tests.sh
