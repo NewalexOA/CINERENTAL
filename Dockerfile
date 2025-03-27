@@ -23,7 +23,7 @@ RUN apt-get update \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy project files
+# Copy project files for dependency installation
 COPY pyproject.toml README.md ./
 COPY backend backend/
 COPY docker docker/
@@ -34,11 +34,19 @@ RUN if [ -f "docker/pip.conf" ]; then mkdir -p /etc/pip && cp docker/pip.conf /e
 # ARG to control environment type
 ARG ENV_TYPE=prod
 
-# Install uv and dependencies
+# Install uv
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh && \
-    export PATH="/root/.local/bin:$PATH" && \
+    echo 'export PATH="/root/.local/bin:$PATH"' >> ~/.bashrc && \
+    export PATH="/root/.local/bin:$PATH"
+
+# Install dependencies based on environment type
+RUN export PATH="/root/.local/bin:$PATH" && \
     uv pip install --system . && \
-    uv pip install --system psycopg2-binary faker treepoem
+    uv pip install --system psycopg2-binary faker treepoem && \
+    if [ "$ENV_TYPE" = "test" ]; then \
+        echo "Installing test dependencies..." && \
+        uv pip install --system pytest pytest-cov pytest-asyncio pytest-mock httpx coverage; \
+    fi
 
 # Install Playwright if needed
 ARG INSTALL_PLAYWRIGHT=false
@@ -53,11 +61,7 @@ FROM python:3.12-slim AS runtime
 
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1 \
-    UV_SYSTEM_PYTHON=1 \
-    PIP_INDEX_URL=https://pypi.org/simple/ \
-    PIP_TRUSTED_HOST=pypi.org \
-    UV_INDEX_URL=https://pypi.org/simple/
+    PYTHONUNBUFFERED=1
 
 # Create non-root user
 RUN groupadd -r appuser && useradd -r -g appuser appuser
@@ -68,8 +72,8 @@ WORKDIR /app
 # Install runtime dependencies
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
-        curl \
         libpq5 \
+        netcat-traditional \
         ghostscript \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
