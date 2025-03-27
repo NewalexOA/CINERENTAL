@@ -11,7 +11,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 # Set working directory
 WORKDIR /app
 
-# Install system dependencies
+# Install system dependencies including Playwright requirements
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     curl \
@@ -20,6 +20,20 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ghostscript \
     postgresql-client \
     netcat-traditional \
+    # Playwright dependencies
+    libglib2.0-0 \
+    libnss3 \
+    libnspr4 \
+    libatk1.0-0 \
+    libatspi2.0-0 \
+    libxcomposite1 \
+    libxdamage1 \
+    libxext6 \
+    libxfixes3 \
+    libxrandr2 \
+    libgbm1 \
+    libxkbcommon0 \
+    libasound2 \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
@@ -59,7 +73,9 @@ RUN export PATH="/root/.local/bin:$PATH" && \
     playwright
 
 # Install Playwright browser
-RUN playwright install chromium
+RUN playwright install chromium && \
+    mkdir -p /var/lib/apt/lists/partial && \
+    chmod -R 777 /var/lib/apt/lists /var/cache/apt
 
 # Make scripts executable
 RUN chmod +x docker/wait-for.sh docker/run-tests.sh
