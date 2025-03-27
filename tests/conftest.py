@@ -185,7 +185,7 @@ TEST_DATABASE_URL = (
     f'{os.environ.get("POSTGRES_PASSWORD", "postgres")}'
     f'@{os.environ.get("POSTGRES_SERVER", "localhost")}:'
     f'{os.environ.get("POSTGRES_PORT", "5432")}/'
-    f'{os.environ.get("POSTGRES_DB", "act_rental_test")}'
+    f'{os.environ.get("POSTGRES_DB", "postgres")}'
 )
 
 
