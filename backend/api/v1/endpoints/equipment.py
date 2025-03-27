@@ -794,19 +794,21 @@ async def check_equipment_availability(
 
             # Check for date overlap
             if booking.start_date <= end_date_dt and booking.end_date >= start_date_dt:
+                # Add project information if available
+                project_id = None
+                project_name = None
+                if hasattr(booking, 'project') and booking.project:
+                    project_id = booking.project.id
+                    project_name = booking.project.name
+
                 conflict = BookingConflictInfo(
                     booking_id=booking.id,
                     start_date=booking.start_date.isoformat(),
                     end_date=booking.end_date.isoformat(),
                     status=booking.booking_status,
-                    project_id=None,
-                    project_name=None,
+                    project_id=project_id,
+                    project_name=project_name,
                 )
-
-                # Add project information if available
-                if hasattr(booking, 'project') and booking.project:
-                    conflict.project_id = booking.project.id
-                    conflict.project_name = booking.project.name
 
                 conflicts.append(conflict)
 
