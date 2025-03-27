@@ -11,7 +11,6 @@ import pytest
 import pytest_asyncio
 import requests
 import uvicorn
-from alembic import command
 from alembic.config import Config
 from loguru import logger
 from playwright.async_api import (
@@ -27,6 +26,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, create_async_engin
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.sql import text
 
+from alembic import command
 from backend.core.logging import configure_logging
 from backend.main import app as fastapi_app
 from backend.models import Equipment
@@ -58,7 +58,9 @@ def configure_test_logging():
 configure_test_logging()
 
 # Test database URL with trust auth method
-TEST_DATABASE_URL = 'postgresql+asyncpg://postgres@test_db:5432/act_rental_test'
+TEST_DATABASE_URL = (
+    'postgresql+asyncpg://postgres:postgres@test-db:5432/act_rental_test'
+)
 
 
 def wait_for_app(url: str, timeout: int = 30, interval: int = 1) -> bool:
@@ -115,13 +117,14 @@ def event_loop():
 
 def init_test_db() -> None:
     """Initialize test database with migrations."""
-    sync_url = 'postgresql://postgres@test_db:5432/postgres'  # Connect to default db
+    # Connect to default db
+    sync_url = 'postgresql://postgres:postgres@test-db:5432/postgres'
     db_name = 'act_rental_test'
 
     # Configure Alembic
     config = Config('alembic.ini')
     config.set_main_option(
-        'sqlalchemy.url', f'postgresql://postgres@test_db:5432/{db_name}'
+        'sqlalchemy.url', f'postgresql://postgres:postgres@test-db:5432/{db_name}'
     )
 
     # Create engine for database operations
@@ -152,7 +155,8 @@ def init_test_db() -> None:
         engine.dispose()
 
         # Connect to test database and apply migrations
-        test_engine = create_engine(f'postgresql://postgres@test_db:5432/{db_name}')
+        db_url = f'postgresql://postgres:postgres@test-db:5432/{db_name}'
+        test_engine = create_engine(db_url)
         try:
             # Apply migrations
             command.upgrade(config, 'head')
