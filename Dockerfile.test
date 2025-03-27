@@ -1,0 +1,60 @@
+FROM python:3.12-slim
+
+# Set environment variables
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    UV_SYSTEM_PYTHON=1 \
+    PIP_INDEX_URL=https://pypi.org/simple/ \
+    PIP_TRUSTED_HOST=pypi.org \
+    UV_INDEX_URL=https://pypi.org/simple/
+
+# Set working directory
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    curl \
+    libpq-dev \
+    python3-dev \
+    ghostscript \
+    postgresql-client \
+    netcat-traditional \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install uv
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh && \
+    echo 'export PATH="/root/.local/bin:$PATH"' >> ~/.bashrc && \
+    export PATH="/root/.local/bin:$PATH"
+
+# Copy project files
+COPY pyproject.toml README.md ./
+COPY backend backend/
+COPY tests tests/
+COPY docker docker/
+
+# Install test dependencies
+RUN export PATH="/root/.local/bin:$PATH" && \
+    uv pip install --system . && \
+    uv pip install --system \
+    pytest==7.4.0 \
+    pytest-asyncio==0.21.1 \
+    pytest-cov==4.1.0 \
+    pytest-mock==3.11.1 \
+    pytest-playwright==0.7.0 \
+    httpx \
+    coverage \
+    requests \
+    psycopg2-binary \
+    faker \
+    treepoem \
+    playwright
+
+# Install Playwright browser
+RUN playwright install chromium
+
+# Make scripts executable
+RUN chmod +x docker/wait-for.sh docker/run-tests.sh
+
+CMD ["./docker/run-tests.sh"]

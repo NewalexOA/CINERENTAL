@@ -26,36 +26,10 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-docker-
 
-      - name: Create .env file
-        run: |
-          echo "ENVIRONMENT=testing" > .env
-          echo "POSTGRES_USER=postgres" >> .env
-          echo "POSTGRES_PASSWORD=postgres" >> .env
-          echo "POSTGRES_DB=act_rental_test" >> .env
-          echo "POSTGRES_HOST_AUTH_METHOD=trust" >> .env
-          echo "SECRET_KEY=test-secret-key" >> .env
-          echo "DEBUG=false" >> .env
-          echo "TESTING=1" >> .env
-
       - name: Build and start containers
         run: |
-          docker compose -f docker-compose.test.yml build test test_db redis
-          docker compose -f docker-compose.test.yml up -d test_db redis
-
-      - name: Wait for services to be ready
-        run: |
-          # Ensure wait-for.sh is executable
-          chmod +x docker/wait-for.sh
-
-          # Wait for PostgreSQL using wait-for.sh
-          docker compose -f docker-compose.test.yml run --rm --no-deps --entrypoint "./docker/wait-for.sh" test postgres test_db 5432
-
-          # Wait for Redis using wait-for.sh
-          docker compose -f docker-compose.test.yml run --rm --no-deps --entrypoint "./docker/wait-for.sh" test redis redis 6379
-
-      - name: Run migrations
-        run: |
-          docker compose -f docker-compose.test.yml run --rm --no-deps --entrypoint "alembic" test upgrade head
+          docker compose -f docker-compose.test.yml build
+          docker compose -f docker-compose.test.yml up -d test-db test-redis
 
       - name: Run tests
         run: |
@@ -63,50 +37,20 @@ jobs:
           mkdir -p $(pwd)/coverage/htmlcov
           chmod -R 777 $(pwd)/coverage
 
-          cat > run_tests_ci.sh << 'EOF'
-          #!/bin/bash
-          set -e
-
-          # Set the environment variable for tests
-          export ENVIRONMENT=testing
-          echo "Setting ENVIRONMENT=testing for all tests"
-
-          if [ ! -d "/app/tests" ]; then
-            echo "Directory tests not found"
-            exit 1
-          fi
-
-          TEST_FILES=$(find /app -type f -name "test_*.py" | sort)
-          if [ -z "$TEST_FILES" ]; then
-            echo "No test files found!"
-            exit 1
-          fi
-
-          cd /app
-
-          echo "Starting unit tests with coverage..."
-          COVERAGE_FILE=/coverage/.coverage.unit python -m pytest tests/unit/ -v --no-header -p no:cacheprovider --cov=backend || echo "Unit tests failed"
-
-          echo "Starting integration tests with coverage..."
-          COVERAGE_FILE=/coverage/.coverage.integration python -m pytest tests/integration/ -v --no-header -p no:cacheprovider --cov=backend || echo "Integration tests failed"
-
-          echo "Starting e2e tests with coverage..."
-          COVERAGE_FILE=/coverage/.coverage.e2e python -m pytest tests/e2e/ -v --no-header -p no:cacheprovider --cov=backend || echo "E2e tests failed"
-
-          echo "Combining coverage data..."
-          cd /coverage
-          coverage combine .coverage.unit .coverage.integration .coverage.e2e
-          coverage html -d htmlcov
-          coverage report
-          EOF
-
-          chmod +x run_tests_ci.sh
-
-          # Run tests with mounted coverage directory
-          docker compose -f docker-compose.test.yml run --rm --no-deps -v $(pwd)/run_tests_ci.sh:/tmp/run_tests_ci.sh -v $(pwd)/coverage:/coverage --entrypoint "bash" test /tmp/run_tests_ci.sh
+          # Run all tests with coverage
+          docker compose -f docker-compose.test.yml run --rm \
+            -v $(pwd)/coverage:/app/coverage \
+            test bash -c "
+              echo 'Running unit tests...' && \
+              pytest tests/unit/ -v --cov=backend --cov-report=html:/app/coverage/htmlcov/unit || exit 1 && \
+              echo 'Running integration tests...' && \
+              pytest tests/integration/ -v --cov=backend --cov-report=html:/app/coverage/htmlcov/integration || exit 1 && \
+              echo 'Running e2e tests...' && \
+              pytest tests/e2e/ -v --cov=backend --cov-report=html:/app/coverage/htmlcov/e2e || exit 1
+            "
 
       - name: Upload coverage report as artifact
-        if: success()
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: coverage-report

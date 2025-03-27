@@ -1,14 +1,12 @@
+version: '3.8'
+
 name: act-rental-test
 
 services:
   test:
     build:
       context: .
-      target: runtime
-      args:
-        ENV_TYPE: test
-        INSTALL_PLAYWRIGHT_DEPS: true
-        INSTALL_PLAYWRIGHT: true
+      dockerfile: Dockerfile.test
     entrypoint: ./docker/run-tests.sh
     volumes:
       - ./app:/app/app
@@ -22,46 +20,43 @@ services:
       - ./pyproject.toml:/app/pyproject.toml
       - ./htmlcov:/app/htmlcov
     environment:
-      - POSTGRES_SERVER=test_db
+      - POSTGRES_SERVER=test-db
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
-      - POSTGRES_DB=act_rental_test
-      - REDIS_HOST=redis
+      - POSTGRES_DB=test_db
+      - REDIS_HOST=test-redis
       - REDIS_PASSWORD=
       - TESTING=1
       - SECRET_KEY=test-secret-key
-      - ENVIRONMENT=testing
+      - ENVIRONMENT=test
     deploy:
       resources:
         limits:
           cpus: '0.5'
           memory: 512M
     depends_on:
-      test_db:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
+      - test-db
+      - test-redis
     networks:
       - act-rental_network
     command: >
       bash -c "
-        ./docker/wait-for.sh test_db:5432 -t 60 -- echo 'Waiting for PostgreSQL...' &&
-        ./docker/wait-for.sh redis:6379 -t 60 -- echo 'Waiting for Redis...' &&
+        ./docker/wait-for.sh test-db:5432 -t 60 -- echo 'Waiting for PostgreSQL...' &&
+        ./docker/wait-for.sh test-redis:6380 -t 60 -- echo 'Waiting for Redis...' &&
         echo 'Running migrations...' &&
         alembic stamp head &&
         echo 'Running tests...' &&
         pytest ${TEST_PATH:-tests/} -v
       "
 
-  test_db:
-    image: postgres:14-alpine
+  test-db:
+    image: postgres:15
     tmpfs:
       - /var/lib/postgresql/data
     environment:
-      - POSTGRES_DB=act_rental_test
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
-      - POSTGRES_HOST_AUTH_METHOD=trust
+      - POSTGRES_DB=test_db
     ports:
       - "5433:5432"
     deploy:
@@ -77,13 +72,10 @@ services:
       timeout: 5s
       retries: 5
 
-  redis:
-    # Use the same redis image as in the main docker-compose
-    # for tests, a simple configuration is sufficient
-    image: redis:6-alpine
-    command: redis-server --appendonly yes
-    networks:
-      - act-rental_network
+  test-redis:
+    image: redis:7
+    ports:
+      - "6380:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
