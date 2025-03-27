@@ -9,14 +9,14 @@ if ! command -v psql &> /dev/null; then
 fi
 
 # Check if required services are running
-if ! nc -z test_db 5432 &> /dev/null; then
-    echo "ERROR: test_db service is not available. Run tests using docker-compose.test.yml:"
+if ! nc -z test-db 5432 &> /dev/null; then
+    echo "ERROR: test-db service is not available. Run tests using docker-compose.test.yml:"
     echo "docker compose -f docker-compose.test.yml run --rm test [test_path/and_options]"
     exit 1
 fi
 
-if ! nc -z redis 6379 &> /dev/null; then
-    echo "ERROR: redis service is not available. Run tests using docker-compose.test.yml:"
+if ! nc -z test-redis 6379 &> /dev/null; then
+    echo "ERROR: test-redis service is not available. Run tests using docker-compose.test.yml:"
     echo "docker compose -f docker-compose.test.yml run --rm test [test_path/and_options]"
     exit 1
 fi

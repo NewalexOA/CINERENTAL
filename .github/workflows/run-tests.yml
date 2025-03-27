@@ -30,9 +30,26 @@ jobs:
         run: |
           docker compose -f docker-compose.test.yml build
           docker compose -f docker-compose.test.yml up -d test-db test-redis
+
           # Wait for services to be healthy
           echo "Waiting for services to be healthy..."
-          timeout 30s bash -c 'until docker compose -f docker-compose.test.yml ps | grep -q "(healthy)"; do sleep 1; done'
+          attempt_counter=0
+          max_attempts=30
+
+          until docker compose -f docker-compose.test.yml ps | grep "test-db" | grep -q "(healthy)" && \
+                docker compose -f docker-compose.test.yml ps | grep "test-redis" | grep -q "(healthy)"; do
+            if [ ${attempt_counter} -eq ${max_attempts} ]; then
+              echo "Max attempts reached. Services are not healthy!"
+              docker compose -f docker-compose.test.yml ps
+              docker compose -f docker-compose.test.yml logs
+              exit 1
+            fi
+
+            attempt_counter=$((attempt_counter+1))
+            echo "Waiting for services to be healthy... (attempt: ${attempt_counter}/${max_attempts})"
+            sleep 1
+          done
+          echo "All services are healthy!"
 
       - name: Run tests
         run: |
