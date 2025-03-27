@@ -1,6 +1,6 @@
 """Equipment API integration tests."""
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import TypedDict, cast
 
 from fastapi import status as http_status
@@ -489,8 +489,8 @@ async def test_check_equipment_availability(
     # Create booking service
     booking_service = BookingService(db_session)
 
-    # Get tomorrow's date and a week from now
-    tomorrow = datetime.now() + timedelta(days=1)
+    # Get tomorrow's date and a week from now with timezone awareness
+    tomorrow = datetime.now(timezone.utc) + timedelta(days=1)
     next_week = tomorrow + timedelta(days=7)
 
     # Format as ISO dates for API request

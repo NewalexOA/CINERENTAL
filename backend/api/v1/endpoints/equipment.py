@@ -5,7 +5,7 @@ It provides routes for adding, updating, and retrieving equipment items,
 including their specifications, availability, and replacement costs.
 """
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import List, Optional
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Query
@@ -156,22 +156,26 @@ async def get_equipment_list(
                 detail='Limit parameter must be less than or equal to 1000',
             )
 
-        # Validate date parameters
-        if start_date or end_date:
+        # Parse date range if provided
+        if start_date and end_date:
             try:
-                if start_date:
-                    available_from = datetime.fromisoformat(start_date)
-                if end_date:
-                    available_to = datetime.fromisoformat(end_date)
-                if available_from and available_to and available_from >= available_to:
-                    raise HTTPException(
-                        status_code=http_status.HTTP_400_BAD_REQUEST,
-                        detail='Start date must be before end date',
-                    )
+                available_from = datetime.fromisoformat(start_date).replace(
+                    tzinfo=timezone.utc
+                )
+                available_to = datetime.fromisoformat(end_date).replace(
+                    tzinfo=timezone.utc
+                )
             except ValueError:
                 raise HTTPException(
                     status_code=http_status.HTTP_400_BAD_REQUEST,
-                    detail='Invalid date format. Use ISO format (YYYY-MM-DDTHH:MM:SS)',
+                    detail='Invalid date format. Use ISO format (YYYY-MM-DD)',
+                )
+
+            # Validate date range
+            if available_from >= available_to:
+                raise HTTPException(
+                    status_code=http_status.HTTP_400_BAD_REQUEST,
+                    detail='Start date must be before end date',
                 )
 
         # Validate query parameter length
@@ -722,8 +726,9 @@ async def check_equipment_availability(
     """
     # Parse dates
     try:
-        start_date_dt = datetime.fromisoformat(start_date)
-        end_date_dt = datetime.fromisoformat(end_date)
+        # Add timezone info to make them timezone-aware (UTC)
+        start_date_dt = datetime.fromisoformat(start_date).replace(tzinfo=timezone.utc)
+        end_date_dt = datetime.fromisoformat(end_date).replace(tzinfo=timezone.utc)
     except ValueError:
         raise HTTPException(
             status_code=http_status.HTTP_400_BAD_REQUEST,
