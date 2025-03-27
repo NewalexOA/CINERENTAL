@@ -24,6 +24,16 @@ const formatDate = (date) => {
     });
 };
 
+const formatDateTime = (datetime) => {
+    return new Date(datetime).toLocaleString('ru-RU', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+};
+
 const formatCurrency = (amount) => {
     return new Intl.NumberFormat('ru-RU', {
         style: 'currency',
