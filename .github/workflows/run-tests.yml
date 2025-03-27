@@ -57,12 +57,14 @@ jobs:
           done
           echo "All services are healthy!"
 
+      - name: Create required directories
+        run: |
+          mkdir -p $(pwd)/coverage/htmlcov
+          mkdir -p $(pwd)/frontend/static $(pwd)/media $(pwd)/static $(pwd)/templates $(pwd)/alembic
+          chmod -R 777 $(pwd)/coverage $(pwd)/frontend $(pwd)/media $(pwd)/static $(pwd)/templates $(pwd)/alembic
+
       - name: Run tests
         run: |
-          # Create directory for coverage reports
-          mkdir -p $(pwd)/coverage/htmlcov
-          chmod -R 777 $(pwd)/coverage
-
           # Run all tests with coverage
           docker compose -f docker-compose.test.yml run --rm \
             -v $(pwd)/coverage:/app/coverage \
