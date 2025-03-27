@@ -45,7 +45,7 @@ RUN export PATH="/root/.local/bin:$PATH" && \
     uv pip install --system psycopg2-binary faker treepoem && \
     if [ "$ENV_TYPE" = "test" ]; then \
         echo "Installing test dependencies..." && \
-        uv pip install --system pytest pytest-cov pytest-asyncio pytest-mock httpx coverage; \
+        uv pip install --system pytest pytest-cov pytest-asyncio pytest-mock httpx coverage requests; \
     fi
 
 # Install Playwright if needed
@@ -85,8 +85,10 @@ COPY --from=builder /usr/local/bin /usr/local/bin
 # Copy application code
 COPY --chown=appuser:appuser . .
 
-# Make scripts executable
-RUN chmod +x docker/start.sh docker/wait-for.sh docker/run-tests.sh
+# Make scripts executable and set permissions
+RUN chmod +x docker/start.sh docker/wait-for.sh docker/run-tests.sh && \
+    mkdir -p /var/lib/apt/lists/partial && \
+    chmod -R 777 /var/lib/apt/lists/
 
 # Switch to non-root user
 USER appuser
