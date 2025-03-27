@@ -5,6 +5,10 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.test
+      args:
+        - PIP_INDEX_URL=${PIP_INDEX_URL:-https://pypi.org/simple/}
+        - PIP_TRUSTED_HOST=${PIP_TRUSTED_HOST:-pypi.org}
+        - APT_MIRROR=${APT_MIRROR:-http://deb.debian.org/debian}
     volumes:
       - ./backend:/app/backend
       - ./tests:/app/tests
@@ -21,7 +25,7 @@ services:
       - POSTGRES_SERVER=test-db
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
-      - POSTGRES_DB=act_rental_test
+      - POSTGRES_DB=postgres
       - REDIS_HOST=test-redis
       - REDIS_PASSWORD=
       - TESTING=1

@@ -1,12 +1,22 @@
 FROM python:3.12-slim
 
+# Set environment variables with default values that can be overridden at build time
+ARG PIP_INDEX_URL=https://pypi.org/simple/
+ARG PIP_TRUSTED_HOST=pypi.org
+ARG APT_MIRROR=http://deb.debian.org/debian
+
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     UV_SYSTEM_PYTHON=1 \
-    PIP_INDEX_URL=https://pypi.org/simple/ \
-    PIP_TRUSTED_HOST=pypi.org \
-    UV_INDEX_URL=https://pypi.org/simple/
+    PIP_INDEX_URL=${PIP_INDEX_URL} \
+    PIP_TRUSTED_HOST=${PIP_TRUSTED_HOST} \
+    UV_INDEX_URL=${PIP_INDEX_URL}
+
+# Configure apt to use specified mirror
+RUN echo "deb ${APT_MIRROR} bullseye main" > /etc/apt/sources.list && \
+    echo "deb ${APT_MIRROR} bullseye-updates main" >> /etc/apt/sources.list && \
+    echo "deb http://security.debian.org/debian-security bullseye-security main" >> /etc/apt/sources.list
 
 # Set working directory
 WORKDIR /app
