@@ -8,34 +8,32 @@ if ! command -v psql &> /dev/null; then
     apt-get install -y --no-install-recommends postgresql-client
 fi
 
-# Check if required services are running
-if ! nc -z test-db 5432 &> /dev/null; then
-    echo "ERROR: test-db service is not available. Run tests using docker-compose.test.yml:"
-    echo "docker compose -f docker-compose.test.yml run --rm test [test_path/and_options]"
-    exit 1
-fi
+# Function to check service availability
+check_service() {
+    local host=$1
+    local port=$2
+    local service_name=$3
+    local max_attempts=30
+    local attempt=1
 
-if ! nc -z test-redis 6379 &> /dev/null; then
-    echo "ERROR: test-redis service is not available. Run tests using docker-compose.test.yml:"
-    echo "docker compose -f docker-compose.test.yml run --rm test [test_path/and_options]"
-    exit 1
-fi
+    echo "Checking $service_name availability..."
+    while ! nc -z "$host" "$port"; do
+        if [ $attempt -ge $max_attempts ]; then
+            echo "ERROR: $service_name service is not available after $max_attempts attempts"
+            echo "Please ensure the service is running using docker-compose.test.yml:"
+            echo "docker compose -f docker-compose.test.yml up -d"
+            exit 1
+        fi
+        echo "$service_name is unavailable - attempt $attempt/$max_attempts - sleeping"
+        attempt=$((attempt + 1))
+        sleep 1
+    done
+    echo "$service_name is available"
+}
 
-# Wait for database to be ready
-echo "Waiting for PostgreSQL..."
-until nc -z test-db 5432; do
-  echo "PostgreSQL is unavailable - sleeping"
-  sleep 1
-done
-echo "PostgreSQL is up"
-
-# Wait for Redis to be ready
-echo "Waiting for Redis..."
-until nc -z test-redis 6379; do
-  echo "Redis is unavailable - sleeping"
-  sleep 1
-done
-echo "Redis is up"
+# Check and wait for required services
+check_service test-db 5432 "PostgreSQL"
+check_service test-redis 6379 "Redis"
 
 # Apply migrations
 echo "Running migrations..."
