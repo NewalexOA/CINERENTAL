@@ -121,14 +121,9 @@ def init_test_db() -> None:
     sync_url = 'postgresql://postgres:postgres@test-db:5432/postgres'
     db_name = 'act_rental_test'
 
-    # Configure Alembic
-    config = Config('alembic.ini')
-    config.set_main_option(
-        'sqlalchemy.url', f'postgresql://postgres:postgres@test-db:5432/{db_name}'
-    )
-
     # Create engine for database operations
     engine = create_engine(sync_url)
+    test_engine = None
 
     try:
         # Connect to default database to recreate test database
@@ -154,44 +149,65 @@ def init_test_db() -> None:
         # Dispose connection to default database
         engine.dispose()
 
-        # Connect to test database and apply migrations
+        # Connect to test database for migrations and verification
         db_url = f'postgresql://postgres:postgres@test-db:5432/{db_name}'
         test_engine = create_engine(db_url)
-        try:
-            # Apply migrations
-            command.upgrade(config, 'head')
 
-            # Verify migrations were applied
-            with test_engine.connect() as conn:
-                tables = [
-                    'equipment',
-                    'categories',
-                    'clients',
-                    'users',
-                    'documents',
-                    'bookings',
-                ]
-                for table in tables:
-                    result = conn.execute(
-                        text(
-                            f'''
-                        SELECT EXISTS (
-                            SELECT FROM information_schema.tables
-                            WHERE table_schema = 'public'
-                            AND table_name = '{table}'
-                        )
-                    '''
-                        )
+        # Configure Alembic for migrations
+        config = Config('alembic.ini')
+        config.set_main_option(
+            'sqlalchemy.url', f'postgresql://postgres:postgres@test-db:5432/{db_name}'
+        )
+
+        # Make sure script_location is properly set to migrations
+        if (
+            not config.get_main_option('script_location')
+            or config.get_main_option('script_location') != 'migrations'
+        ):
+            config.set_main_option('script_location', 'migrations')
+
+        # Set environment variables for Alembic
+        os.environ['POSTGRES_USER'] = 'postgres'
+        os.environ['POSTGRES_PASSWORD'] = 'postgres'
+        os.environ['POSTGRES_SERVER'] = 'test-db'
+        os.environ['POSTGRES_PORT'] = '5432'
+        os.environ['POSTGRES_DB'] = db_name
+
+        # Apply migrations
+        command.upgrade(config, 'head')
+
+        # Verify migrations were applied
+        with test_engine.connect() as conn:
+            tables = [
+                'equipment',
+                'categories',
+                'clients',
+                'users',
+                'documents',
+                'bookings',
+            ]
+            for table in tables:
+                result = conn.execute(
+                    text(
+                        f'''
+                    SELECT EXISTS (
+                        SELECT FROM information_schema.tables
+                        WHERE table_schema = 'public'
+                        AND table_name = '{table}'
                     )
-                    if not result.scalar():
-                        raise Exception(f'Migrations failed: {table} table not found')
-
-        finally:
-            test_engine.dispose()
+                '''
+                    )
+                )
+                if not result.scalar():
+                    raise Exception(f'Migrations failed: {table} table not found')
 
     except Exception as e:
         print(f'Error initializing test database: {str(e)}')
         raise
+    finally:
+        # Clean up connections
+        if test_engine:
+            test_engine.dispose()
 
 
 @pytest.fixture(scope='session', autouse=True)
