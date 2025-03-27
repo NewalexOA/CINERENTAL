@@ -19,7 +19,9 @@ install-test:
 	uv pip install -e ".[test]"
 
 test:
-	docker compose -f docker-compose.test.yml run --rm test tests/
+	docker compose -f docker-compose.test.yml build
+	docker compose -f docker-compose.test.yml up -d test-db test-redis
+	docker compose -f docker-compose.test.yml run --rm test
 
 lint:
 	black --check --diff --skip-string-normalization backend tests
