@@ -22,10 +22,20 @@ if ! nc -z redis 6379 &> /dev/null; then
 fi
 
 # Wait for database to be ready
-./docker/wait-for.sh test-db:5432 -t 60 -- echo "PostgreSQL is up"
+echo "Waiting for PostgreSQL..."
+until nc -z test-db 5432; do
+  echo "PostgreSQL is unavailable - sleeping"
+  sleep 1
+done
+echo "PostgreSQL is up"
 
 # Wait for Redis to be ready
-./docker/wait-for.sh test-redis:6379 -t 60 -- echo "Redis is up"
+echo "Waiting for Redis..."
+until nc -z test-redis 6379; do
+  echo "Redis is unavailable - sleeping"
+  sleep 1
+done
+echo "Redis is up"
 
 # Apply migrations
 echo "Running migrations..."

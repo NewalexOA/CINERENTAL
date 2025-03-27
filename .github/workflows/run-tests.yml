@@ -30,6 +30,9 @@ jobs:
         run: |
           docker compose -f docker-compose.test.yml build
           docker compose -f docker-compose.test.yml up -d test-db test-redis
+          # Wait for services to be healthy
+          echo "Waiting for services to be healthy..."
+          timeout 30s bash -c 'until docker compose -f docker-compose.test.yml ps | grep -q "(healthy)"; do sleep 1; done'
 
       - name: Run tests
         run: |

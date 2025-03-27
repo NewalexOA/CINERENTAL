@@ -35,8 +35,10 @@ services:
           cpus: '0.5'
           memory: 512M
     depends_on:
-      - test-db
-      - test-redis
+      test-db:
+        condition: service_healthy
+      test-redis:
+        condition: service_healthy
     networks:
       - act-rental_network
     command: >
