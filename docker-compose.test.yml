@@ -27,8 +27,8 @@ services:
       - REDIS_HOST=test-redis
       - REDIS_PASSWORD=
       - TESTING=1
+      - ENVIRONMENT=testing
       - SECRET_KEY=test-secret-key
-      - ENVIRONMENT=test
     deploy:
       resources:
         limits:

@@ -66,6 +66,7 @@ jobs:
           # Run all tests with coverage
           docker compose -f docker-compose.test.yml run --rm \
             -v $(pwd)/coverage:/app/coverage \
+            -e ENVIRONMENT=testing \
             test bash -c "
               echo 'Running unit tests...' && \
               pytest tests/unit/ -v --cov=backend --cov-report=html:/app/coverage/htmlcov/unit || exit 1 && \
