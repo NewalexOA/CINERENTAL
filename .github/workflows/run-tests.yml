@@ -26,6 +26,12 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-docker-
 
+      - name: Prepare directories
+        run: |
+          # Ensure frontend/static exists
+          mkdir -p frontend/static
+          chmod -R 777 frontend
+
       - name: Build and start containers
         run: |
           docker compose -f docker-compose.test.yml build

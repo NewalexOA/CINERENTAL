@@ -15,6 +15,7 @@ services:
       - ./media:/app/media
       - ./static:/app/static
       - ./templates:/app/templates
+      - ./frontend:/app/frontend
       - ./alembic.ini:/app/alembic.ini
       - ./pyproject.toml:/app/pyproject.toml
       - ./htmlcov:/app/htmlcov

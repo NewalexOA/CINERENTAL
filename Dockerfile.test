@@ -33,6 +33,16 @@ COPY pyproject.toml README.md ./
 COPY backend backend/
 COPY tests tests/
 COPY docker docker/
+COPY frontend frontend/
+COPY alembic alembic/
+COPY alembic.ini ./
+COPY media media/
+COPY static static/
+COPY templates templates/
+
+# Create necessary directories with proper permissions
+RUN mkdir -p frontend/static && \
+    chmod -R 777 frontend
 
 # Install test dependencies
 RUN export PATH="/root/.local/bin:$PATH" && \
