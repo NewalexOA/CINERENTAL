@@ -24,7 +24,9 @@ from backend.exceptions import BusinessError, NotFoundError, StateError, Validat
 from backend.models.booking import BookingStatus
 from backend.models.equipment import EquipmentStatus
 from backend.schemas import (
+    BookingConflictInfo,
     BookingResponse,
+    EquipmentAvailabilityResponse,
     EquipmentCreate,
     EquipmentResponse,
     EquipmentUpdate,
@@ -640,9 +642,11 @@ async def get_equipment_status_timeline(
             detail=str(e),
         ) from e
     except Exception as e:
+        # Log the exception
+        print(f'Error checking equipment availability: {str(e)}')
         raise HTTPException(
             status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f'Failed to retrieve status timeline: {str(e)}',
+            detail=f'Error checking equipment availability: {str(e)}',
         ) from e
 
 
@@ -688,4 +692,151 @@ async def update_equipment_notes(
         raise HTTPException(
             status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f'Failed to update notes: {str(e)}',
+        ) from e
+
+
+@typed_get(
+    equipment_router,
+    '/{equipment_id}/availability',
+    response_model=EquipmentAvailabilityResponse,
+)
+async def check_equipment_availability(
+    equipment_id: int,
+    start_date: str,
+    end_date: str,
+    db: AsyncSession = Depends(get_db),
+) -> EquipmentAvailabilityResponse:
+    """Check equipment availability for a given date range.
+
+    Args:
+        equipment_id: Equipment ID
+        start_date: Start date in ISO format (YYYY-MM-DD)
+        end_date: End date in ISO format (YYYY-MM-DD)
+        db: Database session
+
+    Returns:
+        Equipment availability information including any conflicts
+
+    Raises:
+        HTTPException: If dates are invalid or equipment not found
+    """
+    # Parse dates
+    try:
+        start_date_dt = datetime.fromisoformat(start_date)
+        end_date_dt = datetime.fromisoformat(end_date)
+    except ValueError:
+        raise HTTPException(
+            status_code=http_status.HTTP_400_BAD_REQUEST,
+            detail='Invalid date format. Use ISO format (YYYY-MM-DD)',
+        )
+
+    # Validate date range
+    if start_date_dt >= end_date_dt:
+        raise HTTPException(
+            status_code=http_status.HTTP_400_BAD_REQUEST,
+            detail='Start date must be before end date',
+        )
+
+    # Get equipment service
+    equipment_service = EquipmentService(db)
+    booking_service = BookingService(db)
+
+    try:
+        # Check if equipment exists
+        equipment = await equipment_service.get_equipment(equipment_id)
+
+        # Check if equipment is in a bookable status
+        bookable_statuses = [EquipmentStatus.AVAILABLE]
+        if equipment.status not in bookable_statuses:
+            status_msg = (
+                f'Equipment is {equipment.status.value} ' 'and cannot be booked'
+            )
+            return EquipmentAvailabilityResponse(
+                equipment_id=equipment_id,
+                is_available=False,
+                equipment_status=equipment.status,
+                conflicts=[],
+                message=status_msg,
+            )
+
+        # Check availability for the given date range
+        is_available = await equipment_service.check_availability(
+            equipment_id=equipment_id,
+            start_date=start_date_dt,
+            end_date=end_date_dt,
+        )
+
+        # If available, return response
+        if is_available:
+            return EquipmentAvailabilityResponse(
+                equipment_id=equipment_id,
+                is_available=True,
+                equipment_status=equipment.status,
+                conflicts=[],
+                message='Equipment is available for the specified date range',
+            )
+
+        # Get conflicting bookings
+        conflicting_bookings = await booking_service.get_by_equipment(
+            equipment_id=equipment_id,
+        )
+
+        # Filter active bookings that conflict with the requested period
+        conflicts = []
+        for booking in conflicting_bookings:
+            # Skip non-active bookings
+            if booking.booking_status not in [
+                BookingStatus.ACTIVE,
+                BookingStatus.CONFIRMED,
+                BookingStatus.PENDING,
+            ]:
+                continue
+
+            # Check for date overlap
+            if booking.start_date <= end_date_dt and booking.end_date >= start_date_dt:
+                conflict = BookingConflictInfo(
+                    booking_id=booking.id,
+                    start_date=booking.start_date.isoformat(),
+                    end_date=booking.end_date.isoformat(),
+                    status=booking.booking_status,
+                    project_id=None,
+                    project_name=None,
+                )
+
+                # Add project information if available
+                if hasattr(booking, 'project') and booking.project:
+                    conflict.project_id = booking.project.id
+                    conflict.project_name = booking.project.name
+
+                conflicts.append(conflict)
+
+        # Return unavailable response with conflicts
+        return EquipmentAvailabilityResponse(
+            equipment_id=equipment_id,
+            is_available=False,
+            equipment_status=equipment.status,
+            conflicts=conflicts,
+            message='Equipment is not available for the specified date range',
+        )
+    except NotFoundError as e:
+        raise HTTPException(
+            status_code=http_status.HTTP_404_NOT_FOUND,
+            detail=str(e),
+        ) from e
+    except ValidationError as e:
+        raise HTTPException(
+            status_code=http_status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        ) from e
+    except BusinessError as e:
+        raise HTTPException(
+            status_code=http_status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        ) from e
+    except Exception as e:
+        # Log the exception
+        print(f'Error checking equipment availability: {str(e)}')
+        raise HTTPException(
+            status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f'Error checking equipment availability: {str(e)}',
         ) from e

@@ -33,6 +33,8 @@ from backend.schemas.document import (
     DocumentUpdate,
 )
 from backend.schemas.equipment import (
+    BookingConflictInfo,
+    EquipmentAvailabilityResponse,
     EquipmentBase,
     EquipmentCreate,
     EquipmentResponse,
@@ -88,6 +90,8 @@ __all__ = [
     'EquipmentWithCategory',
     'RegenerateBarcodeRequest',
     'StatusTimelineResponse',
+    'EquipmentAvailabilityResponse',
+    'BookingConflictInfo',
     # Category schemas
     'CategoryCreate',
     'CategoryResponse',
