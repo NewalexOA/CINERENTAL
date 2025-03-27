@@ -11,6 +11,7 @@ import pytest
 import pytest_asyncio
 import requests
 import uvicorn
+from alembic import command
 from alembic.config import Config
 from loguru import logger
 from playwright.async_api import (
@@ -26,7 +27,6 @@ from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, create_async_engin
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.sql import text
 
-from alembic import command
 from backend.core.logging import configure_logging
 from backend.main import app as fastapi_app
 from backend.models import Equipment
