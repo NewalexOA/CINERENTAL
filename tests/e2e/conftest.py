@@ -58,7 +58,7 @@ def configure_test_logging():
 configure_test_logging()
 
 # Test database URL with trust auth method
-TEST_DATABASE_URL = 'postgresql+asyncpg://postgres@test_db:5432/act_rental_test'
+TEST_DATABASE_URL = 'postgresql+asyncpg://postgres:postgres@test-db:5432/postgres'
 
 
 def wait_for_app(url: str, timeout: int = 30, interval: int = 1) -> bool:
@@ -115,50 +115,36 @@ def event_loop():
 
 def init_test_db() -> None:
     """Initialize test database with migrations."""
-    sync_url = 'postgresql://postgres@test_db:5432/postgres'  # Connect to default db
-    db_name = 'act_rental_test'
-
-    # Configure Alembic
-    config = Config('alembic.ini')
-    config.set_main_option(
-        'sqlalchemy.url', f'postgresql://postgres@test_db:5432/{db_name}'
-    )
+    # Connect directly to postgres database
+    db_name = 'postgres'
+    db_url = f'postgresql://postgres:postgres@test-db:5432/{db_name}'
 
     # Create engine for database operations
-    engine = create_engine(sync_url)
+    engine = create_engine(db_url)
 
     try:
-        # Connect to default database to recreate test database
+        # Connect to the database
         with engine.connect() as conn:
-            conn.execute(text('COMMIT'))  # Close any open transaction
+            # Clean existing tables if any
+            logger.info('Cleaning database tables before applying migrations')
+            try:
+                # Clean up enum types first
+                enum_types_to_drop = [
+                    'clientstatus',
+                    'equipmentstatus',
+                    'bookingstatus',
+                    'paymentstatus',
+                ]
 
-            # Drop connections to test database
-            conn.execute(
-                text(
-                    f'''
-                SELECT pg_terminate_backend(pid)
-                FROM pg_stat_activity
-                WHERE datname = '{db_name}'
-            '''
-                )
-            )
+                for enum_type in enum_types_to_drop:
+                    try:
+                        conn.execute(text(f'DROP TYPE IF EXISTS {enum_type} CASCADE'))
+                        conn.commit()
+                        logger.info(f'Dropped enum type {enum_type}')
+                    except Exception as e:
+                        logger.error(f'Failed to drop enum type {enum_type}: {e}')
 
-            # Drop and recreate database
-            conn.execute(text(f'DROP DATABASE IF EXISTS {db_name}'))
-            conn.execute(text(f'CREATE DATABASE {db_name}'))
-            conn.commit()
-
-        # Dispose connection to default database
-        engine.dispose()
-
-        # Connect to test database and apply migrations
-        test_engine = create_engine(f'postgresql://postgres@test_db:5432/{db_name}')
-        try:
-            # Apply migrations
-            command.upgrade(config, 'head')
-
-            # Verify migrations were applied
-            with test_engine.connect() as conn:
+                # Then drop tables
                 tables = [
                     'equipment',
                     'categories',
@@ -166,27 +152,77 @@ def init_test_db() -> None:
                     'users',
                     'documents',
                     'bookings',
+                    'alembic_version',
                 ]
                 for table in tables:
-                    result = conn.execute(
-                        text(
-                            f'''
-                        SELECT EXISTS (
-                            SELECT FROM information_schema.tables
-                            WHERE table_schema = 'public'
-                            AND table_name = '{table}'
-                        )
-                    '''
-                        )
+                    try:
+                        conn.execute(text(f'DROP TABLE IF EXISTS {table} CASCADE'))
+                    except Exception as e:
+                        logger.warning(f'Error dropping table {table}: {e}')
+                conn.commit()
+            except Exception as e:
+                conn.execute(text('ROLLBACK'))
+                logger.warning(f'Error cleaning database: {e}')
+
+        # Configure Alembic for migrations
+        config = Config('alembic.ini')
+        config.set_main_option('sqlalchemy.url', db_url)
+
+        # Make sure script_location is properly set to migrations
+        if (
+            not config.get_main_option('script_location')
+            or config.get_main_option('script_location') != 'migrations'
+        ):
+            config.set_main_option('script_location', 'migrations')
+
+        # Set environment variables for Alembic
+        os.environ['POSTGRES_USER'] = 'postgres'
+        os.environ['POSTGRES_PASSWORD'] = 'postgres'
+        os.environ['POSTGRES_SERVER'] = 'test-db'
+        os.environ['POSTGRES_PORT'] = '5432'
+        os.environ['POSTGRES_DB'] = db_name
+
+        # Print debug information
+        logger.info(
+            f'Applying migrations to {db_name} at test-db:5432 '
+            f'with script_location={config.get_main_option("script_location")}'
+        )
+
+        # Apply migrations
+        command.upgrade(config, 'head')
+
+        logger.info('Migrations applied, verifying tables...')
+
+        # Verify migrations were applied
+        with engine.connect() as conn:
+            tables = [
+                'equipment',
+                'categories',
+                'clients',
+                'users',
+                'documents',
+                'bookings',
+            ]
+            for table in tables:
+                result = conn.execute(
+                    text(
+                        f'''
+                    SELECT EXISTS (
+                        SELECT FROM information_schema.tables
+                        WHERE table_schema = 'public'
+                        AND table_name = '{table}'
                     )
-                    if not result.scalar():
-                        raise Exception(f'Migrations failed: {table} table not found')
-
-        finally:
-            test_engine.dispose()
-
+                '''
+                    )
+                )
+                exists = result.scalar()
+                if not exists:
+                    logger.error(f'Table {table} not found in {db_name}')
+                    raise Exception(f'Migrations failed: {table} table not found')
+                else:
+                    logger.info(f'Table {table} verified in {db_name}')
     except Exception as e:
-        print(f'Error initializing test database: {str(e)}')
+        logger.error(f'Error initializing test database: {e}')
         raise
 
 

@@ -63,6 +63,11 @@
                 </div>
 
                 <div id="equipmentList" class="d-none">
+                    <div class="mb-3">
+                        <button type="button" class="btn btn-outline-primary btn-sm" id="applyProjectDatesBtn">
+                            <i class="fas fa-calendar-check"></i> Применить даты проекта ко всем позициям
+                        </button>
+                    </div>
                     <table class="table">
                         <thead>
                             <tr>
@@ -208,6 +213,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Add event listeners
     document.getElementById('createProjectBtn').addEventListener('click', createProject);
+    document.getElementById('applyProjectDatesBtn').addEventListener('click', applyProjectDatesToAll);
 });
 
 // Load session data
@@ -326,6 +332,24 @@ function initProjectDateRangePicker() {
             startDate: start,
             endDate: end
         };
+
+        // Проверяем есть ли оборудование с датами из проекта
+        const hasEquipmentWithProjectDates = equipmentList.some(item => {
+            if (item.bookingPeriod) {
+                const [itemStart, itemEnd] = item.bookingPeriod.split(' - ');
+                const prevStartDate = start.format('DD.MM.YYYY');
+                const prevEndDate = end.format('DD.MM.YYYY');
+                return itemStart === prevStartDate && itemEnd === prevEndDate;
+            }
+            return false;
+        });
+
+        if (hasEquipmentWithProjectDates) {
+            const shouldUpdate = confirm('Обновить даты бронирования оборудования в соответствии с новыми датами проекта?');
+            if (shouldUpdate) {
+                applyProjectDatesToAll();
+            }
+        }
     });
 }
 
@@ -393,24 +417,86 @@ function showEquipmentPeriodModal(equipmentId) {
 }
 
 // Save equipment period
-function saveEquipmentPeriod() {
+async function saveEquipmentPeriod() {
     const equipmentId = parseInt(document.getElementById('editEquipmentId').value);
     const periodValue = document.getElementById('equipmentPeriod').value;
 
-    // Update equipment list
-    const index = equipmentList.findIndex(item => item.equipment_id === equipmentId);
-    if (index !== -1) {
-        equipmentList[index].bookingPeriod = periodValue;
-        updateEquipmentUI();
-    }
+    // Разбираем даты для проверки конфликтов
+    const [startDate, endDate] = periodValue.split(' - ');
+    const formattedStartDate = moment(startDate, 'DD.MM.YYYY').format('YYYY-MM-DD');
+    const formattedEndDate = moment(endDate, 'DD.MM.YYYY').format('YYYY-MM-DD');
 
-    // Hide modal
-    bootstrap.Modal.getInstance('#equipmentPeriodModal').hide();
+    // Показываем индикатор загрузки
+    showLoader();
+
+    try {
+        // Проверяем доступность оборудования
+        const availability = await api.get(`/equipment/${equipmentId}/availability?start_date=${formattedStartDate}&end_date=${formattedEndDate}`);
+
+        // Скрываем индикатор загрузки
+        hideLoader();
+
+        if (availability && availability.is_available) {
+            // Обновляем даты если оборудование доступно
+            const index = equipmentList.findIndex(item => item.equipment_id === equipmentId);
+            if (index !== -1) {
+                equipmentList[index].bookingPeriod = periodValue;
+                updateEquipmentUI();
+            }
+
+            // Закрываем модальное окно
+            bootstrap.Modal.getInstance('#equipmentPeriodModal').hide();
+        } else {
+            // Показываем предупреждение о конфликтах
+            let conflictMessage = 'Выбранный период недоступен для бронирования:';
+
+            if (availability && availability.conflicts && availability.conflicts.length > 0) {
+                availability.conflicts.forEach(conflict => {
+                    const conflictStart = moment(conflict.start_date).format('DD.MM.YYYY');
+                    const conflictEnd = moment(conflict.end_date).format('DD.MM.YYYY');
+                    conflictMessage += `\n- Конфликт с бронированием: ${conflictStart} - ${conflictEnd}`;
+                    if (conflict.project_name) {
+                        conflictMessage += ` (Проект: ${conflict.project_name})`;
+                    }
+                });
+            } else {
+                conflictMessage += '\n- Оборудование недоступно в этот период';
+            }
+
+            conflictMessage += '\n\nПожалуйста, выберите другой период.';
+
+            alert(conflictMessage);
+        }
+    } catch (error) {
+        // Скрываем индикатор загрузки
+        hideLoader();
+        console.error('Ошибка при проверке доступности оборудования:', error);
+        showToast('Не удалось проверить доступность оборудования', 'danger');
+    }
 }
 
 // Create project
 function createProject(e) {
     e.preventDefault();
+
+    // Проверка заполнения обязательных полей
+    if (!$('#projectName').val().trim() || !$('#clientSelect').val()) {
+        showToast('Заполните все обязательные поля', 'warning');
+        return;
+    }
+
+    // Проверка наличия оборудования
+    if (equipmentList.length === 0) {
+        showToast('Добавьте оборудование в проект', 'warning');
+        return;
+    }
+
+    // Проверка периодов бронирования
+    const missingPeriods = equipmentList.some(item => !item.bookingPeriod);
+    if (missingPeriods) {
+        showToast('Укажите периоды бронирования для всего оборудования', 'warning');
+        return;
+    }
 
     // Get dates from date range picker
     const dateRange = $('#projectDates').data('daterangepicker');
@@ -422,10 +508,21 @@ function createProject(e) {
         notes: $('#projectNotes').val().trim(),
         start_date: dateRange.startDate.format('YYYY-MM-DDTHH:mm:ss'),
         end_date: dateRange.endDate.format('YYYY-MM-DDTHH:mm:ss'),
-        status: 'DRAFT'
+        status: 'DRAFT',
+        bookings: equipmentList.map(item => {
+            const [startDate, endDate] = item.bookingPeriod.split(' - ');
+            return {
+                equipment_id: item.equipment_id,
+                start_date: moment(startDate, 'DD.MM.YYYY').format('YYYY-MM-DDTHH:mm:ss'),
+                end_date: moment(endDate, 'DD.MM.YYYY').format('YYYY-MM-DDTHH:mm:ss')
+            };
+        })
     };
 
     console.log('Sending project data:', projectData);
+
+    // Показываем индикатор загрузки
+    showLoader();
 
     // Make POST request to create project
     $.ajax({
@@ -439,10 +536,86 @@ function createProject(e) {
             window.location.href = '/projects/' + response.id;
         },
         error: function(xhr, status, error) {
+            hideLoader();
             console.error('Error creating project:', xhr.responseText);
-            alert('Ошибка создания проекта: ' + (xhr.responseJSON?.detail || error));
+            showToast('Ошибка создания проекта: ' + (xhr.responseJSON?.detail || error), 'danger');
         }
     });
+}
+
+// Apply project dates to all equipment
+async function applyProjectDatesToAll() {
+    // Проверяем, что даты проекта заданы
+    if (!projectDateRange) {
+        showToast('Сначала укажите период проекта', 'warning');
+        return;
+    }
+
+    // Формируем строку с датами в нужном формате
+    const formattedDateRange = projectDateRange.startDate.format('DD.MM.YYYY') + ' - ' + projectDateRange.endDate.format('DD.MM.YYYY');
+    const startDate = projectDateRange.startDate.format('YYYY-MM-DD');
+    const endDate = projectDateRange.endDate.format('YYYY-MM-DD');
+
+    // Показываем индикатор загрузки
+    showLoader();
+
+    try {
+        // Собираем ID всего оборудования
+        const equipmentIds = equipmentList.map(item => item.equipment_id);
+
+        // Проверяем доступность оборудования на выбранные даты
+        const availabilityChecks = await Promise.all(
+            equipmentIds.map(id =>
+                api.get(`/equipment/${id}/availability?start_date=${startDate}&end_date=${endDate}`)
+            )
+        );
+
+        // Составляем список доступного и недоступного оборудования
+        const conflictingEquipment = [];
+
+        equipmentList.forEach((item, index) => {
+            const availability = availabilityChecks[index];
+
+            if (availability && availability.is_available) {
+                // Если оборудование доступно, устанавливаем даты
+                item.bookingPeriod = formattedDateRange;
+            } else {
+                // Если оборудование недоступно, добавляем в список конфликтов
+                conflictingEquipment.push({
+                    name: item.name,
+                    barcode: item.barcode,
+                    conflicts: availability?.conflicts || []
+                });
+            }
+        });
+
+        // Обновляем UI
+        updateEquipmentUI();
+
+        // Скрываем индикатор загрузки
+        hideLoader();
+
+        // Если есть конфликты, показываем предупреждение
+        if (conflictingEquipment.length > 0) {
+            let conflictMessage = `Не удалось установить даты для ${conflictingEquipment.length} единиц оборудования из-за конфликтов с существующими бронированиями:`;
+
+            conflictingEquipment.forEach(item => {
+                conflictMessage += `\n- ${item.name} (${item.barcode})`;
+            });
+
+            conflictMessage += "\n\nДаты были установлены только для доступного оборудования.";
+
+            alert(conflictMessage);
+        } else {
+            // Показываем уведомление об успехе
+            showToast('Даты проекта применены ко всем позициям оборудования', 'success');
+        }
+    } catch (error) {
+        // Скрываем индикатор загрузки
+        hideLoader();
+        console.error('Ошибка при проверке доступности оборудования:', error);
+        showToast('Не удалось проверить доступность оборудования', 'danger');
+    }
 }
 </script>
 {% endblock %}

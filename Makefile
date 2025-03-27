@@ -1,26 +1,37 @@
 .PHONY: install install-dev install-test lint format clean run migrate
 
 install:
-	pip install -r requirements-prod.txt
+	python -m venv .venv
+	. .venv/bin/activate && \
+	curl -LsSf https://astral.sh/uv/install.sh | sh && \
+	uv pip install -e ".[dev]"
 
-install-dev:
-	pip install -r requirements-dev.txt
+install-prod:
+	python -m venv .venv
+	. .venv/bin/activate && \
+	curl -LsSf https://astral.sh/uv/install.sh | sh && \
+	uv pip install -r requirements.txt
 
 install-test:
-	pip install -r requirements-test.txt
+	python -m venv .venv
+	. .venv/bin/activate && \
+	curl -LsSf https://astral.sh/uv/install.sh | sh && \
+	uv pip install -e ".[test]"
 
 test:
-	pytest tests/ -v --cov=src.app
+	docker compose -f docker-compose.test.yml build
+	docker compose -f docker-compose.test.yml up -d test-db test-redis
+	docker compose -f docker-compose.test.yml run --rm test
 
 lint:
-	flake8 src/app tests
-	MYPYPATH=src mypy src/app tests
-	black src/app tests --check
-	isort src/app tests --check-only
+	black --check --diff --skip-string-normalization backend tests
+	isort --check --diff --profile black --line-length 88 --skip backend/models/__init__.py backend tests
+	flake8 --config=.flake8 backend tests
+	mypy --config-file=mypy.ini backend
 
 format:
-	black src/app tests
-	isort src/app tests
+	black --skip-string-normalization backend tests
+	isort --profile black --line-length 88 --skip backend/models/__init__.py backend tests
 
 clean:
 	find . -type d -name "__pycache__" -exec rm -rf {} +

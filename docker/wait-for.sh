@@ -14,14 +14,8 @@ echo "Waiting for $service_type ($host:$port)..."
 
 case "$service_type" in
   "postgres")
-    # Export PostgreSQL environment variables
-    export PGHOST="$host"
-    export PGPORT="$port"
-    export PGUSER="${POSTGRES_USER}"
-    export PGPASSWORD="${POSTGRES_PASSWORD}"
-    export PGDATABASE="${POSTGRES_DB}"
-
-    until pg_isready >/dev/null 2>&1; do
+    # Используем базовую TCP проверку вместо pg_isready
+    until (echo > /dev/tcp/$host/$port) >/dev/null 2>&1; do
       [ "$elapsed" -gt "$timeout" ] && echo "Timeout waiting for PostgreSQL" && exit 1
       echo "PostgreSQL is unavailable - sleeping"
       sleep 1
