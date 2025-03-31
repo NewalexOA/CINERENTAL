@@ -180,7 +180,7 @@
 </div>
 {% endblock %}
 
-{% block extra_js %}
+{% block scripts %}
 <!-- Connect the script for working with scanning sessions -->
 <script src="{{ url_for('static', path='js/scan-storage.js') }}"></script>
 <script>
@@ -188,8 +188,36 @@ let sessionData = null;
 let equipmentList = [];
 let projectDateRange = null;
 
+// Show local loader
+function showLocalLoader() {
+    const createButton = document.getElementById('createProjectBtn');
+    if (createButton) {
+        createButton.disabled = true;
+        createButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Создание проекта...';
+    }
+}
+
+// Hide local loader
+function hideLocalLoader() {
+    const createButton = document.getElementById('createProjectBtn');
+    if (createButton) {
+        createButton.disabled = false;
+        createButton.innerHTML = '<i class="fas fa-project-diagram"></i> Создать проект';
+    }
+}
+
 // Initialize page
 document.addEventListener('DOMContentLoaded', () => {
+    // First ensure loader is reset and hidden
+    const loader = document.getElementById('global-loader');
+    if (loader) {
+        loader.setAttribute('hidden', '');
+        if (getComputedStyle(loader).display !== 'none') {
+            loader.style.display = 'none';
+        }
+    }
+    window.loaderCounter = 0;
+
     // Get session ID from URL
     const urlParams = new URLSearchParams(window.location.search);
     const sessionId = urlParams.get('session_id');
@@ -239,11 +267,28 @@ function loadSessionData(sessionId) {
 
 // Load equipment list
 function loadEquipmentList(items) {
-    equipmentList = items.map(item => ({
-        ...item,
-        bookingPeriod: null // Will be set by user
-    }));
+    equipmentList = items.map(item => {
+        let equipment_id = item.equipment_id;
 
+        if (!equipment_id && item.id) {
+            equipment_id = item.id;
+        }
+
+        equipment_id = parseInt(equipment_id);
+
+        if (isNaN(equipment_id)) {
+            console.error('Некорректный ID оборудования в сессии:', item);
+            return null;
+        }
+
+        return {
+            ...item,
+            equipment_id: equipment_id,
+            bookingPeriod: null
+        };
+    }).filter(item => item !== null);
+
+    console.log('Загружено оборудование:', equipmentList);
     updateEquipmentUI();
 }
 
@@ -333,7 +378,6 @@ function initProjectDateRangePicker() {
             endDate: end
         };
 
-        // Проверяем есть ли оборудование с датами из проекта
         const hasEquipmentWithProjectDates = equipmentList.some(item => {
             if (item.bookingPeriod) {
                 const [itemStart, itemEnd] = item.bookingPeriod.split(' - ');
@@ -418,36 +462,182 @@ function showEquipmentPeriodModal(equipmentId) {
 
 // Save equipment period
 async function saveEquipmentPeriod() {
-    const equipmentId = parseInt(document.getElementById('editEquipmentId').value);
-    const periodValue = document.getElementById('equipmentPeriod').value;
-
-    // Разбираем даты для проверки конфликтов
-    const [startDate, endDate] = periodValue.split(' - ');
-    const formattedStartDate = moment(startDate, 'DD.MM.YYYY').format('YYYY-MM-DD');
-    const formattedEndDate = moment(endDate, 'DD.MM.YYYY').format('YYYY-MM-DD');
-
-    // Показываем индикатор загрузки
-    showLoader();
+    const equipmentId = document.getElementById('editEquipmentId').value;
+    const dateRange = $('#equipmentPeriod').data('daterangepicker');
+    const startDate = dateRange.startDate.format('YYYY-MM-DD');
+    const endDate = dateRange.endDate.format('YYYY-MM-DD');
 
     try {
-        // Проверяем доступность оборудования
-        const availability = await api.get(`/equipment/${equipmentId}/availability?start_date=${formattedStartDate}&end_date=${formattedEndDate}`);
+        showLocalLoader();
+        const isAvailable = await checkEquipmentAvailability(equipmentId, startDate, endDate);
 
-        // Скрываем индикатор загрузки
-        hideLoader();
+        if (isAvailable) {
+            const equipment = equipmentList.find(item => item.equipment_id === parseInt(equipmentId));
+            if (equipment) {
+                equipment.bookingPeriod = dateRange.startDate.format('DD.MM.YYYY') + ' - ' + dateRange.endDate.format('DD.MM.YYYY');
+                renderEquipmentList();
 
-        if (availability && availability.is_available) {
-            // Обновляем даты если оборудование доступно
-            const index = equipmentList.findIndex(item => item.equipment_id === equipmentId);
-            if (index !== -1) {
-                equipmentList[index].bookingPeriod = periodValue;
-                updateEquipmentUI();
+                const modal = bootstrap.Modal.getInstance(document.getElementById('equipmentPeriodModal'));
+                modal.hide();
+
+                showToast('Период бронирования сохранен', 'success');
+            }
+        }
+    } catch (error) {
+        console.error('Ошибка при сохранении периода:', error);
+        showToast('Ошибка при сохранении периода', 'danger');
+    } finally {
+        hideLocalLoader();
+    }
+}
+
+// Create project
+async function createProject(e) {
+    e.preventDefault();
+
+    if (!document.getElementById('projectName').value.trim() || !document.getElementById('clientSelect').value) {
+        showToast('Заполните все обязательные поля', 'warning');
+        return;
+    }
+
+    if (equipmentList.length === 0) {
+        showToast('Добавьте оборудование в проект', 'warning');
+        return;
+    }
+
+    const missingPeriods = equipmentList.some(item => !item.bookingPeriod);
+    if (missingPeriods) {
+        showToast('Укажите периоды бронирования для всего оборудования', 'warning');
+        return;
+    }
+
+    // Get dates from date range picker
+    const dateRange = $('#projectDates').data('daterangepicker');
+
+    const projectData = {
+        name: document.getElementById('projectName').value.trim(),
+        client_id: parseInt(document.getElementById('clientSelect').value),
+        description: document.getElementById('projectDescription').value.trim(),
+        notes: document.getElementById('projectNotes').value.trim(),
+        start_date: dateRange.startDate.format('YYYY-MM-DDTHH:mm:ss'),
+        end_date: dateRange.endDate.format('YYYY-MM-DDTHH:mm:ss'),
+        status: 'DRAFT',
+        bookings: equipmentList.map(item => {
+            const [startDate, endDate] = item.bookingPeriod.split(' - ');
+            const equipmentId = parseInt(item.equipment_id);
+
+            console.log('Преобразование ID оборудования:', {
+                original: item.equipment_id,
+                parsed: equipmentId,
+                type: typeof equipmentId
+            });
+
+            if (isNaN(equipmentId)) {
+                console.error('Некорректный ID оборудования:', item.equipment_id);
+                throw new Error(`Некорректный ID оборудования: ${item.equipment_id}`);
             }
 
-            // Закрываем модальное окно
-            bootstrap.Modal.getInstance('#equipmentPeriodModal').hide();
+            return {
+                equipment_id: equipmentId,
+                start_date: moment(startDate, 'DD.MM.YYYY').format('YYYY-MM-DDTHH:mm:ss'),
+                end_date: moment(endDate, 'DD.MM.YYYY').format('YYYY-MM-DDTHH:mm:ss')
+            };
+        })
+    };
+
+    console.log('Sending project data:', projectData);
+
+    try {
+        showLocalLoader();
+        const response = await api.post('/projects/', projectData);
+        console.log('Project created successfully:', response);
+        window.location.href = '/projects/' + response.id;
+    } catch (error) {
+        console.error('Error creating project:', error);
+        showToast('Ошибка создания проекта: ' + (error.message || 'Неизвестная ошибка'), 'danger');
+        hideLocalLoader();
+    }
+}
+
+// Apply project dates to all equipment
+async function applyProjectDatesToAll() {
+    if (!projectDateRange) {
+        showToast('Сначала укажите период проекта', 'warning');
+        return;
+    }
+
+    const formattedDateRange = projectDateRange.startDate.format('DD.MM.YYYY') + ' - ' + projectDateRange.endDate.format('DD.MM.YYYY');
+    const startDate = projectDateRange.startDate.format('YYYY-MM-DD');
+    const endDate = projectDateRange.endDate.format('YYYY-MM-DD');
+
+    // Show local loader
+    const applyButton = document.getElementById('applyProjectDatesBtn');
+    const originalButtonText = applyButton.innerHTML;
+    applyButton.disabled = true;
+    applyButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Применение дат...';
+
+    try {
+        const equipmentIds = equipmentList.map(item => item.equipment_id);
+
+        const availabilityChecks = await Promise.all(
+            equipmentIds.map(id =>
+                api.get(`/equipment/${id}/availability?start_date=${startDate}&end_date=${endDate}`)
+            )
+        );
+
+        const conflictingEquipment = [];
+
+        equipmentList.forEach((item, index) => {
+            const availability = availabilityChecks[index];
+
+            if (availability && availability.is_available) {
+                item.bookingPeriod = formattedDateRange;
+            } else {
+                conflictingEquipment.push({
+                    name: item.name,
+                    barcode: item.barcode,
+                    conflicts: availability?.conflicts || []
+                });
+            }
+        });
+
+        updateEquipmentUI();
+
+        if (conflictingEquipment.length > 0) {
+            let conflictMessage = `Не удалось установить даты для ${conflictingEquipment.length} единиц оборудования из-за конфликтов с существующими бронированиями:`;
+
+            conflictingEquipment.forEach(item => {
+                conflictMessage += `\n- ${item.name} (${item.barcode})`;
+            });
+
+            conflictMessage += "\n\nДаты были установлены только для доступного оборудования.";
+
+            alert(conflictMessage);
         } else {
-            // Показываем предупреждение о конфликтах
+            showToast('Даты проекта применены ко всем позициям оборудования', 'success');
+        }
+    } catch (error) {
+        console.error('Ошибка при проверке доступности оборудования:', error);
+        showToast('Не удалось проверить доступность оборудования', 'danger');
+    } finally {
+        // Restore button state
+        applyButton.disabled = false;
+        applyButton.innerHTML = originalButtonText;
+    }
+}
+
+// Check equipment availability
+async function checkEquipmentAvailability(equipmentId, startDate, endDate) {
+    try {
+        showLocalLoader();
+        const availability = await api.get(
+            `/equipment/${equipmentId}/availability?start_date=${startDate}&end_date=${endDate}`
+        );
+        hideLocalLoader();
+
+        if (availability.is_available) {
+            return true;
+        } else {
             let conflictMessage = 'Выбранный период недоступен для бронирования:';
 
             if (availability && availability.conflicts && availability.conflicts.length > 0) {
@@ -466,155 +656,13 @@ async function saveEquipmentPeriod() {
             conflictMessage += '\n\nПожалуйста, выберите другой период.';
 
             alert(conflictMessage);
+            return false;
         }
     } catch (error) {
-        // Скрываем индикатор загрузки
-        hideLoader();
+        hideLocalLoader();
         console.error('Ошибка при проверке доступности оборудования:', error);
         showToast('Не удалось проверить доступность оборудования', 'danger');
-    }
-}
-
-// Create project
-function createProject(e) {
-    e.preventDefault();
-
-    // Проверка заполнения обязательных полей
-    if (!$('#projectName').val().trim() || !$('#clientSelect').val()) {
-        showToast('Заполните все обязательные поля', 'warning');
-        return;
-    }
-
-    // Проверка наличия оборудования
-    if (equipmentList.length === 0) {
-        showToast('Добавьте оборудование в проект', 'warning');
-        return;
-    }
-
-    // Проверка периодов бронирования
-    const missingPeriods = equipmentList.some(item => !item.bookingPeriod);
-    if (missingPeriods) {
-        showToast('Укажите периоды бронирования для всего оборудования', 'warning');
-        return;
-    }
-
-    // Get dates from date range picker
-    const dateRange = $('#projectDates').data('daterangepicker');
-
-    const projectData = {
-        name: $('#projectName').val().trim(),
-        client_id: parseInt($('#clientSelect').val()),
-        description: $('#projectDescription').val().trim(),
-        notes: $('#projectNotes').val().trim(),
-        start_date: dateRange.startDate.format('YYYY-MM-DDTHH:mm:ss'),
-        end_date: dateRange.endDate.format('YYYY-MM-DDTHH:mm:ss'),
-        status: 'DRAFT',
-        bookings: equipmentList.map(item => {
-            const [startDate, endDate] = item.bookingPeriod.split(' - ');
-            return {
-                equipment_id: item.equipment_id,
-                start_date: moment(startDate, 'DD.MM.YYYY').format('YYYY-MM-DDTHH:mm:ss'),
-                end_date: moment(endDate, 'DD.MM.YYYY').format('YYYY-MM-DDTHH:mm:ss')
-            };
-        })
-    };
-
-    console.log('Sending project data:', projectData);
-
-    // Показываем индикатор загрузки
-    showLoader();
-
-    // Make POST request to create project
-    $.ajax({
-        url: '/api/v1/projects/',
-        type: 'POST',
-        contentType: 'application/json',
-        data: JSON.stringify(projectData),
-        success: function(response) {
-            console.log('Project created successfully:', response);
-            // Redirect to the project page
-            window.location.href = '/projects/' + response.id;
-        },
-        error: function(xhr, status, error) {
-            hideLoader();
-            console.error('Error creating project:', xhr.responseText);
-            showToast('Ошибка создания проекта: ' + (xhr.responseJSON?.detail || error), 'danger');
-        }
-    });
-}
-
-// Apply project dates to all equipment
-async function applyProjectDatesToAll() {
-    // Проверяем, что даты проекта заданы
-    if (!projectDateRange) {
-        showToast('Сначала укажите период проекта', 'warning');
-        return;
-    }
-
-    // Формируем строку с датами в нужном формате
-    const formattedDateRange = projectDateRange.startDate.format('DD.MM.YYYY') + ' - ' + projectDateRange.endDate.format('DD.MM.YYYY');
-    const startDate = projectDateRange.startDate.format('YYYY-MM-DD');
-    const endDate = projectDateRange.endDate.format('YYYY-MM-DD');
-
-    // Показываем индикатор загрузки
-    showLoader();
-
-    try {
-        // Собираем ID всего оборудования
-        const equipmentIds = equipmentList.map(item => item.equipment_id);
-
-        // Проверяем доступность оборудования на выбранные даты
-        const availabilityChecks = await Promise.all(
-            equipmentIds.map(id =>
-                api.get(`/equipment/${id}/availability?start_date=${startDate}&end_date=${endDate}`)
-            )
-        );
-
-        // Составляем список доступного и недоступного оборудования
-        const conflictingEquipment = [];
-
-        equipmentList.forEach((item, index) => {
-            const availability = availabilityChecks[index];
-
-            if (availability && availability.is_available) {
-                // Если оборудование доступно, устанавливаем даты
-                item.bookingPeriod = formattedDateRange;
-            } else {
-                // Если оборудование недоступно, добавляем в список конфликтов
-                conflictingEquipment.push({
-                    name: item.name,
-                    barcode: item.barcode,
-                    conflicts: availability?.conflicts || []
-                });
-            }
-        });
-
-        // Обновляем UI
-        updateEquipmentUI();
-
-        // Скрываем индикатор загрузки
-        hideLoader();
-
-        // Если есть конфликты, показываем предупреждение
-        if (conflictingEquipment.length > 0) {
-            let conflictMessage = `Не удалось установить даты для ${conflictingEquipment.length} единиц оборудования из-за конфликтов с существующими бронированиями:`;
-
-            conflictingEquipment.forEach(item => {
-                conflictMessage += `\n- ${item.name} (${item.barcode})`;
-            });
-
-            conflictMessage += "\n\nДаты были установлены только для доступного оборудования.";
-
-            alert(conflictMessage);
-        } else {
-            // Показываем уведомление об успехе
-            showToast('Даты проекта применены ко всем позициям оборудования', 'success');
-        }
-    } catch (error) {
-        // Скрываем индикатор загрузки
-        hideLoader();
-        console.error('Ошибка при проверке доступности оборудования:', error);
-        showToast('Не удалось проверить доступность оборудования', 'danger');
+        return false;
     }
 }
 </script>

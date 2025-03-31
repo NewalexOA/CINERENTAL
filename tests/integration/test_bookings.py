@@ -167,12 +167,9 @@ async def test_delete_booking(
     response = await async_client.delete(f'/api/v1/bookings/{booking_id}')
     assert response.status_code == status.HTTP_204_NO_CONTENT
 
-    # Verify booking is deleted
+    # Verify booking is deleted (should return 404)
     get_response = await async_client.get(f'/api/v1/bookings/{booking_id}')
-    assert get_response.status_code == status.HTTP_200_OK
-
-    booking_data = get_response.json()
-    assert booking_data['status'] == 'CANCELLED'
+    assert get_response.status_code == status.HTTP_404_NOT_FOUND
 
 
 @async_test

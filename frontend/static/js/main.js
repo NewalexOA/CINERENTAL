@@ -165,26 +165,44 @@ window.resetLoader = function() {
 // API calls
 const api = {
     async get(endpoint) {
+        const startTime = performance.now();
         try {
             const url = endpoint.includes('?') || endpoint.endsWith('/') ? endpoint : `${endpoint}/`;
+            console.group(`%c[API] GET Request: ${API_BASE_URL}${url}`, 'color: #2196F3; font-weight: bold;');
+            console.log('Time:', new Date().toISOString());
+
             const response = await fetch(`${API_BASE_URL}${url}`);
+            console.log('Status:', response.status, response.statusText);
+            console.log('Headers:', Object.fromEntries(response.headers.entries()));
 
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({ detail: 'Ошибка сети' }));
+                console.error('Error Data:', errorData);
                 const error = new Error(errorData.detail || 'Ошибка при получении данных');
                 error.response = { data: errorData, status: response.status };
                 throw error;
             }
 
-            return await response.json();
+            const data = await response.json();
+            const endTime = performance.now();
+            console.log('Response Data:', data);
+            console.log(`Request took ${(endTime - startTime).toFixed(2)}ms`);
+            console.groupEnd();
+            return data;
         } catch (error) {
-            console.error('Error fetching data:', error);
+            console.error('Error Details:', error);
+            console.groupEnd();
             throw error;
         }
     },
 
     async post(endpoint, data) {
+        const startTime = performance.now();
         try {
+            console.group(`%c[API] POST Request: ${API_BASE_URL}${endpoint}`, 'color: #4CAF50; font-weight: bold;');
+            console.log('Time:', new Date().toISOString());
+            console.log('Request Data:', data);
+
             // Convert decimal fields to strings to avoid precision issues
             if (data && typeof data === 'object') {
                 Object.keys(data).forEach(key => {
@@ -194,83 +212,46 @@ const api = {
                 });
             }
 
-            console.log('API POST request to:', API_BASE_URL + endpoint);
-            console.log('Data being sent:', JSON.stringify(data, null, 2));
-
-            const url = endpoint.endsWith('/') ? endpoint : `${endpoint}/`;
-            const response = await fetch(`${API_BASE_URL}${url}`, {
+            const response = await fetch(`${API_BASE_URL}${endpoint}`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(data),
-            });
-
-            // Save response text
-            const responseText = await response.text();
-            let responseData;
-
-            try {
-                // Try to parse JSON
-                responseData = JSON.parse(responseText);
-            } catch (e) {
-                // If parsing fails, use text
-                responseData = responseText;
-            }
-
-            if (!response.ok) {
-                console.error('API error response:', {
-                    status: response.status,
-                    statusText: response.statusText,
-                    data: responseData
-                });
-
-                const error = new Error(`API Error: ${response.status} ${response.statusText}`);
-                error.response = {
-                    status: response.status,
-                    statusText: response.statusText,
-                    data: responseData
-                };
-                throw error;
-            }
-
-            // If successful, return data
-            return responseData;
-        } catch (error) {
-            console.error('Error posting data:', error);
-            throw error;
-        }
-    },
-
-    async patch(endpoint, data) {
-        try {
-            const url = endpoint.endsWith('/') ? endpoint : `${endpoint}/`;
-            const response = await fetch(`${API_BASE_URL}${url}`, {
-                method: 'PATCH',
                 headers: {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify(data)
             });
 
+            console.log('Status:', response.status, response.statusText);
+            console.log('Headers:', Object.fromEntries(response.headers.entries()));
+
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({ detail: 'Ошибка сети' }));
-                const error = new Error(errorData.detail || 'Ошибка при обновлении данных');
+                console.error('Error Data:', errorData);
+                const error = new Error(errorData.detail || 'Ошибка при отправке данных');
                 error.response = { data: errorData, status: response.status };
                 throw error;
             }
 
-            return await response.json();
+            const responseData = await response.json();
+            const endTime = performance.now();
+            console.log('Response Data:', responseData);
+            console.log(`Request took ${(endTime - startTime).toFixed(2)}ms`);
+            console.groupEnd();
+            return responseData;
         } catch (error) {
-            console.error('Error patching data:', error);
+            console.error('Error Details:', error);
+            console.groupEnd();
             throw error;
         }
     },
 
     async put(endpoint, data) {
+        const startTime = performance.now();
         try {
-            const url = endpoint.endsWith('/') ? endpoint : `${endpoint}/`;
-            const response = await fetch(`${API_BASE_URL}${url}`, {
+            console.group(`%c[API] PUT Request: ${API_BASE_URL}${endpoint}`, 'color: #FF9800; font-weight: bold;');
+            console.log('Time:', new Date().toISOString());
+            console.log('Request Data:', data);
+
+            const response = await fetch(`${API_BASE_URL}${endpoint}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
@@ -278,54 +259,58 @@ const api = {
                 body: JSON.stringify(data)
             });
 
+            console.log('Status:', response.status, response.statusText);
+            console.log('Headers:', Object.fromEntries(response.headers.entries()));
+
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({ detail: 'Ошибка сети' }));
-                const error = new Error(errorData.detail || 'Ошибка при отправке данных');
+                console.error('Error Data:', errorData);
+                const error = new Error(errorData.detail || 'Ошибка при обновлении данных');
                 error.response = { data: errorData, status: response.status };
                 throw error;
             }
 
-            return await response.json();
+            const responseData = await response.json();
+            const endTime = performance.now();
+            console.log('Response Data:', responseData);
+            console.log(`Request took ${(endTime - startTime).toFixed(2)}ms`);
+            console.groupEnd();
+            return responseData;
         } catch (error) {
-            console.error('Error putting data:', error);
+            console.error('Error Details:', error);
+            console.groupEnd();
             throw error;
         }
     },
 
     async delete(endpoint) {
+        const startTime = performance.now();
         try {
-            const url = endpoint.endsWith('/') ? endpoint : `${endpoint}/`;
-            const response = await fetch(`${API_BASE_URL}${url}`, {
+            console.group(`%c[API] DELETE Request: ${API_BASE_URL}${endpoint}`, 'color: #F44336; font-weight: bold;');
+            console.log('Time:', new Date().toISOString());
+
+            const response = await fetch(`${API_BASE_URL}${endpoint}`, {
                 method: 'DELETE'
             });
 
+            console.log('Status:', response.status, response.statusText);
+            console.log('Headers:', Object.fromEntries(response.headers.entries()));
+
             if (!response.ok) {
-                let errorData;
-                try {
-                    errorData = await response.json();
-                } catch {
-                    errorData = { detail: 'Network error or empty response' };
-                }
-                const error = new Error(errorData.detail || 'Error deleting data');
+                const errorData = await response.json().catch(() => ({ detail: 'Ошибка сети' }));
+                console.error('Error Data:', errorData);
+                const error = new Error(errorData.detail || 'Ошибка при удалении данных');
                 error.response = { data: errorData, status: response.status };
                 throw error;
             }
 
-            // Check if there is content to parse
-            const contentType = response.headers.get('content-type');
-            if (contentType && contentType.includes('application/json') && response.status !== 204) {
-                try {
-                    return await response.json();
-                } catch (e) {
-                    console.log('Response does not contain JSON data, returning success result');
-                    return { success: true };
-                }
-            }
-
-            // If response is empty or status is 204 No Content, return success
-            return { success: true };
+            const endTime = performance.now();
+            console.log(`Request took ${(endTime - startTime).toFixed(2)}ms`);
+            console.groupEnd();
+            return true;
         } catch (error) {
-            console.error('Error deleting data:', error);
+            console.error('Error Details:', error);
+            console.groupEnd();
             throw error;
         }
     }
@@ -525,7 +510,7 @@ const initDateRangePicker = (element, options = {}) => {
 };
 
 // Equipment search functionality
-const equipmentSearch = {
+window.equipmentSearch = {
     init() {
         const searchInput = document.querySelector('#searchInput');
         const categoryFilter = document.querySelector('#categoryFilter');
@@ -671,6 +656,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Initialize equipment search
     if (document.getElementById('searchInput')) {
-        equipmentSearch.init();
+        window.equipmentSearch.init();
     }
 });

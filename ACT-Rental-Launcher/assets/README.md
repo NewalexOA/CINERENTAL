@@ -1,6 +1,6 @@
-# CINERENTAL Launcher Assets
+# ACT-RENTAL Launcher Assets
 
-This directory contains resources for the CINERENTAL Launcher application:
+This directory contains resources for the ACT-RENTAL Launcher application:
 
 - Icons
 - Images
@@ -35,7 +35,7 @@ When creating a DMG distribution, you can customize the appearance with a backgr
    ```
    create-dmg \
        --background "assets/dmg_background.png" \
-       --volname "CINERENTAL Launcher" \
+       --volname "ACT-RENTAL Launcher" \
        --volicon "assets/icon.icns" \
        ...
    ```

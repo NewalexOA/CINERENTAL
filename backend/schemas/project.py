@@ -46,6 +46,22 @@ class ProjectCreate(ProjectBase):
     status: ProjectStatus = Field(default=ProjectStatus.DRAFT, title='Project Status')
 
 
+class BookingCreateForProject(BaseModel):
+    """Booking schema for project creation."""
+
+    equipment_id: int = Field(..., title='Equipment ID')
+    start_date: datetime = Field(..., title='Booking Start Date')
+    end_date: datetime = Field(..., title='Booking End Date')
+
+
+class ProjectCreateWithBookings(ProjectCreate):
+    """Create project with bookings request schema."""
+
+    bookings: List[BookingCreateForProject] = Field(
+        default_factory=list, title='Bookings'
+    )
+
+
 class ProjectUpdate(BaseModel):
     """Update project request schema."""
 

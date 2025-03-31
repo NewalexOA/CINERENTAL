@@ -79,8 +79,8 @@ class BaseRepository(Generic[ModelType]):
         try:
             self.session.add(instance)
             await self.session.flush()
-            await self.session.commit()
             await self.session.refresh(instance)
+            await self.session.commit()
             return instance
         except Exception as e:
             await self.session.rollback()
@@ -101,8 +101,8 @@ class BaseRepository(Generic[ModelType]):
         try:
             self.session.add(instance)
             await self.session.flush()
-            await self.session.commit()
             await self.session.refresh(instance)
+            await self.session.commit()
             return instance
         except Exception as e:
             await self.session.rollback()
@@ -152,8 +152,8 @@ class BaseRepository(Generic[ModelType]):
             if instance:
                 instance.deleted_at = datetime.now(timezone.utc)
                 await self.session.flush()
-                await self.session.commit()
                 await self.session.refresh(instance)
+                await self.session.commit()
             return instance
         except Exception as e:
             await self.session.rollback()

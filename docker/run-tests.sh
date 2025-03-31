@@ -35,7 +35,7 @@ check_service() {
 }
 
 # Check if required services are available
-check_service test-db 5432 "PostgreSQL" 30
+check_service test_db 5432 "PostgreSQL" 30
 check_service test-redis 6379 "Redis" 30
 
 # Run the tests

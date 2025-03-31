@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}{{ equipment.name }} - CINERENTAL{% endblock %}
+{% block title %}{{ equipment.name }} - {{ APP_NAME }}{% endblock %}
 
 {% block content %}
 <div class="row mb-4">
@@ -208,7 +208,7 @@
 </div>
 {% endblock %}
 
-{% block extra_js %}
+{% block scripts %}
 <script
     data-equipment-id="{{ equipment.id }}"
     data-category-id="{{ equipment.category_id }}"
@@ -243,31 +243,12 @@ window.showToast = function(message, type) {
 
 // Load categories for edit form
 async function loadCategories() {
+    const formSelect = document.querySelector('select[name="category_id"]');
+    formSelect.innerHTML = '<option value="">Загрузка категорий...</option>';
+    formSelect.disabled = true;
+
     try {
         const categories = await api.get('/categories');
-        const formSelect = document.querySelector('select[name="category_id"]');
-
-        // Get equipment category id from URL if available (takes precedence over stored value)
-        const url = new URL(window.location.href);
-        let equipmentCategoryId = EQUIPMENT_DATA.categoryId;
-
-        // If category_id is in URL parameters, use that instead
-        if (url.searchParams.has('category_id')) {
-            equipmentCategoryId = parseInt(url.searchParams.get('category_id'), 10);
-        }
-
-        // Update display name in card subtitle immediately when loading from URL parameter
-        if (url.searchParams.has('category_id')) {
-            const categoryId = parseInt(url.searchParams.get('category_id'), 10);
-            if (!isNaN(categoryId)) {
-                // Find the category by ID
-                const category = categories.find(cat => parseInt(cat.id, 10) === categoryId);
-                if (category) {
-                    // Update the displayed category name in the UI
-                    document.querySelector('.card-subtitle.text-muted').textContent = category.name;
-                }
-            }
-        }
 
         // First add empty option for "no category" selection
         let options = `<option value="">Без категории</option>`;
@@ -277,7 +258,7 @@ async function loadCategories() {
             // Ensure both values are numbers for comparison
             const categoryId = parseInt(category.id, 10);
             // Use strict comparison to avoid false positives
-            const isSelected = categoryId === equipmentCategoryId;
+            const isSelected = categoryId === EQUIPMENT_DATA.categoryId;
 
             return `<option value="${categoryId}" ${isSelected ? 'selected' : ''}>
                 ${category.name}
@@ -287,7 +268,10 @@ async function loadCategories() {
         formSelect.innerHTML = options;
     } catch (error) {
         console.error('Error loading categories:', error);
-        showToast('Ошибка загрузки категорий', 'danger');
+        showToast('Ошибка при загрузке категорий', 'danger');
+        formSelect.innerHTML = '<option value="">Ошибка загрузки</option>';
+    } finally {
+        formSelect.disabled = false;
     }
 }
 

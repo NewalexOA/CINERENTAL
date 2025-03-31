@@ -3,6 +3,7 @@
 This module implements business logic for managing equipment bookings.
 """
 
+import logging
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 from typing import List, Optional
@@ -27,6 +28,9 @@ from backend.services.equipment import EquipmentService
 MIN_BOOKING_DURATION = timedelta(days=1)  # Minimum booking duration
 MAX_BOOKING_DURATION = timedelta(days=365)  # Maximum booking duration
 MAX_ADVANCE_DAYS = 365  # Maximum days in advance for booking
+
+# Configure logger
+log = logging.getLogger(__name__)
 
 
 class BookingService:
@@ -86,12 +90,32 @@ class BookingService:
             # Get current time in UTC
             now = datetime.now(timezone.utc)
 
-            # Validate start date
-            if start_date < now:
+            # Calculate start of today in UTC
+            today_start = datetime(now.year, now.month, now.day, tzinfo=timezone.utc)
+
+            # Log date information
+            log.debug(
+                'Booking date validation: start_date={}, today_start={}, now={}',
+                start_date.isoformat(),
+                today_start.isoformat(),
+                now.isoformat(),
+            )
+
+            # Check if start date is in the past (before the beginning of today)
+            if start_date < today_start:
                 raise DateError(
                     'Start date cannot be in the past',
                     start_date=start_date,
-                    end_date=end_date,
+                    details={'today_start': today_start.isoformat()},
+                )
+
+            # Log when creating a retroactive booking (if needed for other logic)
+            if start_date < now:
+                log.info(
+                    'Retroactive booking (starting today but earlier than now): '
+                    'start={} (now={})',
+                    start_date.isoformat(),
+                    now.isoformat(),
                 )
 
             # Validate end date
@@ -275,7 +299,7 @@ class BookingService:
             raise
 
     async def get_booking(self, booking_id: int) -> Booking:
-        """Get booking by ID.
+        """Get booking by ID, including soft-deleted ones.
 
         Args:
             booking_id: Booking ID
@@ -290,7 +314,8 @@ class BookingService:
         if booking_id <= 0:
             raise ValidationError('Booking ID must be positive')
 
-        booking = await self.repository.get(booking_id)
+        # Call repository.get with include_deleted=True
+        booking = await self.repository.get(booking_id, include_deleted=True)
         if not booking:
             raise NotFoundError(
                 f'Booking with ID {booking_id} not found',
@@ -414,7 +439,8 @@ class BookingService:
     async def delete_booking(self, booking_id: int) -> None:
         """Delete booking.
 
-        This is a soft delete that changes the booking status to CANCELLED.
+        This is a hard delete that removes the booking from the database
+        regardless of its status.
 
         Args:
             booking_id: Booking ID
@@ -423,10 +449,19 @@ class BookingService:
             NotFoundError: If booking is not found
         """
         # First check if booking exists
-        await self.get_booking(booking_id)
+        booking = await self.get_booking(booking_id)
+        if not booking:
+            raise NotFoundError(f'Booking with ID {booking_id} not found')
 
-        # Then change status to CANCELLED
-        await self.change_status(booking_id, BookingStatus.CANCELLED)
+        # Delete the booking directly instead of changing status
+        await self.repository.delete(booking_id)
+
+        # If the equipment was rented (ACTIVE booking status), set it back to available
+        if booking.booking_status == BookingStatus.ACTIVE:
+            await self.equipment_service.change_status(
+                booking.equipment_id,
+                EquipmentStatus.AVAILABLE,
+            )
 
     async def change_status(
         self,
@@ -472,7 +507,6 @@ class BookingService:
             BookingStatus.COMPLETED: [],
             BookingStatus.CANCELLED: [],
             BookingStatus.OVERDUE: [
-                BookingStatus.COMPLETED,
                 BookingStatus.CANCELLED,
             ],
         }
