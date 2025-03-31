@@ -1,7 +1,6 @@
 """Fixtures and configuration for E2E tests."""
 
 import asyncio
-import multiprocessing
 import os
 import time
 from decimal import Decimal
@@ -10,7 +9,6 @@ from typing import AsyncGenerator, Dict, Generator, Tuple
 import pytest
 import pytest_asyncio
 import requests
-import uvicorn
 from alembic import command
 from alembic.config import Config
 from loguru import logger
@@ -27,8 +25,9 @@ from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, create_async_engin
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.sql import text
 
+# Import only the settings instance
+from backend.core.config import settings
 from backend.core.logging import configure_logging
-from backend.main import app as fastapi_app
 from backend.models import Equipment
 from backend.schemas.category import CategoryResponse
 from backend.services import EquipmentService
@@ -57,8 +56,8 @@ def configure_test_logging():
 # Call the logging configuration function
 configure_test_logging()
 
-# Test database URL with trust auth method
-TEST_DATABASE_URL = 'postgresql+asyncpg://postgres:postgres@test-db:5432/postgres'
+# Test database URL is now imported from config
+# TEST_DATABASE_URL = 'postgresql+asyncpg://postgres:postgres@test_db:5432/postgres'
 
 
 def wait_for_app(url: str, timeout: int = 30, interval: int = 1) -> bool:
@@ -94,13 +93,6 @@ def wait_for_app(url: str, timeout: int = 30, interval: int = 1) -> bool:
     return False
 
 
-def run_app() -> None:
-    """Run the FastAPI application."""
-    uvicorn.run(
-        fastapi_app, host='127.0.0.1', port=8000, log_level='info', use_colors=False
-    )
-
-
 @pytest.fixture(scope='session')
 def event_loop():
     """Create event loop for tests."""
@@ -114,59 +106,59 @@ def event_loop():
 
 
 def init_test_db() -> None:
-    """Initialize test database with migrations."""
-    # Connect directly to postgres database
-    db_name = 'postgres'
-    db_url = f'postgresql://postgres:postgres@test-db:5432/{db_name}'
+    """Initialize the test database by dropping and recreating the public schema."""
+    # Use settings object to access config values
+    db_name = settings.POSTGRES_DB
+    # Construct the database URL without the database name for initial connection
+    db_url_nodatabase = (
+        f'postgresql+psycopg2://{settings.POSTGRES_USER}:{settings.POSTGRES_PASSWORD}@'
+        f'{settings.POSTGRES_SERVER}:{settings.POSTGRES_PORT}/'
+    )
+    db_url = f'{db_url_nodatabase}{db_name}'
 
-    # Create engine for database operations
-    engine = create_engine(db_url)
+    engine = create_engine(db_url_nodatabase, isolation_level='AUTOCOMMIT')
 
     try:
-        # Connect to the database
         with engine.connect() as conn:
-            # Clean existing tables if any
-            logger.info('Cleaning database tables before applying migrations')
-            try:
-                # Clean up enum types first
-                enum_types_to_drop = [
-                    'clientstatus',
-                    'equipmentstatus',
-                    'bookingstatus',
-                    'paymentstatus',
-                ]
+            # Check if database exists
+            result = conn.execute(
+                text('SELECT 1 FROM pg_database WHERE datname = :db_name'),
+                {'db_name': db_name},
+            )
+            db_exists = result.scalar() == 1
 
-                for enum_type in enum_types_to_drop:
-                    try:
-                        conn.execute(text(f'DROP TYPE IF EXISTS {enum_type} CASCADE'))
-                        conn.commit()
-                        logger.info(f'Dropped enum type {enum_type}')
-                    except Exception as e:
-                        logger.error(f'Failed to drop enum type {enum_type}: {e}')
+            if not db_exists:
+                logger.info(f'Database {db_name} does not exist. Creating...')
+                conn.execute(text(f'CREATE DATABASE "{db_name}"'))
+                logger.info(f'Database {db_name} created.')
+            else:
+                logger.info(f'Database {db_name} already exists.')
 
-                # Then drop tables
-                tables = [
-                    'equipment',
-                    'categories',
-                    'clients',
-                    'users',
-                    'documents',
-                    'bookings',
-                    'alembic_version',
-                ]
-                for table in tables:
-                    try:
-                        conn.execute(text(f'DROP TABLE IF EXISTS {table} CASCADE'))
-                    except Exception as e:
-                        logger.warning(f'Error dropping table {table}: {e}')
-                conn.commit()
-            except Exception as e:
-                conn.execute(text('ROLLBACK'))
-                logger.warning(f'Error cleaning database: {e}')
+    except Exception as e:
+        logger.error(f'Error checking or creating database {db_name}: {e}')
+        raise
+    finally:
+        engine.dispose()
+
+    # Now connect to the specific test database
+    engine = create_engine(db_url, isolation_level='AUTOCOMMIT')
+    try:
+        with engine.connect() as conn:
+            logger.info(f'Dropping and recreating public schema in {db_name}...')
+            # Drop schema with cascade and recreate it
+            conn.execute(text('DROP SCHEMA public CASCADE;'))
+            conn.execute(text('CREATE SCHEMA public;'))
+            # Grant permissions (adjust user if necessary)
+            conn.execute(text('GRANT ALL ON SCHEMA public TO postgres;'))
+            conn.execute(text('GRANT ALL ON SCHEMA public TO public;'))
+            logger.info('Public schema recreated successfully.')
+
+            # No need to drop specific enums or tables anymore
 
         # Configure Alembic for migrations
         config = Config('alembic.ini')
-        config.set_main_option('sqlalchemy.url', db_url)
+        # Use the synchronous URL from settings for Alembic
+        config.set_main_option('sqlalchemy.url', settings.SYNC_DATABASE_URL)
 
         # Make sure script_location is properly set to migrations
         if (
@@ -175,25 +167,34 @@ def init_test_db() -> None:
         ):
             config.set_main_option('script_location', 'migrations')
 
-        # Set environment variables for Alembic
-        os.environ['POSTGRES_USER'] = 'postgres'
-        os.environ['POSTGRES_PASSWORD'] = 'postgres'
-        os.environ['POSTGRES_SERVER'] = 'test-db'
-        os.environ['POSTGRES_PORT'] = '5432'
-        os.environ['POSTGRES_DB'] = db_name
+        # Set environment variables for Alembic (might be redundant if
+        # alembic.ini uses them)
+        # Access values from settings instead of potentially undefined os.environ
+        # vars here
+        os.environ['POSTGRES_USER'] = settings.POSTGRES_USER
+        os.environ['POSTGRES_PASSWORD'] = settings.POSTGRES_PASSWORD
+        os.environ['POSTGRES_SERVER'] = settings.POSTGRES_SERVER
+        os.environ['POSTGRES_PORT'] = str(settings.POSTGRES_PORT)
+        os.environ['POSTGRES_DB'] = settings.POSTGRES_DB
 
         # Print debug information
-        logger.info(
-            f'Applying migrations to {db_name} at test-db:5432 '
-            f'with script_location={config.get_main_option("script_location")}'
+        log_db = settings.POSTGRES_DB
+        log_server = settings.POSTGRES_SERVER
+        log_port = settings.POSTGRES_PORT
+        log_script_loc = config.get_main_option('script_location')
+        log_message = (
+            f'Applying migrations to {log_db} at '
+            f'{log_server}:{log_port} '
+            f'with script_location={log_script_loc}'
         )
+        logger.info(log_message)
 
         # Apply migrations
         command.upgrade(config, 'head')
 
         logger.info('Migrations applied, verifying tables...')
 
-        # Verify migrations were applied
+        # Verify migrations were applied (using synchronous connection for verification)
         with engine.connect() as conn:
             tables = [
                 'equipment',
@@ -202,6 +203,8 @@ def init_test_db() -> None:
                 'users',
                 'documents',
                 'bookings',
+                'global_barcode_sequence',  # Added verification for sequence table
+                'scan_sessions',  # Changed from equipment_scan_sessions
             ]
             for table in tables:
                 result = conn.execute(
@@ -222,55 +225,35 @@ def init_test_db() -> None:
                 else:
                     logger.info(f'Table {table} verified in {db_name}')
     except Exception as e:
-        logger.error(f'Error initializing test database: {e}')
+        # Log detailed error, including traceback
+        logger.error(f'Error initializing test database: {e}', exc_info=True)
         raise
+    finally:
+        engine.dispose()
 
 
 @pytest.fixture(scope='session', autouse=True)
 def setup_test_env(event_loop) -> Generator[None, None, None]:
-    """Setup test environment: initialize DB and start application."""
+    """Setup test environment: initialize DB ONLY."""
     # Initialize database first
     init_test_db()
 
-    # Start the FastAPI application in a separate process
-    proc = multiprocessing.Process(target=run_app, daemon=True)
-    proc.start()
+    # Removed the Uvicorn server startup logic (subprocess.Popen)
+    # The test execution environment (docker compose run) should handle server
+    # if needed, or tests should use ASGITransport.
 
-    # Wait for the application to be ready
-    max_retries = 30
-    retry = 0
-    while retry < max_retries:
-        try:
-            response = requests.get('http://127.0.0.1:8000/api/v1/health')
-            if response.status_code == 200:
-                break
-        except requests.exceptions.ConnectionError:
-            retry += 1
-            time.sleep(1)
+    yield  # Tests run here
 
-    if retry == max_retries:
-        if proc.is_alive():
-            proc.terminate()
-            proc.join(timeout=5)
-            if proc.is_alive():
-                proc.kill()
-        raise RuntimeError('Failed to start the application')
-
-    yield
-
-    # Cleanup
-    if proc.is_alive():
-        proc.terminate()
-        proc.join(timeout=5)
-        if proc.is_alive():
-            proc.kill()
+    # No server process to clean up
+    logger.info('E2E environment setup complete.')
 
 
 @pytest.fixture
 async def engine() -> AsyncGenerator[AsyncEngine, None]:
     """Create database engine for tests."""
+    # Use the DATABASE_URL property from the imported settings instance
     engine = create_async_engine(
-        TEST_DATABASE_URL,
+        settings.DATABASE_URL,  # Use the async URL from settings
         echo=False,  # Disable SQL logging
         future=True,
     )
@@ -314,20 +297,34 @@ async def test_equipment(
     test_category: Dict,
 ) -> AsyncGenerator[Equipment, None]:
     """Create a test equipment."""
-    # Using a valid numeric barcode format (11 digits)
-    # '000000001' with checksum '01'
-    custom_barcode = '00000000101'
+    # Check if category exists before using it
+    category_id = test_category.get('id')
+    if not category_id:
+        raise ValueError('Test category fixture did not return a valid ID.')
 
-    equipment = await equipment_service.create_equipment(
-        name='Sony Test Equipment',
-        description='Test Description for Sony device',
-        category_id=test_category['id'],
-        custom_barcode=custom_barcode,
-        serial_number='SN001',
-        replacement_cost=Decimal('1000.00'),
-    )
-    await db_session.commit()
-    yield equipment
+    # Ensure barcode uniqueness if necessary for specific tests
+    # Correct barcode format: 9 digits sequence + 2 digits checksum
+    # For sequence '123456789', checksum is 91 (calculated using _calculate_checksum)
+    custom_barcode = '12345678991'  # Corrected barcode with valid checksum
+
+    try:
+        equipment = await equipment_service.create_equipment(
+            name='Sony Test Equipment',
+            description='Test Description for Sony device',
+            category_id=category_id,  # Use fetched category_id
+            custom_barcode=custom_barcode,
+            serial_number='SN001',
+            replacement_cost=Decimal('1000.00'),
+        )
+        await db_session.commit()
+        yield equipment
+        # Clean up the created equipment
+        # await db_session.delete(equipment)  # Optional: cleanup fixture handles it
+        # await db_session.commit()
+    except Exception as e:
+        logger.error(f'Error creating test equipment: {e}', exc_info=True)
+        await db_session.rollback()  # Rollback on error
+        raise  # Re-raise the exception
 
 
 @pytest.fixture(scope='session')
@@ -388,11 +385,17 @@ async def test_page(
     test_equipment: Tuple[Equipment, Dict],
 ) -> AsyncGenerator[Page, None]:
     """Configure page for testing."""
+    # Get base URL from environment variable or use default
+    base_url = os.environ.get('APP_BASE_URL', 'http://web-test:8000')
+
     # Set viewport size
     await page.set_viewport_size({'width': 1280, 'height': 720})
 
     # Navigate to the equipment page and wait for it to be ready
-    await page.goto('http://127.0.0.1:8000/equipment')
+    # Use the base_url obtained from environment
+    equipment_url = f'{base_url}/equipment'  # Assuming /equipment is the correct path
+    logger.info(f'Navigating to E2E test URL: {equipment_url}')
+    await page.goto(equipment_url)
     await page.wait_for_load_state('networkidle')
     await page.wait_for_selector('#searchInput', state='visible', timeout=30000)
 
