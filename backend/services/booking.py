@@ -90,32 +90,30 @@ class BookingService:
             # Get current time in UTC
             now = datetime.now(timezone.utc)
 
-            # Calculate yesterday's date (today minus 1 day) at midnight
-            yesterday = datetime(
-                now.year, now.month, now.day, tzinfo=timezone.utc
-            ) - timedelta(days=1)
+            # Calculate start of today in UTC
+            today_start = datetime(now.year, now.month, now.day, tzinfo=timezone.utc)
 
             # Log date information
             log.debug(
-                'Booking date validation: start_date={}, yesterday={}, now={}',
+                'Booking date validation: start_date={}, today_start={}, now={}',
                 start_date.isoformat(),
-                yesterday.isoformat(),
+                today_start.isoformat(),
                 now.isoformat(),
             )
 
-            # Allow bookings since yesterday, but not earlier
-            if start_date < yesterday:
+            # Check if start date is in the past (before the beginning of today)
+            if start_date < today_start:
                 raise DateError(
-                    'Start date cannot be earlier than yesterday',
+                    'Start date cannot be in the past',
                     start_date=start_date,
-                    details={'yesterday': yesterday.isoformat()},
+                    details={'today_start': today_start.isoformat()},
                 )
 
-            # Log when creating a retroactive booking
-            # (starting in the past but not earlier than yesterday)
+            # Log when creating a retroactive booking (if needed for other logic)
             if start_date < now:
                 log.info(
-                    'Retroactive booking: start={} (now={})',
+                    'Retroactive booking (starting today but earlier than now): '
+                    'start={} (now={})',
                     start_date.isoformat(),
                     now.isoformat(),
                 )
@@ -301,7 +299,7 @@ class BookingService:
             raise
 
     async def get_booking(self, booking_id: int) -> Booking:
-        """Get booking by ID.
+        """Get booking by ID, including soft-deleted ones.
 
         Args:
             booking_id: Booking ID
@@ -316,7 +314,8 @@ class BookingService:
         if booking_id <= 0:
             raise ValidationError('Booking ID must be positive')
 
-        booking = await self.repository.get(booking_id)
+        # Call repository.get with include_deleted=True
+        booking = await self.repository.get(booking_id, include_deleted=True)
         if not booking:
             raise NotFoundError(
                 f'Booking with ID {booking_id} not found',
