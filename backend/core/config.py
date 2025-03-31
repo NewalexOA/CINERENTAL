@@ -29,6 +29,11 @@ class Settings(BaseSettings):
     # Application
     APP_NAME: str = 'ACT-Rental'
     COMPANY_SINCE: str = '2024'
+    COMPANY_LEGAL_NAME: str = os.environ.get(
+        'COMPANY_LEGAL_NAME', '"ACT" FILM FACILITIES AGENCY LIMITED'
+    )
+    COMPANY_PHONE: str = os.environ.get('COMPANY_PHONE', '+7 (905) 222-81-03')
+    COMPANY_EMAIL: str = os.environ.get('COMPANY_EMAIL', 'info@actfilm.ru')
     ENVIRONMENT: str = os.environ.get('ENVIRONMENT', 'development')
     DEBUG: bool = os.environ.get('DEBUG', 'true').lower() in ('true', '1', 't')
     SECRET_KEY: str = Field(
