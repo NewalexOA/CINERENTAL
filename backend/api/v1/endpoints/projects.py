@@ -15,7 +15,10 @@ from backend.core.database import get_db
 from backend.exceptions import BusinessError, DateError, NotFoundError, ValidationError
 from backend.models import ProjectStatus
 from backend.schemas import (
+    ClientInfo,
+    EquipmentPrintItem,
     ProjectCreateWithBookings,
+    ProjectPrint,
     ProjectResponse,
     ProjectUpdate,
     ProjectWithBookings,
@@ -402,3 +405,95 @@ async def get_project_bookings(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
     except ValidationError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+
+@typed_get(
+    projects_router,
+    '/{project_id}/print',
+    response_model=ProjectPrint,
+    summary='Get project print data',
+)
+async def get_project_print_data(
+    project_id: int,
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> ProjectPrint:
+    """Get project data for print form.
+
+    Args:
+        project_id: Project ID
+        db: Database session
+
+    Returns:
+        Project print data including client and equipment information
+
+    Raises:
+        HTTPException: If project not found or other error occurs
+    """
+    log = logger.bind(project_id=project_id)
+    log.debug('Getting project print data')
+
+    service = ProjectService(db)
+    try:
+        # Get project with bookings
+        project = await service.get_project(project_id, with_bookings=True)
+        await db.refresh(project, ['client'])
+
+        # Create project response
+        project_response = ProjectResponse.model_validate(project, from_attributes=True)
+
+        # Create client info
+        client_info = ClientInfo(
+            id=project.client.id,
+            name=project.client.name,
+            company=project.client.company or '',
+            phone=project.client.phone or '',
+        )
+
+        # Get equipment items
+        equipment_items = []
+        total_liability = 0.0
+
+        for booking in project.bookings:
+            # Ensure equipment data is loaded
+            await db.refresh(booking, ['equipment'])
+            equipment = booking.equipment
+
+            # Get equipment serial number and liability amount
+            serial_number = getattr(equipment, 'serial_number', None) or ''
+            liability_amount = getattr(equipment, 'liability_amount', 0.0) or 0.0
+
+            # Create equipment item
+            equipment_item = EquipmentPrintItem(
+                id=equipment.id,
+                name=equipment.name,
+                serial_number=serial_number,
+                liability_amount=float(liability_amount),
+            )
+
+            equipment_items.append(equipment_item)
+            total_liability += float(liability_amount)
+
+        # Create print form response
+        print_data = ProjectPrint(
+            project=project_response,
+            client=client_info,
+            equipment=equipment_items,
+            total_items=len(equipment_items),
+            total_liability=total_liability,
+            generated_at=datetime.now(),
+        )
+
+        return print_data
+
+    except NotFoundError as e:
+        log.error('Project not found: {}', str(e))
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f'Project with ID {project_id} not found',
+        )
+    except Exception as e:
+        log.error('Error getting project print data: {}', str(e))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f'Error retrieving project print data: {str(e)}',
+        )
