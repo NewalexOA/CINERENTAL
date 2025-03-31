@@ -14,7 +14,7 @@
 1. Клонирование репозитория:
 ```bash
 git clone <repository-url>
-cd cinerental
+cd ACT-RENTAL
 ```
 
 2. Настройка окружения:
