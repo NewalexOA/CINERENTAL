@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ошибка печати</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            line-height: 1.5;
+            color: #333;
+        }
+        .error-container {
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 30px;
+            border: 1px solid #dc3545;
+            border-radius: 8px;
+            background-color: #f8f9fa;
+        }
+        .error-title {
+            color: #dc3545;
+            margin-top: 0;
+        }
+        .error-message {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 15px 0;
+        }
+        .back-link {
+            display: inline-block;
+            margin-top: 15px;
+            color: #007bff;
+            text-decoration: none;
+        }
+        .back-link:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="error-container">
+        <h1 class="error-title">Ошибка печати</h1>
+        <p>При формировании печатной формы произошла ошибка:</p>
+        <div class="error-message">
+            {{ error }}
+        </div>
+        <p>Пожалуйста, попробуйте снова позже или обратитесь к администратору.</p>
+        <a href="javascript:history.back()" class="back-link">&larr; Вернуться назад</a>
+    </div>
+</body>
+</html>
