@@ -221,23 +221,15 @@ async def get_booking(
     booking_id: int,
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> BookingResponse:
-    """Get booking by ID.
-
-    Args:
-        booking_id: Booking ID
-        db: Database session
-
-    Returns:
-        Booking details
-
-    Raises:
-        HTTPException: If booking not found
-    """
+    """Get booking by ID."""
     booking_service = BookingService(db)
     try:
-        booking_obj = await booking_service.get_booking_with_relations(booking_id)
+        # Use get_booking to include soft-deleted records
+        booking_obj = await booking_service.get_booking(booking_id)
 
         # Convert Booking object to BookingResponse
+        # Note: _booking_to_response might need adjustment if it relies on
+        # eagerly loaded relations from get_booking_with_relations
         response = _booking_to_response(booking_obj)
 
         return response

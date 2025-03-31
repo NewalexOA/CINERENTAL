@@ -20,9 +20,9 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    """Add equipment_scan_sessions table and deleted_at column to projects."""
+    """Add scan_sessions table and deleted_at column to projects."""
     op.create_table(
-        'equipment_scan_sessions',
+        'scan_sessions',
         sa.Column('id', sa.Integer(), nullable=False),
         sa.Column('user_id', sa.Integer(), nullable=True),
         sa.Column('name', sa.String(length=255), nullable=False),
@@ -45,20 +45,20 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint('id'),
     )
     op.create_index(
-        op.f('ix_equipment_scan_sessions_created_at'),
-        'equipment_scan_sessions',
+        op.f('ix_scan_sessions_created_at'),
+        'scan_sessions',
         ['created_at'],
         unique=False,
     )
     op.create_index(
-        op.f('ix_equipment_scan_sessions_updated_at'),
-        'equipment_scan_sessions',
+        op.f('ix_scan_sessions_updated_at'),
+        'scan_sessions',
         ['updated_at'],
         unique=False,
     )
     op.create_index(
-        op.f('ix_equipment_scan_sessions_user_id'),
-        'equipment_scan_sessions',
+        op.f('ix_scan_sessions_user_id'),
+        'scan_sessions',
         ['user_id'],
         unique=False,
     )
@@ -78,21 +78,19 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    """Remove equipment_scan_sessions table and deleted_at column from projects."""
+    """Remove scan_sessions table and deleted_at column from projects."""
     # Drop index and column for projects table
     op.drop_index(op.f('ix_projects_deleted_at'), table_name='projects')
     op.drop_column('projects', 'deleted_at')
 
-    # Drop equipment_scan_sessions table and its indexes
+    # Drop scan_sessions table and its indexes
+    op.drop_index(op.f('ix_scan_sessions_user_id'), table_name='scan_sessions')
     op.drop_index(
-        op.f('ix_equipment_scan_sessions_user_id'), table_name='equipment_scan_sessions'
+        op.f('ix_scan_sessions_updated_at'),
+        table_name='scan_sessions',
     )
     op.drop_index(
-        op.f('ix_equipment_scan_sessions_updated_at'),
-        table_name='equipment_scan_sessions',
+        op.f('ix_scan_sessions_created_at'),
+        table_name='scan_sessions',
     )
-    op.drop_index(
-        op.f('ix_equipment_scan_sessions_created_at'),
-        table_name='equipment_scan_sessions',
-    )
-    op.drop_table('equipment_scan_sessions')
+    op.drop_table('scan_sessions')

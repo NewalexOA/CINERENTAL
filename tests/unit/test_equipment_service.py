@@ -794,3 +794,69 @@ class TestEquipmentService:
         results = await service.search('test')
         results = [r for r in results if r.category_id == 999]
         assert len(results) == 0  # No equipment in non-existent category
+
+    @async_test
+    async def test_check_availability_with_conflicts(
+        self,
+        service: EquipmentService,
+        test_equipment: Equipment,
+        booking_service: BookingService,
+        test_client: Client,
+        test_dates: dict[str, datetime],
+    ) -> None:
+        """Test checking equipment availability with overlapping bookings."""
+        # Create two bookings with different dates
+        await booking_service.create_booking(
+            client_id=test_client.id,
+            equipment_id=test_equipment.id,
+            start_date=test_dates['start_date'],
+            end_date=test_dates['end_date'],
+            total_amount=float(Decimal('300.00')),
+            deposit_amount=float(Decimal('100.00')),
+        )
+
+        # Create another booking for future dates
+        future_start = test_dates['end_date'] + timedelta(days=10)
+        future_end = future_start + timedelta(days=5)
+        await booking_service.create_booking(
+            client_id=test_client.id,
+            equipment_id=test_equipment.id,
+            start_date=future_start,
+            end_date=future_end,
+            total_amount=float(Decimal('200.00')),
+            deposit_amount=float(Decimal('50.00')),
+        )
+
+        # Check availability for dates that overlap with the first booking
+        is_available = await service.check_availability(
+            test_equipment.id,
+            test_dates['start_date'] - timedelta(days=1),
+            test_dates['start_date'] + timedelta(days=1),
+        )
+        assert is_available is False
+
+        # Check availability for dates between two bookings
+        between_start = test_dates['end_date'] + timedelta(days=1)
+        between_end = future_start - timedelta(days=1)
+        is_available = await service.check_availability(
+            test_equipment.id,
+            between_start,
+            between_end,
+        )
+        assert is_available is True
+
+        # Check availability for dates that overlap with the second booking
+        is_available = await service.check_availability(
+            test_equipment.id,
+            future_start - timedelta(days=1),
+            future_start + timedelta(days=1),
+        )
+        assert is_available is False
+
+        # Check availability for dates that overlap with both bookings
+        is_available = await service.check_availability(
+            test_equipment.id,
+            test_dates['start_date'] - timedelta(days=1),
+            future_end + timedelta(days=1),
+        )
+        assert is_available is False

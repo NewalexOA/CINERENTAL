@@ -1,4 +1,4 @@
-# Тестирование CINERENTAL
+# Тестирование ACT-RENTAL
 
 ## Структура тестового окружения
 
@@ -91,16 +91,16 @@ docker compose -f docker-compose.test.yml up -d
 docker compose -f docker-compose.test.yml run --rm test tests/unit/test_equipment_service.py::test_create_equipment
 
 # Запуск всех тестов в директории
-docker compose -f docker-compose.test.yml run --rm test tests/
+docker compose -f docker-compose.test.yml run --rm test pytest tests/
 
 # Запуск всех e2e тестов
-docker compose -f docker-compose.test.yml run --rm test tests/e2e/ -v
+docker compose -f docker-compose.test.yml run --rm test pytest tests/e2e/ -v
 
 # Запуск с дополнительными опциями pytest
-docker compose -f docker-compose.test.yml run --rm test tests/integration/ -v -x
+docker compose -f docker-compose.test.yml run --rm test pytest tests/ -v --cov=app --cov-report=html
 
 # Запуск тестов с определенной меткой
-docker compose -f docker-compose.test.yml run --rm test -m "integration"
+docker compose -f docker-compose.test.yml run --rm test pytest -m "integration"
 ```
 
 ### Завершение тестирования

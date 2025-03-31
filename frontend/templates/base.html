@@ -93,7 +93,7 @@
     <!-- Footer -->
     <footer class="footer">
         <div class="container text-center">
-            <span class="text-muted">© {{ COMPANY_SINCE }} {{ APP_NAME }}. Все права защищены.</span>
+            <span class="text-muted">© {{ COMPANY_SINCE }} {{ COMPANY_LEGAL_NAME }}. Все права защищены.</span>
         </div>
     </footer>
 
@@ -136,7 +136,78 @@
     <!-- Custom JavaScript -->
     <script src="{{ url_for('static', path='js/main.js') }}"></script>
 
-    {% block extra_js %}{% endblock %}
+    <!-- JavaScript Modules -->
+    <script src="{{ url_for('static', path='js/modules/print.js') }}"></script>
+
+    <!-- Global JavaScript error handler -->
+    <script>
+        // Console functionality check
+        console.log('%c[BASE] Base template initialization', 'color: #4CAF50; font-size: 14px; font-weight: bold;');
+
+        // Check if console is available and working
+        if (typeof console === 'undefined') {
+            alert('Console is not available! Logging will not work.');
+        } else {
+            console.log('[BASE] Console is available and working');
+            console.log('[BASE] User Agent:', navigator.userAgent);
+            console.log('[BASE] Window Size:', window.innerWidth, 'x', window.innerHeight);
+        }
+
+        // Global error handler
+        window.onerror = function(message, source, lineno, colno, error) {
+            console.group('%c[ERROR] Unhandled JavaScript Error', 'color: #ff0000; font-size: 14px; font-weight: bold;');
+            console.error('Message:', message);
+            console.error('Source:', source);
+            console.error('Line:Column:', lineno + ':' + colno);
+            if (error) {
+                console.error('Stack trace:', error.stack);
+            }
+            console.error('User Agent:', navigator.userAgent);
+            console.error('Page URL:', window.location.href);
+            console.error('Timestamp:', new Date().toISOString());
+            console.groupEnd();
+
+            // Display error to user
+            showToast('Произошла ошибка JavaScript. Проверьте консоль браузера для деталей.', 'danger');
+
+            return false; // Allow the browser's default error handler to execute
+        };
+
+        // Unhandled promise rejection handler
+        window.onunhandledrejection = function(event) {
+            console.group('%c[ERROR] Unhandled Promise Rejection', 'color: #ff0000; font-size: 14px; font-weight: bold;');
+            console.error('Reason:', event.reason);
+            if (event.reason.stack) {
+                console.error('Stack trace:', event.reason.stack);
+            }
+            console.error('Promise:', event.promise);
+            console.error('Timestamp:', new Date().toISOString());
+            console.groupEnd();
+
+            // Display error to user
+            showToast('Произошла ошибка при асинхронной операции. Проверьте консоль браузера для деталей.', 'danger');
+        };
+    </script>
+
+    <!-- Additional scripts -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Main JavaScript code for the entire site
+
+            // Initialize datepickers
+            if (document.querySelectorAll('.datepicker').length > 0) {
+                $('.datepicker').daterangepicker({
+                    singleDatePicker: true,
+                    showDropdowns: true,
+                    locale: {
+                        format: 'DD.MM.YYYY'
+                    }
+                });
+            }
+        });
+    </script>
+
+    {% block scripts %}{% endblock %}
 
     <script>
         // Initialize scanner for modal

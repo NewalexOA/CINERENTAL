@@ -147,51 +147,36 @@ docker compose up test
 docker compose -f docker-compose.prod.yml up -d
 ```
 
-## Installation
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/yourusername/act-rental.git
-   cd act-rental
-   ```
+## Dependencies Installation
 
-2. Create and activate virtual environment:
-   ```bash
-   python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
-   ```
+### For Development
 
-3. Install dependencies:
-   ```bash
-   # For production environment
-   pip install -r requirements-prod.txt
+```bash
+# Create virtual environment and install dependencies
+make install
 
-   # For development environment
-   pip install -r requirements-dev.txt
+# Or manually
+python -m venv .venv
+source .venv/bin/activate  # for Linux/macOS
+# or
+.venv\Scripts\activate  # for Windows
 
-   # For testing environment
-   pip install -r requirements-test.txt
-   ```
+# Install uv
+curl -LsSf https://astral.sh/uv/install.sh | sh
 
-4. Copy environment example and configure:
-   ```bash
-   cp .env.example .env
-   # Edit .env with your configuration
-   ```
+# Install development dependencies
+uv pip install -e ".[dev]"
+```
 
-5. Start services with Docker Compose:
-   ```bash
-   docker-compose up -d
-   ```
+### For Testing
 
-6. Run migrations:
-   ```bash
-   alembic upgrade head
-   ```
+```bash
+# Install testing dependencies
+make install-test
 
-7. Start the application:
-   ```bash
-   uvicorn backend.main:app --reload
-   ```
+# Or manually
+uv pip install -e ".[test]"
+```
 
 ## Development
 - Follow [Code Style Guide](docs/code_style.md)

@@ -11,7 +11,7 @@ from sqlalchemy import and_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
-from backend.models import Booking, BookingStatus, PaymentStatus
+from backend.models import Booking, BookingStatus, Equipment, PaymentStatus
 from backend.repositories import BaseRepository
 
 
@@ -285,7 +285,7 @@ class BookingRepository(BaseRepository[Booking]):
             select(Booking)
             .where(Booking.id == booking_id)
             .options(
-                joinedload(Booking.equipment),
+                joinedload(Booking.equipment).joinedload(Equipment.category),
                 joinedload(Booking.client),
             )
         )
@@ -302,16 +302,22 @@ class BookingRepository(BaseRepository[Booking]):
             Equipment information as a dictionary
         """
         booking = await self.get_with_relations(booking_id)
-        if booking is None:
+        if booking is None or booking.equipment is None:
             return {}
 
         category_name = 'Не указана'
-        if booking.equipment.category:
+        category_id = None
+
+        # Safe category retrieval
+        has_category = hasattr(booking.equipment, 'category')
+        if has_category and booking.equipment.category is not None:
             category_name = booking.equipment.category.name
+            category_id = booking.equipment.category.id
 
         return {
             'id': booking.equipment.id,
             'name': booking.equipment.name,
+            'category_id': category_id,
             'category': category_name,
             'replacement_cost': booking.equipment.replacement_cost,
             'serial_number': booking.equipment.serial_number,

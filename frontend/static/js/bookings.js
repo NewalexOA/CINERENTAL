@@ -175,6 +175,16 @@ const bookingManager = {
                 this.deleteBooking(bookingId);
             });
         }
+
+        // Setup delete modal to receive booking ID from trigger button
+        const deleteBookingModal = document.getElementById('deleteBookingModal');
+        if (deleteBookingModal) {
+            deleteBookingModal.addEventListener('show.bs.modal', (event) => {
+                const button = event.relatedTarget;
+                const bookingId = button.getAttribute('data-booking-id');
+                deleteBookingModal.setAttribute('data-booking-id', bookingId);
+            });
+        }
     },
 
     // Initialize the new booking form

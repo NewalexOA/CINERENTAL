@@ -1,45 +1,49 @@
 #!/bin/bash
 set -e
 
-# Устанавливаем утилиты PostgreSQL, если они не установлены
-if ! command -v psql &> /dev/null; then
-    echo "Installing PostgreSQL client..."
-    apt-get update -qq
-    apt-get install -y --no-install-recommends postgresql-client
-fi
+# Define colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+NC='\033[0m' # No Color
 
-# Проверяем, запущены ли необходимые сервисы
-if ! nc -z test_db 5432 &> /dev/null; then
-    echo "ОШИБКА: Сервис test_db не доступен. Запустите тесты через docker-compose.test.yml:"
-    echo "docker compose -f docker-compose.test.yml run --rm test [test_path/and_options]"
-    exit 1
-fi
+# Set environment variables
+export ENVIRONMENT=testing
+export PYTHONPATH=$PYTHONPATH:$(pwd)
 
-if ! nc -z redis 6379 &> /dev/null; then
-    echo "ОШИБКА: Сервис redis не доступен. Запустите тесты через docker-compose.test.yml:"
-    echo "docker compose -f docker-compose.test.yml run --rm test [test_path/and_options]"
-    exit 1
-fi
+# Function to check if a service is available
+check_service() {
+    local host=$1
+    local port=$2
+    local service_name=$3
+    local max_attempts=$4
+    local attempt=1
 
-# Wait for services to be ready
-echo "Waiting for PostgreSQL..."
-./docker/wait-for.sh postgres test_db 5432
+    echo -e "${YELLOW}Checking if $service_name is available at $host:$port...${NC}"
 
-echo "Waiting for Redis..."
-./docker/wait-for.sh redis redis 6379
+    while ! nc -z $host $port >/dev/null 2>&1; do
+        if [ $attempt -ge $max_attempts ]; then
+            echo -e "${RED}$service_name service is not available. Run tests using docker-compose.test.yml:${NC}"
+            echo -e "${YELLOW}docker compose -f docker-compose.test.yml run --rm test [test_path/and_options]${NC}"
+            exit 1
+        fi
+        echo -e "${YELLOW}Waiting for $service_name service... Attempt $attempt/$max_attempts${NC}"
+        attempt=$((attempt+1))
+        sleep 1
+    done
+    echo -e "${GREEN}$service_name is available!${NC}"
+}
 
-# Run migrations on test database
-echo "Running migrations..."
-export PYTHONPATH=/app
-alembic upgrade head
+# Check if required services are available
+check_service test_db 5432 "PostgreSQL" 30
+check_service test-redis 6379 "Redis" 30
 
-# Run tests with coverage
-echo "Running tests..."
+# Run the tests
+echo -e "${GREEN}All services are available. Running tests...${NC}"
+
+# If no arguments are provided, run all tests
 if [ $# -eq 0 ]; then
-    echo "No tests specified. Please provide test path or options."
-    echo "Usage: docker compose run --rm test [test_path/and_options]"
-    echo "Example: docker compose run --rm test tests/unit/test_equipment_service.py -v"
-    exit 1
+    python -m pytest
 else
-    python -m pytest "$@" --cov=backend --cov-report=html --cov-report=term-missing
+    python -m pytest "$@"
 fi

@@ -33,6 +33,8 @@ from backend.schemas.document import (
     DocumentUpdate,
 )
 from backend.schemas.equipment import (
+    BookingConflictInfo,
+    EquipmentAvailabilityResponse,
     EquipmentBase,
     EquipmentCreate,
     EquipmentResponse,
@@ -42,9 +44,14 @@ from backend.schemas.equipment import (
     StatusTimelineResponse,
 )
 from backend.schemas.project import (
+    BookingCreateForProject,
     BookingInProject,
+    ClientInfo,
+    EquipmentPrintItem,
     ProjectBase,
     ProjectCreate,
+    ProjectCreateWithBookings,
+    ProjectPrint,
     ProjectResponse,
     ProjectUpdate,
     ProjectWithBookings,
@@ -88,6 +95,8 @@ __all__ = [
     'EquipmentWithCategory',
     'RegenerateBarcodeRequest',
     'StatusTimelineResponse',
+    'EquipmentAvailabilityResponse',
+    'BookingConflictInfo',
     # Category schemas
     'CategoryCreate',
     'CategoryResponse',
@@ -101,6 +110,11 @@ __all__ = [
     'ProjectUpdate',
     'ProjectWithBookings',
     'BookingInProject',
+    'BookingCreateForProject',
+    'ProjectCreateWithBookings',
+    'ClientInfo',
+    'EquipmentPrintItem',
+    'ProjectPrint',
     # Scan Session
     'EquipmentItem',
     'ScanSessionCreate',

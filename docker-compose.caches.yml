@@ -1,0 +1,38 @@
+name: act-rental-caches
+
+services:
+  apt-cacher:
+    build:
+      context: ./docker/apt-cacher-ng
+    ports:
+      - "3142:3142"
+    volumes:
+      - apt-cache-data:/var/cache/apt-cacher-ng
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "3142"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  pypi-cache:
+    build:
+      context: ./docker/devpi
+    ports:
+      - "3141:3141"
+    volumes:
+      - pypi-cache-data:/data/devpi
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3141"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  apt-cache-data:
+    driver: local
+  pypi-cache-data:
+    driver: local

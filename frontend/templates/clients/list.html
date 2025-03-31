@@ -104,7 +104,7 @@
                         </span>
                     </div>
                     <small class="text-muted">
-                        Добавлен {{ client.created_at | date }}
+                        Добавлен {{ client.created_at | format_date }}
                     </small>
                 </div>
             </div>
@@ -215,7 +215,7 @@
 </div>
 {% endblock %}
 
-{% block extra_js %}
+{% block scripts %}
 <script>
 function showLocalLoader() {
     const loader = document.getElementById('clients-loader');

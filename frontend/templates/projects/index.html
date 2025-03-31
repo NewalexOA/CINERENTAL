@@ -90,7 +90,7 @@
 </div>
 {% endblock %}
 
-{% block extra_js %}
+{% block scripts %}
 <script>
 // Pagination state
 let currentPage = 1;
@@ -208,6 +208,17 @@ function applyFilters() {
 
 // Load projects with pagination and filters
 async function loadProjects() {
+    const projectsList = document.getElementById('projectsList');
+    projectsList.innerHTML = `
+        <tr>
+            <td colspan="6" class="text-center py-4">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Загрузка...</span>
+                </div>
+            </td>
+        </tr>
+    `;
+
     try {
         // Build query parameters
         const params = new URLSearchParams();
@@ -231,7 +242,7 @@ async function loadProjects() {
         console.error('Error loading projects:', error);
         showToast('Ошибка загрузки проектов', 'danger');
 
-        document.getElementById('projectsList').innerHTML = `
+        projectsList.innerHTML = `
             <tr>
                 <td colspan="6" class="text-center py-4 text-danger">
                     <i class="fas fa-exclamation-circle fa-2x mb-2"></i>

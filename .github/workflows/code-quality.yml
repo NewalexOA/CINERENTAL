@@ -19,15 +19,16 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-          cache: 'pip'
+
+      - name: Install uv
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
 
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
-          pip install black==24.1.0 isort==5.13.2 flake8==7.0.0 mypy==1.8.0
-          pip install flake8-docstrings flake8-quotes
-          pip install types-redis types-passlib types-python-jose
-          pip install -r requirements-dev.txt
+          uv pip install --system .
+          uv pip install --system black==24.1.0 isort==6.0.0 flake8==7.0.0 mypy==1.8.0 flake8-docstrings flake8-quotes types-redis types-passlib types-python-jose pytest-asyncio pytest-cov pytest-mock
 
       - name: Run Black
         run: |

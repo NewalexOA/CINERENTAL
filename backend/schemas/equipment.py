@@ -6,7 +6,7 @@ including request/response schemas for managing rental items.
 
 from datetime import datetime
 from decimal import Decimal
-from typing import Optional
+from typing import List, Optional
 
 from pydantic import BaseModel, ConfigDict, Field, computed_field
 
@@ -126,5 +126,35 @@ class StatusTimelineResponse(BaseModel):
     status: EquipmentStatus
     timestamp: datetime
     notes: Optional[str] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class BookingConflictInfo(BaseModel):
+    """Booking conflict information schema."""
+
+    booking_id: int = Field(..., description='Booking ID')
+    start_date: str = Field(..., description='Booking start date')
+    end_date: str = Field(..., description='Booking end date')
+    status: str = Field(..., description='Booking status')
+    project_id: Optional[int] = Field(None, description='Project ID if available')
+    project_name: Optional[str] = Field(None, description='Project name if available')
+
+
+class EquipmentAvailabilityResponse(BaseModel):
+    """Equipment availability response schema."""
+
+    equipment_id: int = Field(..., description='Equipment ID')
+    is_available: bool = Field(
+        ..., description='Whether equipment is available for the specified period'
+    )
+    equipment_status: EquipmentStatus = Field(
+        ..., description='Current equipment status'
+    )
+    conflicts: List[BookingConflictInfo] = Field(
+        default_factory=list,
+        description='List of booking conflicts if not available',
+    )
+    message: str = Field(..., description='Availability message')
 
     model_config = ConfigDict(from_attributes=True)

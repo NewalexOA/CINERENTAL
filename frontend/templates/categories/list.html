@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Категории - CINERENTAL{% endblock %}
+{% block title %}Категории - {{ APP_NAME }}{% endblock %}
 
 {% block content %}
 <div class="container mt-4">
@@ -174,10 +174,18 @@
 </div>
 {% endblock %}
 
-{% block extra_js %}
+{% block scripts %}
 <script>
     // Loading categories when page is loaded
     document.addEventListener('DOMContentLoaded', () => {
+        // Test console logging
+        console.log('%c[Categories] LOGGING TEST - START', 'background: #222; color: #bada55; font-size: 16px;');
+        console.log('[Categories] Console logging is working');
+        console.warn('[Categories] Warning test');
+        console.error('[Categories] Error test');
+
+        console.group('[Categories] Page Initialization');
+        console.log('[Categories] Page loaded, initializing...');
         // First ensure loader is reset and hidden
         const loader = document.getElementById('global-loader');
         if (loader) {
@@ -187,7 +195,7 @@
             }
         }
         window.loaderCounter = 0;
-        console.log('Forced loader reset on page load');
+        console.log('[Categories] Loader reset completed');
 
         // Use inline loading indicator instead of global loader
         const table = document.getElementById('categoriesTable');
@@ -198,29 +206,37 @@
         // Load categories without using global loader
         loadCategoriesWithoutGlobalLoader();
         setupEventListeners();
+        console.log('[Categories] Initialization completed');
+        console.groupEnd();
+
+        console.log('%c[Categories] LOGGING TEST - END', 'background: #222; color: #bada55; font-size: 16px;');
     });
 
     // Load categories without using global loader
     async function loadCategoriesWithoutGlobalLoader() {
+        console.group('[Categories] Loading Categories');
         try {
-            const categories = await api.get('/categories');
-            console.log('Загруженные категории:', categories);
+            console.log('[Categories] Fetching categories from API...');
+            const categories = await api.get('/categories/with-equipment-count');
+            console.log('[Categories] Categories loaded:', categories);
             const table = document.getElementById('categoriesTable');
 
             if (!table) {
-                console.error('Элемент categoriesTable не найден');
+                console.error('[Categories] Table element not found!');
                 return;
             }
 
             table.innerHTML = '';
 
-            if (categories.length === 0) {
+            if (!categories || categories.length === 0) {
+                console.warn('[Categories] No categories found');
                 table.innerHTML = '<tr><td colspan="4" class="text-center">Нет категорий</td></tr>';
                 return;
             }
 
+            console.log(`[Categories] Rendering ${categories.length} categories`);
             categories.forEach(category => {
-                console.log('Категория:', category.id, category);
+                console.log('[Categories] Rendering category:', category.id, category);
 
                 const row = document.createElement('tr');
                 row.setAttribute('data-category-id', category.id);
@@ -272,17 +288,20 @@
                 });
             });
         } catch (error) {
-            console.error('Ошибка при загрузке категорий:', error);
+            console.error('[Categories] Failed to load categories:', error);
             const table = document.getElementById('categoriesTable');
             if (table) {
                 table.innerHTML = '<tr><td colspan="4" class="text-center text-danger">Ошибка при загрузке категорий</td></tr>';
             }
             showToast('Ошибка при загрузке категорий', 'danger');
+        } finally {
+            console.groupEnd();
         }
     }
 
     // Setup event listeners
     function setupEventListeners() {
+        console.log('[Categories] Setting up event listeners');
         // Add category
         document.getElementById('addCategory').addEventListener('click', addCategory);
 
@@ -291,11 +310,13 @@
 
         // Add subcategory
         document.getElementById('addSubcategoryBtn').addEventListener('click', () => {
+            console.log('[Categories] Opening add subcategory form');
             document.getElementById('addSubcategoryForm').style.display = 'block';
             document.getElementById('editSubcategoryForm').style.display = 'none';
         });
 
         document.getElementById('cancelSubcategory').addEventListener('click', () => {
+            console.log('[Categories] Canceling add subcategory');
             document.getElementById('addSubcategoryForm').style.display = 'none';
         });
 
@@ -303,6 +324,7 @@
 
         // Cancel subcategory editing
         document.getElementById('cancelEditSubcategory').addEventListener('click', () => {
+            console.log('[Categories] Canceling edit subcategory');
             document.getElementById('editSubcategoryForm').style.display = 'none';
         });
 
@@ -320,17 +342,20 @@
 
             // Reset loader when modal is shown
             modalElement.addEventListener('show.bs.modal', () => {
+                console.log(`[Categories] Opening modal: ${modalId}`);
                 resetLoader();
             });
 
             // Reset loader when modal is hidden
             modalElement.addEventListener('hidden.bs.modal', () => {
+                console.log(`[Categories] Closing modal: ${modalId}`);
                 resetLoader();
             });
 
             // Additional safety: reset loader on backdrop click
             modalElement.addEventListener('click', (event) => {
                 if (event.target === modalElement) {
+                    console.log(`[Categories] Modal backdrop clicked: ${modalId}`);
                     resetLoader();
                 }
             });
@@ -365,18 +390,22 @@
                 }
             }
         }, 3000);
+
+        console.log('[Categories] Event listeners setup completed');
     }
 
     // Add category
     async function addCategory() {
+        console.log('[Categories] Adding new category');
         const form = document.getElementById('addCategoryForm');
-        const formData = new FormData(form);
-        const data = Object.fromEntries(formData);
+        const data = {
+            name: form.elements.name.value,
+            description: form.elements.description.value
+        };
 
-        console.log('Данные для создания категории:', data);
-
-        // Validation of form data
+        // Validation
         if (!data.name.trim()) {
+            console.warn('[Categories] Add category validation failed: empty name');
             showToast('Необходимо указать название категории', 'warning');
             return;
         }
@@ -388,18 +417,20 @@
         addButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Добавление...';
 
         try {
-            const response = await api.post('/categories/', data);
-            console.log('Ответ сервера при создании категории:', response);
+            console.log('[Categories] Sending add category request:', data);
+            const response = await api.post('/categories', data);
+            console.log('[Categories] Category added successfully:', response);
             showToast('Категория успешно добавлена', 'success');
 
-            // Close modal and update category lis
+            // Reset form and close modal
+            form.reset();
             const modal = bootstrap.Modal.getInstance(document.getElementById('addCategoryModal'));
             modal.hide();
-            form.reset();
 
+            // Reload categories
             await loadCategoriesWithoutGlobalLoader();
         } catch (error) {
-            console.error('Ошибка при добавлении категории:', error);
+            console.error('[Categories] Error adding category:', error);
             showToast('Ошибка при добавлении категории', 'danger');
         } finally {
             // Restore button state
@@ -410,20 +441,10 @@
 
     // Open edit category modal
     async function openEditCategoryModal(categoryId) {
-        // Create a temporary loading overlay in the table area
-        const tableArea = document.querySelector('.card-body');
-        const loadingOverlay = document.createElement('div');
-        loadingOverlay.className = 'position-absolute top-0 left-0 w-100 h-100 d-flex justify-content-center align-items-center bg-light bg-opacity-75';
-        loadingOverlay.style.zIndex = '100';
-        loadingOverlay.innerHTML = '<div class="spinner-border text-primary" role="status"><span class="visually-hidden">Загрузка...</span></div>';
-
-        if (tableArea) {
-            tableArea.style.position = 'relative';
-            tableArea.appendChild(loadingOverlay);
-        }
-
+        console.log(`[Categories] Opening edit modal for category ${categoryId}`);
         try {
             const category = await api.get(`/categories/${categoryId}`);
+            console.log('[Categories] Category data loaded:', category);
 
             const form = document.getElementById('editCategoryForm');
             form.elements.id.value = category.id;
@@ -433,18 +454,14 @@
             const modal = new bootstrap.Modal(document.getElementById('editCategoryModal'));
             modal.show();
         } catch (error) {
-            console.error('Ошибка при загрузке категории:', error);
+            console.error('[Categories] Error loading category for editing:', error);
             showToast('Ошибка при загрузке категории', 'danger');
-        } finally {
-            // Remove loading overlay
-            if (loadingOverlay && loadingOverlay.parentNode) {
-                loadingOverlay.parentNode.removeChild(loadingOverlay);
-            }
         }
     }
 
     // Update category
     async function updateCategory() {
+        console.log('[Categories] Updating category');
         const form = document.getElementById('editCategoryForm');
         const categoryId = form.elements.id.value;
         const data = {
@@ -452,8 +469,9 @@
             description: form.elements.description.value
         };
 
-        // Validation of form data
+        // Validation
         if (!data.name.trim()) {
+            console.warn('[Categories] Update category validation failed: empty name');
             showToast('Необходимо указать название категории', 'warning');
             return;
         }
@@ -465,16 +483,18 @@
         updateButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Сохранение...';
 
         try {
+            console.log(`[Categories] Sending update request for category ${categoryId}:`, data);
             await api.put(`/categories/${categoryId}`, data);
+            console.log('[Categories] Category updated successfully');
             showToast('Категория успешно обновлена', 'success');
 
-            // Close modal and update category lis
+            // Close modal and update category list
             const modal = bootstrap.Modal.getInstance(document.getElementById('editCategoryModal'));
             modal.hide();
 
             await loadCategoriesWithoutGlobalLoader();
         } catch (error) {
-            console.error('Ошибка при обновлении категории:', error);
+            console.error('[Categories] Error updating category:', error);
             showToast('Ошибка при обновлении категории', 'danger');
         } finally {
             // Restore button state
@@ -485,8 +505,9 @@
 
     // Open subcategories modal
     async function openSubcategoriesModal(categoryId, categoryName) {
+        console.log(`[Categories] Opening subcategories modal for category ${categoryId} (${categoryName})`);
         try {
-            // Prepare modal conten
+            // Prepare modal content
             document.getElementById('categoryName').textContent = categoryName || '';
             document.getElementById('subcategoryCategoryId').value = categoryId || '';
             document.getElementById('addSubcategoryForm').style.display = 'none';
@@ -500,17 +521,19 @@
             // Load data after modal animation completes
             setTimeout(async () => {
                 try {
+                    console.log(`[Categories] Loading subcategories for category ${categoryId}`);
                     const subcategories = await api.get(`/categories/${categoryId}/subcategories`);
+                    console.log('[Categories] Subcategories loaded:', subcategories);
                     renderSubcategories(subcategories);
                 } catch (error) {
-                    console.error('Error loading subcategories:', error);
+                    console.error('[Categories] Error loading subcategories:', error);
                     document.getElementById('subcategoriesTable').innerHTML =
                         '<tr><td colspan="3" class="text-center text-danger">Ошибка при загрузке подкатегорий</td></tr>';
                     showToast('Ошибка при загрузке подкатегорий', 'danger');
                 }
             }, 300);
         } catch (error) {
-            console.error('Error in modal preparation:', error);
+            console.error('[Categories] Error in modal preparation:', error);
             showToast('Ошибка при открытии модального окна', 'danger');
             resetLoader();
         }
@@ -581,11 +604,13 @@
 
     // Add subcategory
     async function addSubcategory() {
+        console.log('[Categories] Adding new subcategory');
         const categoryId = document.getElementById('subcategoryCategoryId').value;
         const name = document.getElementById('subcategoryName').value;
 
         // Validation
         if (!name.trim()) {
+            console.warn('[Categories] Add subcategory validation failed: empty name');
             showToast('Необходимо указать название подкатегории', 'warning');
             return;
         }
@@ -597,22 +622,24 @@
         saveButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Сохранение...';
 
         try {
-            const response = await api.post('/categories/', {
+            const data = {
                 parent_id: parseInt(categoryId),
                 name: name,
                 description: ''
-            });
-
+            };
+            console.log('[Categories] Sending add subcategory request:', data);
+            const response = await api.post('/categories/', data);
+            console.log('[Categories] Subcategory added successfully:', response);
             showToast('Подкатегория успешно добавлена', 'success');
 
-            // Reset form and update lis
+            // Reset form and update list
             document.getElementById('subcategoryName').value = '';
             document.getElementById('addSubcategoryForm').style.display = 'none';
 
             const subcategories = await loadSubcategories(categoryId);
             renderSubcategories(subcategories);
         } catch (error) {
-            console.error('Ошибка при добавлении подкатегории:', error);
+            console.error('[Categories] Error adding subcategory:', error);
             showToast('Ошибка при добавлении подкатегории', 'danger');
         } finally {
             // Restore button state
@@ -658,11 +685,13 @@
 
     // Update subcategory
     async function updateSubcategory() {
+        console.log('[Categories] Updating subcategory');
         const subcategoryId = document.getElementById('editSubcategoryId').value;
         const name = document.getElementById('editSubcategoryName').value;
 
         // Validation
         if (!name.trim()) {
+            console.warn('[Categories] Update subcategory validation failed: empty name');
             showToast('Необходимо указать название подкатегории', 'warning');
             return;
         }
@@ -674,12 +703,17 @@
         updateButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Обновление...';
 
         try {
+            console.log(`[Categories] Loading current subcategory data for ${subcategoryId}`);
             const subcategory = await api.get(`/categories/${subcategoryId}`);
-            await api.put(`/categories/${subcategoryId}`, {
+
+            const data = {
                 name,
                 description: subcategory.description,
                 parent_id: subcategory.parent_id
-            });
+            };
+            console.log(`[Categories] Sending update request for subcategory ${subcategoryId}:`, data);
+            await api.put(`/categories/${subcategoryId}`, data);
+            console.log('[Categories] Subcategory updated successfully');
             showToast('Подкатегория успешно обновлена', 'success');
 
             document.getElementById('editSubcategoryForm').style.display = 'none';
@@ -688,7 +722,7 @@
             const subcategories = await loadSubcategories(categoryId);
             renderSubcategories(subcategories);
         } catch (error) {
-            console.error('Ошибка при обновлении подкатегории:', error);
+            console.error('[Categories] Error updating subcategory:', error);
             showToast('Ошибка при обновлении подкатегории', 'danger');
         } finally {
             // Restore button state
@@ -699,7 +733,9 @@
 
     // Delete subcategory
     async function deleteSubcategory(subcategoryId) {
+        console.log(`[Categories] Attempting to delete subcategory ${subcategoryId}`);
         if (!confirm('Вы уверены, что хотите удалить эту подкатегорию?\n\nВнимание: Это помечает подкатегорию как удаленную. Подкатегория не будет видна в списке, но данные сохранятся в системе.')) {
+            console.log('[Categories] Subcategory deletion cancelled by user');
             return;
         }
 
@@ -708,14 +744,16 @@
             '<tr><td colspan="3" class="text-center"><div class="spinner-border spinner-border-sm"></div> Удаление...</td></tr>';
 
         try {
+            console.log(`[Categories] Sending delete request for subcategory ${subcategoryId}`);
             await api.delete(`/categories/${subcategoryId}`);
+            console.log('[Categories] Subcategory deleted successfully');
             showToast('Подкатегория успешно удалена', 'success');
 
             const categoryId = document.getElementById('subcategoryCategoryId').value;
             const subcategories = await loadSubcategories(categoryId);
             renderSubcategories(subcategories);
         } catch (error) {
-            console.error('Ошибка при удалении подкатегории:', error);
+            console.error('[Categories] Error deleting subcategory:', error);
 
             // Try to extract more detailed error message
             let errorMessage = 'Ошибка при удалении подкатегории';
@@ -733,6 +771,7 @@
                 const subcategories = await loadSubcategories(categoryId);
                 renderSubcategories(subcategories);
             } catch (e) {
+                console.error('[Categories] Error reloading subcategories after deletion error:', e);
                 document.getElementById('subcategoriesTable').innerHTML =
                     '<tr><td colspan="3" class="text-center text-danger">Не удалось загрузить подкатегории</td></tr>';
             }
@@ -741,68 +780,36 @@
 
     // Delete category
     async function deleteCategory(categoryId, categoryName) {
-        if (!confirm(`Вы уверены, что хотите удалить категорию "${categoryName}"?\n\nВнимание: Это помечает категорию как удаленную. Категория не будет видна в списке, но данные сохранятся в системе.`)) {
+        console.log(`[Categories] Attempting to delete category ${categoryId} (${categoryName})`);
+        if (!confirm(`Вы уверены, что хотите удалить категорию "${categoryName}"?`)) {
+            console.log('[Categories] Category deletion cancelled by user');
             return;
         }
 
-        // Find category row in the table
+        // Find the row and add loading overlay
         const row = document.querySelector(`tr[data-category-id="${categoryId}"]`);
         if (row) {
-            row.style.opacity = '0.6';
-
-            // Create loading overlay
+            row.style.opacity = '0.5';
             const loadingOverlay = document.createElement('div');
-            loadingOverlay.className = 'position-absolute w-100 h-100 d-flex justify-content-center align-items-center';
-            loadingOverlay.style = 'top: 0; left: 0; background: rgba(255,255,255,0.7);';
+            loadingOverlay.className = 'position-absolute top-0 left-0 w-100 h-100 d-flex justify-content-center align-items-center';
             loadingOverlay.innerHTML = '<div class="spinner-border spinner-border-sm text-primary"></div>';
-
-            // Ensure row has relative positioning
-            if (window.getComputedStyle(row).position !== 'relative') {
-                row.style.position = 'relative';
-            }
-
+            row.style.position = 'relative';
             row.appendChild(loadingOverlay);
         }
 
         try {
+            console.log(`[Categories] Sending delete request for category ${categoryId}`);
             await api.delete(`/categories/${categoryId}`);
-            showToast(`Категория "${categoryName}" успешно удалена`, 'success');
+            console.log('[Categories] Category deleted successfully');
+            showToast('Категория успешно удалена', 'success');
             await loadCategoriesWithoutGlobalLoader();
-
         } catch (error) {
-            console.error('Ошибка при удалении категории:', error);
+            console.error('[Categories] Error deleting category:', error);
+            showToast('Ошибка при удалении категории', 'danger');
 
-            // Handle specific error types
-            let errorMessage = 'Не удалось удалить категорию';
-
-            if (error.message && error.message.includes('foreign key constraint')) {
-                if (error.message.includes('equipment_category_id_fkey')) {
-                    errorMessage = `Категория "${categoryName}" не может быть удалена, так как она используется в оборудовании. Сначала необходимо удалить или переместить связанное оборудование.`;
-                } else if (error.message.includes('subcategory')) {
-                    errorMessage = `Категория "${categoryName}" не может быть удалена, так как она содержит подкатегории. Сначала необходимо удалить все подкатегории.`;
-                }
-            } else if (error.response) {
-                // Try to parse API response for more detailed error messages
-                const data = error.response.data;
-                if (data && data.detail) {
-                    if (typeof data.detail === 'string') {
-                        // Direct error message
-                        errorMessage = data.detail;
-                    } else if (data.detail.msg) {
-                        // Pydantic validation error
-                        errorMessage = data.detail.msg;
-                    }
-                }
-            }
-
-            showToast(errorMessage, 'danger');
-            await loadCategoriesWithoutGlobalLoader();
-
-        } finally {
-            // Restore row appearance
+            // Restore row appearance on error
             if (row) {
                 row.style.opacity = '';
-
                 const loadingOverlay = row.querySelector('div.position-absolute');
                 if (loadingOverlay) {
                     loadingOverlay.remove();

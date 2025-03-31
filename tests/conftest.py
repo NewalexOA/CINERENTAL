@@ -33,7 +33,6 @@ from sqlalchemy.ext.asyncio import (
 from sqlalchemy.pool import NullPool
 from sqlalchemy.sql import text
 
-from backend.core.config import settings
 from backend.core.database import get_db
 from backend.core.logging import configure_logging
 from backend.main import app as main_app
@@ -182,19 +181,33 @@ def async_fixture(
 
 # Test database URL
 TEST_DATABASE_URL = (
-    f'postgresql+asyncpg://{settings.POSTGRES_USER}:{settings.POSTGRES_PASSWORD}'
-    f'@{settings.POSTGRES_SERVER}:{settings.POSTGRES_PORT}/act_rental_test'
+    f'postgresql+asyncpg://{os.environ.get("POSTGRES_USER", "postgres")}:'
+    f'{os.environ.get("POSTGRES_PASSWORD", "postgres")}'
+    f'@{os.environ.get("POSTGRES_SERVER", "localhost")}:'
+    f'{os.environ.get("POSTGRES_PORT", "5432")}/'
+    f'{os.environ.get("POSTGRES_DB", "postgres")}'
 )
 
 
 @pytest.fixture(scope='session')
 async def create_test_database() -> None:
     """Create test database if it doesn't exist."""
+    # Get host name from env variables or use default
+    host = os.environ.get('POSTGRES_SERVER', 'localhost')
+    port = int(os.environ.get('POSTGRES_PORT', '5432'))
+    user = os.environ.get('POSTGRES_USER', 'postgres')
+    password = os.environ.get('POSTGRES_PASSWORD', 'postgres')
+
+    # If we're in a container, avoid creating a new test database
+    # and just use the one provided by Docker Compose
+    if os.environ.get('TESTING', '0') == '1':
+        return
+
     sys_conn = await asyncpg.connect(
-        host=settings.POSTGRES_SERVER,
-        port=settings.POSTGRES_PORT,
-        user=settings.POSTGRES_USER,
-        password=settings.POSTGRES_PASSWORD,
+        host=host,
+        port=port,
+        user=user,
+        password=password,
         database='postgres',
     )
 

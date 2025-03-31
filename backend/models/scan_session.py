@@ -23,7 +23,7 @@ class ScanSession(TimestampMixin, Base):
         expires_at: Expiration date
     """
 
-    __tablename__ = 'equipment_scan_sessions'
+    __tablename__ = 'scan_sessions'
 
     id: Mapped[int] = mapped_column(primary_key=True)
     user_id: Mapped[Optional[int]] = mapped_column(

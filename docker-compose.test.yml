@@ -1,36 +1,39 @@
 name: act-rental-test
 
 services:
-  test:
+  web-test:  # New service to run the FastAPI app for E2E tests
     build:
       context: .
-      target: runtime
+      dockerfile: Dockerfile.test # Reuse the same build context/image as tests
       args:
-        ENV_TYPE: test
-        INSTALL_PLAYWRIGHT_DEPS: true
-        INSTALL_PLAYWRIGHT: true
-    entrypoint: ./docker/run-tests.sh
+        - PIP_INDEX_URL=${PIP_INDEX_URL:-https://pypi.org/simple/}
+        - PIP_TRUSTED_HOST=${PIP_TRUSTED_HOST:-pypi.org}
+        - APT_MIRROR=${APT_MIRROR:-http://deb.debian.org/debian}
     volumes:
-      - ./app:/app/app
-      - ./tests:/app/tests
-      - ./alembic:/app/alembic
-      - ./docker:/app/docker
+      - ./backend:/app/backend
+      - ./migrations:/app/migrations
       - ./media:/app/media
       - ./static:/app/static
       - ./templates:/app/templates
+      - ./frontend:/app/frontend
       - ./alembic.ini:/app/alembic.ini
       - ./pyproject.toml:/app/pyproject.toml
-      - ./htmlcov:/app/htmlcov
     environment:
       - POSTGRES_SERVER=test_db
+      - POSTGRES_PORT=5432
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
-      - POSTGRES_DB=act_rental_test
-      - REDIS_HOST=redis
+      - POSTGRES_DB=postgres
+      - REDIS_HOST=test-redis
+      - REDIS_PORT=6379 # Internal Redis port
       - REDIS_PASSWORD=
       - TESTING=1
-      - SECRET_KEY=test-secret-key
       - ENVIRONMENT=testing
+      - SECRET_KEY=test-secret-key
+      - PORT=8000 # Define internal port
+      - HOST=0.0.0.0
+    ports:
+      - "8001:8000" # Expose on host port 8001 for potential debugging
     deploy:
       resources:
         limits:
@@ -39,29 +42,82 @@ services:
     depends_on:
       test_db:
         condition: service_healthy
-      redis:
+      test-redis:
         condition: service_healthy
     networks:
-      - act-rental_network
+      - test-network
     command: >
       bash -c "
-        ./docker/wait-for.sh test_db:5432 -t 60 -- echo 'Waiting for PostgreSQL...' &&
-        ./docker/wait-for.sh redis:6379 -t 60 -- echo 'Waiting for Redis...' &&
-        echo 'Running migrations...' &&
-        alembic stamp head &&
-        echo 'Running tests...' &&
-        pytest ${TEST_PATH:-tests/} -v
+        echo 'Starting FastAPI server for E2E tests...' && \
+        uvicorn backend.main:app --host $$HOST --port $$PORT
       "
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 12 # Allow more retries for app startup
+      start_period: 3s # Give app time to start before first check
+
+  test:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+      args:
+        - PIP_INDEX_URL=${PIP_INDEX_URL:-https://pypi.org/simple/}
+        - PIP_TRUSTED_HOST=${PIP_TRUSTED_HOST:-pypi.org}
+        - APT_MIRROR=${APT_MIRROR:-http://deb.debian.org/debian}
+    volumes:
+      - ./backend:/app/backend
+      - ./tests:/app/tests
+      - ./migrations:/app/migrations
+      - ./docker:/app/docker
+      - ./media:/app/media
+      - ./static:/app/static
+      - ./templates:/app/templates
+      - ./frontend:/app/frontend
+      - ./alembic.ini:/app/alembic.ini
+      - ./pyproject.toml:/app/pyproject.toml
+      - ./htmlcov:/app/htmlcov
+    environment:
+      # Keep DB/Redis settings for potential direct access in tests if needed
+      - POSTGRES_SERVER=test_db
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=postgres
+      - REDIS_HOST=test-redis
+      - REDIS_PORT=6379 # Internal Redis port
+      - REDIS_PASSWORD=
+      - TESTING=1
+      - ENVIRONMENT=testing
+      - SECRET_KEY=test-secret-key
+      # Add URL for the test web server
+      - APP_BASE_URL=http://web-test:8000
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+    depends_on:
+      test_db:
+        condition: service_healthy
+      test-redis:
+        condition: service_healthy
+      web-test: # Wait for the web server to be healthy
+        condition: service_healthy
+    networks:
+      - test-network
+    # Command should just keep the container running, tests are run via 'docker compose run'
+    command: ['tail', '-f', '/dev/null']
 
   test_db:
     image: postgres:14-alpine
     tmpfs:
       - /var/lib/postgresql/data
     environment:
-      - POSTGRES_DB=act_rental_test
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
-      - POSTGRES_HOST_AUTH_METHOD=trust
+      - POSTGRES_DB=postgres
     ports:
       - "5433:5432"
     deploy:
@@ -70,26 +126,25 @@ services:
           cpus: '0.5'
           memory: 512M
     networks:
-      - act-rental_network
+      - test-network
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
       timeout: 5s
       retries: 5
 
-  redis:
-    # Use the same redis image as in the main docker-compose
-    # for tests, a simple configuration is sufficient
+  test-redis:
     image: redis:6-alpine
-    command: redis-server --appendonly yes
-    networks:
-      - act-rental_network
+    ports:
+      - "6380:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
       timeout: 5s
       retries: 5
+    networks:
+      - test-network
 
 networks:
-  act-rental_network:
+  test-network:
     driver: bridge

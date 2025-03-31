@@ -1,0 +1,94 @@
+FROM python:3.12-slim
+
+# Set environment variables with default values that can be overridden at build time
+ARG PIP_INDEX_URL=https://pypi.org/simple/
+ARG PIP_TRUSTED_HOST=pypi.org
+ARG APT_MIRROR=http://deb.debian.org/debian
+
+# Set environment variables
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    UV_SYSTEM_PYTHON=1 \
+    PIP_INDEX_URL=${PIP_INDEX_URL} \
+    PIP_TRUSTED_HOST=${PIP_TRUSTED_HOST} \
+    UV_INDEX_URL=${PIP_INDEX_URL}
+
+# Configure apt to use specified mirror
+RUN echo "deb ${APT_MIRROR} bullseye main" > /etc/apt/sources.list && \
+    echo "deb ${APT_MIRROR} bullseye-updates main" >> /etc/apt/sources.list && \
+    echo "deb http://security.debian.org/debian-security bullseye-security main" >> /etc/apt/sources.list
+
+# Set working directory
+WORKDIR /app
+
+# Install system dependencies including Playwright requirements
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    curl \
+    libpq-dev \
+    python3-dev \
+    ghostscript \
+    postgresql-client \
+    netcat-traditional \
+    # Playwright dependencies
+    libglib2.0-0 \
+    libnss3 \
+    libnspr4 \
+    libatk1.0-0 \
+    libatk-bridge2.0-0 \
+    libatspi2.0-0 \
+    libxcomposite1 \
+    libxdamage1 \
+    libxext6 \
+    libxfixes3 \
+    libxrandr2 \
+    libgbm1 \
+    libxkbcommon0 \
+    libasound2 \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install uv
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh && \
+    echo 'export PATH="/root/.local/bin:$PATH"' >> ~/.bashrc && \
+    export PATH="/root/.local/bin:$PATH"
+
+# Create all necessary directories
+RUN mkdir -p backend tests docker frontend frontend/static \
+    media static templates alembic && \
+    touch alembic.ini && \
+    chmod -R 777 frontend media static templates alembic
+
+# Copy files individually to avoid errors
+COPY pyproject.toml .
+COPY README.md .
+COPY backend/. backend/
+COPY tests/. tests/
+COPY docker/. docker/
+
+# Install test dependencies
+RUN export PATH="/root/.local/bin:$PATH" && \
+    uv pip install --system . && \
+    uv pip install --system \
+    pytest==7.4.0 \
+    pytest-asyncio==0.21.1 \
+    pytest-cov==4.1.0 \
+    pytest-mock==3.11.1 \
+    pytest-playwright==0.7.0 \
+    httpx \
+    coverage \
+    requests \
+    psycopg2-binary \
+    faker \
+    treepoem \
+    playwright
+
+# Install Playwright browser
+RUN playwright install chromium && \
+    mkdir -p /var/lib/apt/lists/partial && \
+    chmod -R 777 /var/lib/apt/lists /var/cache/apt
+
+# Make scripts executable
+RUN chmod +x docker/wait-for.sh docker/run-tests.sh
+
+CMD ["./docker/run-tests.sh"]

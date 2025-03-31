@@ -26,87 +26,70 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-docker-
 
-      - name: Create .env file
+      - name: Prepare directories
         run: |
-          echo "ENVIRONMENT=testing" > .env
-          echo "POSTGRES_USER=postgres" >> .env
-          echo "POSTGRES_PASSWORD=postgres" >> .env
-          echo "POSTGRES_DB=act_rental_test" >> .env
-          echo "POSTGRES_HOST_AUTH_METHOD=trust" >> .env
-          echo "SECRET_KEY=test-secret-key" >> .env
-          echo "DEBUG=false" >> .env
-          echo "TESTING=1" >> .env
+          # Ensure frontend/static exists
+          mkdir -p frontend/static
+          chmod -R 777 frontend
 
       - name: Build and start containers
         run: |
-          docker compose -f docker-compose.test.yml build test test_db redis
-          docker compose -f docker-compose.test.yml up -d test_db redis
+          docker compose -f docker-compose.test.yml build
+          docker compose -f docker-compose.test.yml up -d test_db test-redis
 
-      - name: Wait for services to be ready
+          # Wait for services to be healthy
+          echo "Waiting for services to be healthy..."
+          attempt_counter=0
+          max_attempts=30
+
+          until docker compose -f docker-compose.test.yml ps | grep "test_db" | grep -q "(healthy)" && \
+                docker compose -f docker-compose.test.yml ps | grep "test-redis" | grep -q "(healthy)"; do
+            if [ ${attempt_counter} -eq ${max_attempts} ]; then
+              echo "Max attempts reached. Services are not healthy!"
+              docker compose -f docker-compose.test.yml ps
+              docker compose -f docker-compose.test.yml logs
+              exit 1
+            fi
+
+            attempt_counter=$((attempt_counter+1))
+            echo "Waiting for services to be healthy... (attempt: ${attempt_counter}/${max_attempts})"
+            sleep 1
+          done
+          echo "All services are healthy!"
+
+      - name: Create required directories
         run: |
-          # Ensure wait-for.sh is executable
-          chmod +x docker/wait-for.sh
+          mkdir -p $(pwd)/coverage/htmlcov
+          mkdir -p $(pwd)/frontend/static $(pwd)/media $(pwd)/static $(pwd)/templates $(pwd)/alembic
+          chmod -R 777 $(pwd)/coverage $(pwd)/frontend $(pwd)/media $(pwd)/static $(pwd)/templates $(pwd)/alembic
 
-          # Wait for PostgreSQL using wait-for.sh
-          docker compose -f docker-compose.test.yml run --rm --no-deps --entrypoint "./docker/wait-for.sh" test postgres test_db 5432
-
-          # Wait for Redis using wait-for.sh
-          docker compose -f docker-compose.test.yml run --rm --no-deps --entrypoint "./docker/wait-for.sh" test redis redis 6379
-
-      - name: Run migrations
+      - name: Network diagnostics
         run: |
-          docker compose -f docker-compose.test.yml run --rm --no-deps --entrypoint "alembic" test upgrade head
+          echo "=== Docker network information ==="
+          docker network ls
+          docker network inspect $(docker network ls --filter name=test -q)
+
+          echo "=== DNS resolution from test container ==="
+          docker compose -f docker-compose.test.yml run --rm test bash -c "cat /etc/hosts && echo '---' && cat /etc/resolv.conf && echo '---' && ping -c 2 test_db || true"
 
       - name: Run tests
         run: |
-          # Create directory for coverage reports
-          mkdir -p $(pwd)/coverage/htmlcov
-          chmod -R 777 $(pwd)/coverage
-
-          cat > run_tests_ci.sh << 'EOF'
-          #!/bin/bash
-          set -e
-
-          # Set the environment variable for tests
-          export ENVIRONMENT=testing
-          echo "Setting ENVIRONMENT=testing for all tests"
-
-          if [ ! -d "/app/tests" ]; then
-            echo "Directory tests not found"
-            exit 1
-          fi
-
-          TEST_FILES=$(find /app -type f -name "test_*.py" | sort)
-          if [ -z "$TEST_FILES" ]; then
-            echo "No test files found!"
-            exit 1
-          fi
-
-          cd /app
-
-          echo "Starting unit tests with coverage..."
-          COVERAGE_FILE=/coverage/.coverage.unit python -m pytest tests/unit/ -v --no-header -p no:cacheprovider --cov=backend || echo "Unit tests failed"
-
-          echo "Starting integration tests with coverage..."
-          COVERAGE_FILE=/coverage/.coverage.integration python -m pytest tests/integration/ -v --no-header -p no:cacheprovider --cov=backend || echo "Integration tests failed"
-
-          echo "Starting e2e tests with coverage..."
-          COVERAGE_FILE=/coverage/.coverage.e2e python -m pytest tests/e2e/ -v --no-header -p no:cacheprovider --cov=backend || echo "E2e tests failed"
-
-          echo "Combining coverage data..."
-          cd /coverage
-          coverage combine .coverage.unit .coverage.integration .coverage.e2e
-          coverage html -d htmlcov
-          coverage report
-          EOF
-
-          chmod +x run_tests_ci.sh
-
-          # Run tests with mounted coverage directory
-          docker compose -f docker-compose.test.yml run --rm --no-deps -v $(pwd)/run_tests_ci.sh:/tmp/run_tests_ci.sh -v $(pwd)/coverage:/coverage --entrypoint "bash" test /tmp/run_tests_ci.sh
+          # Run all tests with coverage
+          docker compose -f docker-compose.test.yml run --rm \
+            -v $(pwd)/coverage:/app/coverage \
+            -e ENVIRONMENT=testing \
+            -e PYTHONUNBUFFERED=1 \
+            test bash -c "
+              echo 'Running unit tests...' && \
+              pytest tests/unit/ -v --cov=backend --cov-report=html:/app/coverage/htmlcov/unit || exit 1 && \
+              echo 'Running integration tests...' && \
+              pytest tests/integration/ -v --cov=backend --cov-report=html:/app/coverage/htmlcov/integration || exit 1 && \
+              echo 'Running e2e tests...' && \
+              pytest tests/e2e/ -v --cov=backend --cov-report=html:/app/coverage/htmlcov/e2e || exit 1
+            "
 
       - name: Upload coverage report as artifact
-        if: success()
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: coverage-report
