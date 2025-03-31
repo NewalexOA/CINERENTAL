@@ -44,9 +44,11 @@ from backend.schemas.equipment import (
     StatusTimelineResponse,
 )
 from backend.schemas.project import (
+    BookingCreateForProject,
     BookingInProject,
     ProjectBase,
     ProjectCreate,
+    ProjectCreateWithBookings,
     ProjectResponse,
     ProjectUpdate,
     ProjectWithBookings,
@@ -105,6 +107,8 @@ __all__ = [
     'ProjectUpdate',
     'ProjectWithBookings',
     'BookingInProject',
+    'BookingCreateForProject',
+    'ProjectCreateWithBookings',
     # Scan Session
     'EquipmentItem',
     'ScanSessionCreate',

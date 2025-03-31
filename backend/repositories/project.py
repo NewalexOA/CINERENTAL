@@ -11,7 +11,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from backend.models import Client, Project, ProjectStatus
+from backend.models import Booking, Client, Equipment, Project, ProjectStatus
 from backend.repositories.base import BaseRepository
 
 
@@ -72,7 +72,11 @@ class ProjectRepository(BaseRepository[Project]):
         query = (
             select(Project)
             .where(Project.id == project_id)
-            .options(selectinload(Project.bookings))
+            .options(
+                selectinload(Project.bookings)
+                .selectinload(Booking.equipment)
+                .selectinload(Equipment.category)
+            )
         )
         result = await self.session.execute(query)
         return result.scalars().first()
