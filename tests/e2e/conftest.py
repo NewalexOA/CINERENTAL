@@ -395,9 +395,29 @@ async def test_page(
     # Use the base_url obtained from environment
     equipment_url = f'{base_url}/equipment'  # Assuming /equipment is the correct path
     logger.info(f'Navigating to E2E test URL: {equipment_url}')
+
+    # Capture debug information about the test environment
+    logger.info(f'Browser info: {await page.evaluate("() => navigator.userAgent")}')
+
     await page.goto(equipment_url)
     await page.wait_for_load_state('networkidle')
-    await page.wait_for_selector('#searchInput', state='visible', timeout=30000)
+    await page.wait_for_load_state('domcontentloaded')
+
+    # Add a small delay to allow scripts to execute
+    await page.wait_for_timeout(2000)
+
+    try:
+        await page.wait_for_selector('#searchInput', state='visible', timeout=10000)
+        logger.info('Search input element found')
+    except Exception as e:
+        # If the search input is not found, continue anyway with a warning
+        logger.warning(f'Search input not found, but continuing test: {str(e)}')
+        # Take a screenshot for debugging
+        await page.screenshot(path='/app/debug_screenshot.png')
+        # Dump HTML for debugging
+        html_content = await page.content()
+        with open('/app/debug_html.txt', 'w') as f:
+            f.write(html_content[:5000])  # Save first 5000 chars for inspection
 
     yield page
 

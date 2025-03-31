@@ -510,7 +510,7 @@ const initDateRangePicker = (element, options = {}) => {
 };
 
 // Equipment search functionality
-const equipmentSearch = {
+window.equipmentSearch = {
     init() {
         const searchInput = document.querySelector('#searchInput');
         const categoryFilter = document.querySelector('#categoryFilter');
@@ -656,6 +656,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Initialize equipment search
     if (document.getElementById('searchInput')) {
-        equipmentSearch.init();
+        window.equipmentSearch.init();
     }
 });
