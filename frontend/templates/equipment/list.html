@@ -250,19 +250,25 @@
 </style>
 {% endblock %}
 
-{% block extra_js %}
+{% block scripts %}
 <script>
 // Load categories for add form
 async function loadCategories() {
+    const formSelect = document.querySelector('select[name="category_id"]');
+    formSelect.innerHTML = '<option value="">Загрузка категорий...</option>';
+    formSelect.disabled = true;
+
     try {
         const categories = await api.get('/categories');
-        const formSelect = document.querySelector('select[name="category_id"]');
         formSelect.innerHTML = categories.map(category =>
             `<option value="${category.id}">${category.name}</option>`
         ).join('');
     } catch (error) {
         console.error('Error loading categories:', error);
         showToast('Ошибка при загрузке категорий', 'danger');
+        formSelect.innerHTML = '<option value="">Ошибка загрузки</option>';
+    } finally {
+        formSelect.disabled = false;
     }
 }
 
