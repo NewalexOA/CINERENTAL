@@ -19,6 +19,9 @@ templates.env.globals.update(
     {
         'APP_NAME': settings.APP_NAME,
         'COMPANY_SINCE': settings.COMPANY_SINCE,
+        'COMPANY_LEGAL_NAME': settings.COMPANY_LEGAL_NAME,
+        'COMPANY_PHONE': settings.COMPANY_PHONE,
+        'COMPANY_EMAIL': settings.COMPANY_EMAIL,
     }
 )
 
@@ -114,6 +117,33 @@ def tojson_filter(obj: Any) -> str:
         return json.dumps(str(obj))
 
 
+def format_currency(value: Union[float, int, Decimal, str, None]) -> str:
+    """Format value as currency for display.
+
+    Args:
+        value: Value to format
+
+    Returns:
+        Formatted currency string
+    """
+    if value is None:
+        return '0 ₽'
+
+    # Convert to float if necessary
+    if isinstance(value, str):
+        try:
+            value = float(value)
+        except ValueError:
+            return f'{value} ₽'
+    elif isinstance(value, Decimal):
+        value = float(value)
+
+    # Format with thousand separators and two decimal places
+    # Using the Russian locale style
+    formatted = '{:,.2f}'.format(value).replace(',', ' ').replace('.', ',')
+    return f'{formatted} ₽'
+
+
 # Get Jinja2 environment
 env: Environment = templates.env
 
@@ -121,3 +151,4 @@ env: Environment = templates.env
 env.filters['format_date'] = format_date
 env.filters['format_datetime'] = format_datetime
 env.filters['custom_tojson'] = tojson_filter
+env.filters['format_currency'] = format_currency

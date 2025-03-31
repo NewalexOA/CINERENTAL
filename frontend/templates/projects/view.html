@@ -57,6 +57,9 @@
                     <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#editProjectModal">
                         <i class="fas fa-edit"></i> Редактировать
                     </button>
+                    <button class="btn btn-outline-secondary" id="printProjectBtn" data-project-id="{{ project_data.id }}">
+                        <i class="fas fa-print"></i> Печать
+                    </button>
                     <button class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteProjectModal">
                         <i class="fas fa-trash"></i> Удалить
                     </button>
@@ -446,5 +449,17 @@ function getStatusColor(status) {
     };
     return colors[status] || 'secondary';
 }
+
+// Click handler for the print button
+document.getElementById('printProjectBtn').addEventListener('click', function() {
+    const projectId = this.dataset.projectId;
+    if (window.PrintModule) {
+        // If print module is loaded, use it
+        window.PrintModule.openProjectPrintWindow(projectId);
+    } else {
+        // Fallback if print module is not loaded
+        window.open(`/projects/${projectId}/print`, '_blank');
+    }
+});
 </script>
 {% endblock %}

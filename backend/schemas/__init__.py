@@ -46,9 +46,12 @@ from backend.schemas.equipment import (
 from backend.schemas.project import (
     BookingCreateForProject,
     BookingInProject,
+    ClientInfo,
+    EquipmentPrintItem,
     ProjectBase,
     ProjectCreate,
     ProjectCreateWithBookings,
+    ProjectPrint,
     ProjectResponse,
     ProjectUpdate,
     ProjectWithBookings,
@@ -109,6 +112,9 @@ __all__ = [
     'BookingInProject',
     'BookingCreateForProject',
     'ProjectCreateWithBookings',
+    'ClientInfo',
+    'EquipmentPrintItem',
+    'ProjectPrint',
     # Scan Session
     'EquipmentItem',
     'ScanSessionCreate',

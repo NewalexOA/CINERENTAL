@@ -3,6 +3,8 @@
 This module contains routes for project management web pages.
 """
 
+import json
+import traceback
 from typing import Union
 
 from fastapi import APIRouter, Depends
@@ -97,8 +99,6 @@ async def view_project(
         logger.debug(f'Project status: {project_dict.get("status", "NOT SET")}')
         logger.debug(f'Bookings count: {len(project_dict.get("bookings", []))}')
 
-        import json
-
         try:
             # Try to encode to ensure it can be serialized properly
             json_test = json.dumps(project_dict)
@@ -132,8 +132,6 @@ async def view_project(
         return templates.TemplateResponse('projects/view.html', template_context)
     except Exception as e:
         logger.error(f'Error loading project {project_id}: {str(e)}')
-        import traceback
-
         logger.error(f'Error traceback: {traceback.format_exc()}')
 
         # Still render the template but without project data
@@ -142,6 +140,109 @@ async def view_project(
             {
                 'request': request,
                 'project_id': str(project_id),  # Ensure it's a string
+                'error': str(e),
+            },
+        )
+
+
+@router.get('/{project_id}/print', response_class=HTMLResponse)
+async def print_project(
+    request: Request,
+    project_id: int,
+    db: AsyncSession = Depends(get_db),
+) -> _TemplateResponse:
+    """Render project print form.
+
+    Args:
+        request: FastAPI request object
+        project_id: Project ID
+        db: Database session
+
+    Returns:
+        Rendered template for project print form
+    """
+    logger.debug(f'Request to print project: ID={project_id}')
+
+    try:
+        # Use service directly instead of API request
+        service = ProjectService(db)
+
+        # Get project with bookings
+        project = await service.get_project(project_id, with_bookings=True)
+        await db.refresh(project, ['client'])
+
+        # Create project response
+        from datetime import datetime
+
+        from backend.schemas import ClientInfo, EquipmentPrintItem, ProjectResponse
+
+        # Create project response
+        project_response = ProjectResponse.model_validate(project, from_attributes=True)
+
+        # Create client info
+        client_info = ClientInfo(
+            id=project.client.id,
+            name=project.client.name,
+            company=project.client.company or '',
+            phone=project.client.phone or '',
+        )
+
+        # Get equipment items
+        equipment_items = []
+        total_liability = 0.0
+
+        for booking in project.bookings:
+            # Ensure equipment data is loaded
+            await db.refresh(booking, ['equipment'])
+            equipment = booking.equipment
+
+            # Get equipment serial number and liability amount
+            serial_number = getattr(equipment, 'serial_number', None) or ''
+            liability_amount = getattr(equipment, 'liability_amount', 0.0) or 0.0
+
+            # Create equipment item
+            equipment_item = EquipmentPrintItem(
+                id=equipment.id,
+                name=equipment.name,
+                serial_number=serial_number,
+                liability_amount=float(liability_amount),
+            )
+
+            equipment_items.append(equipment_item)
+            total_liability += float(liability_amount)
+
+        # Create print form data
+        print_data = {
+            'project': project_response.model_dump(),
+            'client': client_info.model_dump(),
+            'equipment': [item.model_dump() for item in equipment_items],
+            'total_items': len(equipment_items),
+            'total_liability': total_liability,
+            'generated_at': datetime.now(),
+        }
+
+        # Render template with data
+        return templates.TemplateResponse(
+            'print/project.html',
+            {
+                'request': request,
+                'project': print_data['project'],
+                'client': print_data['client'],
+                'equipment': print_data['equipment'],
+                'total_items': print_data['total_items'],
+                'total_liability': print_data['total_liability'],
+                'generated_at': print_data['generated_at'],
+            },
+        )
+    except Exception as e:
+        logger.error(f'Error printing project {project_id}: {str(e)}')
+        logger.error(f'Error traceback: {traceback.format_exc()}')
+
+        # Return error page
+        return templates.TemplateResponse(
+            'print/error.html',
+            {
+                'request': request,
                 'error': str(e),
             },
         )

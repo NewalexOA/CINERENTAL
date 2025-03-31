@@ -93,7 +93,7 @@
     <!-- Footer -->
     <footer class="footer">
         <div class="container text-center">
-            <span class="text-muted">© {{ COMPANY_SINCE }} {{ APP_NAME }}. Все права защищены.</span>
+            <span class="text-muted">© {{ COMPANY_SINCE }} {{ COMPANY_LEGAL_NAME }}. Все права защищены.</span>
         </div>
     </footer>
 
@@ -135,6 +135,9 @@
 
     <!-- Custom JavaScript -->
     <script src="{{ url_for('static', path='js/main.js') }}"></script>
+
+    <!-- JavaScript Modules -->
+    <script src="{{ url_for('static', path='js/modules/print.js') }}"></script>
 
     <!-- Global JavaScript error handler -->
     <script>

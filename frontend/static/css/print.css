@@ -1,0 +1,334 @@
+/* Project print form styles */
+
+/* Common styles */
+@page {
+    size: A4;
+    margin: 1.5cm;
+    margin-bottom: 2.5cm;
+    counter-increment: page;
+    @bottom-center {
+        content: "Страница " counter(page) " из " counter(pages);
+        font-size: 9pt;
+        color: #555;
+    }
+}
+
+body {
+    font-family: 'Roboto', 'Segoe UI', Arial, sans-serif;
+    line-height: 1.5;
+    color: #333;
+    background: #fff;
+    margin: 0;
+    padding: 0;
+}
+
+.print-container {
+    box-shadow: 0 0 20px rgba(0,0,0,0.1);
+    margin: 2em auto;
+    max-width: 210mm;
+    padding: 0;
+}
+
+/* Header styles */
+.print-header {
+    display: flex;
+    justify-content: space-between;
+    padding: 2em 2em 1.5em;
+    border-bottom: 2px solid #f0f0f0;
+    background: linear-gradient(to right, #fff, #fafafa);
+}
+
+.company-info {
+    display: flex;
+    align-items: center;
+}
+
+.company-logo {
+    height: 60px;
+    margin-right: 20px;
+}
+
+.company-name {
+    font-size: 22pt;
+    font-weight: 700;
+    color: #222;
+    margin: 0;
+}
+
+.project-info {
+    flex: 1;
+    padding-left: 2em;
+}
+
+.project-title {
+    font-size: 20pt;
+    font-weight: 700;
+    color: #222;
+    margin: 0 0 0.5em 0;
+    border-bottom: 2px solid #2c7be5;
+    padding-bottom: 0.2em;
+    display: inline-block;
+}
+
+.project-details {
+    margin-bottom: 15px;
+}
+
+.detail-row {
+    margin-bottom: 0.5em;
+    display: flex;
+}
+
+.detail-label {
+    font-weight: 600;
+    color: #555;
+    width: 120px;
+}
+
+.detail-value {
+    flex: 1;
+}
+
+/* Equipment section styles */
+.equipment-section {
+    padding: 1.5em 2em;
+}
+
+.section-title {
+    font-size: 16pt;
+    font-weight: 600;
+    color: #2c7be5;
+    margin-bottom: 1em;
+    padding-bottom: 0.5em;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.equipment-table {
+    width: 100%;
+    border-collapse: collapse;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    margin-bottom: 20px;
+}
+
+.equipment-table th {
+    background-color: #f6f9fc;
+    border: none;
+    border-bottom: 2px solid #e0e0e0;
+    color: #555;
+    font-weight: 600;
+    padding: 12px;
+    text-transform: uppercase;
+    font-size: 0.85em;
+    text-align: left;
+}
+
+.equipment-table td {
+    padding: 12px;
+    border: none;
+    border-bottom: 1px solid #eee;
+    text-align: left;
+}
+
+.equipment-table tr:nth-child(even) {
+    background-color: #fafbfc;
+}
+
+.equipment-table tfoot td {
+    border-top: 2px solid #e0e0e0;
+    font-weight: 600;
+    color: #333;
+}
+
+.col-num {
+    width: 5%;
+    text-align: center;
+}
+
+.col-name {
+    width: 50%;
+}
+
+.col-serial {
+    width: 20%;
+}
+
+.col-amount {
+    width: 25%;
+    text-align: right;
+}
+
+.total-label {
+    text-align: right;
+}
+
+.total-amount {
+    text-align: right;
+}
+
+/* Footer styles */
+.print-footer {
+    margin-top: 0;
+    padding: 1.5em 2em 2em;
+    border-top: 2px solid #f0f0f0;
+    background: #fafafa;
+    position: relative;
+    page-break-inside: avoid;
+    page-break-after: auto;
+    break-inside: avoid;
+}
+
+.notes-section {
+    background-color: white;
+    border: 1px solid #eee;
+    border-radius: 5px;
+    padding: 1em;
+    margin: 1.5em 0;
+}
+
+.notes-section h4 {
+    margin-top: 0;
+    margin-bottom: 5px;
+}
+
+.signatures {
+    margin: 2em 0;
+    background: white;
+    padding: 1.5em;
+    border-radius: 5px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+
+.signature-row {
+    display: flex;
+    justify-content: space-between;
+}
+
+.signature-field {
+    margin-right: 20px;
+    flex: 1;
+}
+
+.signature-label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+}
+
+.signature-line {
+    display: block;
+    border-bottom: 1px solid #ccc;
+    height: 25px;
+}
+
+.generation-info {
+    font-size: 0.8em;
+    color: #999;
+    margin-top: 1em;
+    text-align: right;
+}
+
+.company-contacts {
+    text-align: center;
+    margin-top: 1.5em;
+    padding-top: 1em;
+    border-top: 1px solid #eee;
+    color: #777;
+}
+
+.page-info {
+    text-align: center;
+    margin-top: 0.5em;
+    margin-bottom: 0.5em;
+}
+
+.page-current:before {
+    content: counter(page);
+}
+
+.page-total:before {
+    content: counter(pages);
+}
+
+/* Status styles */
+.status-draft {
+    text-transform: uppercase;
+}
+
+.status-active {
+    text-transform: uppercase;
+}
+
+.status-completed {
+    text-transform: uppercase;
+}
+
+.status-cancelled {
+    text-transform: uppercase;
+}
+
+/* Media queries for printing */
+@media print {
+    body {
+        margin: 0;
+        padding: 0;
+        background: none;
+    }
+
+    .print-container {
+        box-shadow: none;
+        margin: 0;
+        max-width: 100%;
+        display: flex;
+        flex-direction: column;
+        min-height: 100vh;
+    }
+
+    /* Hide the HTML page counter when the CSS page counter is available */
+    .page-info {
+        display: none;
+    }
+
+    .print-footer {
+        position: relative;
+        margin-top: auto;
+        bottom: 0;
+        width: 100%;
+        background: transparent;
+        border-top: 1px solid #eee;
+        padding-top: 1em;
+        padding-bottom: 1.5em;
+        page-break-inside: avoid;
+        break-inside: avoid;
+        break-after: auto;
+    }
+
+    .equipment-section {
+        margin-bottom: 2cm;
+    }
+
+    .equipment-table {
+        page-break-inside: avoid;
+    }
+
+    .equipment-table tr {
+        page-break-inside: avoid;
+    }
+
+    .equipment-table tr:nth-child(20n) {
+        page-break-after: always;
+    }
+
+    .print-header,
+    .section-title {
+        page-break-after: avoid;
+    }
+
+    .signatures,
+    .company-contacts,
+    .generation-info {
+        display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        break-inside: avoid;
+    }
+}

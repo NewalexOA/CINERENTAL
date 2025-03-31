@@ -128,3 +128,44 @@ class ProjectWithBookings(ProjectResponse):
         ser_json_timedelta='iso8601',
         validate_default=True,
     )
+
+
+class ClientInfo(BaseModel):
+    """Client information for print form."""
+
+    id: int
+    name: str
+    company: str
+    phone: Optional[str] = None
+
+    model_config = ConfigDict(
+        from_attributes=True,
+    )
+
+
+class EquipmentPrintItem(BaseModel):
+    """Equipment item for project print form."""
+
+    id: int
+    name: str
+    serial_number: Optional[str] = None
+    liability_amount: float = 0.0
+
+    model_config = ConfigDict(
+        from_attributes=True,
+    )
+
+
+class ProjectPrint(BaseModel):
+    """Project print form schema."""
+
+    project: ProjectResponse
+    client: ClientInfo
+    equipment: List[EquipmentPrintItem]
+    total_items: int
+    total_liability: float
+    generated_at: datetime = Field(default_factory=datetime.now)
+
+    model_config = ConfigDict(
+        from_attributes=True,
+    )
