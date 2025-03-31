@@ -71,7 +71,7 @@ python-dotenv==1.1.0
     #   uvicorn
 python-jose==3.4.0
     # via act-rental (pyproject.toml)
-python-multipart==0.0.6
+python-multipart==0.0.18
     # via act-rental (pyproject.toml)
 pyyaml==6.0.2
     # via uvicorn
@@ -89,7 +89,7 @@ sqlalchemy==2.0.25
     # via
     #   act-rental (pyproject.toml)
     #   alembic
-starlette==0.36.3
+starlette==0.40.0
     # via fastapi
 typing-extensions==4.13.0
     # via
