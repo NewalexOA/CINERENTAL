@@ -292,12 +292,30 @@ const bookingManager = {
     // Load booking details for editing
     async loadBookingDetails(bookingId) {
         try {
+            console.log(`[Bookings] Loading booking details for ID: ${bookingId}`);
+
             const booking = await api.get(`/bookings/${bookingId}`);
+
+            console.log('[Bookings] Booking details loaded:', booking);
 
             // Populate form fields
             const form = document.getElementById('editBookingForm');
+            if (!form) {
+                console.error('[Bookings] Edit booking form not found in DOM');
+                showToast('Форма редактирования не найдена', 'danger');
+                return;
+            }
+
             form.elements.id.value = booking.id;
-            form.elements.client_id.value = booking.client_id;
+
+            // Check if client_id exists and is valid
+            if (booking.client_id) {
+                form.elements.client_id.value = booking.client_id;
+            } else if (booking.client && booking.client.id) {
+                form.elements.client_id.value = booking.client.id;
+            } else {
+                console.warn('[Bookings] Client ID not found in booking data', booking);
+            }
 
             // Set date range
             const startDate = moment(booking.start_date).format('DD.MM.YYYY');
@@ -306,9 +324,20 @@ const bookingManager = {
 
             // Load equipment options and set selected equipment
             await this.loadEquipment('editEquipmentSelection');
-            const equipmentInput = document.querySelector(`#editEquipmentSelection input[value="${booking.equipment_id}"]`);
-            if (equipmentInput) {
-                equipmentInput.checked = true;
+
+            // Get equipment ID, handling different response formats
+            const equipmentId = booking.equipment_id ||
+                               (booking.equipment && booking.equipment.id);
+
+            if (equipmentId) {
+                const equipmentInput = document.querySelector(`#editEquipmentSelection input[value="${equipmentId}"]`);
+                if (equipmentInput) {
+                    equipmentInput.checked = true;
+                } else {
+                    console.warn(`[Bookings] Equipment input with ID ${equipmentId} not found in the form`);
+                }
+            } else {
+                console.warn('[Bookings] Equipment ID not found in booking data', booking);
             }
 
             // Set notes
@@ -316,8 +345,12 @@ const bookingManager = {
                 form.elements.notes.value = booking.notes || '';
             }
         } catch (error) {
-            console.error('Error loading booking details:', error);
-            showToast('Ошибка при загрузке данных бронирования', 'danger');
+            console.error('[Bookings] Error loading booking details:', error);
+            if (error.response) {
+                console.error('[Bookings] Response status:', error.response.status);
+                console.error('[Bookings] Error data:', error.response.data);
+            }
+            showToast('Ошибка при загрузке данных бронирования. Проверьте консоль для деталей.', 'danger');
         }
     },
 
