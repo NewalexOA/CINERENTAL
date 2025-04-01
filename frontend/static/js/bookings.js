@@ -673,9 +673,7 @@ const bookingSearch = {
                                 <td>${booking.equipment_name || 'Н/Д'}</td>
                                 <td>${formattedStartDate} - ${formattedEndDate}</td>
                                 <td>
-                                    <span class="badge ${getStatusBadgeClass(booking.booking_status || booking.status)}">
-                                        ${getStatusDisplayName(booking.booking_status || booking.status)}
-                                    </span>
+                                    ${booking.project_name ? booking.project_name : 'Нет проекта'}
                                 </td>
                                 <td>
                                     <span class="badge ${getPaymentStatusBadgeClass(booking.payment_status || booking.payment)}">

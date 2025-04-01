@@ -43,7 +43,7 @@ async def booking_detail(
     booking_service = BookingService(db)
 
     try:
-        booking = await booking_service.get_booking(booking_id)
+        booking = await booking_service.get_booking_with_relations(booking_id)
 
         # Get additional data about the client and equipment
         client_service = ClientService(db)

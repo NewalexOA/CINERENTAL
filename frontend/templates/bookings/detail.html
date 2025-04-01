@@ -28,10 +28,12 @@
             <div class="card-body">
                 <div class="row mb-3">
                     <div class="col-md-6">
-                        <h6>Статус</h6>
-                        <span class="badge {% if booking.status == 'PENDING' %}bg-warning{% elif booking.status == 'CONFIRMED' %}bg-info{% elif booking.status == 'ACTIVE' %}bg-primary{% elif booking.status == 'COMPLETED' %}bg-success{% elif booking.status == 'CANCELLED' %}bg-danger{% else %}bg-secondary{% endif %}">
-                            {{ booking.status }}
-                        </span>
+                        <h6>Проект</h6>
+                        {% if booking.project_name %}
+                        <p><a href="/projects/{{ booking.project_id }}" class="text-decoration-none">{{ booking.project_name }}</a></p>
+                        {% else %}
+                        <p class="text-muted">Нет проекта</p>
+                        {% endif %}
                     </div>
                     <div class="col-md-6">
                         <h6>Статус оплаты</h6>

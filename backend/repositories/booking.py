@@ -266,7 +266,11 @@ class BookingRepository(BaseRepository[Booking]):
         """
         stmt = (
             select(self.model)
-            .options(joinedload(self.model.client), joinedload(self.model.equipment))
+            .options(
+                joinedload(self.model.client),
+                joinedload(self.model.equipment),
+                joinedload(self.model.project),
+            )
             .where(self.model.deleted_at.is_(None))
         )
         result = await self.session.execute(stmt)
@@ -287,6 +291,7 @@ class BookingRepository(BaseRepository[Booking]):
             .options(
                 joinedload(Booking.equipment).joinedload(Equipment.category),
                 joinedload(Booking.client),
+                joinedload(Booking.project),
             )
         )
         result = await self.session.execute(query)
