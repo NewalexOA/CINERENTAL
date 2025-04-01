@@ -164,14 +164,29 @@ window.resetLoader = function() {
 
 // API calls
 const api = {
-    async get(endpoint) {
+    async get(endpoint, params = null) {
         const startTime = performance.now();
+        let url = endpoint;
+
+        // Build query string if params are provided
+        if (params && Object.keys(params).length > 0) {
+            const queryString = new URLSearchParams(params).toString();
+            // Append query string correctly
+            url += (url.includes('?') ? '&' : '?') + queryString;
+        }
+
+        // Optional: Decide if trailing slash is needed for non-parameterized requests
+        // For consistency, maybe remove the auto-adding slash logic here
+        // if backend handles both with/without slash, or ensure it's correct.
+        // Let's remove the automatic slash adding for now, assuming backend is flexible or we provide correct endpoints.
+        // const finalUrl = url.includes('?') || url.endsWith('/') ? url : `${url}/`; // Old logic
+        const finalUrl = url; // Simplified
+
         try {
-            const url = endpoint.includes('?') || endpoint.endsWith('/') ? endpoint : `${endpoint}/`;
-            console.group(`%c[API] GET Request: ${API_BASE_URL}${url}`, 'color: #2196F3; font-weight: bold;');
+            console.group(`%c[API] GET Request: ${API_BASE_URL}${finalUrl}`, 'color: #2196F3; font-weight: bold;');
             console.log('Time:', new Date().toISOString());
 
-            const response = await fetch(`${API_BASE_URL}${url}`);
+            const response = await fetch(`${API_BASE_URL}${finalUrl}`);
             console.log('Status:', response.status, response.statusText);
             console.log('Headers:', Object.fromEntries(response.headers.entries()));
 
@@ -192,7 +207,9 @@ const api = {
         } catch (error) {
             console.error('Error Details:', error);
             console.groupEnd();
-            throw error;
+            // Re-throw a more informative error if possible
+            const errorMessage = error.response?.data?.detail || error.message || 'Ошибка при получении данных';
+            throw new Error(errorMessage);
         }
     },
 
@@ -238,9 +255,28 @@ const api = {
             console.groupEnd();
             return responseData;
         } catch (error) {
-            console.error('Error Details:', error);
-            console.groupEnd();
-            throw error;
+            console.error('Error Data:', error.response?.data);
+            // Log detailed validation errors if available (FastAPI)
+            let errorMessage = 'Произошла ошибка при выполнении запроса'; // Default message
+            if (error.response?.data?.detail) {
+                if (Array.isArray(error.response.data.detail)) {
+                    // Handle FastAPI validation errors (list of objects)
+                    console.error('Validation Errors:', error.response.data.detail);
+                    errorMessage = error.response.data.detail.map(err => `${err.loc ? err.loc.join(' -> ') : 'field'}: ${err.msg}`).join('; \n');
+                } else if (typeof error.response.data.detail === 'string') {
+                    // Handle simple string detail messages
+                    console.error('Error Detail:', error.response.data.detail);
+                    errorMessage = error.response.data.detail;
+                } else {
+                     console.error('Unknown Error Detail Format:', error.response.data.detail);
+                     errorMessage = JSON.stringify(error.response.data.detail);
+                }
+            } else if (error.message) {
+                errorMessage = error.message;
+            }
+            console.error('User-facing Error Message:', errorMessage); // Log the message shown to user
+            console.error('Full Error Object:', error); // Log the full error object for debugging
+            throw new Error(errorMessage); // Throw the specific message
         }
     },
 
@@ -308,6 +344,45 @@ const api = {
             console.log(`Request took ${(endTime - startTime).toFixed(2)}ms`);
             console.groupEnd();
             return true;
+        } catch (error) {
+            console.error('Error Details:', error);
+            console.groupEnd();
+            throw error;
+        }
+    },
+
+    async patch(endpoint, data) {
+        const startTime = performance.now();
+        try {
+            console.group(`%c[API] PATCH Request: ${API_BASE_URL}${endpoint}`, 'color: #9C27B0; font-weight: bold;');
+            console.log('Time:', new Date().toISOString());
+            console.log('Request Data:', data);
+
+            const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(data)
+            });
+
+            console.log('Status:', response.status, response.statusText);
+            console.log('Headers:', Object.fromEntries(response.headers.entries()));
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({ detail: 'Ошибка сети' }));
+                console.error('Error Data:', errorData);
+                const error = new Error(errorData.detail || 'Ошибка при частичном обновлении данных');
+                error.response = { data: errorData, status: response.status };
+                throw error;
+            }
+
+            const responseData = await response.json();
+            const endTime = performance.now();
+            console.log('Response Data:', responseData);
+            console.log(`Request took ${(endTime - startTime).toFixed(2)}ms`);
+            console.groupEnd();
+            return responseData;
         } catch (error) {
             console.error('Error Details:', error);
             console.groupEnd();

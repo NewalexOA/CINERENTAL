@@ -567,8 +567,7 @@ class ProjectService:
         log = logger.bind(project_id=project_id)
 
         try:
-            # Check if project exists
-            project = await self.repository.get_by_id(project_id)
+            project = await self.repository.get_by_id_with_bookings(project_id)
             if project is None:
                 log.warning(ProjectLogMessages.PROJECT_NOT_FOUND, project_id)
                 raise NotFoundError(
@@ -576,21 +575,35 @@ class ProjectService:
                     details={'project_id': project_id},
                 )
 
-            # Delete project
+            bookings_count = 0
+            if project.bookings:
+                bookings_count = len(project.bookings)
+                log.info(
+                    'Deleting {} bookings for project {}', bookings_count, project_id
+                )
+
+                booking_ids = [booking.id for booking in project.bookings]
+
+                for booking_id in booking_ids:
+                    log.debug('Deleting booking {}', booking_id)
+                    await self.booking_repository.delete(booking_id)
+
+                await self.db_session.flush()
+
             result = await self.repository.delete(project_id)
             await self.db_session.commit()
 
             if result:
                 log.info(ProjectLogMessages.PROJECT_DELETED, project_id)
+                if bookings_count > 0:
+                    log.info('Successfully deleted {} bookings', bookings_count)
 
             return result
 
         except NotFoundError:
-            # Re-raise domain exceptions
             await self.db_session.rollback()
             raise
         except Exception as e:
-            # Handle unexpected errors
             await self.db_session.rollback()
             log.error(ErrorLogMessages.DELETE_PROJECT_ERROR, str(e))
             raise

@@ -46,6 +46,13 @@ def _booking_to_response(booking_obj: Booking) -> BookingResponse:
     if booking_obj.client is not None:
         client_name = booking_obj.client.name
 
+    project_name = None
+    if booking_obj.project is not None:
+        project_name = booking_obj.project.name
+        print(f'Found project for booking {booking_obj.id}: {project_name}')
+    else:
+        print(f'No project found for booking {booking_obj.id}')
+
     return BookingResponse(
         id=booking_obj.id,
         equipment_id=booking_obj.equipment_id,
@@ -60,6 +67,7 @@ def _booking_to_response(booking_obj: Booking) -> BookingResponse:
         updated_at=booking_obj.updated_at,
         equipment_name=equipment_name,
         client_name=client_name,
+        project_name=project_name,
     )
 
 
