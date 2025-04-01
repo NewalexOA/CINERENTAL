@@ -35,7 +35,7 @@
                         <h6 class="card-subtitle text-muted">{{ project_data.client_name }}</h6>
                     </div>
                     <div>
-                        <span class="badge bg-{{ project_data.status | lower }} fs-6">
+                        <span id="project-status-badge" class="badge bg-{{ project_data.status | lower }} fs-6">
                             {{ project_data.status }}
                         </span>
                     </div>
@@ -259,5 +259,6 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="{{ url_for('static', path='js/projects.js') }}"></script>
+<script src="{{ url_for('static', path='js/projects-common.js') }}"></script>
+<script src="{{ url_for('static', path='js/projects-view.js') }}"></script>
 {% endblock %}
