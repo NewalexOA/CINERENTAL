@@ -313,6 +313,45 @@ const api = {
             console.groupEnd();
             throw error;
         }
+    },
+
+    async patch(endpoint, data) {
+        const startTime = performance.now();
+        try {
+            console.group(`%c[API] PATCH Request: ${API_BASE_URL}${endpoint}`, 'color: #9C27B0; font-weight: bold;');
+            console.log('Time:', new Date().toISOString());
+            console.log('Request Data:', data);
+
+            const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(data)
+            });
+
+            console.log('Status:', response.status, response.statusText);
+            console.log('Headers:', Object.fromEntries(response.headers.entries()));
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({ detail: 'Ошибка сети' }));
+                console.error('Error Data:', errorData);
+                const error = new Error(errorData.detail || 'Ошибка при частичном обновлении данных');
+                error.response = { data: errorData, status: response.status };
+                throw error;
+            }
+
+            const responseData = await response.json();
+            const endTime = performance.now();
+            console.log('Response Data:', responseData);
+            console.log(`Request took ${(endTime - startTime).toFixed(2)}ms`);
+            console.groupEnd();
+            return responseData;
+        } catch (error) {
+            console.error('Error Details:', error);
+            console.groupEnd();
+            throw error;
+        }
     }
 };
 
