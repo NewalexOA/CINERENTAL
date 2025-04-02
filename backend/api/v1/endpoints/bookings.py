@@ -46,6 +46,13 @@ def _booking_to_response(booking_obj: Booking) -> BookingResponse:
     if booking_obj.client is not None:
         client_name = booking_obj.client.name
 
+    project_name = None
+    if booking_obj.project is not None:
+        project_name = booking_obj.project.name
+        print(f'Found project for booking {booking_obj.id}: {project_name}')
+    else:
+        print(f'No project found for booking {booking_obj.id}')
+
     return BookingResponse(
         id=booking_obj.id,
         equipment_id=booking_obj.equipment_id,
@@ -60,6 +67,7 @@ def _booking_to_response(booking_obj: Booking) -> BookingResponse:
         updated_at=booking_obj.updated_at,
         equipment_name=equipment_name,
         client_name=client_name,
+        project_name=project_name,
     )
 
 
@@ -126,7 +134,12 @@ async def create_booking(
 )
 async def get_bookings(
     db: Annotated[AsyncSession, Depends(get_db)],
-    client_id: Optional[int] = Query(None, description='Filter by client ID'),
+    query: Optional[str] = Query(
+        None, description='Search by client name, email, or phone'
+    ),
+    equipment_query: Optional[str] = Query(
+        None, description='Search by equipment name or serial number'
+    ),
     equipment_id: Optional[int] = Query(None, description='Filter by equipment ID'),
     booking_status: Optional[BookingStatus] = Query(
         None, description='Filter by booking status'
@@ -147,7 +160,8 @@ async def get_bookings(
 
     Args:
         db: Database session
-        client_id: Filter by client ID
+        query: Search by client name, email, or phone
+        equipment_query: Search by equipment name or serial number
         equipment_id: Filter by equipment ID
         booking_status: Filter by booking status
         payment_status: Filter by payment status
@@ -161,46 +175,25 @@ async def get_bookings(
     """
     booking_service = BookingService(db)
     try:
-        # Apply all filters
-        filtered_bookings = await booking_service.repository.get_all()
+        # Fetch bookings using the service layer, passing filters
+        # The service/repository should handle the actual filtering logic
+        filtered_bookings = await booking_service.get_filtered_bookings(
+            query=query,
+            equipment_query=equipment_query,
+            equipment_id=equipment_id,
+            booking_status=booking_status,
+            payment_status=payment_status,
+            start_date=start_date,
+            end_date=end_date,
+        )
 
-        # Filter by client if specified
-        if client_id is not None:
-            client_bookings = await booking_service.get_by_client(client_id)
-            filtered_bookings = [b for b in filtered_bookings if b in client_bookings]
-
-        # Filter by equipment if specified
-        if equipment_id is not None:
-            equipment_bookings = await booking_service.get_by_equipment(equipment_id)
-            filtered_bookings = [
-                b for b in filtered_bookings if b in equipment_bookings
-            ]
-
-        # Filter by booking status if specified
-        if booking_status is not None:
-            status_bookings = await booking_service.get_by_status(booking_status)
-            filtered_bookings = [b for b in filtered_bookings if b in status_bookings]
-
-        # Filter by payment status if specified
-        if payment_status is not None:
-            payment_bookings = await booking_service.get_by_payment_status(
-                payment_status
-            )
-            filtered_bookings = [b for b in filtered_bookings if b in payment_bookings]
-
-        # Filter by date range if specified
-        if start_date is not None and end_date is not None:
-            date_bookings = await booking_service.get_active_for_period(
-                start_date, end_date
-            )
-            filtered_bookings = [b for b in filtered_bookings if b in date_bookings]
-
-        # Apply pagination
+        # Apply pagination (consider moving to service/repo)
         paginated_bookings = filtered_bookings[skip : skip + limit]
 
         # Convert Booking objects to BookingResponse objects
         responses = []
         for booking_obj in paginated_bookings:
+            # Ensure related objects are loaded or handle potential None values
             response = _booking_to_response(booking_obj)
             responses.append(response)
 

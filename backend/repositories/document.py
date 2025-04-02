@@ -86,6 +86,8 @@ class DocumentRepository(BaseRepository[Document]):
     async def search(
         self,
         query_str: str,
+        sort_by: Optional[str] = None,
+        sort_order: Optional[str] = 'asc',
         include_deleted: bool = False,
     ) -> List[Document]:
         """Search documents by title or description.

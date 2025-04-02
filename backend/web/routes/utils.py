@@ -97,6 +97,10 @@ def prepare_booking_data(
     if hasattr(booking, 'payment_status') and booking.payment_status:
         booking_data['payment_status'] = booking.payment_status.value
 
+    if hasattr(booking, 'project') and booking.project:
+        booking_data['project_name'] = booking.project.name
+        booking_data['project_id'] = booking.project.id
+
     # Add relations if requested and available
     if include_relations:
         if client:

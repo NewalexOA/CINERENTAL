@@ -35,14 +35,23 @@ async def get_clients(
     query: Optional[str] = Query(
         None, description='Search query for filtering clients by name, email or phone'
     ),
+    sort_by: Optional[str] = Query(
+        'name',  # Default sort by name
+        description='Field to sort by (e.g., name, created_at, bookings_count)',
+    ),
+    sort_order: Optional[str] = Query(
+        'asc', description='Sort order (asc or desc)'  # Default sort order ascending
+    ),
 ) -> List[ClientResponse]:
-    """Get list of clients with optional filtering.
+    """Get list of clients with optional filtering and sorting.
 
     Args:
         db: Database session
         skip: Number of clients to skip (for pagination)
         limit: Maximum number of clients to return (for pagination)
         query: Search query for filtering clients
+        sort_by: Field to sort clients by
+        sort_order: Sort order (asc/desc)
 
     Returns:
         List of clients matching the criteria
@@ -50,14 +59,23 @@ async def get_clients(
     try:
         service = ClientService(db)
 
+        # Pass sorting parameters to service methods
         if query:
-            clients = await service.search_clients(query)
+            clients = await service.search_clients(
+                query, sort_by=sort_by, sort_order=sort_order
+            )
         else:
-            clients = await service.get_clients()
+            clients = await service.get_clients(sort_by=sort_by, sort_order=sort_order)
 
-        # Apply pagination manually
+        # Apply pagination manually (consider moving pagination to service/repo)
         skip_val = skip or 0
         limit_val = limit or 100
+        # Assuming service always returns a list due to type hints
+        # Remove the isinstance check causing unreachable code warning
+        # if not isinstance(clients, list):
+        #    logger.error(f"Service returned non-list type: {type(clients)}")
+        #    clients = []
+
         return cast(List[ClientResponse], clients[skip_val : skip_val + limit_val])
     except BusinessError as e:
         raise HTTPException(

@@ -7,9 +7,9 @@ including registration, profile updates, and rental history tracking.
 from datetime import datetime, timezone
 from typing import List, Optional, Tuple
 
-from sqlalchemy import and_, or_, select
+from sqlalchemy import and_, asc, desc, func, or_, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.sql import Select, func
+from sqlalchemy.sql import Select
 
 from backend.models import Booking, BookingStatus, Client, ClientStatus
 from backend.repositories import BaseRepository
@@ -25,6 +25,100 @@ class ClientRepository(BaseRepository[Client]):
             session: SQLAlchemy async session
         """
         super().__init__(session, Client)
+
+    # Helper function to apply sorting based on parameters
+    def _apply_sorting(self, stmt: Select, sort_by: str, sort_order: str) -> Select:
+        """Applies sorting to a SQLAlchemy query."""
+        order_func = desc if sort_order.lower() == 'desc' else asc
+
+        if sort_by == 'name':
+            stmt = stmt.order_by(order_func(self.model.name))
+        elif sort_by == 'created_at':
+            stmt = stmt.order_by(order_func(self.model.created_at))
+        elif sort_by == 'bookings_count':
+            # Sort by the computed label using text()
+            stmt = stmt.order_by(order_func(text('bookings_count')))
+        # Add other sortable fields if needed
+        # else: log warning about invalid sort_by field?
+
+        return stmt
+
+    async def get_all(
+        self,
+        sort_by: Optional[str] = 'name',
+        sort_order: Optional[str] = 'asc',
+        include_deleted: bool = False,
+    ) -> List[Client]:
+        """Get all clients, optionally sorted and including deleted.
+
+        Overrides BaseRepository.get_all to add sorting logic.
+        """
+        # Select Client model and count bookings using a subquery
+        bookings_sub = (
+            select(Booking.client_id, func.count(Booking.id).label('bookings_count'))
+            .group_by(Booking.client_id)
+            .subquery()
+        )
+
+        stmt = select(
+            self.model,
+            func.coalesce(bookings_sub.c.bookings_count, 0).label('bookings_count'),
+        ).outerjoin(bookings_sub, self.model.id == bookings_sub.c.client_id)
+
+        if not include_deleted:
+            stmt = stmt.where(self.model.deleted_at.is_(None))
+
+        # Apply sorting using helper
+        if sort_by and sort_order:
+            stmt = self._apply_sorting(stmt, sort_by, sort_order)
+
+        result = await self.session.execute(stmt)
+        # Extract only the Client model instance from the result tuples
+        return [row[0] for row in result.all()]
+
+    async def search(
+        self,
+        query_str: str,
+        sort_by: Optional[str] = 'name',
+        sort_order: Optional[str] = 'asc',
+        include_deleted: bool = False,
+    ) -> List[Client]:
+        """Search clients by name, email or phone, optionally sorted.
+
+        Overrides BaseRepository.search to implement search logic with sorting.
+        """
+        query = query_str.lower()
+        # Base query with booking count using a subquery
+        bookings_sub = (
+            select(Booking.client_id, func.count(Booking.id).label('bookings_count'))
+            .group_by(Booking.client_id)
+            .subquery()
+        )
+
+        stmt = select(
+            self.model,
+            func.coalesce(bookings_sub.c.bookings_count, 0).label('bookings_count'),
+        ).outerjoin(bookings_sub, self.model.id == bookings_sub.c.client_id)
+
+        # Apply search filters
+        stmt = stmt.where(
+            or_(
+                func.lower(self.model.name).contains(query),
+                func.lower(self.model.email).contains(query),
+                func.lower(self.model.phone).contains(query),
+            )
+        )
+
+        if not include_deleted:
+            stmt = stmt.where(self.model.deleted_at.is_(None))
+
+        # Apply sorting using helper
+        if sort_by and sort_order:
+            stmt = self._apply_sorting(stmt, sort_by, sort_order)
+
+        result = await self.session.execute(stmt)
+        # Extract only the Client model instance from the result tuples
+        return [row[0] for row in result.all()]
 
     async def get_by_email(self, email: str) -> Optional[Client]:
         """Get client by email.
@@ -51,33 +145,6 @@ class ClientRepository(BaseRepository[Client]):
         query = select(self.model).where(self.model.phone == phone)
         result = await self.session.scalar(query)  # type: Optional[Client]
         return result
-
-    async def search(
-        self,
-        query_str: str,
-        include_deleted: bool = False,
-    ) -> List[Client]:
-        """Search clients by name, email or phone.
-
-        Args:
-            query_str: Search query string
-            include_deleted: Whether to include deleted clients
-
-        Returns:
-            List of matching clients
-        """
-        query = query_str.lower()
-        stmt: Select[Tuple[Client]] = select(self.model).where(
-            or_(
-                func.lower(self.model.name).contains(query),
-                func.lower(self.model.email).contains(query),
-                func.lower(self.model.phone).contains(query),
-            )
-        )
-        if not include_deleted:
-            stmt = stmt.where(self.model.deleted_at.is_(None))
-        result = await self.session.execute(stmt)
-        return list(result.scalars().all())
 
     async def get_with_active_bookings(self, client_id: int) -> Optional[Client]:
         """Get client with active bookings.

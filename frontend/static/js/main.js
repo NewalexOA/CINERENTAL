@@ -4,15 +4,19 @@
 const API_BASE_URL = '/api/v1';
 
 // Utility functions
-const debounce = (func, wait) => {
+const debounce = (func, wait, immediate) => {
     let timeout;
-    return function executedFunction(...args) {
-        const later = () => {
-            clearTimeout(timeout);
-            func(...args);
+    return function executedFunction() {
+        const context = this;
+        const args = arguments;
+        const later = function() {
+            timeout = null;
+            if (!immediate) func.apply(context, args);
         };
+        const callNow = immediate && !timeout;
         clearTimeout(timeout);
         timeout = setTimeout(later, wait);
+        if (callNow) func.apply(context, args);
     };
 };
 
@@ -164,14 +168,29 @@ window.resetLoader = function() {
 
 // API calls
 const api = {
-    async get(endpoint) {
+    async get(endpoint, params = null) {
         const startTime = performance.now();
+        let url = endpoint;
+
+        // Build query string if params are provided
+        if (params && Object.keys(params).length > 0) {
+            const queryString = new URLSearchParams(params).toString();
+            // Append query string correctly
+            url += (url.includes('?') ? '&' : '?') + queryString;
+        }
+
+        // Optional: Decide if trailing slash is needed for non-parameterized requests
+        // For consistency, maybe remove the auto-adding slash logic here
+        // if backend handles both with/without slash, or ensure it's correct.
+        // Let's remove the automatic slash adding for now, assuming backend is flexible or we provide correct endpoints.
+        // const finalUrl = url.includes('?') || url.endsWith('/') ? url : `${url}/`; // Old logic
+        const finalUrl = url; // Simplified
+
         try {
-            const url = endpoint.includes('?') || endpoint.endsWith('/') ? endpoint : `${endpoint}/`;
-            console.group(`%c[API] GET Request: ${API_BASE_URL}${url}`, 'color: #2196F3; font-weight: bold;');
+            console.group(`%c[API] GET Request: ${API_BASE_URL}${finalUrl}`, 'color: #2196F3; font-weight: bold;');
             console.log('Time:', new Date().toISOString());
 
-            const response = await fetch(`${API_BASE_URL}${url}`);
+            const response = await fetch(`${API_BASE_URL}${finalUrl}`);
             console.log('Status:', response.status, response.statusText);
             console.log('Headers:', Object.fromEntries(response.headers.entries()));
 
@@ -192,7 +211,9 @@ const api = {
         } catch (error) {
             console.error('Error Details:', error);
             console.groupEnd();
-            throw error;
+            // Re-throw a more informative error if possible
+            const errorMessage = error.response?.data?.detail || error.message || 'Ошибка при получении данных';
+            throw new Error(errorMessage);
         }
     },
 
@@ -238,9 +259,28 @@ const api = {
             console.groupEnd();
             return responseData;
         } catch (error) {
-            console.error('Error Details:', error);
-            console.groupEnd();
-            throw error;
+            console.error('Error Data:', error.response?.data);
+            // Log detailed validation errors if available (FastAPI)
+            let errorMessage = 'Произошла ошибка при выполнении запроса'; // Default message
+            if (error.response?.data?.detail) {
+                if (Array.isArray(error.response.data.detail)) {
+                    // Handle FastAPI validation errors (list of objects)
+                    console.error('Validation Errors:', error.response.data.detail);
+                    errorMessage = error.response.data.detail.map(err => `${err.loc ? err.loc.join(' -> ') : 'field'}: ${err.msg}`).join('; \n');
+                } else if (typeof error.response.data.detail === 'string') {
+                    // Handle simple string detail messages
+                    console.error('Error Detail:', error.response.data.detail);
+                    errorMessage = error.response.data.detail;
+                } else {
+                     console.error('Unknown Error Detail Format:', error.response.data.detail);
+                     errorMessage = JSON.stringify(error.response.data.detail);
+                }
+            } else if (error.message) {
+                errorMessage = error.message;
+            }
+            console.error('User-facing Error Message:', errorMessage); // Log the message shown to user
+            console.error('Full Error Object:', error); // Log the full error object for debugging
+            throw new Error(errorMessage); // Throw the specific message
         }
     },
 
@@ -308,6 +348,45 @@ const api = {
             console.log(`Request took ${(endTime - startTime).toFixed(2)}ms`);
             console.groupEnd();
             return true;
+        } catch (error) {
+            console.error('Error Details:', error);
+            console.groupEnd();
+            throw error;
+        }
+    },
+
+    async patch(endpoint, data) {
+        const startTime = performance.now();
+        try {
+            console.group(`%c[API] PATCH Request: ${API_BASE_URL}${endpoint}`, 'color: #9C27B0; font-weight: bold;');
+            console.log('Time:', new Date().toISOString());
+            console.log('Request Data:', data);
+
+            const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(data)
+            });
+
+            console.log('Status:', response.status, response.statusText);
+            console.log('Headers:', Object.fromEntries(response.headers.entries()));
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({ detail: 'Ошибка сети' }));
+                console.error('Error Data:', errorData);
+                const error = new Error(errorData.detail || 'Ошибка при частичном обновлении данных');
+                error.response = { data: errorData, status: response.status };
+                throw error;
+            }
+
+            const responseData = await response.json();
+            const endTime = performance.now();
+            console.log('Response Data:', responseData);
+            console.log(`Request took ${(endTime - startTime).toFixed(2)}ms`);
+            console.groupEnd();
+            return responseData;
         } catch (error) {
             console.error('Error Details:', error);
             console.groupEnd();
@@ -644,6 +723,179 @@ function formatEquipmentRow(item) {
     `;
 }
 
+// --- Client Search and Sort Functionality ---
+
+// Function to render a single client card (adapt structure as needed)
+function renderClientCard(client) {
+    // Basic security check: Ensure client object and essential fields exist
+    if (!client || typeof client.id === 'undefined' || typeof client.name === 'undefined') {
+        console.error('Invalid client data received:', client);
+        return ''; // Return empty string or a placeholder if needed
+    }
+
+    // Basic sanitization/escaping for display (more robust solution might be needed)
+    const escapeHTML = (str) => String(str).replace(/[&<>'"]/g, tag => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '\'': '&#39;',
+        '"': '&quot;'
+    }[tag] || tag));
+
+    const clientId = escapeHTML(client.id);
+    const clientName = escapeHTML(client.name);
+    const clientCompany = escapeHTML(client.company || ''); // Handle null/undefined company
+    const clientEmail = escapeHTML(client.email || ''); // Handle null/undefined email
+    const clientPhone = escapeHTML(client.phone || ''); // Handle null/undefined phone
+    const bookingsCount = escapeHTML(client.bookings_count !== undefined ? client.bookings_count : '0'); // Handle undefined counts
+    const createdAt = client.created_at ? formatDate(client.created_at) : 'N/A'; // Use existing formatDate
+
+    return `
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div>
+                            <h5 class="card-title mb-1">${clientName}</h5>
+                            <h6 class="card-subtitle text-muted">${clientCompany}</h6>
+                        </div>
+                        <div class="dropdown">
+                            <button class="btn btn-link text-dark" type="button" data-bs-toggle="dropdown">
+                                <i class="fas fa-ellipsis-v"></i>
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li>
+                                    <a class="dropdown-item" href="/clients/${clientId}">
+                                        <i class="fas fa-info-circle"></i> Подробнее
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#editClientModal" data-client-id="${clientId}">
+                                        <i class="fas fa-edit"></i> Редактировать
+                                    </a>
+                                </li>
+                                <li>
+                                    <hr class="dropdown-divider">
+                                </li>
+                                <li>
+                                    <a class="dropdown-item text-danger" href="#" data-bs-toggle="modal" data-bs-target="#deleteClientModal" data-client-id="${clientId}">
+                                        <i class="fas fa-trash"></i> Удалить
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <div class="text-muted mb-2">
+                            <i class="fas fa-envelope"></i> ${clientEmail}
+                        </div>
+                        <div class="text-muted">
+                            <i class="fas fa-phone"></i> ${clientPhone}
+                        </div>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <span class="badge bg-primary">
+                                <i class="fas fa-box"></i> ${bookingsCount} бронирований
+                            </span>
+                        </div>
+                        <small class="text-muted">
+                            Добавлен ${createdAt}
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+// Function to update the client list display
+function updateClientDisplay(clients) {
+    const clientsGrid = document.getElementById('clientsGrid');
+    if (!clientsGrid) return; // Exit if grid element not found
+
+    clientsGrid.innerHTML = ''; // Clear current clients
+
+    if (clients && clients.length > 0) {
+        clients.forEach(client => {
+            clientsGrid.innerHTML += renderClientCard(client);
+        });
+    } else {
+        // Display a message if no clients found
+        clientsGrid.innerHTML = '<div class="col-12"><p class="text-center text-muted">Клиенты не найдены.</p></div>';
+    }
+}
+
+// Function to fetch clients from API and update display
+async function fetchAndUpdateClients() {
+    const searchInput = document.getElementById('searchClient');
+    const sortOrderSelect = document.getElementById('sortOrder');
+    const clientsGrid = document.getElementById('clientsGrid');
+
+    if (!clientsGrid) return; // Should not happen if init checks pass
+
+    const query = searchInput ? searchInput.value.trim() : '';
+    const sortBy = sortOrderSelect ? sortOrderSelect.value : 'name'; // Default sort
+    // Add sort order if needed (e.g., a toggle button or separate select)
+    const sortOrder = 'asc'; // Assuming ascending for now
+
+    console.log(`Fetching clients: Query="${query}", SortBy="${sortBy}", Order="${sortOrder}"`);
+
+    // Show loading indicator
+    clientsGrid.innerHTML = '<div class="col-12 text-center p-5"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Загрузка...</span></div></div>';
+
+    try {
+        const params = {};
+        if (query) {
+            params.query = query;
+        }
+        if (sortBy) {
+            params.sort_by = sortBy; // Parameter name expected by backend
+            params.sort_order = sortOrder; // Parameter name expected by backend
+        }
+        // Add pagination params if needed: params.skip = ..., params.limit = ...
+
+        const clients = await api.get('/clients/', params);
+        console.log('Received clients:', clients);
+        if (Array.isArray(clients)) {
+            updateClientDisplay(clients);
+        } else {
+             console.error('Invalid response format from API:', clients);
+             updateClientDisplay([]);
+        }
+    } catch (error) {
+        console.error('Error fetching clients:', error);
+        clientsGrid.innerHTML = '<div class="col-12"><p class="text-center text-danger">Ошибка загрузки клиентов.</p></div>';
+        if (window.showToast) {
+             window.showToast('Ошибка при загрузке клиентов.', 'danger');
+        }
+    }
+}
+
+// Initialize client search and sort controls
+function initClientControls() {
+    const searchInput = document.getElementById('searchClient');
+    const sortOrderSelect = document.getElementById('sortOrder');
+    const clientsGrid = document.getElementById('clientsGrid');
+
+    if (!searchInput || !sortOrderSelect || !clientsGrid) {
+        console.log('Client search/sort controls or grid not found on this page.');
+        return; // Exit if elements aren't present
+    }
+
+    console.log('Initializing client controls (search & sort)...');
+
+    // Use debounce for fetching/updating
+    const debouncedFetch = debounce(fetchAndUpdateClients, 300);
+
+    searchInput.addEventListener('input', debouncedFetch);
+    sortOrderSelect.addEventListener('change', fetchAndUpdateClients); // No debounce needed on change
+
+    // Initial load (optional, if you want to load based on initial state)
+     fetchAndUpdateClients(); // Load based on initial input/select values
+
+}
+
 // Document ready handler
 document.addEventListener('DOMContentLoaded', () => {
     // Initialize tooltips
@@ -658,4 +910,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (document.getElementById('searchInput')) {
         window.equipmentSearch.init();
     }
+
+    initClientControls(); // Initialize client search and sort
 });
