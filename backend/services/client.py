@@ -161,13 +161,26 @@ class ClientService:
         client.status = status
         return await self.repository.update(client)
 
-    async def get_clients(self) -> List[Client]:
-        """Get all clients.
+    async def get_clients(
+        self,
+        sort_by: Optional[str] = 'name',  # Default sort by name
+        sort_order: Optional[str] = 'asc',  # Default sort order ascending
+        include_deleted: bool = False,  # Keep include_deleted if needed
+    ) -> List[Client]:
+        """Get all clients, optionally sorted.
+
+        Args:
+            sort_by: Field to sort by (e.g., name, created_at, bookings_count).
+            sort_order: Sort order (asc or desc).
+            include_deleted: Whether to include deleted clients.
 
         Returns:
-            List of all clients
+            List of all clients.
         """
-        return await self.repository.get_all()
+        # Pass sorting parameters to the repository method
+        return await self.repository.get_all(
+            sort_by=sort_by, sort_order=sort_order, include_deleted=include_deleted
+        )
 
     async def get_client(
         self,
@@ -188,18 +201,28 @@ class ClientService:
     async def search_clients(
         self,
         query: str,
+        sort_by: Optional[str] = 'name',  # Default sort by name
+        sort_order: Optional[str] = 'asc',  # Default sort order ascending
         include_deleted: bool = False,
     ) -> List[Client]:
-        """Search clients by name, email, or phone.
+        """Search clients by name, email, or phone, optionally sorted.
 
         Args:
-            query: Search query
-            include_deleted: Whether to include deleted clients
+            query: Search query.
+            sort_by: Field to sort by (e.g., name, created_at, bookings_count).
+            sort_order: Sort order (asc or desc).
+            include_deleted: Whether to include deleted clients.
 
         Returns:
-            List of matching clients
+            List of matching clients.
         """
-        return await self.repository.search(query, include_deleted=include_deleted)
+        # Pass sorting parameters to the repository method
+        return await self.repository.search(
+            query_str=query,
+            sort_by=sort_by,
+            sort_order=sort_order,
+            include_deleted=include_deleted,
+        )
 
     async def get_with_active_bookings(self, client_id: int) -> Optional[Client]:
         """Get client with active bookings.
