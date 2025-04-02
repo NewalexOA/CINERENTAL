@@ -203,7 +203,11 @@ class EquipmentRepository(BaseRepository[Equipment]):
         )
 
     async def search(
-        self, query_str: str, include_deleted: bool = False
+        self,
+        query_str: str,
+        sort_by: Optional[str] = None,
+        sort_order: Optional[str] = 'asc',
+        include_deleted: bool = False,
     ) -> List[Equipment]:
         """Search for equipment by name, description, barcode, or serial number.
 

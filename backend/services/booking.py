@@ -729,3 +729,42 @@ class BookingService:
             )
 
         return booking
+
+    async def get_filtered_bookings(
+        self,
+        query: Optional[str] = None,
+        equipment_query: Optional[str] = None,
+        equipment_id: Optional[int] = None,
+        booking_status: Optional[BookingStatus] = None,
+        payment_status: Optional[PaymentStatus] = None,
+        start_date: Optional[datetime] = None,
+        end_date: Optional[datetime] = None,
+        # Add skip/limit if pagination handled here, otherwise in repository
+    ) -> List[Booking]:
+        """Get bookings based on various filter criteria.
+
+        Args:
+            query: Search query for client details.
+            equipment_query: Search query for equipment details.
+            equipment_id: Filter by equipment ID.
+            booking_status: Filter by booking status.
+            payment_status: Filter by payment status.
+            start_date: Filter by start date.
+            end_date: Filter by end date.
+
+        Returns:
+            List of filtered bookings with relations loaded.
+        """
+        # Delegate filtering logic to the repository
+        # Ensure the repository method loads necessary relations
+        # (client, equipment, project)
+        return await self.repository.get_filtered(
+            query=query,
+            equipment_query=equipment_query,
+            equipment_id=equipment_id,
+            booking_status=booking_status,
+            payment_status=payment_status,
+            start_date=start_date,
+            end_date=end_date,
+            # Pass skip/limit if needed
+        )

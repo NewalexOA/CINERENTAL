@@ -21,6 +21,7 @@ fi
 
 # Start the application
 exec uvicorn backend.main:app \
+    --app-dir . \
     --host 0.0.0.0 \
     --port 8000 \
     --workers ${WORKERS_COUNT:-1} \

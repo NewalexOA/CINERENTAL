@@ -83,7 +83,11 @@ COPY --from=builder /usr/local/lib/python3.12/site-packages /usr/local/lib/pytho
 COPY --from=builder /usr/local/bin /usr/local/bin
 
 # Copy application code
-COPY --chown=appuser:appuser . .
+COPY --chown=appuser:appuser backend backend
+COPY --chown=appuser:appuser frontend frontend
+COPY --chown=appuser:appuser migrations migrations
+COPY --chown=appuser:appuser alembic.ini pyproject.toml README.md ./ 
+COPY --chown=appuser:appuser docker docker
 
 # Make scripts executable and set permissions
 RUN chmod +x docker/start.sh docker/wait-for.sh docker/run-tests.sh && \
