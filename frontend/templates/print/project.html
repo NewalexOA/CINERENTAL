@@ -19,7 +19,7 @@
                 <div class="project-details">
                     <div class="detail-row">
                         <span class="detail-label">Клиент:</span>
-                        <span class="detail-value">{{ client.name }}</span>
+                        <span class="detail-value">{{ client.name }}{% if client.phone %} | {{ client.phone }}{% endif %}</span>
                     </div>
                     <div class="detail-row">
                         <span class="detail-label">Компания:</span>
