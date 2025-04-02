@@ -105,17 +105,22 @@ class CategoryRepository(BaseRepository[Category]):
     async def search(
         self,
         query: str,
+        sort_by: Optional[str] = None,
+        sort_order: Optional[str] = 'asc',
         include_deleted: bool = False,
     ) -> List[Category]:
         """Search categories by name or description.
 
         Args:
             query: Search query string
+            sort_by: Field to sort by (optional, currently ignored).
+            sort_order: Sort order ('asc' or 'desc', currently ignored).
             include_deleted: Whether to include deleted categories
 
         Returns:
             List of matching categories
         """
+        # Note: Sorting logic is not implemented here yet, but parameters are accepted.
         query = query.lower()
         stmt = select(Category).where(
             or_(

@@ -162,18 +162,22 @@ class BaseRepository(Generic[ModelType]):
     async def search(
         self,
         query_str: str,
+        sort_by: Optional[str] = None,
+        sort_order: Optional[str] = 'asc',
         include_deleted: bool = False,
     ) -> List[ModelType]:
-        """Search entities.
+        """Search entities, optionally sorted and including deleted.
 
         Args:
-            query_str: Search query string
-            include_deleted: Whether to include deleted entities
+            query_str: Search query string.
+            sort_by: Field name to sort by.
+            sort_order: Sort order ('asc' or 'desc').
+            include_deleted: Whether to include deleted entities.
 
         Returns:
-            List of matching entities
+            List of matching entities.
 
         Raises:
-            NotImplementedError: If not implemented by child class
+            NotImplementedError: If not implemented by child class.
         """
         raise NotImplementedError
