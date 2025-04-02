@@ -738,7 +738,12 @@ class EquipmentService:
         if not query or query.isspace():
             raise ValidationError('Search query cannot be empty')
 
-        equipment_list = await self.repository.search(query, include_deleted)
+        # Use keyword arguments to match the repository signature
+        equipment_list = await self.repository.search(
+            query_str=query,
+            include_deleted=include_deleted,
+            # Add sort_by, sort_order here if needed
+        )
 
         # Load equipment with categories
         loaded_equipment = []
