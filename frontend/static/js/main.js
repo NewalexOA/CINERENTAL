@@ -88,8 +88,8 @@ window.showToast = function(message, type = 'info') {
     // Add toast to container
     document.getElementById('toastContainer').appendChild(toast);
 
-    // Initialize and show toas
-    const bsToast = new bootstrap.Toast(toast);
+    // Initialize and show toast with shorter delay
+    const bsToast = new bootstrap.Toast(toast, { delay: 3000 }); // Add delay option (3 seconds)
     bsToast.show();
 
     // Remove toast after it's hidden

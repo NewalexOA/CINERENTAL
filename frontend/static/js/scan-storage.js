@@ -16,6 +16,7 @@ const STORAGE_KEY = 'equipment_scan_sessions';
  * @property {string} updatedAt - Last update timestamp
  * @property {boolean} syncedWithServer - Server sync flag
  * @property {number|null} serverSessionId - Server session ID (if synced)
+ * @property {boolean} [dirty] - Flag indicating if session has unsynced changes (optional)
  */
 
 /**
@@ -89,7 +90,8 @@ const scanStorage = {
             items: [],
             updatedAt: new Date().toISOString(),
             syncedWithServer: false,
-            serverSessionId: null
+            serverSessionId: null,
+            dirty: true // New sessions are dirty by default
         };
 
         sessions.push(newSession);
@@ -157,6 +159,7 @@ const scanStorage = {
         // Update session metadata and save
         sessions[sessionIndex].updatedAt = new Date().toISOString();
         sessions[sessionIndex].syncedWithServer = false; // Mark as unsynced after modification
+        sessions[sessionIndex].dirty = true; // Mark session as dirty
         this._saveSessions(sessions);
 
         // Return the updated session (important for UI updates)
@@ -201,6 +204,7 @@ const scanStorage = {
         // Update session metadata and save
         sessions[sessionIndex].updatedAt = new Date().toISOString();
         sessions[sessionIndex].syncedWithServer = false;
+        sessions[sessionIndex].dirty = true; // Mark session as dirty
         this._saveSessions(sessions);
 
         return sessions[sessionIndex];
@@ -225,6 +229,7 @@ const scanStorage = {
 
         sessions[sessionIndex].updatedAt = new Date().toISOString();
         sessions[sessionIndex].syncedWithServer = false;
+        sessions[sessionIndex].dirty = true; // Mark session as dirty
 
         this._saveSessions(sessions);
         return sessions[sessionIndex];
@@ -245,6 +250,7 @@ const scanStorage = {
         sessions[sessionIndex].items = [];
         sessions[sessionIndex].updatedAt = new Date().toISOString();
         sessions[sessionIndex].syncedWithServer = false;
+        sessions[sessionIndex].dirty = true; // Mark session as dirty
 
         this._saveSessions(sessions);
         return sessions[sessionIndex];
@@ -287,6 +293,7 @@ const scanStorage = {
         sessions[sessionIndex].name = name;
         sessions[sessionIndex].updatedAt = new Date().toISOString();
         sessions[sessionIndex].syncedWithServer = false;
+        sessions[sessionIndex].dirty = true; // Mark session as dirty
 
         this._saveSessions(sessions);
         return sessions[sessionIndex];
@@ -333,6 +340,52 @@ const scanStorage = {
                 };
             })
         };
+    },
+
+    /**
+     * Update a session with new data (usually after server sync)
+     * @param {ScanSession} updatedSessionData - New session data
+     * @returns {ScanSession|undefined} Updated session
+     */
+    updateSession(updatedSessionData) {
+        const sessions = this.getSessions();
+        const sessionIndex = sessions.findIndex(session => session.id === updatedSessionData.id);
+        if (sessionIndex === -1) return undefined;
+
+        // Merge updated data, ensuring not to overwrite local-only flags if not provided
+        sessions[sessionIndex] = {
+            ...sessions[sessionIndex], // Keep existing data
+            ...updatedSessionData, // Overwrite with new data
+            dirty: false // Mark as clean after successful update/sync
+        };
+        this._saveSessions(sessions);
+        return sessions[sessionIndex];
+    },
+
+    /**
+     * Checks if a session has unsynced changes.
+     * @param {string} sessionId - The ID of the session.
+     * @returns {boolean} True if the session is dirty, false otherwise.
+     */
+    isSessionDirty(sessionId) {
+        const session = this.getSession(sessionId);
+        return session ? !!session.dirty : false; // Return true if dirty is true, false otherwise
+    },
+
+    /**
+     * Marks a session as clean (not dirty), usually after a successful sync.
+     * @param {string} sessionId - The ID of the session.
+     * @returns {ScanSession|undefined} The updated session.
+     */
+    markSessionAsClean(sessionId) {
+        const sessions = this.getSessions();
+        const sessionIndex = sessions.findIndex(session => session.id === sessionId);
+        if (sessionIndex === -1) return undefined;
+
+        sessions[sessionIndex].dirty = false;
+        // Optionally update updatedAt timestamp? Depends on requirements.
+        this._saveSessions(sessions);
+        return sessions[sessionIndex];
     }
 };
 

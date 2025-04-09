@@ -4,6 +4,8 @@
 
 let scanner = null;
 let currentEquipment = null;
+let autoSyncIntervalId = null; // Timer ID for auto-sync
+const AUTO_SYNC_INTERVAL_MS = 60000; // 1 minute
 
 // Initialize scanner
 async function initScanner() {
@@ -20,6 +22,16 @@ async function initScanner() {
 
         // Initialize session management
         initSessionManagement();
+
+        // Check for active session on load
+        const activeSession = scanStorage.getActiveSession();
+        if (activeSession) {
+            updateSessionUI(activeSession);
+            startAutoSyncTimer(); // Start timer if session is active on load
+        } else {
+            // Optionally show message or create a new default session
+            document.getElementById('noActiveSessionMessage').classList.remove('d-none');
+        }
     } catch (error) {
         console.error('Error initializing scanner:', error);
         showToast('Ошибка инициализации сканера', 'danger');
@@ -45,6 +57,9 @@ function initSessionManagement() {
     document.getElementById('refreshSessionsListBtn').addEventListener('click', refreshSessionsList);
     document.getElementById('cleanExpiredSessionsBtn').addEventListener('click', cleanExpiredSessions);
     document.getElementById('resetAllSessionsBtn').addEventListener('click', resetAllSessions);
+
+    // Setup event listeners (moved from bottom for clarity)
+    setupEventListeners();
 }
 
 // Update session UI based on active session
@@ -271,6 +286,86 @@ function showLoadSessionModal() {
 
     // Load server sessions when switching to that tab
     document.querySelector('button[data-bs-target="#serverSessions"]').addEventListener('click', loadServerSessions);
+
+    // Ensure listeners are added only once or cleared first
+    const localList = document.getElementById('localSessionsList');
+    const serverList = document.getElementById('serverSessionsList');
+    localList.querySelectorAll('.load-local-session-btn').forEach(btn => {
+        btn.replaceWith(btn.cloneNode(true)); // Simple way to remove old listeners
+    });
+    serverList.querySelectorAll('.load-server-session-btn').forEach(btn => {
+        btn.replaceWith(btn.cloneNode(true));
+    });
+     localList.querySelectorAll('.delete-local-session-btn').forEach(btn => {
+        btn.replaceWith(btn.cloneNode(true));
+    });
+     serverList.querySelectorAll('.delete-server-session-btn').forEach(btn => {
+        btn.replaceWith(btn.cloneNode(true));
+    });
+
+    // Add event listeners for loading sessions (Local)
+    localList.querySelectorAll('.load-local-session-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const sessionId = e.currentTarget.getAttribute('data-session-id');
+            const session = scanStorage.setActiveSession(sessionId);
+            updateSessionUI(session);
+            startAutoSyncTimer(); // Start timer when session is loaded
+            bootstrap.Modal.getInstance('#loadSessionModal').hide();
+            showToast('Локальная сессия загружена', 'success');
+        });
+    });
+
+    // Add event listeners for loading sessions (Server)
+    serverList.querySelectorAll('.load-server-session-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            const serverSessionId = e.currentTarget.getAttribute('data-session-id');
+            try {
+                const session = await scanSync.loadSessionFromServer(serverSessionId);
+                if (session) {
+                    updateSessionUI(session);
+                    startAutoSyncTimer(); // Start timer when session is loaded
+                    bootstrap.Modal.getInstance('#loadSessionModal').hide();
+                    showToast('Серверная сессия загружена', 'success');
+                }
+            } catch (error) {
+                showToast('Ошибка загрузки сессии с сервера', 'danger');
+            }
+        });
+    });
+
+    // Add event listeners for deleting sessions (Local)
+    localList.querySelectorAll('.delete-local-session-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const sessionId = e.currentTarget.getAttribute('data-session-id');
+            if (confirm('Удалить локальную сессию?')) {
+                const isActive = scanStorage.getActiveSession()?.id === sessionId;
+                scanStorage.deleteSession(sessionId);
+                refreshLocalSessionsList(); // Refresh only local list
+                if (isActive) {
+                    stopAutoSyncTimer(); // Stop timer if active session was deleted
+                    updateSessionUI(null); // Clear active session UI
+                }
+                showToast('Локальная сессия удалена', 'success');
+            }
+        });
+    });
+
+     // Add event listeners for deleting sessions (Server) - Needs backend endpoint
+     serverList.querySelectorAll('.delete-server-session-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            const serverSessionId = e.currentTarget.getAttribute('data-session-id');
+            if (confirm('Удалить сессию с сервера? Локальная копия (если есть) останется.')) {
+                 try {
+                    // TODO: Implement scanSync.deleteSessionFromServer(serverSessionId);
+                    await scanSync.deleteSessionFromServer(serverSessionId);
+                    loadServerSessions(); // Refresh server list
+                    showToast('Сессия удалена с сервера', 'success');
+                } catch (error) {
+                    showToast('Ошибка удаления сессии с сервера', 'danger');
+                }
+            }
+        });
+    });
 }
 
 // Load server sessions
@@ -772,6 +867,123 @@ function resetAllSessions() {
         updateSessionUI(newSession);
     }
 }
+
+// Setup event listeners (moved from bottom for clarity)
+function setupEventListeners() {
+    // New Session Button
+    document.getElementById('newSessionBtn').addEventListener('click', () => {
+        const sessionName = prompt('Введите имя новой сессии:', 'Сессия ' + new Date().toLocaleString());
+        if (sessionName) {
+            const newSession = scanStorage.createSession(sessionName);
+            updateSessionUI(newSession);
+            startAutoSyncTimer(); // Start timer for new session
+            showToast('Новая сессия создана и активирована', 'success');
+        }
+    });
+
+    // Load Session Button
+    document.getElementById('loadSessionBtn').addEventListener('click', showLoadSessionModal);
+
+    // Manage Sessions Button
+    document.getElementById('manageSessionsBtn').addEventListener('click', showManageSessionsModal);
+
+    // Rename Session Button
+    document.getElementById('renameSessionBtn').addEventListener('click', () => {
+        const activeSession = scanStorage.getActiveSession();
+        if (activeSession) {
+            const newName = prompt('Введите новое имя сессии:', activeSession.name);
+            if (newName && newName !== activeSession.name) {
+                scanStorage.renameSession(activeSession.id, newName);
+                updateSessionUI(scanStorage.getActiveSession()); // Refresh UI
+                showToast('Сессия переименована', 'success');
+            }
+        }
+    });
+
+    // Clear Session Button
+    document.getElementById('clearSessionBtn').addEventListener('click', () => {
+        const activeSession = scanStorage.getActiveSession();
+        if (activeSession && confirm('Вы уверены, что хотите очистить текущую сессию? Все отсканированные позиции будут удалены.')) {
+            scanStorage.clearEquipment(activeSession.id);
+            updateSessionUI(scanStorage.getActiveSession()); // Refresh UI
+            showToast('Сессия очищена', 'warning');
+            // No need to stop/start timer, session still active
+        }
+    });
+
+    // Sync Session Button (Manual Sync)
+    document.getElementById('syncSessionBtn').addEventListener('click', syncActiveSession);
+
+    // Create Project Button
+    document.getElementById('createProjectBtn').addEventListener('click', createProjectFromSession);
+
+    // Quick Actions
+    document.getElementById('updateStatus').addEventListener('click', () => {
+        // ... (existing code) ...
+    });
+    document.getElementById('saveStatus').addEventListener('click', async () => {
+        // ... (existing code) ...
+    });
+    document.getElementById('viewHistory').addEventListener('click', () => {
+        // ... (existing code) ...
+    });
+
+    // Add other listeners if needed...
+}
+
+// --- Auto-Sync Logic ---
+
+// Function for auto-syncing the active session
+async function autoSyncActiveSession() {
+    const activeSession = scanStorage.getActiveSession();
+    if (activeSession) {
+        if (scanStorage.isSessionDirty(activeSession.id)) {
+            console.log('[AutoSync] Session dirty, attempting sync:', activeSession.name);
+            try {
+                // Use the same sync logic as manual sync, but without aggressive UI updates/toasts
+                const updatedSession = await scanSync.syncSessionWithServer(activeSession.id);
+                if (updatedSession) {
+                    // IMPORTANT: Update the local session data with server response
+                    // This also marks the session as clean (dirty: false)
+                    scanStorage.updateSession(updatedSession);
+                    console.log('[AutoSync] Sync successful.');
+                    // Optionally, subtly update parts of the UI if needed, e.g., sync status icon
+                    updateSessionUI(updatedSession); // Update UI to reflect sync status change
+                } else {
+                    console.warn('[AutoSync] Sync function did not return updated session.');
+                }
+            } catch (error) {
+                console.error('[AutoSync] Sync failed:', error);
+                // Consider showing a non-intrusive error indicator
+            }
+        } else {
+            console.log('[AutoSync] Session clean, skipping sync.');
+        }
+    } else {
+        // If no active session, ensure timer is stopped
+        console.log('[AutoSync] No active session, stopping timer.');
+        stopAutoSyncTimer();
+    }
+}
+
+// Function to start the auto-sync timer
+function startAutoSyncTimer() {
+    stopAutoSyncTimer(); // Clear any existing timer first
+    console.log(`[AutoSync] Starting timer (${AUTO_SYNC_INTERVAL_MS}ms)`);
+    autoSyncIntervalId = setInterval(autoSyncActiveSession, AUTO_SYNC_INTERVAL_MS);
+}
+
+// Function to stop the auto-sync timer
+function stopAutoSyncTimer() {
+    if (autoSyncIntervalId) {
+        console.log('[AutoSync] Stopping timer');
+        clearInterval(autoSyncIntervalId);
+        autoSyncIntervalId = null;
+    }
+}
+
+// Ensure timer stops if window is closed/navigated away
+window.addEventListener('beforeunload', stopAutoSyncTimer);
 
 // Initialize page
 document.addEventListener('DOMContentLoaded', initScanner);
