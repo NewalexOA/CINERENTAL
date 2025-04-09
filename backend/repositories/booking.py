@@ -140,6 +140,7 @@ class BookingRepository(BaseRepository[Booking]):
             .options(
                 joinedload(self.model.client),
                 joinedload(self.model.project),
+                joinedload(self.model.equipment),
             )
         )
         result = await self.session.execute(stmt)

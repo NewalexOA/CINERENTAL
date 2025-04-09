@@ -21,11 +21,21 @@ const debounce = (func, wait, immediate) => {
 };
 
 const formatDate = (date) => {
-    return new Date(date).toLocaleDateString('ru-RU', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-    });
+    // Use Moment.js for reliable date formatting
+    const m = moment(date); // moment() handles various input formats
+    if (!m.isValid()) {
+        // Return placeholder or empty string if date is invalid
+        return 'Неверная дата';
+    }
+    // Format using Moment's format function (LL is locale-aware long date format like 'September 4, 1986')
+    // Using 'L' for a shorter format like '09/04/1986' or customize as needed 'DD.MM.YYYY'
+    return m.format('DD.MM.YYYY'); // Example: 10.04.2025
+    // Or use toLocaleDateString if preferred, but moment parsing helps reliability
+    // return m.toDate().toLocaleDateString('ru-RU', {
+    //     year: 'numeric',
+    //     month: 'long',
+    //     day: 'numeric'
+    // });
 };
 
 const formatDateTime = (datetime) => {

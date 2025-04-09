@@ -529,7 +529,7 @@ function updateScannerControls(isInitialized) {
 // Update quick action buttons
 function updateQuickActions(enabled) {
     // Update standard buttons
-    document.getElementById('createBooking').disabled = !enabled;
+    // document.getElementById('createBooking').disabled = !enabled; // Removed as button no longer exists
     document.getElementById('updateStatus').disabled = !enabled;
     document.getElementById('viewHistory').disabled = !enabled;
 }
@@ -557,16 +557,26 @@ async function loadEquipmentHistory(equipmentId) {
         `).join('');
 
         // Update booking history
-        document.querySelector('#bookingHistory .list-group').innerHTML = bookingHistory.map(booking => `
-            <a href="/bookings/${booking.id}" class="list-group-item list-group-item-action">
-                <div class="d-flex w-100 justify-content-between">
-                    <h6 class="mb-1">${booking.client.name}</h6>
-                    <small class="text-muted">${formatDate(booking.start_date)}</small>
-                </div>
-                <p class="mb-1">${formatDateRange(booking.start_date, booking.end_date)}</p>
-                <small class="text-${getStatusColor(booking.status)}">${booking.status}</small>
-            </a>
-        `).join('');
+        const bookingHistoryHtml = bookingHistory.map(booking => {
+            // Safely access related names, providing defaults if null/undefined
+            const clientName = booking.client_name || 'Клиент не указан';
+            const equipmentName = booking.equipment_name || 'Оборудование не указано';
+            const projectName = booking.project_name || 'Без проекта'; // Access project_name from response
+            const bookingStatus = booking.status || 'Статус не указан';
+
+            return `
+                <a href="/bookings/${booking.id}" class="list-group-item list-group-item-action">
+                    <div class="d-flex w-100 justify-content-between">
+                        <h6 class="mb-1">${clientName} (${projectName})</h6>
+                        <small class="text-muted">${formatDate(booking.start_date)}</small>
+                    </div>
+                    <p class="mb-1">${formatDateRange(booking.start_date, booking.end_date)}</p>
+                    <small class="text-${getStatusColor(bookingStatus)}">${bookingStatus}</small>
+                </a>
+            `;
+        }).join('');
+        document.querySelector('#bookingHistory .list-group').innerHTML = bookingHistoryHtml || '<li class="list-group-item">Нет истории бронирований</li>';
+
     } catch (error) {
         console.error('Error loading equipment history:', error);
         showToast('Ошибка загрузки истории', 'danger');
@@ -623,11 +633,11 @@ document.getElementById('viewHistory').addEventListener('click', () => {
     }
 });
 
-document.getElementById('createBooking').addEventListener('click', () => {
-    if (currentEquipment) {
-        window.location.href = `/bookings/?equipment=${currentEquipment.id}`;
-    }
-});
+// document.getElementById('createBooking').addEventListener('click', () => {
+//     if (currentEquipment) {
+//         window.location.href = `/bookings/?equipment=${currentEquipment.id}`;
+//     }
+// });
 
 // Helper function for status colors
 function getStatusColor(status) {

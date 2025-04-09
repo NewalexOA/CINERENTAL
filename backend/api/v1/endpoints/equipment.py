@@ -19,6 +19,7 @@ from backend.api.v1.decorators import (
     typed_post,
     typed_put,
 )
+from backend.api.v1.endpoints.bookings import _booking_to_response
 from backend.core.database import get_db
 from backend.exceptions import BusinessError, NotFoundError, StateError, ValidationError
 from backend.models.booking import BookingStatus
@@ -582,9 +583,13 @@ async def get_equipment_bookings(
                 detail=f'Equipment with ID {equipment_id} not found',
             )
 
-        # Get equipment bookings
-        bookings = await service.get_equipment_bookings(equipment_id)
-        return [BookingResponse.model_validate(booking) for booking in bookings]
+        # Get equipment bookings using the service
+        # The repository now loads client, project, AND equipment
+        booking_service = BookingService(db)
+        bookings = await booking_service.get_by_equipment(equipment_id)
+
+        # Use the helper function to correctly format the response
+        return [_booking_to_response(booking) for booking in bookings]
     except NotFoundError as e:
         raise HTTPException(
             status_code=http_status.HTTP_404_NOT_FOUND,
