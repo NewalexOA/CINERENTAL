@@ -326,54 +326,86 @@ function doPrintBarcode(barcodeType) {
 }
 
 // Scan session functions (need to be global scope for onclick)
-function addToScanSession(equipmentId, equipmentName, barcode, categoryId, categoryName) {
-    // Decode potential HTML entities
-    const decodedName = document.createElement('textarea');
-    decodedName.innerHTML = equipmentName;
-    equipmentName = decodedName.value;
+async function addToScanSession(equipmentId) {
+    console.log('addToScanSession called with ID:', equipmentId);
 
-    // Populate modal hidden fields
-    document.getElementById('equipmentIdToAdd').value = equipmentId;
-    document.getElementById('equipmentNameToAdd').textContent = equipmentName;
-    document.getElementById('equipmentBarcodeToAdd').value = barcode;
-    document.getElementById('equipmentCategoryIdToAdd').value = categoryId || '';
-    document.getElementById('equipmentCategoryNameToAdd').value = categoryName || '';
-
-    // Ensure scanStorage is available (should be loaded via script tag)
-    if (typeof scanStorage === 'undefined') {
-        console.error('scanStorage is not available!');
-        showToast('Ошибка: Модуль сканирования не инициализирован.', 'danger');
-        return;
-    }
-
-    const activeSession = scanStorage.getActiveSession();
     const modalElement = document.getElementById('addToScanSessionModal');
-    const activeMsg = document.getElementById('activeSessionMessage');
-    const noActiveMsg = document.getElementById('noActiveSessionMessage');
-    const activeNameSpan = document.getElementById('activeSessionName');
+    if (!modalElement) return console.error('addToScanSessionModal not found!');
+    const modal = bootstrap.Modal.getOrCreateInstance(modalElement);
+
+    const loadingEl = document.getElementById('addToSessionLoading');
+    const contentEl = document.getElementById('addToSessionContent');
     const confirmAddBtn = document.getElementById('confirmAddToSession');
     const confirmNewBtn = document.getElementById('confirmNewSession');
 
-    if (activeSession) {
-        activeMsg.classList.remove('d-none');
-        noActiveMsg.classList.add('d-none');
-        activeNameSpan.textContent = activeSession.name;
-        confirmAddBtn.style.display = '';
-        confirmNewBtn.style.display = 'none';
-    } else {
-        activeMsg.classList.add('d-none');
-        noActiveMsg.classList.remove('d-none');
-        confirmAddBtn.style.display = 'none';
-        confirmNewBtn.style.display = '';
-        const newSessionNameInput = document.getElementById('newSessionName');
-        if (newSessionNameInput) newSessionNameInput.value = ''; // Clear input
-    }
+    // Show loading, hide content, disable buttons
+    loadingEl.classList.remove('d-none');
+    contentEl.classList.add('d-none');
+    confirmAddBtn.disabled = true;
+    confirmNewBtn.disabled = true;
+    modal.show(); // Show modal with loading indicator
 
-    if (modalElement) {
-        const modal = new bootstrap.Modal(modalElement);
-        modal.show();
-    } else {
-        console.error('addToScanSessionModal not found!');
+    let equipmentData;
+    try {
+        // Fetch full equipment data from API
+        // Assuming 'api' object is globally available and configured
+        equipmentData = await api.get(`/equipment/${equipmentId}`);
+        console.log('Fetched equipment data:', equipmentData);
+
+        if (!equipmentData || typeof equipmentData !== 'object') {
+            throw new Error('Invalid data received from API');
+        }
+
+        // Populate modal hidden fields with fetched data
+        document.getElementById('equipmentIdToAdd').value = equipmentData.id;
+        // Decode name just in case it contains HTML entities from API (unlikely but safe)
+        const decodedNameEl = document.createElement('textarea');
+        decodedNameEl.innerHTML = equipmentData.name || '';
+        document.getElementById('equipmentNameToAdd').textContent = decodedNameEl.value;
+        document.getElementById('equipmentBarcodeToAdd').value = equipmentData.barcode || '';
+        document.getElementById('equipmentSerialNumberToAdd').value = equipmentData.serial_number || '';
+        document.getElementById('equipmentCategoryIdToAdd').value = equipmentData.category_id || '';
+        document.getElementById('equipmentCategoryNameToAdd').value = equipmentData.category_name || ''; // Use category_name from response
+
+        // Prepare modal content based on active session
+        if (typeof scanStorage === 'undefined') {
+            throw new Error('scanStorage is not available!');
+        }
+        const activeSession = scanStorage.getActiveSession();
+        const activeMsg = document.getElementById('activeSessionMessage');
+        const noActiveMsg = document.getElementById('noActiveSessionMessage');
+        const activeNameSpan = document.getElementById('activeSessionName');
+
+        if (activeSession) {
+            activeMsg.classList.remove('d-none');
+            noActiveMsg.classList.add('d-none');
+            activeNameSpan.textContent = activeSession.name;
+            confirmAddBtn.style.display = '';
+            confirmNewBtn.style.display = 'none';
+            confirmAddBtn.disabled = false; // Enable button
+        } else {
+            activeMsg.classList.add('d-none');
+            noActiveMsg.classList.remove('d-none');
+            confirmAddBtn.style.display = 'none';
+            confirmNewBtn.style.display = '';
+            const newSessionNameInput = document.getElementById('newSessionName');
+            if (newSessionNameInput) newSessionNameInput.value = '';
+            confirmNewBtn.disabled = false; // Enable button
+        }
+
+        // Show content, hide loading
+        contentEl.classList.remove('d-none');
+        loadingEl.classList.add('d-none');
+
+    } catch (error) {
+        console.error('Error fetching equipment data or preparing modal:', error);
+        showToast('Ошибка получения данных об оборудовании', 'danger');
+        modal.hide(); // Hide modal on error
+        // Ensure loading is hidden and content shown if modal is reused
+        loadingEl.classList.add('d-none');
+        contentEl.classList.remove('d-none');
+        confirmAddBtn.disabled = false;
+        confirmNewBtn.disabled = false;
     }
 }
 
@@ -414,6 +446,7 @@ function addEquipmentToSession(sessionId) {
     const equipmentId = parseInt(document.getElementById('equipmentIdToAdd').value);
     const equipmentName = document.getElementById('equipmentNameToAdd').textContent;
     const barcode = document.getElementById('equipmentBarcodeToAdd').value;
+    const serialNumber = document.getElementById('equipmentSerialNumberToAdd').value || null; // Retrieve serial number
     const categoryId = parseInt(document.getElementById('equipmentCategoryIdToAdd').value) || null;
     const categoryName = document.getElementById('equipmentCategoryNameToAdd').value || '';
 
@@ -426,21 +459,25 @@ function addEquipmentToSession(sessionId) {
         equipment_id: equipmentId,
         name: equipmentName,
         barcode: barcode,
+        serial_number: serialNumber, // This now comes from API via hidden input
         category_id: categoryId,
-        category_name: categoryName
+        category_name: categoryName // This now comes from API via hidden input
     };
 
-    const updatedSession = scanStorage.addEquipment(sessionId, equipment);
-
-    if (updatedSession) {
-        showToast(`Оборудование "${equipmentName}" добавлено в сессию "${updatedSession.name}"`, 'success');
-    } else {
-        // Handle potential errors from addEquipment, e.g., duplicates
-        showToast('Не удалось добавить оборудование (возможно, уже добавлено)', 'warning');
-    }
+    // Call scanStorage.addEquipment and handle the result
+    const result = scanStorage.addEquipment(sessionId, equipment);
 
     const modal = bootstrap.Modal.getInstance(document.getElementById('addToScanSessionModal'));
     if (modal) modal.hide();
+
+    if (result === 'duplicate') {
+        showToast(`Оборудование "${equipmentName}" (S/N: ${serialNumber}) уже есть в этой сессии.`, 'warning');
+    } else if (result) { // result is the updated session object
+        showToast(`Оборудование "${equipmentName}" добавлено в сессию "${result.name}"`, 'success');
+    } else {
+        // Handle potential undefined result from addEquipment on other errors
+        showToast('Не удалось добавить оборудование в сессию.', 'danger');
+    }
 }
 
 // Initial setup moved inside DOMContentLoaded
