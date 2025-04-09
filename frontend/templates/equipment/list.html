@@ -81,6 +81,9 @@
                                     <button type="button" class="btn btn-sm btn-outline-secondary" onclick="printBarcode('{{ item.id }}', '{{ item.barcode }}')">
                                         <i class="fas fa-print"></i>
                                     </button>
+                                    <button type="button" class="btn btn-sm btn-outline-success btn-qrcode" onclick="addToScanSession('{{ item.id }}', '{{ item.name }}', '{{ item.barcode}}', '{{ item.category_id }}', '{{ item.category_name }}')">
+                                        <i class="fas fa-qrcode"></i>
+                                    </button>
                                 </div>
                             </td>
                         </tr>
@@ -195,6 +198,42 @@
     </div>
 </div>
 
+<!-- Add to Scan Session Modal -->
+<div class="modal fade" id="addToScanSessionModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Добавление в сессию сканирования</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="noActiveSessionMessage" class="d-none">
+                    <p class="text-center">У вас нет активной сессии сканирования. Хотите создать новую?</p>
+                    <form id="newScanSessionForm" class="mt-3">
+                        <div class="mb-3">
+                            <label class="form-label">Название сессии</label>
+                            <input type="text" class="form-control" id="newSessionName" required>
+                        </div>
+                    </form>
+                </div>
+                <div id="activeSessionMessage" class="d-none">
+                    <p>Добавить оборудование "<span id="equipmentNameToAdd"></span>" в сессию "<span id="activeSessionName"></span>"?</p>
+                </div>
+                <!-- Hidden inputs to store equipment data -->
+                <input type="hidden" id="equipmentIdToAdd">
+                <input type="hidden" id="equipmentBarcodeToAdd">
+                <input type="hidden" id="equipmentCategoryIdToAdd">
+                <input type="hidden" id="equipmentCategoryNameToAdd">
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                <button type="button" class="btn btn-primary" id="confirmNewSession" style="display: none;">Создать и добавить</button>
+                <button type="button" class="btn btn-success" id="confirmAddToSession" style="display: none;">Добавить в сессию</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <style>
     /* Existing styles... */
 
@@ -247,10 +286,64 @@
     #datamatrix-text {
         margin-left: 5px;
     }
+
+    .timeline {
+        position: relative;
+        margin: 0 0 30px 0;
+        padding: 0;
+        list-style: none;
+    }
+
+    .timeline:before {
+        content: '';
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background: #ddd;
+        left: 31px;
+        margin-left: -1.5px;
+    }
+
+    .timeline > li {
+        position: relative;
+        margin-bottom: 15px;
+    }
+
+    .timeline-badge {
+        width: 12px;
+        height: 12px;
+        position: absolute;
+        top: 4px;
+        left: 31px;
+        margin-left: -6px;
+        border-radius: 50%;
+    }
+
+    .timeline-content {
+        margin-left: 60px;
+        padding: 10px 15px;
+        background: #f8f9fa;
+        border-radius: 5px;
+    }
+
+    /* Стили для кнопки добавления в сессию */
+    .btn-qrcode {
+        transition: all 0.2s ease;
+    }
+
+    .btn-qrcode:hover {
+        transform: scale(1.05);
+    }
+
+    .btn-outline-success:focus {
+        box-shadow: 0 0 0 0.25rem rgba(25, 135, 84, 0.25);
+    }
 </style>
 {% endblock %}
 
 {% block scripts %}
+<script src="{{ url_for('static', path='js/scan-storage.js') }}"></script>
 <script>
 // Load categories for add form
 async function loadCategories() {
@@ -542,6 +635,10 @@ document.addEventListener('DOMContentLoaded', function() {
             setTimeout(formatAmounts, 100);
         };
     }
+
+    // Add event listeners for scan session
+    document.getElementById('confirmNewSession').addEventListener('click', createSessionAndAddEquipment);
+    document.getElementById('confirmAddToSession').addEventListener('click', addEquipmentToActiveSession);
 });
 
 // barcode print
@@ -677,6 +774,100 @@ function doPrintBarcode(barcodeType) {
     }
 
     showToast('Штрих-код отправлен на печать', 'success');
+}
+
+// Function to add equipment to scan session
+function addToScanSession(equipmentId, equipmentName, barcode, categoryId, categoryName) {
+    // Decode HTML entities in the equipment name (e.g., &quot;)
+    const decodedName = document.createElement('textarea');
+    decodedName.innerHTML = equipmentName;
+    equipmentName = decodedName.value;
+
+    // Store equipment data in hidden inputs
+    document.getElementById('equipmentIdToAdd').value = equipmentId;
+    document.getElementById('equipmentNameToAdd').textContent = equipmentName;
+    document.getElementById('equipmentBarcodeToAdd').value = barcode;
+    document.getElementById('equipmentCategoryIdToAdd').value = categoryId;
+    document.getElementById('equipmentCategoryNameToAdd').value = categoryName;
+
+    // Check if we have an active scan session
+    const activeSession = scanStorage.getActiveSession();
+
+    if (activeSession) {
+        // Show active session message
+        document.getElementById('activeSessionMessage').classList.remove('d-none');
+        document.getElementById('noActiveSessionMessage').classList.add('d-none');
+        document.getElementById('activeSessionName').textContent = activeSession.name;
+        document.getElementById('confirmAddToSession').style.display = '';
+        document.getElementById('confirmNewSession').style.display = 'none';
+    } else {
+        // Show no active session message and form to create new session
+        document.getElementById('activeSessionMessage').classList.add('d-none');
+        document.getElementById('noActiveSessionMessage').classList.remove('d-none');
+        document.getElementById('confirmAddToSession').style.display = 'none';
+        document.getElementById('confirmNewSession').style.display = '';
+    }
+
+    // Show modal
+    const modal = new bootstrap.Modal(document.getElementById('addToScanSessionModal'));
+    modal.show();
+}
+
+// Function to create new session and add equipment
+function createSessionAndAddEquipment() {
+    const sessionName = document.getElementById('newSessionName').value.trim();
+
+    if (!sessionName) {
+        showToast('Введите название сессии', 'warning');
+        return;
+    }
+
+    // Create new session
+    const newSession = scanStorage.createSession(sessionName);
+
+    // Add equipment to the session
+    addEquipmentToSession(newSession.id);
+}
+
+// Function to add equipment to existing session
+function addEquipmentToActiveSession() {
+    const activeSession = scanStorage.getActiveSession();
+    if (!activeSession) {
+        showToast('Нет активной сессии', 'error');
+        return;
+    }
+
+    addEquipmentToSession(activeSession.id);
+}
+
+// Common function to add equipment to a session
+function addEquipmentToSession(sessionId) {
+    const equipmentId = parseInt(document.getElementById('equipmentIdToAdd').value);
+    const equipmentName = document.getElementById('equipmentNameToAdd').textContent;
+    const barcode = document.getElementById('equipmentBarcodeToAdd').value;
+    const categoryId = parseInt(document.getElementById('equipmentCategoryIdToAdd').value) || null;
+    const categoryName = document.getElementById('equipmentCategoryNameToAdd').value;
+
+    // Create equipment object
+    const equipment = {
+        equipment_id: equipmentId,
+        name: equipmentName,
+        barcode: barcode,
+        category_id: categoryId,
+        category_name: categoryName
+    };
+
+    // Add to session
+    const updatedSession = scanStorage.addEquipment(sessionId, equipment);
+
+    if (updatedSession) {
+        showToast(`Оборудование добавлено в сессию "${updatedSession.name}"`, 'success');
+    } else {
+        showToast('Не удалось добавить оборудование в сессию', 'danger');
+    }
+
+    // Hide modal
+    bootstrap.Modal.getInstance(document.getElementById('addToScanSessionModal')).hide();
 }
 
 // Initialize

@@ -717,6 +717,9 @@ function formatEquipmentRow(item) {
                     <button type="button" class="btn btn-sm btn-outline-secondary" onclick="printBarcode('${item.id}', '${item.barcode}')">
                         <i class="fas fa-print"></i>
                     </button>
+                    <button type="button" class="btn btn-sm btn-outline-success btn-qrcode" onclick="addToScanSession('${item.id}', '${item.name}', '${item.barcode}', '${item.category_id}', '${item.category_name}')">
+                        <i class="fas fa-qrcode"></i>
+                    </button>
                 </div>
             </td>
         </tr>
