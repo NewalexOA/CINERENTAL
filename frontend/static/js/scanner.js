@@ -59,7 +59,8 @@ function updateSessionUI(session) {
 
         // Update session info
         document.getElementById('sessionName').textContent = session.name;
-        document.getElementById('itemCount').textContent = `${session.items.length} позиций`;
+        const totalItems = session.items.reduce((sum, item) => sum + (item.quantity || 1), 0);
+        document.getElementById('itemCount').textContent = `${totalItems} шт. (${session.items.length} поз.)`;
 
         // Update items list
         const itemsList = document.getElementById('sessionItemsList');
@@ -71,31 +72,139 @@ function updateSessionUI(session) {
             session.items.forEach(item => {
                 const itemElement = document.createElement('div');
                 itemElement.className = 'list-group-item list-group-item-action d-flex justify-content-between align-items-center';
+
+                const hasSerialNumber = !!item.serial_number;
+                const quantity = item.quantity || 1;
+                const quantityDisplay = !hasSerialNumber && quantity > 1 ? ` (x${quantity})` : '';
+
+                // Define buttons based on whether the item has a serial number
+                let buttonsHtml;
+                if (hasSerialNumber) {
+                    // Item WITH serial number: Show remove button
+                    buttonsHtml = `
+                        <button class="btn btn-sm btn-outline-danger remove-item-btn" data-equipment-id="${item.equipment_id}" title="Удалить">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    `;
+                } else {
+                    // Item WITHOUT serial number: Show increment and decrement/remove buttons
+                    let firstButtonHtml;
+                    if (quantity > 1) {
+                        // Quantity > 1: Show decrement button
+                        firstButtonHtml = `
+                            <button class="btn btn-outline-secondary decrement-item-btn" data-equipment-id="${item.equipment_id}" title="Уменьшить кол-во">
+                                <i class="fas fa-minus"></i>
+                            </button>
+                        `;
+                    } else {
+                        // Quantity === 1: Show remove button instead of decrement
+                        firstButtonHtml = `
+                            <button class="btn btn-sm btn-outline-danger remove-item-btn" data-equipment-id="${item.equipment_id}" title="Удалить">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        `;
+                    }
+                    // Always show increment button
+                    const incrementButtonHtml = `
+                        <button class="btn btn-outline-secondary increment-item-btn" data-equipment-id="${item.equipment_id}" title="Увеличить кол-во">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                    `;
+                    // Combine buttons in desired order (+ first, then -/X)
+                    buttonsHtml = `
+                        <div class="btn-group btn-group-sm" role="group">
+                            ${incrementButtonHtml}
+                            ${firstButtonHtml}
+                        </div>
+                    `;
+                }
+
                 itemElement.innerHTML = `
-                    <div>
-                        <h6 class="mb-0">${item.name}</h6>
-                        <small class="text-muted">${item.barcode}</small>
+                    <div style="flex-grow: 1; margin-right: 10px;">
+                        <h6 class="mb-0">${item.name}${quantityDisplay}</h6>
+                        ${hasSerialNumber ? `<small class="text-muted d-block">S/N: ${item.serial_number}</small>` : ''}
                     </div>
-                    <button class="btn btn-sm btn-outline-danger remove-item-btn" data-equipment-id="${item.equipment_id}">
-                        <i class="fas fa-times"></i>
-                    </button>
+                    ${buttonsHtml}
                 `;
                 itemsList.appendChild(itemElement);
             });
 
-            // Add event listeners for remove buttons
-            document.querySelectorAll('.remove-item-btn').forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    const equipmentId = parseInt(e.currentTarget.getAttribute('data-equipment-id'));
-                    removeEquipmentFromSession(equipmentId);
-                });
-            });
+            // Add event listeners AFTER updating innerHTML
+            attachItemButtonListeners(session.id);
         }
     } else {
         // Show message, hide session info
         noActiveSessionMessage.classList.remove('d-none');
         activeSessionInfo.classList.add('d-none');
     }
+}
+
+// Helper function to attach listeners to item buttons
+function attachItemButtonListeners(sessionId) {
+    // Remove item button listener
+    document.querySelectorAll('.remove-item-btn').forEach(btn => {
+        // Remove existing listener before adding a new one to prevent duplicates
+        const newBtn = btn.cloneNode(true);
+        btn.parentNode.replaceChild(newBtn, btn);
+        newBtn.addEventListener('click', (e) => {
+            const equipmentId = parseInt(e.currentTarget.getAttribute('data-equipment-id'));
+            removeEquipmentFromSession(sessionId, equipmentId); // Pass sessionId
+        });
+    });
+
+    // Decrement item button listener
+    document.querySelectorAll('.decrement-item-btn').forEach(btn => {
+        const newBtn = btn.cloneNode(true);
+        btn.parentNode.replaceChild(newBtn, btn);
+        newBtn.addEventListener('click', (e) => {
+            const equipmentId = parseInt(e.currentTarget.getAttribute('data-equipment-id'));
+            handleDecrementItem(sessionId, equipmentId); // Pass sessionId
+        });
+    });
+
+    // Increment item button listener
+    document.querySelectorAll('.increment-item-btn').forEach(btn => {
+        const newBtn = btn.cloneNode(true);
+        btn.parentNode.replaceChild(newBtn, btn);
+        newBtn.addEventListener('click', (e) => {
+            const equipmentId = parseInt(e.currentTarget.getAttribute('data-equipment-id'));
+            handleIncrementItem(sessionId, equipmentId); // Pass sessionId
+        });
+    });
+}
+
+// Handlers for increment/decrement (Need to be defined)
+function handleDecrementItem(sessionId, equipmentId) {
+    console.log(`Decrementing item ${equipmentId} in session ${sessionId}`);
+    const updatedSession = scanStorage.decrementQuantity(sessionId, equipmentId);
+    updateSessionUI(updatedSession);
+}
+
+function handleIncrementItem(sessionId, equipmentId) {
+    console.log(`Incrementing item ${equipmentId} in session ${sessionId}`);
+    // We need the original item details to re-add it (which increments quantity)
+    // Find the item in the current session to get its details
+    const session = scanStorage.getSession(sessionId);
+    const item = session?.items.find(i => i.equipment_id === equipmentId);
+    if (item) {
+        const updatedSession = scanStorage.addEquipment(sessionId, item); // Re-adding increments quantity
+        updateSessionUI(updatedSession);
+    } else {
+        console.error(`Could not find item with ID ${equipmentId} to increment.`);
+    }
+}
+
+// Modify removeEquipmentFromSession to accept sessionId
+function removeEquipmentFromSession(sessionId, equipmentId) { // Added sessionId
+    if (!sessionId) {
+        console.error("Cannot remove item, session ID is missing.");
+        return;
+    }
+
+    const updatedSession = scanStorage.removeEquipment(sessionId, equipmentId);
+    updateSessionUI(updatedSession);
+
+    showToast('Оборудование удалено из сессии', 'success');
 }
 
 // Show new session modal
@@ -308,17 +417,6 @@ function createProjectFromSession() {
         console.error('Error saving project data to sessionStorage:', e);
         showToast('Ошибка подготовки данных для проекта', 'danger');
     }
-}
-
-// Remove equipment from session
-function removeEquipmentFromSession(equipmentId) {
-    const activeSession = scanStorage.getActiveSession();
-    if (!activeSession) return;
-
-    const updatedSession = scanStorage.removeEquipment(activeSession.id, equipmentId);
-    updateSessionUI(updatedSession);
-
-    showToast('Оборудование удалено из сессии', 'success');
 }
 
 // Handle successful scan
