@@ -108,14 +108,12 @@ const scanStorage = {
     addEquipment(sessionId, equipment) {
         const sessions = this.getSessions();
         const sessionIndex = sessions.findIndex(session => session.id === sessionId);
-
         if (sessionIndex === -1) return undefined;
 
-        // Ensure equipment has equipment_id property
-        const equipmentId = equipment.id || equipment.equipment_id;
-        if (!equipmentId) {
-            console.error('Equipment missing ID:', equipment);
-            return sessions[sessionIndex];
+        const equipmentId = Number(equipment.id || equipment.equipment_id);
+        if (isNaN(equipmentId)) {
+            console.error('Invalid equipment ID:', equipment);
+            return undefined; // Indicate error
         }
 
         // Normalize equipment object
@@ -134,7 +132,7 @@ const scanStorage = {
 
         if (isDuplicate) {
             console.log(`Equipment with ID ${equipmentId} already in session, skipping`);
-            return sessions[sessionIndex];
+            return 'duplicate'; // Return specific string for duplicate
         }
 
         // Add normalized equipment to session
@@ -143,7 +141,7 @@ const scanStorage = {
         sessions[sessionIndex].syncedWithServer = false;
 
         this._saveSessions(sessions);
-        return sessions[sessionIndex];
+        return sessions[sessionIndex]; // Return session object on success
     },
 
     /**

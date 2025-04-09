@@ -520,12 +520,25 @@ class BarcodeScanner {
             }
             const equipment = await response.json();
 
+            let addedToSession = false; // Flag to track if item was actually added
+            let isDuplicate = false;
+
             // Save to session storage if available
             if (window.scanStorage && this.sessionId) {
-                window.scanStorage.addEquipment(this.sessionId, equipment);
+                const result = window.scanStorage.addEquipment(this.sessionId, equipment);
+                if (result === 'duplicate') {
+                    isDuplicate = true;
+                    console.log(`Barcode ${barcode} corresponds to equipment ID ${equipment.id} which is already in session ${this.sessionId}.`);
+                } else if (typeof result === 'object' && result !== null) {
+                    // Check if the result is a session object (success)
+                    addedToSession = true;
+                }
             }
 
-            this.onScan(equipment);
+            // Trigger onScan only if successfully added (or if no storage used)
+            // Pass additional info about duplication status
+            this.onScan(equipment, { isDuplicate: isDuplicate, addedToSession: addedToSession });
+
         } catch (error) {
             console.error('Barcode scan error:', error);
             this.onError(error);

@@ -322,28 +322,24 @@ function removeEquipmentFromSession(equipmentId) {
 }
 
 // Handle successful scan
-async function handleScan(equipment) {
+async function handleScan(equipment, scanInfo) {
     currentEquipment = equipment;
     updateScanResult(equipment);
     updateQuickActions(true);
     addToScanHistory(equipment);
 
-    // Add equipment to active session
+    // Handle session addition based on scanInfo flags
     const activeSession = scanStorage.getActiveSession();
     if (activeSession) {
-        // Format equipment for session
-        const equipmentItem = {
-            equipment_id: currentEquipment.id,
-            barcode: currentEquipment.barcode,
-            name: currentEquipment.name,
-            category_name: currentEquipment.category_name
-        };
-
-        // Add to session
-        const updatedSession = scanStorage.addEquipment(activeSession.id, equipmentItem);
-        updateSessionUI(updatedSession);
-
-        showToast('Оборудование автоматически добавлено в сессию', 'success');
+        if (scanInfo.isDuplicate) {
+             showToast(`Оборудование "${equipment.name}" уже есть в сессии`, 'info');
+             // Optionally, briefly highlight the existing item in the list?
+        } else if (scanInfo.addedToSession) {
+             // Item was successfully added by processBarcode
+             updateSessionUI(scanStorage.getSession(activeSession.id)); // Refresh UI from storage
+             showToast(`Оборудование "${equipment.name}" добавлено в сессию`, 'success');
+        }
+        // If neither duplicate nor added (e.g., scanStorage disabled or error), do nothing special regarding session toast
     }
 }
 
