@@ -6,7 +6,7 @@ This module provides repository for scan sessions.
 from datetime import datetime
 from typing import List, Optional
 
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.models import ScanSession
@@ -25,7 +25,7 @@ class ScanSessionRepository(BaseRepository[ScanSession]):
         super().__init__(session, ScanSession)
 
     async def get_by_user(self, user_id: int) -> List[ScanSession]:
-        """Get all scan sessions for a user.
+        """Get all scan sessions for a user OR sessions with no user_id.
 
         Args:
             user_id: User ID
@@ -35,7 +35,10 @@ class ScanSessionRepository(BaseRepository[ScanSession]):
         """
         query = (
             select(self.model)
-            .where(self.model.user_id == user_id, self.model.deleted_at.is_(None))
+            .where(
+                or_(self.model.user_id == user_id, self.model.user_id.is_(None)),
+                self.model.deleted_at.is_(None),
+            )
             .order_by(self.model.created_at.desc())
         )
 

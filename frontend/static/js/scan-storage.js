@@ -441,8 +441,8 @@ const scanSync = {
      */
     async getUserSessionsFromServer(userId) {
         try {
-            // Get sessions from server
-            return await api.get(`/scan-sessions/user/${userId}`);
+            // Get sessions from server using query parameter
+            return await api.get('/scan-sessions/', { user_id: userId });
         } catch (error) {
             console.error('Error getting user sessions from server:', error);
             showToast('Ошибка получения сессий с сервера: ' + (error.message || 'Неизвестная ошибка'), 'danger');
