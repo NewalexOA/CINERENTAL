@@ -722,18 +722,29 @@ function refreshSessionsList() {
 }
 
 // Clean expired sessions
-function cleanExpiredSessions() {
-    const removedCount = scanStorage.cleanExpiredSessions();
+async function cleanExpiredSessions() {
+    try {
+        const response = await api.post('/scan-sessions/clean-expired');
+        const removedCount = response.cleaned_count; // Assuming the endpoint returns { cleaned_count: count }
 
-    if (removedCount > 0) {
-        refreshSessionsList();
-        showToast(`Удалено ${removedCount} устаревших сессий`, 'success');
+        if (removedCount > 0) {
+            // Refresh both local and server lists if the modal is open
+            if (document.getElementById('manageSessionsModal').classList.contains('show')) {
+                 refreshSessionsList(); // Refresh local sessions
+                 loadServerSessions(); // Refresh server sessions
+            }
+            showToast(`Удалено ${removedCount} устаревших сессий с сервера`, 'success');
 
-        // Update UI if active session was removed
-        const activeSession = scanStorage.getActiveSession();
-        updateSessionUI(activeSession);
-    } else {
-        showToast('Устаревших сессий не найдено', 'info');
+            // It's unlikely the *active* session was just expired and cleaned on the server,
+            // so potentially no need to update the main UI unless specifically needed.
+            // const activeSession = scanStorage.getActiveSession();
+            // updateSessionUI(activeSession);
+        } else {
+            showToast('Устаревших сессий на сервере не найдено', 'info');
+        }
+    } catch (error) {
+        console.error('Error cleaning expired sessions:', error);
+        showToast('Ошибка при очистке устаревших сессий на сервере', 'danger');
     }
 }
 
