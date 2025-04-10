@@ -488,7 +488,7 @@ class EquipmentService:
         # Load equipment with category for response
         loaded_equipment = await self._load_equipment_with_category(equipment)
 
-        return EquipmentResponse.model_validate(loaded_equipment.__dict__)
+        return EquipmentResponse.model_validate(loaded_equipment)
 
     async def get_by_serial_number(self, serial_number: str) -> Optional[Equipment]:
         """Get equipment by serial number.

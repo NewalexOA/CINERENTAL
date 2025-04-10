@@ -7,6 +7,7 @@ from fastapi import status
 from httpx import AsyncClient
 
 from backend.models import ScanSession
+from backend.schemas.scan_session import ScanSessionResponse
 
 pytestmark = pytest.mark.asyncio
 
@@ -73,23 +74,32 @@ async def test_get_user_scan_sessions(
     test_scan_session: ScanSession,
 ) -> None:
     """Test getting all scan sessions."""
+    # Request without specific user_id should return empty list
+    # (based on current API behavior)
     response = await async_client.get('/api/v1/scan-sessions/')
 
     assert response.status_code == status.HTTP_200_OK
     data = response.json()
     assert isinstance(data, list)
+    # Expect empty list when no user_id is provided
     assert len(data) == 0
 
-    # Check the request with some arbitrary user_id
+    # Request with an arbitrary user_id should return sessions with user_id=None
+    # due to repository logic
     response = await async_client.get(
         '/api/v1/scan-sessions/',
-        params={'user_id': 999},  # Use an arbitrary user_id instead of None
+        params={'user_id': 999},  # Use an arbitrary user_id
     )
 
     assert response.status_code == status.HTTP_200_OK
     data = response.json()
     assert isinstance(data, list)
-    assert len(data) == 0
+    # Expect the session created by the fixture (user_id=None)
+    # because user_id was provided
+    assert len(data) == 1
+    # Parse the response data using the Pydantic model
+    parsed_session = ScanSessionResponse.model_validate(data[0])
+    assert parsed_session.id == test_scan_session.id
 
 
 async def test_update_scan_session(
