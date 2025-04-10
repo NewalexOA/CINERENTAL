@@ -572,23 +572,30 @@ function updateScanResult(equipment) {
         return;
     }
 
+    // Format currency if function exists
+    const formattedCost = typeof formatCurrency === 'function'
+        ? formatCurrency(equipment.replacement_cost)
+        : equipment.replacement_cost; // Fallback to raw number if formatter unavailable
+
     container.innerHTML = `
-        <div class="text-center mb-3">
-            <span class="badge bg-${getStatusColor(equipment.status)} fs-5">
+        <div class="d-flex justify-content-between align-items-center mb-1">
+            <h5 class="mb-0 me-2">${equipment.name}</h5>
+            <span class="badge bg-${getStatusColor(equipment.status)} fs-6 text-nowrap flex-shrink-0">
                 ${equipment.status}
             </span>
         </div>
-        <h5>${equipment.name}</h5>
-        <p class="text-muted">${equipment.category_name}</p>
-        <div class="mb-3">
-            <small class="d-block"><strong>Серийный номер:</strong> ${equipment.serial_number}</small>
-            <small class="d-block"><strong>Штрих-код:</strong> ${equipment.barcode}</small>
+        <div class="mb-2">
+            <p class="text-muted small mb-0">${equipment.category_name || 'Без категории'}</p>
+        </div>
+        <div class="mb-2">
+            <small class="d-block text-muted"><i class="fas fa-barcode me-1"></i>${equipment.barcode}</small>
+            ${equipment.serial_number ? `<small class="d-block text-muted"><i class="fas fa-hashtag me-1"></i>${equipment.serial_number}</small>` : ''}
         </div>
         <div class="mb-3">
-            <small class="d-block"><strong>Сумма материальной ответственности:</strong> ${equipment.replacement_cost} ₽</small>
+            <strong class="d-block">МО: ${formattedCost}</strong>
         </div>
-        <div class="text-center">
-            <a href="/equipment/${equipment.id}" class="btn btn-sm btn-outline-primary">
+        <div class="text-center mt-3">
+            <a href="#/equipment/${equipment.id}" class="btn btn-sm btn-outline-primary">
                 <i class="fas fa-info-circle"></i> Подробнее
             </a>
         </div>
