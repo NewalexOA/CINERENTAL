@@ -58,7 +58,7 @@ class TestEquipmentService:
             barcode='CATS-000001-5',
             serial_number='SN-001',
             category_id=test_category.id,
-            replacement_cost=Decimal('1000.00'),
+            replacement_cost=1000,
             status=EquipmentStatus.AVAILABLE,
         )
         db_session.add(equipment)
@@ -83,7 +83,7 @@ class TestEquipmentService:
             category_id=test_category.id,
             custom_barcode=custom_barcode,
             serial_number='SN001',
-            replacement_cost=1000.00,
+            replacement_cost=1000,
         )
 
         assert isinstance(equipment_response, EquipmentResponse)
@@ -92,7 +92,7 @@ class TestEquipmentService:
         assert equipment_response.category_id == test_category.id
         assert equipment_response.barcode == custom_barcode
         assert equipment_response.serial_number == 'SN001'
-        assert equipment_response.replacement_cost == Decimal('1000.00')
+        assert equipment_response.replacement_cost == 1000
         assert equipment_response.status == EquipmentStatus.AVAILABLE
 
     @async_test
@@ -113,7 +113,7 @@ class TestEquipmentService:
             category_id=test_category.id,
             custom_barcode=custom_barcode,
             serial_number='SN001',
-            replacement_cost=1000.00,
+            replacement_cost=1000,
         )
 
         # Try to create second equipment with same barcode
@@ -124,7 +124,7 @@ class TestEquipmentService:
                 category_id=test_category.id,
                 custom_barcode=custom_barcode,
                 serial_number='SN002',
-                replacement_cost=1000.00,
+                replacement_cost=1000,
             )
 
     @async_test
@@ -140,7 +140,7 @@ class TestEquipmentService:
                 category_id=1,
                 custom_barcode='CATS-000001-5',
                 serial_number='SN-001',
-                replacement_cost=-10.0,
+                replacement_cost=-10,
             )
 
     @async_test
@@ -162,7 +162,7 @@ class TestEquipmentService:
             category_id=test_category.id,
             custom_barcode=custom_barcode,
             serial_number='SN001',
-            replacement_cost=1000.00,
+            replacement_cost=1000,
         )
 
         equipment_list = await service.get_equipment_list(
@@ -313,14 +313,14 @@ class TestEquipmentService:
             name='Updated Equipment',
             description='Updated Description',
             barcode='UPDT-000001-5',
-            replacement_cost=2000.00,
+            replacement_cost=2000,
             notes='Updated notes',
         )
 
         assert equipment.name == 'Updated Equipment'
         assert equipment.description == 'Updated Description'
         assert equipment.barcode == 'UPDT-000001-5'
-        assert float(equipment.replacement_cost) == 2000.00
+        assert float(equipment.replacement_cost) == 2000
         assert equipment.notes == 'Updated notes'
 
     @async_test
@@ -335,7 +335,7 @@ class TestEquipmentService:
             name=test_equipment.name,
             description=test_equipment.description,
             barcode=test_equipment.barcode,
-            replacement_cost=float(test_equipment.replacement_cost),
+            replacement_cost=int(test_equipment.replacement_cost),
             notes=test_equipment.notes,
         )
 
@@ -379,7 +379,7 @@ class TestEquipmentService:
             category_id=test_equipment.category_id,
             custom_barcode=custom_barcode,
             serial_number='SN-002',
-            replacement_cost=1000.00,
+            replacement_cost=1000,
         )
 
         # Check that we can find equipment by the new barcode
@@ -458,12 +458,12 @@ class TestEquipmentService:
             test_equipment.id,
             name='Updated Equipment',
             description='Updated Description',
-            replacement_cost=2000.00,
+            replacement_cost=2000,
         )
 
         assert updated.name == 'Updated Equipment'
         assert updated.description == 'Updated Description'
-        assert float(updated.replacement_cost) == 2000.00
+        assert float(updated.replacement_cost) == 2000
 
     @async_test
     async def test_update_equipment_not_found(
@@ -553,7 +553,7 @@ class TestEquipmentService:
         with pytest.raises(BusinessError):
             await service.update_equipment(
                 test_equipment.id,
-                replacement_cost=-1000.00,  # Negative replacement cost
+                replacement_cost=-1000,  # Negative replacement cost
             )
 
     @async_test
@@ -652,7 +652,7 @@ class TestEquipmentService:
                 category_id=test_category.id,
                 custom_barcode=None,
                 serial_number='SN123',
-                replacement_cost=-1.0,
+                replacement_cost=-1,
             )
 
     @async_test
@@ -728,7 +728,7 @@ class TestEquipmentService:
             category_id=test_category.id,
             custom_barcode=custom_barcode,
             serial_number='SN002',
-            replacement_cost=2000.00,
+            replacement_cost=2000,
         )
 
         # Search with query only
@@ -754,7 +754,7 @@ class TestEquipmentService:
                 category_id=test_category.id,
                 barcode=f'CATS-{i:06d}-{i % 10}',  # Unique barcode
                 serial_number=f'SN-SEARCH-{i:03d}',  # Unique serial
-                replacement_cost=Decimal('1000.00'),
+                replacement_cost=1000,
                 status=EquipmentStatus.AVAILABLE,
             )
             service.session.add(equipment)

@@ -4,6 +4,8 @@
 
 let scanner = null;
 let currentEquipment = null;
+let autoSyncIntervalId = null; // Timer ID for auto-sync
+const AUTO_SYNC_INTERVAL_MS = 60000; // 1 minute
 
 // Initialize scanner
 async function initScanner() {
@@ -20,6 +22,16 @@ async function initScanner() {
 
         // Initialize session management
         initSessionManagement();
+
+        // Check for active session on load
+        const activeSession = scanStorage.getActiveSession();
+        if (activeSession) {
+            updateSessionUI(activeSession);
+            startAutoSyncTimer(); // Start timer if session is active on load
+        } else {
+            // Optionally show message or create a new default session
+            document.getElementById('noActiveSessionMessage').classList.remove('d-none');
+        }
     } catch (error) {
         console.error('Error initializing scanner:', error);
         showToast('Ошибка инициализации сканера', 'danger');
@@ -45,6 +57,9 @@ function initSessionManagement() {
     document.getElementById('refreshSessionsListBtn').addEventListener('click', refreshSessionsList);
     document.getElementById('cleanExpiredSessionsBtn').addEventListener('click', cleanExpiredSessions);
     document.getElementById('resetAllSessionsBtn').addEventListener('click', resetAllSessions);
+
+    // Setup event listeners (moved from bottom for clarity)
+    setupEventListeners();
 }
 
 // Update session UI based on active session
@@ -59,7 +74,8 @@ function updateSessionUI(session) {
 
         // Update session info
         document.getElementById('sessionName').textContent = session.name;
-        document.getElementById('itemCount').textContent = `${session.items.length} позиций`;
+        const totalItems = session.items.reduce((sum, item) => sum + (item.quantity || 1), 0);
+        document.getElementById('itemCount').textContent = `${totalItems} шт. (${session.items.length} поз.)`;
 
         // Update items list
         const itemsList = document.getElementById('sessionItemsList');
@@ -71,31 +87,139 @@ function updateSessionUI(session) {
             session.items.forEach(item => {
                 const itemElement = document.createElement('div');
                 itemElement.className = 'list-group-item list-group-item-action d-flex justify-content-between align-items-center';
+
+                const hasSerialNumber = !!item.serial_number;
+                const quantity = item.quantity || 1;
+                const quantityDisplay = !hasSerialNumber && quantity > 1 ? ` (x${quantity})` : '';
+
+                // Define buttons based on whether the item has a serial number
+                let buttonsHtml;
+                if (hasSerialNumber) {
+                    // Item WITH serial number: Show remove button
+                    buttonsHtml = `
+                        <button class="btn btn-sm btn-outline-danger remove-item-btn" data-equipment-id="${item.equipment_id}" title="Удалить">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    `;
+                } else {
+                    // Item WITHOUT serial number: Show increment and decrement/remove buttons
+                    let firstButtonHtml;
+                    if (quantity > 1) {
+                        // Quantity > 1: Show decrement button
+                        firstButtonHtml = `
+                            <button class="btn btn-outline-secondary decrement-item-btn" data-equipment-id="${item.equipment_id}" title="Уменьшить кол-во">
+                                <i class="fas fa-minus"></i>
+                            </button>
+                        `;
+                    } else {
+                        // Quantity === 1: Show remove button instead of decrement
+                        firstButtonHtml = `
+                            <button class="btn btn-sm btn-outline-danger remove-item-btn" data-equipment-id="${item.equipment_id}" title="Удалить">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        `;
+                    }
+                    // Always show increment button
+                    const incrementButtonHtml = `
+                        <button class="btn btn-outline-secondary increment-item-btn" data-equipment-id="${item.equipment_id}" title="Увеличить кол-во">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                    `;
+                    // Combine buttons in desired order (+ first, then -/X)
+                    buttonsHtml = `
+                        <div class="btn-group btn-group-sm" role="group">
+                            ${incrementButtonHtml}
+                            ${firstButtonHtml}
+                        </div>
+                    `;
+                }
+
                 itemElement.innerHTML = `
-                    <div>
-                        <h6 class="mb-0">${item.name}</h6>
-                        <small class="text-muted">${item.barcode}</small>
+                    <div style="flex-grow: 1; margin-right: 10px;">
+                        <h6 class="mb-0">${item.name}${quantityDisplay}</h6>
+                        ${hasSerialNumber ? `<small class="text-muted d-block">S/N: ${item.serial_number}</small>` : ''}
                     </div>
-                    <button class="btn btn-sm btn-outline-danger remove-item-btn" data-equipment-id="${item.equipment_id}">
-                        <i class="fas fa-times"></i>
-                    </button>
+                    ${buttonsHtml}
                 `;
                 itemsList.appendChild(itemElement);
             });
 
-            // Add event listeners for remove buttons
-            document.querySelectorAll('.remove-item-btn').forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    const equipmentId = parseInt(e.currentTarget.getAttribute('data-equipment-id'));
-                    removeEquipmentFromSession(equipmentId);
-                });
-            });
+            // Add event listeners AFTER updating innerHTML
+            attachItemButtonListeners(session.id);
         }
     } else {
         // Show message, hide session info
         noActiveSessionMessage.classList.remove('d-none');
         activeSessionInfo.classList.add('d-none');
     }
+}
+
+// Helper function to attach listeners to item buttons
+function attachItemButtonListeners(sessionId) {
+    // Remove item button listener
+    document.querySelectorAll('.remove-item-btn').forEach(btn => {
+        // Remove existing listener before adding a new one to prevent duplicates
+        const newBtn = btn.cloneNode(true);
+        btn.parentNode.replaceChild(newBtn, btn);
+        newBtn.addEventListener('click', (e) => {
+            const equipmentId = parseInt(e.currentTarget.getAttribute('data-equipment-id'));
+            removeEquipmentFromSession(sessionId, equipmentId); // Pass sessionId
+        });
+    });
+
+    // Decrement item button listener
+    document.querySelectorAll('.decrement-item-btn').forEach(btn => {
+        const newBtn = btn.cloneNode(true);
+        btn.parentNode.replaceChild(newBtn, btn);
+        newBtn.addEventListener('click', (e) => {
+            const equipmentId = parseInt(e.currentTarget.getAttribute('data-equipment-id'));
+            handleDecrementItem(sessionId, equipmentId); // Pass sessionId
+        });
+    });
+
+    // Increment item button listener
+    document.querySelectorAll('.increment-item-btn').forEach(btn => {
+        const newBtn = btn.cloneNode(true);
+        btn.parentNode.replaceChild(newBtn, btn);
+        newBtn.addEventListener('click', (e) => {
+            const equipmentId = parseInt(e.currentTarget.getAttribute('data-equipment-id'));
+            handleIncrementItem(sessionId, equipmentId); // Pass sessionId
+        });
+    });
+}
+
+// Handlers for increment/decrement (Need to be defined)
+function handleDecrementItem(sessionId, equipmentId) {
+    console.log(`Decrementing item ${equipmentId} in session ${sessionId}`);
+    const updatedSession = scanStorage.decrementQuantity(sessionId, equipmentId);
+    updateSessionUI(updatedSession);
+}
+
+function handleIncrementItem(sessionId, equipmentId) {
+    console.log(`Incrementing item ${equipmentId} in session ${sessionId}`);
+    // We need the original item details to re-add it (which increments quantity)
+    // Find the item in the current session to get its details
+    const session = scanStorage.getSession(sessionId);
+    const item = session?.items.find(i => i.equipment_id === equipmentId);
+    if (item) {
+        const updatedSession = scanStorage.addEquipment(sessionId, item); // Re-adding increments quantity
+        updateSessionUI(updatedSession);
+    } else {
+        console.error(`Could not find item with ID ${equipmentId} to increment.`);
+    }
+}
+
+// Modify removeEquipmentFromSession to accept sessionId
+function removeEquipmentFromSession(sessionId, equipmentId) { // Added sessionId
+    if (!sessionId) {
+        console.error("Cannot remove item, session ID is missing.");
+        return;
+    }
+
+    const updatedSession = scanStorage.removeEquipment(sessionId, equipmentId);
+    updateSessionUI(updatedSession);
+
+    showToast('Оборудование удалено из сессии', 'success');
 }
 
 // Show new session modal
@@ -162,6 +286,86 @@ function showLoadSessionModal() {
 
     // Load server sessions when switching to that tab
     document.querySelector('button[data-bs-target="#serverSessions"]').addEventListener('click', loadServerSessions);
+
+    // Ensure listeners are added only once or cleared first
+    const localList = document.getElementById('localSessionsList');
+    const serverList = document.getElementById('serverSessionsList');
+    localList.querySelectorAll('.load-local-session-btn').forEach(btn => {
+        btn.replaceWith(btn.cloneNode(true)); // Simple way to remove old listeners
+    });
+    serverList.querySelectorAll('.load-server-session-btn').forEach(btn => {
+        btn.replaceWith(btn.cloneNode(true));
+    });
+     localList.querySelectorAll('.delete-local-session-btn').forEach(btn => {
+        btn.replaceWith(btn.cloneNode(true));
+    });
+     serverList.querySelectorAll('.delete-server-session-btn').forEach(btn => {
+        btn.replaceWith(btn.cloneNode(true));
+    });
+
+    // Add event listeners for loading sessions (Local)
+    localList.querySelectorAll('.load-local-session-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const sessionId = e.currentTarget.getAttribute('data-session-id');
+            const session = scanStorage.setActiveSession(sessionId);
+            updateSessionUI(session);
+            startAutoSyncTimer(); // Start timer when session is loaded
+            bootstrap.Modal.getInstance('#loadSessionModal').hide();
+            showToast('Локальная сессия загружена', 'success');
+        });
+    });
+
+    // Add event listeners for loading sessions (Server)
+    serverList.querySelectorAll('.load-server-session-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            const serverSessionId = e.currentTarget.getAttribute('data-session-id');
+            try {
+                const session = await scanSync.loadSessionFromServer(serverSessionId);
+                if (session) {
+                    updateSessionUI(session);
+                    startAutoSyncTimer(); // Start timer when session is loaded
+                    bootstrap.Modal.getInstance('#loadSessionModal').hide();
+                    showToast('Серверная сессия загружена', 'success');
+                }
+            } catch (error) {
+                showToast('Ошибка загрузки сессии с сервера', 'danger');
+            }
+        });
+    });
+
+    // Add event listeners for deleting sessions (Local)
+    localList.querySelectorAll('.delete-local-session-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const sessionId = e.currentTarget.getAttribute('data-session-id');
+            if (confirm('Удалить локальную сессию?')) {
+                const isActive = scanStorage.getActiveSession()?.id === sessionId;
+                scanStorage.deleteSession(sessionId);
+                refreshLocalSessionsList(); // Refresh only local list
+                if (isActive) {
+                    stopAutoSyncTimer(); // Stop timer if active session was deleted
+                    updateSessionUI(null); // Clear active session UI
+                }
+                showToast('Локальная сессия удалена', 'success');
+            }
+        });
+    });
+
+     // Add event listeners for deleting sessions (Server) - Needs backend endpoint
+     serverList.querySelectorAll('.delete-server-session-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            const serverSessionId = e.currentTarget.getAttribute('data-session-id');
+            if (confirm('Удалить сессию с сервера? Локальная копия (если есть) останется.')) {
+                 try {
+                    // TODO: Implement scanSync.deleteSessionFromServer(serverSessionId);
+                    await scanSync.deleteSessionFromServer(serverSessionId);
+                    loadServerSessions(); // Refresh server list
+                    showToast('Сессия удалена с сервера', 'success');
+                } catch (error) {
+                    showToast('Ошибка удаления сессии с сервера', 'danger');
+                }
+            }
+        });
+    });
 }
 
 // Load server sessions
@@ -310,40 +514,25 @@ function createProjectFromSession() {
     }
 }
 
-// Remove equipment from session
-function removeEquipmentFromSession(equipmentId) {
-    const activeSession = scanStorage.getActiveSession();
-    if (!activeSession) return;
-
-    const updatedSession = scanStorage.removeEquipment(activeSession.id, equipmentId);
-    updateSessionUI(updatedSession);
-
-    showToast('Оборудование удалено из сессии', 'success');
-}
-
 // Handle successful scan
-async function handleScan(equipment) {
+async function handleScan(equipment, scanInfo) {
     currentEquipment = equipment;
     updateScanResult(equipment);
     updateQuickActions(true);
     addToScanHistory(equipment);
 
-    // Add equipment to active session
+    // Handle session addition based on scanInfo flags
     const activeSession = scanStorage.getActiveSession();
     if (activeSession) {
-        // Format equipment for session
-        const equipmentItem = {
-            equipment_id: currentEquipment.id,
-            barcode: currentEquipment.barcode,
-            name: currentEquipment.name,
-            category_name: currentEquipment.category_name
-        };
-
-        // Add to session
-        const updatedSession = scanStorage.addEquipment(activeSession.id, equipmentItem);
-        updateSessionUI(updatedSession);
-
-        showToast('Оборудование автоматически добавлено в сессию', 'success');
+        if (scanInfo.isDuplicate) {
+             showToast(`Оборудование "${equipment.name}" уже есть в сессии`, 'info');
+             // Optionally, briefly highlight the existing item in the list?
+        } else if (scanInfo.addedToSession) {
+             // Item was successfully added by processBarcode
+             updateSessionUI(scanStorage.getSession(activeSession.id)); // Refresh UI from storage
+             showToast(`Оборудование "${equipment.name}" добавлено в сессию`, 'success');
+        }
+        // If neither duplicate nor added (e.g., scanStorage disabled or error), do nothing special regarding session toast
     }
 }
 
@@ -383,23 +572,30 @@ function updateScanResult(equipment) {
         return;
     }
 
+    // Format currency if function exists
+    const formattedCost = typeof formatCurrency === 'function'
+        ? formatCurrency(equipment.replacement_cost)
+        : equipment.replacement_cost; // Fallback to raw number if formatter unavailable
+
     container.innerHTML = `
-        <div class="text-center mb-3">
-            <span class="badge bg-${getStatusColor(equipment.status)} fs-5">
+        <div class="d-flex justify-content-between align-items-center mb-1">
+            <h5 class="mb-0 me-2">${equipment.name}</h5>
+            <span class="badge bg-${getStatusColor(equipment.status)} fs-6 text-nowrap flex-shrink-0">
                 ${equipment.status}
             </span>
         </div>
-        <h5>${equipment.name}</h5>
-        <p class="text-muted">${equipment.category_name}</p>
-        <div class="mb-3">
-            <small class="d-block"><strong>Серийный номер:</strong> ${equipment.serial_number}</small>
-            <small class="d-block"><strong>Штрих-код:</strong> ${equipment.barcode}</small>
+        <div class="mb-2">
+            <p class="text-muted small mb-0">${equipment.category_name || 'Без категории'}</p>
+        </div>
+        <div class="mb-2">
+            <small class="d-block text-muted"><i class="fas fa-barcode me-1"></i>${equipment.barcode}</small>
+            ${equipment.serial_number ? `<small class="d-block text-muted"><i class="fas fa-hashtag me-1"></i>${equipment.serial_number}</small>` : ''}
         </div>
         <div class="mb-3">
-            <small class="d-block"><strong>Сумма материальной ответственности:</strong> ${equipment.replacement_cost} ₽</small>
+            <strong class="d-block">МО: ${formattedCost}</strong>
         </div>
-        <div class="text-center">
-            <a href="/equipment/${equipment.id}" class="btn btn-sm btn-outline-primary">
+        <div class="text-center mt-3">
+            <a href="#/equipment/${equipment.id}" class="btn btn-sm btn-outline-primary">
                 <i class="fas fa-info-circle"></i> Подробнее
             </a>
         </div>
@@ -435,7 +631,7 @@ function updateScannerControls(isInitialized) {
 // Update quick action buttons
 function updateQuickActions(enabled) {
     // Update standard buttons
-    document.getElementById('createBooking').disabled = !enabled;
+    // document.getElementById('createBooking').disabled = !enabled; // Removed as button no longer exists
     document.getElementById('updateStatus').disabled = !enabled;
     document.getElementById('viewHistory').disabled = !enabled;
 }
@@ -463,16 +659,26 @@ async function loadEquipmentHistory(equipmentId) {
         `).join('');
 
         // Update booking history
-        document.querySelector('#bookingHistory .list-group').innerHTML = bookingHistory.map(booking => `
-            <a href="/bookings/${booking.id}" class="list-group-item list-group-item-action">
-                <div class="d-flex w-100 justify-content-between">
-                    <h6 class="mb-1">${booking.client.name}</h6>
-                    <small class="text-muted">${formatDate(booking.start_date)}</small>
-                </div>
-                <p class="mb-1">${formatDateRange(booking.start_date, booking.end_date)}</p>
-                <small class="text-${getStatusColor(booking.status)}">${booking.status}</small>
-            </a>
-        `).join('');
+        const bookingHistoryHtml = bookingHistory.map(booking => {
+            // Safely access related names, providing defaults if null/undefined
+            const clientName = booking.client_name || 'Клиент не указан';
+            const equipmentName = booking.equipment_name || 'Оборудование не указано';
+            const projectName = booking.project_name || 'Без проекта'; // Access project_name from response
+            const bookingStatus = booking.status || 'Статус не указан';
+
+            return `
+                <a href="/bookings/${booking.id}" class="list-group-item list-group-item-action">
+                    <div class="d-flex w-100 justify-content-between">
+                        <h6 class="mb-1">${clientName} (${projectName})</h6>
+                        <small class="text-muted">${formatDate(booking.start_date)}</small>
+                    </div>
+                    <p class="mb-1">${formatDateRange(booking.start_date, booking.end_date)}</p>
+                    <small class="text-${getStatusColor(bookingStatus)}">${bookingStatus}</small>
+                </a>
+            `;
+        }).join('');
+        document.querySelector('#bookingHistory .list-group').innerHTML = bookingHistoryHtml || '<li class="list-group-item">Нет истории бронирований</li>';
+
     } catch (error) {
         console.error('Error loading equipment history:', error);
         showToast('Ошибка загрузки истории', 'danger');
@@ -529,11 +735,11 @@ document.getElementById('viewHistory').addEventListener('click', () => {
     }
 });
 
-document.getElementById('createBooking').addEventListener('click', () => {
-    if (currentEquipment) {
-        window.location.href = `/bookings/?equipment=${currentEquipment.id}`;
-    }
-});
+// document.getElementById('createBooking').addEventListener('click', () => {
+//     if (currentEquipment) {
+//         window.location.href = `/bookings/?equipment=${currentEquipment.id}`;
+//     }
+// });
 
 // Helper function for status colors
 function getStatusColor(status) {
@@ -628,18 +834,29 @@ function refreshSessionsList() {
 }
 
 // Clean expired sessions
-function cleanExpiredSessions() {
-    const removedCount = scanStorage.cleanExpiredSessions();
+async function cleanExpiredSessions() {
+    try {
+        const response = await api.post('/scan-sessions/clean-expired');
+        const removedCount = response.cleaned_count; // Assuming the endpoint returns { cleaned_count: count }
 
-    if (removedCount > 0) {
-        refreshSessionsList();
-        showToast(`Удалено ${removedCount} устаревших сессий`, 'success');
+        if (removedCount > 0) {
+            // Refresh both local and server lists if the modal is open
+            if (document.getElementById('manageSessionsModal').classList.contains('show')) {
+                 refreshSessionsList(); // Refresh local sessions
+                 loadServerSessions(); // Refresh server sessions
+            }
+            showToast(`Удалено ${removedCount} устаревших сессий с сервера`, 'success');
 
-        // Update UI if active session was removed
-        const activeSession = scanStorage.getActiveSession();
-        updateSessionUI(activeSession);
-    } else {
-        showToast('Устаревших сессий не найдено', 'info');
+            // It's unlikely the *active* session was just expired and cleaned on the server,
+            // so potentially no need to update the main UI unless specifically needed.
+            // const activeSession = scanStorage.getActiveSession();
+            // updateSessionUI(activeSession);
+        } else {
+            showToast('Устаревших сессий на сервере не найдено', 'info');
+        }
+    } catch (error) {
+        console.error('Error cleaning expired sessions:', error);
+        showToast('Ошибка при очистке устаревших сессий на сервере', 'danger');
     }
 }
 
@@ -657,6 +874,123 @@ function resetAllSessions() {
         updateSessionUI(newSession);
     }
 }
+
+// Setup event listeners (moved from bottom for clarity)
+function setupEventListeners() {
+    // New Session Button
+    document.getElementById('newSessionBtn').addEventListener('click', () => {
+        const sessionName = prompt('Введите имя новой сессии:', 'Сессия ' + new Date().toLocaleString());
+        if (sessionName) {
+            const newSession = scanStorage.createSession(sessionName);
+            updateSessionUI(newSession);
+            startAutoSyncTimer(); // Start timer for new session
+            showToast('Новая сессия создана и активирована', 'success');
+        }
+    });
+
+    // Load Session Button
+    document.getElementById('loadSessionBtn').addEventListener('click', showLoadSessionModal);
+
+    // Manage Sessions Button
+    document.getElementById('manageSessionsBtn').addEventListener('click', showManageSessionsModal);
+
+    // Rename Session Button
+    document.getElementById('renameSessionBtn').addEventListener('click', () => {
+        const activeSession = scanStorage.getActiveSession();
+        if (activeSession) {
+            const newName = prompt('Введите новое имя сессии:', activeSession.name);
+            if (newName && newName !== activeSession.name) {
+                scanStorage.renameSession(activeSession.id, newName);
+                updateSessionUI(scanStorage.getActiveSession()); // Refresh UI
+                showToast('Сессия переименована', 'success');
+            }
+        }
+    });
+
+    // Clear Session Button
+    document.getElementById('clearSessionBtn').addEventListener('click', () => {
+        const activeSession = scanStorage.getActiveSession();
+        if (activeSession && confirm('Вы уверены, что хотите очистить текущую сессию? Все отсканированные позиции будут удалены.')) {
+            scanStorage.clearEquipment(activeSession.id);
+            updateSessionUI(scanStorage.getActiveSession()); // Refresh UI
+            showToast('Сессия очищена', 'warning');
+            // No need to stop/start timer, session still active
+        }
+    });
+
+    // Sync Session Button (Manual Sync)
+    document.getElementById('syncSessionBtn').addEventListener('click', syncActiveSession);
+
+    // Create Project Button
+    document.getElementById('createProjectBtn').addEventListener('click', createProjectFromSession);
+
+    // Quick Actions
+    document.getElementById('updateStatus').addEventListener('click', () => {
+        // ... (existing code) ...
+    });
+    document.getElementById('saveStatus').addEventListener('click', async () => {
+        // ... (existing code) ...
+    });
+    document.getElementById('viewHistory').addEventListener('click', () => {
+        // ... (existing code) ...
+    });
+
+    // Add other listeners if needed...
+}
+
+// --- Auto-Sync Logic ---
+
+// Function for auto-syncing the active session
+async function autoSyncActiveSession() {
+    const activeSession = scanStorage.getActiveSession();
+    if (activeSession) {
+        if (scanStorage.isSessionDirty(activeSession.id)) {
+            console.log('[AutoSync] Session dirty, attempting sync:', activeSession.name);
+            try {
+                // Use the same sync logic as manual sync, but without aggressive UI updates/toasts
+                const updatedSession = await scanSync.syncSessionWithServer(activeSession.id);
+                if (updatedSession) {
+                    // IMPORTANT: Update the local session data with server response
+                    // This also marks the session as clean (dirty: false)
+                    scanStorage.updateSession(updatedSession);
+                    console.log('[AutoSync] Sync successful.');
+                    // Optionally, subtly update parts of the UI if needed, e.g., sync status icon
+                    updateSessionUI(updatedSession); // Update UI to reflect sync status change
+                } else {
+                    console.warn('[AutoSync] Sync function did not return updated session.');
+                }
+            } catch (error) {
+                console.error('[AutoSync] Sync failed:', error);
+                // Consider showing a non-intrusive error indicator
+            }
+        } else {
+            console.log('[AutoSync] Session clean, skipping sync.');
+        }
+    } else {
+        // If no active session, ensure timer is stopped
+        console.log('[AutoSync] No active session, stopping timer.');
+        stopAutoSyncTimer();
+    }
+}
+
+// Function to start the auto-sync timer
+function startAutoSyncTimer() {
+    stopAutoSyncTimer(); // Clear any existing timer first
+    console.log(`[AutoSync] Starting timer (${AUTO_SYNC_INTERVAL_MS}ms)`);
+    autoSyncIntervalId = setInterval(autoSyncActiveSession, AUTO_SYNC_INTERVAL_MS);
+}
+
+// Function to stop the auto-sync timer
+function stopAutoSyncTimer() {
+    if (autoSyncIntervalId) {
+        console.log('[AutoSync] Stopping timer');
+        clearInterval(autoSyncIntervalId);
+        autoSyncIntervalId = null;
+    }
+}
+
+// Ensure timer stops if window is closed/navigated away
+window.addEventListener('beforeunload', stopAutoSyncTimer);
 
 // Initialize page
 document.addEventListener('DOMContentLoaded', initScanner);

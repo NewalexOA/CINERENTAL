@@ -30,7 +30,7 @@ async def test_create_equipment_with_generated_barcode(
             'description': 'Test Description',
             'category_id': category.id,
             'serial_number': 'SN001',
-            'replacement_cost': 1000.00,
+            'replacement_cost': 1000,
         },
     )
 
@@ -78,7 +78,7 @@ async def test_create_equipment_with_custom_barcode(
             'category_id': category.id,
             'custom_barcode': custom_barcode,
             'serial_number': 'SN002',
-            'replacement_cost': 1000.00,
+            'replacement_cost': 1000,
         },
     )
 
@@ -112,7 +112,7 @@ async def test_create_equipment_without_barcode(
             'description': 'Test Description',
             'category_id': category.id,
             'serial_number': 'SN003',
-            'replacement_cost': 1000.00,
+            'replacement_cost': 1000,
         },
     )
 
@@ -153,7 +153,7 @@ async def test_create_equipment_with_invalid_barcode(
             'category_id': category.id,
             'custom_barcode': 'INVALID-FORMAT',  # Invalid format
             'serial_number': 'SN004',
-            'replacement_cost': 1000.00,
+            'replacement_cost': 1000,
         },
     )
 
@@ -191,7 +191,7 @@ async def test_create_equipment_with_duplicate_barcode(
             'category_id': category.id,
             'custom_barcode': custom_barcode,
             'serial_number': 'SN005',
-            'replacement_cost': 1000.00,
+            'replacement_cost': 1000,
         },
     )
 
@@ -206,7 +206,7 @@ async def test_create_equipment_with_duplicate_barcode(
             'category_id': category.id,
             'custom_barcode': custom_barcode,  # Duplicate
             'serial_number': 'SN006',
-            'replacement_cost': 1000.00,
+            'replacement_cost': 1000,
         },
     )
 

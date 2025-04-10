@@ -1,7 +1,6 @@
 """Unit tests for client service."""
 
 from datetime import datetime, timedelta, timezone
-from decimal import Decimal
 
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -67,7 +66,7 @@ class TestClientService:
             description='Test Description',
             serial_number='TEST001',
             barcode='TEST001',
-            replacement_cost=Decimal('1000.00'),
+            replacement_cost=1000.00,
             status=EquipmentStatus.AVAILABLE,
         )
         db_session.add(equipment)

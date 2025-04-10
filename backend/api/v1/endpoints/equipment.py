@@ -19,6 +19,7 @@ from backend.api.v1.decorators import (
     typed_post,
     typed_put,
 )
+from backend.api.v1.endpoints.bookings import _booking_to_response
 from backend.core.database import get_db
 from backend.exceptions import BusinessError, NotFoundError, StateError, ValidationError
 from backend.models.booking import BookingStatus
@@ -62,19 +63,16 @@ async def create_equipment_endpoint(
     """
     try:
         # Validate replacement cost if provided
-        if (
-            equipment.replacement_cost is not None
-            and float(equipment.replacement_cost) < 0
-        ):
+        if equipment.replacement_cost is not None and equipment.replacement_cost < 0:
             raise HTTPException(
                 status_code=http_status.HTTP_400_BAD_REQUEST,
                 detail='Replacement cost must be greater than or equal to 0',
             )
 
-        # Check that replacement cost is within the database limits
+        # Check that replacement cost is within reasonable limits (adjust if needed)
         if (
             equipment.replacement_cost is not None
-            and float(equipment.replacement_cost) >= 100000000
+            and equipment.replacement_cost >= 100000000
         ):
             raise HTTPException(
                 status_code=http_status.HTTP_400_BAD_REQUEST,
@@ -82,9 +80,9 @@ async def create_equipment_endpoint(
             )
 
         service = EquipmentService(db)
-        replacement_cost = 0.0
-        if equipment.replacement_cost:
-            replacement_cost = float(equipment.replacement_cost)
+        replacement_cost_value = (
+            equipment.replacement_cost if equipment.replacement_cost is not None else 0
+        )
 
         # Check if we should validate barcode format
         # If custom_barcode comes from frontend manual input, don't validate format
@@ -101,7 +99,7 @@ async def create_equipment_endpoint(
             category_id=equipment.category_id,
             custom_barcode=equipment.custom_barcode,
             serial_number=equipment.serial_number,
-            replacement_cost=replacement_cost,
+            replacement_cost=replacement_cost_value,
             notes=equipment.notes,
             validate_barcode_format=validate_barcode_format,
         )
@@ -274,10 +272,7 @@ async def update_equipment(
     """Update equipment by ID."""
     try:
         # Validate replacement cost
-        if (
-            equipment.replacement_cost is not None
-            and float(equipment.replacement_cost) < 0
-        ):
+        if equipment.replacement_cost is not None and equipment.replacement_cost < 0:
             raise HTTPException(
                 status_code=http_status.HTTP_400_BAD_REQUEST,
                 detail='Replacement cost must be greater than or equal to 0',
@@ -341,7 +336,7 @@ async def update_equipment(
                 'replacement_cost' in equipment_data
                 and equipment_data['replacement_cost'] is not None
             ):
-                replacement_cost_value = float(equipment_data['replacement_cost'])
+                replacement_cost_value = equipment_data['replacement_cost']
 
             updated_equipment = await service.update_equipment(
                 equipment_id,
@@ -353,7 +348,7 @@ async def update_equipment(
                 category_id=equipment_data.get('category_id'),
                 status=equipment_data.get('status'),
             )
-            return EquipmentResponse.model_validate(updated_equipment.__dict__)
+            return EquipmentResponse.model_validate(updated_equipment)
         except NotFoundError as e:
             raise HTTPException(
                 status_code=http_status.HTTP_404_NOT_FOUND,
@@ -447,7 +442,7 @@ async def get_equipment_by_barcode(
                 f'Equipment with barcode {barcode} not found',
                 details={'barcode': barcode},
             )
-        return EquipmentResponse.model_validate(equipment.__dict__)
+        return EquipmentResponse.model_validate(equipment)
     except BusinessError as e:
         if isinstance(e, NotFoundError):
             raise HTTPException(
@@ -582,9 +577,13 @@ async def get_equipment_bookings(
                 detail=f'Equipment with ID {equipment_id} not found',
             )
 
-        # Get equipment bookings
-        bookings = await service.get_equipment_bookings(equipment_id)
-        return [BookingResponse.model_validate(booking) for booking in bookings]
+        # Get equipment bookings using the service
+        # The repository now loads client, project, AND equipment
+        booking_service = BookingService(db)
+        bookings = await booking_service.get_by_equipment(equipment_id)
+
+        # Use the helper function to correctly format the response
+        return [_booking_to_response(booking) for booking in bookings]
     except NotFoundError as e:
         raise HTTPException(
             status_code=http_status.HTTP_404_NOT_FOUND,
@@ -686,7 +685,7 @@ async def update_equipment_notes(
             notes=notes,
         )
 
-        return EquipmentResponse.model_validate(updated_equipment.__dict__)
+        return EquipmentResponse.model_validate(updated_equipment)
     except NotFoundError as e:
         raise HTTPException(
             status_code=http_status.HTTP_404_NOT_FOUND,

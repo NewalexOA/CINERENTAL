@@ -16,6 +16,7 @@ const STORAGE_KEY = 'equipment_scan_sessions';
  * @property {string} updatedAt - Last update timestamp
  * @property {boolean} syncedWithServer - Server sync flag
  * @property {number|null} serverSessionId - Server session ID (if synced)
+ * @property {boolean} [dirty] - Flag indicating if session has unsynced changes (optional)
  */
 
 /**
@@ -89,7 +90,8 @@ const scanStorage = {
             items: [],
             updatedAt: new Date().toISOString(),
             syncedWithServer: false,
-            serverSessionId: null
+            serverSessionId: null,
+            dirty: true // New sessions are dirty by default
         };
 
         sessions.push(newSession);
@@ -108,46 +110,108 @@ const scanStorage = {
     addEquipment(sessionId, equipment) {
         const sessions = this.getSessions();
         const sessionIndex = sessions.findIndex(session => session.id === sessionId);
-
         if (sessionIndex === -1) return undefined;
 
-        // Ensure equipment has equipment_id property
-        const equipmentId = equipment.id || equipment.equipment_id;
-        if (!equipmentId) {
-            console.error('Equipment missing ID:', equipment);
-            return sessions[sessionIndex];
+        const equipmentId = Number(equipment.id || equipment.equipment_id);
+        if (isNaN(equipmentId)) {
+            console.error('Invalid equipment ID:', equipment);
+            return undefined;
         }
 
-        // Normalize equipment object
+        // Normalize equipment object, always add quantity: 1 initially
         const normalizedEquipment = {
             equipment_id: equipmentId,
             barcode: equipment.barcode || '',
             name: equipment.name || 'Unknown Equipment',
-            category_id: equipment.category_id || equipment.category?.id,
-            category_name: equipment.category_name || equipment.category?.name || 'Без категории'
+            serial_number: equipment.serial_number || null, // Ensure serial_number exists, can be null
+            category_id: equipment.category_id || equipment.category?.id || null,
+            category_name: equipment.category_name || equipment.category?.name || 'Без категории',
+            quantity: 1
         };
 
-        // Check for duplicates using equipment_id
-        const isDuplicate = sessions[sessionIndex].items.some(
-            item => (item.id === equipmentId || item.equipment_id === equipmentId)
-        );
+        const sessionItems = sessions[sessionIndex].items;
+        const existingItemIndex = sessionItems.findIndex(item => item.equipment_id === normalizedEquipment.equipment_id);
 
-        if (isDuplicate) {
-            console.log(`Equipment with ID ${equipmentId} already in session, skipping`);
-            return sessions[sessionIndex];
+        // Check if the incoming item has a serial number
+        const hasSerialNumber = !!normalizedEquipment.serial_number;
+
+        if (hasSerialNumber) {
+            // Item HAS serial number: check if ANY item with the same equipment_id already exists
+            if (existingItemIndex !== -1) {
+                console.log(`Equipment with ID ${equipmentId} (with serial number) already represented in session, skipping duplicate.`);
+                return 'duplicate';
+            }
+            // No existing item with this ID found, add the new one
+            sessionItems.push(normalizedEquipment);
+        } else {
+            // Item does NOT have serial number: check if an item with the same equipment_id exists to increment quantity
+            if (existingItemIndex !== -1) {
+                // Found existing item, increment quantity
+                const existingItem = sessionItems[existingItemIndex];
+                existingItem.quantity = (existingItem.quantity || 1) + 1; // Increment quantity
+                console.log(`Incremented quantity for equipment ID ${equipmentId} (no serial number). New quantity: ${existingItem.quantity}`);
+            } else {
+                // No existing item found, add the new one (with quantity: 1)
+                sessionItems.push(normalizedEquipment);
+            }
         }
 
-        // Add normalized equipment to session
-        sessions[sessionIndex].items.push(normalizedEquipment);
+        // Update session metadata and save
         sessions[sessionIndex].updatedAt = new Date().toISOString();
-        sessions[sessionIndex].syncedWithServer = false;
-
+        sessions[sessionIndex].syncedWithServer = false; // Mark as unsynced after modification
+        sessions[sessionIndex].dirty = true; // Mark session as dirty
         this._saveSessions(sessions);
+
+        // Return the updated session (important for UI updates)
         return sessions[sessionIndex];
     },
 
     /**
-     * Remove equipment from a session
+     * Decrement quantity or remove equipment without serial number from a session.
+     * @param {string} sessionId - The ID of the session.
+     * @param {number} equipmentId - The ID of the equipment to decrement.
+     * @returns {ScanSession|undefined} The updated session object, or undefined if session/item not found or item has serial number.
+     */
+    decrementQuantity(sessionId, equipmentId) {
+        const sessions = this.getSessions();
+        const sessionIndex = sessions.findIndex(session => session.id === sessionId);
+        if (sessionIndex === -1) {
+            console.error(`Session with ID ${sessionId} not found for decrementing.`);
+            return undefined;
+        }
+
+        const sessionItems = sessions[sessionIndex].items;
+        // Find the item by ID *and* ensure it does NOT have a serial number
+        const itemIndex = sessionItems.findIndex(item => item.equipment_id === equipmentId && !item.serial_number);
+
+        if (itemIndex === -1) {
+            console.warn(`Equipment with ID ${equipmentId} (without serial number) not found in session ${sessionId} for decrementing.`);
+            return sessions[sessionIndex]; // Return current session without changes
+        }
+
+        const item = sessionItems[itemIndex];
+
+        if (item.quantity && item.quantity > 1) {
+            // Decrement quantity if it's greater than 1
+            item.quantity -= 1;
+            console.log(`Decremented quantity for equipment ID ${equipmentId}. New quantity: ${item.quantity}`);
+        } else {
+            // Remove the item if quantity is 1 or less/undefined
+            sessionItems.splice(itemIndex, 1);
+            console.log(`Removed equipment ID ${equipmentId} (quantity was 1 or less).`);
+        }
+
+        // Update session metadata and save
+        sessions[sessionIndex].updatedAt = new Date().toISOString();
+        sessions[sessionIndex].syncedWithServer = false;
+        sessions[sessionIndex].dirty = true; // Mark session as dirty
+        this._saveSessions(sessions);
+
+        return sessions[sessionIndex];
+    },
+
+    /**
+     * Remove equipment from a session (handles both serialized and non-serialized by ID)
      * @param {string} sessionId - Session ID
      * @param {number} equipmentId - Equipment ID
      * @returns {ScanSession|undefined} - Updated session or undefined
@@ -165,6 +229,7 @@ const scanStorage = {
 
         sessions[sessionIndex].updatedAt = new Date().toISOString();
         sessions[sessionIndex].syncedWithServer = false;
+        sessions[sessionIndex].dirty = true; // Mark session as dirty
 
         this._saveSessions(sessions);
         return sessions[sessionIndex];
@@ -185,6 +250,7 @@ const scanStorage = {
         sessions[sessionIndex].items = [];
         sessions[sessionIndex].updatedAt = new Date().toISOString();
         sessions[sessionIndex].syncedWithServer = false;
+        sessions[sessionIndex].dirty = true; // Mark session as dirty
 
         this._saveSessions(sessions);
         return sessions[sessionIndex];
@@ -227,6 +293,7 @@ const scanStorage = {
         sessions[sessionIndex].name = name;
         sessions[sessionIndex].updatedAt = new Date().toISOString();
         sessions[sessionIndex].syncedWithServer = false;
+        sessions[sessionIndex].dirty = true; // Mark session as dirty
 
         this._saveSessions(sessions);
         return sessions[sessionIndex];
@@ -273,6 +340,52 @@ const scanStorage = {
                 };
             })
         };
+    },
+
+    /**
+     * Update a session with new data (usually after server sync)
+     * @param {ScanSession} updatedSessionData - New session data
+     * @returns {ScanSession|undefined} Updated session
+     */
+    updateSession(updatedSessionData) {
+        const sessions = this.getSessions();
+        const sessionIndex = sessions.findIndex(session => session.id === updatedSessionData.id);
+        if (sessionIndex === -1) return undefined;
+
+        // Merge updated data, ensuring not to overwrite local-only flags if not provided
+        sessions[sessionIndex] = {
+            ...sessions[sessionIndex], // Keep existing data
+            ...updatedSessionData, // Overwrite with new data
+            dirty: false // Mark as clean after successful update/sync
+        };
+        this._saveSessions(sessions);
+        return sessions[sessionIndex];
+    },
+
+    /**
+     * Checks if a session has unsynced changes.
+     * @param {string} sessionId - The ID of the session.
+     * @returns {boolean} True if the session is dirty, false otherwise.
+     */
+    isSessionDirty(sessionId) {
+        const session = this.getSession(sessionId);
+        return session ? !!session.dirty : false; // Return true if dirty is true, false otherwise
+    },
+
+    /**
+     * Marks a session as clean (not dirty), usually after a successful sync.
+     * @param {string} sessionId - The ID of the session.
+     * @returns {ScanSession|undefined} The updated session.
+     */
+    markSessionAsClean(sessionId) {
+        const sessions = this.getSessions();
+        const sessionIndex = sessions.findIndex(session => session.id === sessionId);
+        if (sessionIndex === -1) return undefined;
+
+        sessions[sessionIndex].dirty = false;
+        // Optionally update updatedAt timestamp? Depends on requirements.
+        this._saveSessions(sessions);
+        return sessions[sessionIndex];
     }
 };
 
@@ -381,8 +494,8 @@ const scanSync = {
      */
     async getUserSessionsFromServer(userId) {
         try {
-            // Get sessions from server
-            return await api.get(`/scan-sessions/user/${userId}`);
+            // Get sessions from server using query parameter
+            return await api.get('/scan-sessions/', { user_id: userId });
         } catch (error) {
             console.error('Error getting user sessions from server:', error);
             showToast('Ошибка получения сессий с сервера: ' + (error.message || 'Неизвестная ошибка'), 'danger');

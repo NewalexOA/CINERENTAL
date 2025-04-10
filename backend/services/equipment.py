@@ -5,7 +5,6 @@ including inventory management, availability tracking, and equipment status upda
 """
 
 from datetime import datetime, timezone
-from decimal import Decimal
 from typing import Any, Dict, List, Optional, Set
 
 from sqlalchemy import select
@@ -73,7 +72,7 @@ class EquipmentService:
         name: str,
         description: Optional[str],
         category_id: int,
-        replacement_cost: float = 0.0,
+        replacement_cost: Optional[int] = 0,
         custom_barcode: Optional[str] = None,
         serial_number: Optional[str] = None,
         notes: Optional[str] = None,
@@ -138,9 +137,7 @@ class EquipmentService:
             category_id=category_id,
             barcode=barcode,
             serial_number=serial_number,
-            replacement_cost=(
-                Decimal(str(replacement_cost)) if replacement_cost is not None else None
-            ),
+            replacement_cost=replacement_cost,
             notes=notes,
             status=EquipmentStatus.AVAILABLE,
         )
@@ -271,7 +268,7 @@ class EquipmentService:
         category_id: Optional[int] = None,
         barcode: Optional[str] = None,
         serial_number: Optional[str] = None,
-        replacement_cost: Optional[float] = None,
+        replacement_cost: Optional[int] = None,
         notes: Optional[str] = None,
         status: Optional[EquipmentStatus] = None,
     ) -> Equipment:
@@ -339,7 +336,7 @@ class EquipmentService:
         if serial_number is not None:
             equipment.serial_number = serial_number
         if replacement_cost is not None:
-            equipment.replacement_cost = Decimal(str(replacement_cost))
+            equipment.replacement_cost = replacement_cost
         if notes is not None:
             equipment.notes = notes
         if status is not None:
@@ -491,7 +488,7 @@ class EquipmentService:
         # Load equipment with category for response
         loaded_equipment = await self._load_equipment_with_category(equipment)
 
-        return EquipmentResponse.model_validate(loaded_equipment.__dict__)
+        return EquipmentResponse.model_validate(loaded_equipment)
 
     async def get_by_serial_number(self, serial_number: str) -> Optional[Equipment]:
         """Get equipment by serial number.

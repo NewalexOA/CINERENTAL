@@ -35,7 +35,7 @@ def prepare_equipment_data(
     if isinstance(equipment, dict):
         equipment_response = EquipmentResponse.model_validate(equipment)
     else:
-        equipment_response = EquipmentResponse.model_validate(equipment.__dict__)
+        equipment_response = EquipmentResponse.model_validate(equipment)
 
     item_dict = equipment_response.model_dump()
 

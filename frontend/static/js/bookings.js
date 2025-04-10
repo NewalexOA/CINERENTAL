@@ -94,14 +94,14 @@ const bookingManager = {
         if (dateRangeInput) {
             const dateRangeOptions = {
                 autoUpdateInput: false,
-                locale: {
+            locale: {
                     cancelLabel: 'Очистить',
                     applyLabel: 'Применить',
                     format: 'YYYY-MM-DD',
-                    separator: ' - ',
+                separator: ' - ',
                     daysOfWeek: moment.weekdaysMin(),
                     monthNames: moment.monthsShort(),
-                    firstDay: 1
+                firstDay: 1
                 },
                 ranges: {
                     'Сегодня': [moment(), moment()],
@@ -258,8 +258,8 @@ const bookingManager = {
         const { bookingsTableBody, clientSearchSpinner, equipmentSearchSpinner } = this.elements;
         if (!bookingsTableBody) {
             console.error('Bookings table body not found.');
-            return;
-        }
+                return;
+            }
 
         // Show spinners
         if (clientSearchSpinner) clientSearchSpinner.classList.remove('d-none');
@@ -347,7 +347,7 @@ const bookingManager = {
     resetFilter() {
         const { form, clientSearchInput, equipmentSearchInput, paymentStatusSelect, dateRangeInput } = this.elements;
         if (form) form.reset();
-        if (clientSearchInput) clientSearchInput.value = '';
+                if (clientSearchInput) clientSearchInput.value = '';
         if (equipmentSearchInput) equipmentSearchInput.value = ''; // Reset equipment search
         if (paymentStatusSelect) paymentStatusSelect.value = '';
          if (dateRangeInput) {

@@ -126,7 +126,7 @@ async def test_equipment(
         description='Test Description',
         serial_number='TEST001',
         barcode='TEST001',
-        replacement_cost=1000.0,
+        replacement_cost=1000,
     )
     yield equipment
 

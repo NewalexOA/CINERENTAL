@@ -200,3 +200,21 @@ async def delete_scan_session(
     result = await service.delete_session(session_id)
     if not result:
         raise NotFoundError(f'Scan session with ID {session_id} not found')
+
+
+@typed_post(
+    scan_sessions_router,
+    '/clean-expired',
+    status_code=status.HTTP_200_OK,
+    summary='Clean expired scan sessions',
+)
+async def clean_expired_sessions_endpoint(
+    service: ScanSessionService = Depends(get_service),
+) -> dict:
+    """Clean (soft delete) all expired scan sessions.
+
+    Returns:
+        dict: Dictionary containing the number of cleaned sessions.
+    """
+    cleaned_count = await service.clean_expired_sessions()
+    return {'cleaned_count': cleaned_count}

@@ -251,7 +251,7 @@ class TestCategoryHierarchy:
                 description='Professional DSLR camera',
                 category_id=dslr.id,
                 serial_number=f'CN5D{i}',
-                replacement_cost=3000.0,
+                replacement_cost=3000,
             )
 
         for i in range(2):
@@ -260,7 +260,7 @@ class TestCategoryHierarchy:
                 description='4K Super 35mm sensor camera',
                 category_id=video.id,
                 serial_number=f'SF7{i}',
-                replacement_cost=8000.0,
+                replacement_cost=8000,
             )
 
 
@@ -657,7 +657,7 @@ class TestEquipmentBusinessRules:
             description='Test equipment for maintenance status',
             serial_number='TEST-MAINT-001',
             barcode='BARCODE-MAINT-001',
-            replacement_cost=1000.00,
+            replacement_cost=1000,
             category_id=test_equipment.category_id,
             status=EquipmentStatus.AVAILABLE,
         )
@@ -687,7 +687,7 @@ class TestEquipmentBusinessRules:
         # Cannot update with negative replacement cos
         with pytest.raises(BusinessError, match='must be greater than or equal to 0'):
             await equipment_service.update_equipment(
-                test_equipment.id, replacement_cost=-1000.00
+                test_equipment.id, replacement_cost=-1000
             )
 
         # Cannot create duplicate barcode
@@ -701,7 +701,7 @@ class TestEquipmentBusinessRules:
             category_id=test_equipment.category_id,
             custom_barcode=valid_barcode,
             serial_number='UNIQUE001',
-            replacement_cost=1000.00,
+            replacement_cost=1000,
         )
 
         # Now try to create another equipment with the same barcode
@@ -712,5 +712,5 @@ class TestEquipmentBusinessRules:
                 category_id=test_equipment.category_id,
                 custom_barcode=valid_barcode,  # Same barcode as first equipment
                 serial_number='UNIQUE002',
-                replacement_cost=1000.00,
+                replacement_cost=1000,
             )

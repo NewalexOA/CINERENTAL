@@ -31,6 +31,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Add event listeners for action buttons
     initializeEventListeners(projectId);
+
+    // Initialize edit project modal
+    initializeEditProjectModal();
 });
 
 /**
@@ -225,7 +228,11 @@ function updateActionsBasedOnStatus(status) {
  */
 async function updateProjectStatus(projectId, newStatus) {
     try {
-        await api.patch(`/projects/${projectId}/status`, { status: newStatus });
+        const updatedProject = await api.patch(`/projects/${projectId}`, { status: newStatus });
+
+        if (projectData) {
+            projectData.status = updatedProject.status;
+        }
 
         // Find and Update UI for the status badge using the new ID
         const statusBadge = document.getElementById('project-status-badge');
@@ -284,12 +291,20 @@ function confirmCancelProject(projectId) {
  */
 async function cancelProject(projectId) {
     try {
-        await api.patch(`/projects/${projectId}/status`, { status: 'CANCELLED' });
+        const updatedProject = await api.patch(`/projects/${projectId}`, { status: 'CANCELLED' });
+
+        if (projectData) {
+            projectData.status = 'CANCELLED';
+        }
 
         // Update UI
         document.getElementById('projectStatus').value = 'CANCELLED';
-        document.getElementById('projectStatusBadge').className = 'badge bg-danger';
-        document.getElementById('projectStatusBadge').textContent = 'CANCELLED';
+
+        const statusBadge = document.getElementById('project-status-badge');
+        if (statusBadge) {
+            statusBadge.className = 'badge bg-danger fs-6';
+            statusBadge.textContent = 'CANCELLED';
+        }
 
         // Update actions
         updateActionsBasedOnStatus('CANCELLED');
@@ -360,5 +375,196 @@ function hideLoading() {
     const loadingEl = document.getElementById('loadingIndicator');
     if (loadingEl) {
         loadingEl.classList.add('d-none');
+    }
+}
+
+/**
+ * Initialize edit project modal
+ */
+function initializeEditProjectModal() {
+    const editModal = document.getElementById('editProjectModal');
+    if (!editModal) return;
+
+    // Initialize daterangepicker for project dates
+    const projectDates = editModal.querySelector('input[name="project_dates"]');
+    if (projectDates) {
+        $(projectDates).daterangepicker({
+            autoUpdateInput: false,
+            locale: DATERANGEPICKER_LOCALE
+        });
+
+        $(projectDates).on('apply.daterangepicker', function(ev, picker) {
+            $(this).val(picker.startDate.format('DD.MM.YYYY') + ' - ' + picker.endDate.format('DD.MM.YYYY'));
+        });
+
+        $(projectDates).on('cancel.daterangepicker', function(ev, picker) {
+            $(this).val('');
+        });
+    }
+
+    // Handle modal show event
+    editModal.addEventListener('show.bs.modal', async () => {
+        const form = editModal.querySelector('#editProjectForm');
+        if (!form || !projectData) return;
+
+        try {
+            // Load clients list
+            const clients = await api.get('/clients');
+            const clientSelect = form.querySelector('select[name="client_id"]');
+
+            if (clientSelect) {
+                // Save current selection
+                const currentClientId = clientSelect.value;
+
+                // Clear and rebuild options
+                clientSelect.innerHTML = '<option value="">Выберите клиента</option>';
+
+                // Add client options
+                clients.forEach(client => {
+                    const option = document.createElement('option');
+                    option.value = client.id;
+                    option.textContent = client.name;
+                    clientSelect.appendChild(option);
+                });
+
+                // Restore selection
+                clientSelect.value = projectData.client_id || '';
+            }
+
+            // Set project name
+            const nameInput = form.querySelector('input[name="name"]');
+            if (nameInput) nameInput.value = projectData.name || '';
+
+            // Set project dates
+            if (projectDates && projectData.start_date && projectData.end_date) {
+                const picker = $(projectDates).data('daterangepicker');
+                picker.setStartDate(moment(projectData.start_date));
+                picker.setEndDate(moment(projectData.end_date));
+                projectDates.value = picker.startDate.format('DD.MM.YYYY') + ' - ' + picker.endDate.format('DD.MM.YYYY');
+            }
+
+            // Set description
+            const descriptionInput = form.querySelector('textarea[name="description"]');
+            if (descriptionInput) descriptionInput.value = projectData.description || '';
+        } catch (error) {
+            console.error('Error loading clients:', error);
+            toast('Ошибка загрузки списка клиентов', 'danger');
+        }
+    });
+}
+
+/**
+ * Handle project update
+ * @param {string} projectId - Project ID
+ */
+async function handleUpdateProject(projectId) {
+    const form = document.getElementById('editProjectForm');
+    if (!form) return;
+
+    try {
+        // Show loading state
+        const updateButton = document.getElementById('updateProject');
+        if (updateButton) {
+            updateButton.disabled = true;
+            updateButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Сохранение...';
+        }
+
+        // Get form data
+        const formData = new FormData(form);
+        const dateRange = $(form.querySelector('input[name="project_dates"]')).data('daterangepicker');
+
+        // Create payload
+        const payload = {
+            name: formData.get('name'),
+            client_id: parseInt(formData.get('client_id')),
+            description: formData.get('description') || null,
+            start_date: dateRange?.startDate?.format('YYYY-MM-DDTHH:mm:ss'),
+            end_date: dateRange?.endDate?.format('YYYY-MM-DDTHH:mm:ss')
+        };
+
+        // Validate required fields
+        if (!payload.name) {
+            toast('Введите название проекта', 'warning');
+            return;
+        }
+        if (!payload.client_id) {
+            toast('Выберите клиента', 'warning');
+            return;
+        }
+        if (!dateRange || !dateRange.startDate || !dateRange.endDate) {
+            toast('Выберите период проекта', 'warning');
+            return;
+        }
+
+        // Send update request
+        const updatedProject = await api.patch(`/projects/${projectId}`, payload);
+
+        // Update local data
+        projectData = updatedProject;
+
+        // Update UI
+        renderProjectDetails(updatedProject);
+
+        // Hide modal
+        const modal = bootstrap.Modal.getInstance(document.getElementById('editProjectModal'));
+        if (modal) {
+            modal.hide();
+        }
+
+        toast('Проект успешно обновлен', 'success');
+    } catch (error) {
+        console.error('Error updating project:', error);
+        toast(`Ошибка при обновлении проекта: ${error.message}`, 'danger');
+    } finally {
+        // Restore button state
+        const updateButton = document.getElementById('updateProject');
+        if (updateButton) {
+            updateButton.disabled = false;
+            updateButton.innerHTML = 'Сохранить';
+        }
+    }
+}
+
+/**
+ * Update project notes
+ * @param {string} projectId - Project ID
+ * @param {string} notes - New notes text
+ */
+async function updateProjectNotes(projectId, notes) {
+    try {
+        // Disable the save button and show spinner
+        const submitBtn = document.querySelector('#notesForm button[type="submit"]');
+        if (submitBtn) {
+            const originalText = submitBtn.textContent;
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Сохранение...';
+        }
+
+        // Send the update to the API
+        const updatedProject = await api.patch(`/projects/${projectId}`, { notes });
+
+        // Update local data
+        if (projectData) {
+            projectData.notes = updatedProject.notes;
+        }
+
+        // Show success message
+        toast('Заметки к проекту обновлены', 'success');
+
+        // Restore the button
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = 'Сохранить';
+        }
+    } catch (error) {
+        console.error('Error updating project notes:', error);
+        toast('Ошибка при обновлении заметок к проекту', 'danger');
+
+        // Restore the button on error
+        const submitBtn = document.querySelector('#notesForm button[type="submit"]');
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = 'Сохранить';
+        }
     }
 }
