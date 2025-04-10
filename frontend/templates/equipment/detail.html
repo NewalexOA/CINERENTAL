@@ -214,11 +214,11 @@
 
 {% block scripts %}
     {# Pass data to JavaScript #}
-    <script
+<script
         id="equipment-data"
-        data-equipment-id="{{ equipment.id }}"
+    data-equipment-id="{{ equipment.id }}"
         data-category-id="{{ equipment.category_id or '' }}" {# Handle potential None category #}
-        data-barcode="{{ equipment.barcode }}"
+    data-barcode="{{ equipment.barcode }}"
     ></script>
     <script src="{{ url_for('static', path='js/equipment-detail.js') }}"></script>
 {% endblock %}

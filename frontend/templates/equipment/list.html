@@ -218,23 +218,23 @@
                     <p class="mt-2">Загрузка данных об оборудовании...</p>
                 </div>
                 <div id="addToSessionContent">
-                    <div id="noActiveSessionMessage" class="d-none">
-                        <p class="text-center">У вас нет активной сессии сканирования. Хотите создать новую?</p>
-                        <form id="newScanSessionForm" class="mt-3">
-                            <div class="mb-3">
-                                <label class="form-label">Название сессии</label>
-                                <input type="text" class="form-control" id="newSessionName" required>
-                            </div>
-                        </form>
-                    </div>
-                    <div id="activeSessionMessage" class="d-none">
-                        <p>Добавить оборудование "<span id="equipmentNameToAdd"></span>" в сессию "<span id="activeSessionName"></span>"?</p>
-                    </div>
-                    <input type="hidden" id="equipmentIdToAdd">
-                    <input type="hidden" id="equipmentBarcodeToAdd">
+                <div id="noActiveSessionMessage" class="d-none">
+                    <p class="text-center">У вас нет активной сессии сканирования. Хотите создать новую?</p>
+                    <form id="newScanSessionForm" class="mt-3">
+                        <div class="mb-3">
+                            <label class="form-label">Название сессии</label>
+                            <input type="text" class="form-control" id="newSessionName" required>
+                        </div>
+                    </form>
+                </div>
+                <div id="activeSessionMessage" class="d-none">
+                    <p>Добавить оборудование "<span id="equipmentNameToAdd"></span>" в сессию "<span id="activeSessionName"></span>"?</p>
+                </div>
+                <input type="hidden" id="equipmentIdToAdd">
+                <input type="hidden" id="equipmentBarcodeToAdd">
                     <input type="hidden" id="equipmentSerialNumberToAdd">
-                    <input type="hidden" id="equipmentCategoryIdToAdd">
-                    <input type="hidden" id="equipmentCategoryNameToAdd">
+                <input type="hidden" id="equipmentCategoryIdToAdd">
+                <input type="hidden" id="equipmentCategoryNameToAdd">
                 </div>
             </div>
             <div class="modal-footer">
