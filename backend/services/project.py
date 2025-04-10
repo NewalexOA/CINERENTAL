@@ -478,7 +478,8 @@ class ProjectService:
                     )
 
             # Prepare update data
-            update_data = {
+            update_data = {}
+            params = {
                 'name': name,
                 'client_id': client_id,
                 'start_date': start_date,
@@ -488,8 +489,19 @@ class ProjectService:
                 'notes': notes,
             }
 
-            # Remove None values
-            update_data = {k: v for k, v in update_data.items() if v is not None}
+            for key, value in params.items():
+                if key in locals():
+                    # Check required fields
+                    if value is None and key in [
+                        'name',
+                        'client_id',
+                        'status',
+                        'start_date',
+                        'end_date',
+                    ]:
+                        log.warning('Attempt to set required field {} to None', key)
+                        continue
+                    update_data[key] = value
 
             # Check dates if both provided
             if start_date is not None and end_date is not None:

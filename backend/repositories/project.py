@@ -163,7 +163,7 @@ class ProjectRepository(BaseRepository[Project]):
             return None
 
         for key, value in update_data.items():
-            if hasattr(project, key) and value is not None:
+            if hasattr(project, key):
                 setattr(project, key, value)
 
         await self.session.flush()

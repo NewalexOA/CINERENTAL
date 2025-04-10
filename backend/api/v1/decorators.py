@@ -157,6 +157,7 @@ def typed_patch(
     status_code: Optional[int] = None,
     response_class: Type[JSONResponse] = JSONResponse,
     response_model_exclude_none: bool = False,
+    summary: Optional[str] = None,
 ) -> Callable[[Callable[P, R]], Callable[P, R]]:
     """Typed PATCH decorator.
 
@@ -167,6 +168,7 @@ def typed_patch(
         status_code: HTTP status code
         response_class: Response class
         response_model_exclude_none: Whether to exclude None values
+        summary: Endpoint summary for OpenAPI documentation
 
     Returns:
         Decorated function
@@ -177,5 +179,6 @@ def typed_patch(
         status_code=status_code,
         response_class=response_class,
         response_model_exclude_none=response_model_exclude_none,
+        summary=summary,
     )
     return cast(Callable[[Callable[P, R]], Callable[P, R]], decorator)

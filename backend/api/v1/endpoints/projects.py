@@ -10,7 +10,13 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.api.v1.decorators import typed_delete, typed_get, typed_post, typed_put
+from backend.api.v1.decorators import (
+    typed_delete,
+    typed_get,
+    typed_patch,
+    typed_post,
+    typed_put,
+)
 from backend.core.database import get_db
 from backend.exceptions import BusinessError, DateError, NotFoundError, ValidationError
 from backend.models import ProjectStatus
@@ -496,4 +502,61 @@ async def get_project_print_data(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f'Error retrieving project print data: {str(e)}',
+        )
+
+
+@typed_patch(
+    projects_router,
+    '/{project_id}',
+    response_model=ProjectResponse,
+    summary='Partially update project',
+)
+async def patch_project(
+    project_id: int,
+    project: ProjectUpdate,
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> ProjectResponse:
+    """Partially update project.
+
+    Args:
+        project_id: Project ID
+        project: Project data for update
+        db: Database session
+
+    Returns:
+        Updated project
+
+    Raises:
+        HTTPException: If project not found or validation fails
+    """
+    service = ProjectService(db)
+    try:
+        update_data = project.model_dump(exclude_unset=True)
+
+        updated_project = await service.update_project(
+            project_id=project_id, **update_data
+        )
+
+        # Ensure client data is loaded for response
+        await db.refresh(updated_project, ['client'])
+        response_data = {
+            **updated_project.__dict__,
+            'client_name': updated_project.client.name,
+        }
+
+        return ProjectResponse.model_validate(response_data)
+    except NotFoundError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e),
+        )
+    except ValidationError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        )
+    except BusinessError as e:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(e),
         )
