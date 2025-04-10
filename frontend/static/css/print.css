@@ -136,14 +136,15 @@ body {
 /* Equipment section styles */
 .equipment-section {
     padding: 0;
+    margin-bottom: 0.3cm;
 }
 
 .section-title {
     font-size: 12pt;
     font-weight: bold;
     color: #000;
-    margin-bottom: 0.5em;
-    padding-bottom: 0.2em;
+    margin-bottom: 0.15em;
+    padding-bottom: 0.07em;
     border-bottom: 1px solid #000;
 }
 
@@ -151,8 +152,8 @@ body {
     width: 100%;
     border-collapse: collapse;
     box-shadow: none;
-    margin-bottom: 1cm;
-    font-size: 9pt;
+    margin-bottom: 0.3cm;
+    font-size: 7pt;
 }
 
 .equipment-table th {
@@ -161,14 +162,14 @@ body {
     border-bottom: 1px solid #000;
     color: #000;
     font-weight: bold;
-    padding: 8px 4px;
+    padding: 2px 1px;
     text-transform: uppercase;
     font-size: 0.9em;
     text-align: left;
 }
 
 .equipment-table td {
-    padding: 3px 4px;
+    padding: 1px 1px;
     border: none;
     border-bottom: 1px solid #eee;
     text-align: left;
@@ -183,7 +184,7 @@ body {
     border-top: 1px solid #000;
     font-weight: bold;
     color: #000;
-    padding: 8px 4px;
+    padding: 2px 1px;
 }
 
 .col-num {
@@ -200,12 +201,12 @@ body {
 }
 
 .col-qty {
-    width: 5%;
+    width: 10%;
     text-align: center;
 }
 
 .col-amount {
-    width: 25%;
+    width: 12%;
     text-align: right;
 }
 
@@ -219,8 +220,8 @@ body {
 
 /* Footer styles */
 .print-footer {
-    margin-top: 1cm;
-    padding: 0.5cm 0;
+    margin-top: 0.3cm;
+    padding: 0.15cm 0;
     border-top: 1px solid #ccc;
     background: none;
     position: relative;
@@ -235,11 +236,11 @@ body {
     border: none;
     border-radius: 0;
     padding: 0;
-    margin: 1em 0;
+    margin: 0.3em 0;
 }
 
 .signatures {
-    margin: 1.5em 0;
+    margin: 0.5em 0;
     background: transparent;
     padding: 0;
     border-radius: 0;
@@ -249,7 +250,7 @@ body {
 .signature-row {
     display: flex;
     justify-content: space-between;
-    margin-top: 1.5cm;
+    margin-top: 0.5cm;
 }
 
 .signature-field {
@@ -267,7 +268,7 @@ body {
     display: block;
     border-bottom: 1px solid #000;
     height: 20px;
-    margin-top: 1cm;
+    margin-top: 0.3cm;
 }
 
 .generation-info {
@@ -332,14 +333,14 @@ body {
         width: auto;
         background: transparent;
         border-top: 1px solid #ccc;
-        padding-top: 0.5cm;
+        padding-top: 0.15cm;
         padding-bottom: 0;
         page-break-inside: avoid;
         break-inside: avoid;
     }
 
     .equipment-section {
-        margin-bottom: 1cm;
+        margin-bottom: 0.3cm;
     }
 
     .equipment-table {
