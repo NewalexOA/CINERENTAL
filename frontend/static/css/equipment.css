@@ -1,0 +1,102 @@
+/* Barcode preview styles */
+.barcode-preview-container {
+    width: 150px;
+    height: 80px;
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.barcode-preview-inner {
+    width: 100%;
+    height: 100%;
+    padding: 5px;
+}
+
+.barcode-container-linear {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.barcode-container-datamatrix {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+}
+
+.barcode-preview-image {
+    max-width: 140px;
+    max-height: 50px;
+    object-fit: contain;
+}
+
+.barcode-preview-text {
+    font-size: 8px;
+    font-family: monospace;
+    text-align: center;
+    margin-top: 2px;
+}
+
+#datamatrix-text {
+    margin-left: 5px;
+}
+
+.timeline {
+    position: relative;
+    margin: 0 0 30px 0;
+    padding: 0;
+    list-style: none;
+}
+
+.timeline:before {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: #ddd;
+    left: 31px;
+    margin-left: -1.5px;
+}
+
+.timeline > li {
+    position: relative;
+    margin-bottom: 15px;
+}
+
+.timeline-badge {
+    width: 12px;
+    height: 12px;
+    position: absolute;
+    top: 4px;
+    left: 31px;
+    margin-left: -6px;
+    border-radius: 50%;
+}
+
+.timeline-content {
+    margin-left: 60px;
+    padding: 10px 15px;
+    background: #f8f9fa;
+    border-radius: 5px;
+}
+
+/* Стили для кнопки добавления в сессию */
+.btn-qrcode {
+    transition: all 0.2s ease;
+}
+
+.btn-qrcode:hover {
+    transform: scale(1.05);
+}
+
+.btn-outline-success:focus {
+    box-shadow: 0 0 0 0.25rem rgba(25, 135, 84, 0.25);
+}

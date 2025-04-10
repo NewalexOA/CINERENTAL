@@ -21,11 +21,21 @@ const debounce = (func, wait, immediate) => {
 };
 
 const formatDate = (date) => {
-    return new Date(date).toLocaleDateString('ru-RU', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-    });
+    // Use Moment.js for reliable date formatting
+    const m = moment(date); // moment() handles various input formats
+    if (!m.isValid()) {
+        // Return placeholder or empty string if date is invalid
+        return 'Неверная дата';
+    }
+    // Format using Moment's format function (LL is locale-aware long date format like 'September 4, 1986')
+    // Using 'L' for a shorter format like '09/04/1986' or customize as needed 'DD.MM.YYYY'
+    return m.format('DD.MM.YYYY'); // Example: 10.04.2025
+    // Or use toLocaleDateString if preferred, but moment parsing helps reliability
+    // return m.toDate().toLocaleDateString('ru-RU', {
+    //     year: 'numeric',
+    //     month: 'long',
+    //     day: 'numeric'
+    // });
 };
 
 const formatDateTime = (datetime) => {
@@ -78,8 +88,8 @@ window.showToast = function(message, type = 'info') {
     // Add toast to container
     document.getElementById('toastContainer').appendChild(toast);
 
-    // Initialize and show toas
-    const bsToast = new bootstrap.Toast(toast);
+    // Initialize and show toast with shorter delay
+    const bsToast = new bootstrap.Toast(toast, { delay: 3000 }); // Add delay option (3 seconds)
     bsToast.show();
 
     // Remove toast after it's hidden
@@ -520,12 +530,25 @@ class BarcodeScanner {
             }
             const equipment = await response.json();
 
+            let addedToSession = false; // Flag to track if item was actually added
+            let isDuplicate = false;
+
             // Save to session storage if available
             if (window.scanStorage && this.sessionId) {
-                window.scanStorage.addEquipment(this.sessionId, equipment);
+                const result = window.scanStorage.addEquipment(this.sessionId, equipment);
+                if (result === 'duplicate') {
+                    isDuplicate = true;
+                    console.log(`Barcode ${barcode} corresponds to equipment ID ${equipment.id} which is already in session ${this.sessionId}.`);
+                } else if (typeof result === 'object' && result !== null) {
+                    // Check if the result is a session object (success)
+                    addedToSession = true;
+                }
             }
 
-            this.onScan(equipment);
+            // Trigger onScan only if successfully added (or if no storage used)
+            // Pass additional info about duplication status
+            this.onScan(equipment, { isDuplicate: isDuplicate, addedToSession: addedToSession });
+
         } catch (error) {
             console.error('Barcode scan error:', error);
             this.onError(error);
@@ -716,6 +739,9 @@ function formatEquipmentRow(item) {
                     </a>
                     <button type="button" class="btn btn-sm btn-outline-secondary" onclick="printBarcode('${item.id}', '${item.barcode}')">
                         <i class="fas fa-print"></i>
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-success btn-qrcode" onclick="addToScanSession('${item.id}', '${item.name}', '${item.barcode}', '${item.category_id}', '${item.category_name}')">
+                        <i class="fas fa-qrcode"></i>
                     </button>
                 </div>
             </td>

@@ -5,7 +5,6 @@ including request/response schemas for managing rental items.
 """
 
 from datetime import datetime
-from decimal import Decimal
 from typing import List, Optional
 
 from pydantic import BaseModel, ConfigDict, Field, computed_field
@@ -35,7 +34,7 @@ class EquipmentBase(BaseModel):
 class EquipmentCreate(EquipmentBase):
     """Create equipment request schema."""
 
-    replacement_cost: Optional[Decimal] = Field(
+    replacement_cost: Optional[int] = Field(
         None, title='Replacement Cost', description='Cost to replace if damaged'
     )
     custom_barcode: Optional[str] = Field(
@@ -61,7 +60,7 @@ class EquipmentUpdate(BaseModel):
     description: Optional[str] = Field(
         None, title='Description', description='Equipment description'
     )
-    replacement_cost: Optional[Decimal] = Field(
+    replacement_cost: Optional[int] = Field(
         None, title='Replacement Cost', description='Cost to replace if damaged'
     )
     barcode: Optional[str] = Field(
@@ -84,7 +83,7 @@ class EquipmentResponse(BaseModel):
     id: int
     name: str
     description: Optional[str] = None
-    replacement_cost: Optional[Decimal]
+    replacement_cost: Optional[int]
     barcode: str
     serial_number: Optional[str]
     category_id: int
@@ -92,7 +91,7 @@ class EquipmentResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
     notes: Optional[str] = None
-    category_name: str = Field(default='Без категории', description='Category name')
+    category_name: str = Field(description='Category name')
     category: Optional[CategoryInfo] = Field(None, description='Category information')
 
     @computed_field

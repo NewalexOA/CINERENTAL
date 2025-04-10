@@ -10,11 +10,11 @@
     <div class="print-container">
         <!-- Header -->
         <header class="print-header">
-            <div class="company-info">
+            {# Three-column structure #}
+            <div class="header-col header-col-logo">
                 <img src="{{ url_for('static', path='img/logo.png') }}" alt="Логотип" class="company-logo">
-                <h1 class="company-name">{{ APP_NAME }}</h1>
             </div>
-            <div class="project-info">
+            <div class="header-col header-col-details">
                 <h2 class="project-title">ПРОЕКТ: {{ project.name }}</h2>
                 <div class="project-details">
                     <div class="detail-row">
@@ -29,13 +29,15 @@
                         <span class="detail-label">Период:</span>
                         <span class="detail-value">{{ project.start_date | format_date }} - {{ project.end_date | format_date }}</span>
                     </div>
-                    {% if project.description %}
-                    <div class="detail-row">
-                        <span class="detail-label">Описание:</span>
-                        <span class="detail-value">{{ project.description }}</span>
-                    </div>
-                    {% endif %}
                 </div>
+            </div>
+            <div class="header-col header-col-description">
+                {% if project.description %}
+                <div class="description-block">
+                    <div class="description-label-block">Описание:</div>
+                    <div class="description-value">{{ project.description }}</div>
+                </div>
+                {% endif %}
             </div>
         </header>
 
@@ -48,6 +50,7 @@
                         <th class="col-num">№</th>
                         <th class="col-name">Наименование</th>
                         <th class="col-serial">Серийный номер</th>
+                        <th class="col-qty">Кол-во</th>
                         <th class="col-amount">Сумма ответственности</th>
                     </tr>
                 </thead>
@@ -57,13 +60,14 @@
                         <td class="col-num">{{ loop.index }}</td>
                         <td class="col-name">{{ item.name }}</td>
                         <td class="col-serial">{{ item.serial_number or "—" }}</td>
+                        <td class="col-qty">{{ item.quantity or 1 }}</td>
                         <td class="col-amount">{{ item.liability_amount | format_currency }}</td>
                     </tr>
                     {% endfor %}
                 </tbody>
                 <tfoot>
                     <tr>
-                        <td colspan="3" class="total-label">Итого:</td>
+                        <td colspan="4" class="total-label">Итого:</td>
                         <td class="total-amount">{{ total_liability | format_currency }}</td>
                     </tr>
                 </tfoot>

@@ -4,10 +4,9 @@ This module defines the Equipment model for rental equipment items.
 """
 
 import enum
-from decimal import Decimal
 from typing import TYPE_CHECKING, List, Optional
 
-from sqlalchemy import ForeignKey, Numeric, String
+from sqlalchemy import ForeignKey, Integer, String
 from sqlalchemy.dialects.postgresql import ENUM
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -78,7 +77,7 @@ class Equipment(TimestampMixin, SoftDeleteMixin, Base):
         nullable=False,
         index=True,
     )
-    replacement_cost: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
+    replacement_cost: Mapped[int] = mapped_column(Integer, nullable=False)
     notes: Mapped[Optional[str]] = mapped_column(String(5000))
 
     # Relationships
@@ -87,7 +86,7 @@ class Equipment(TimestampMixin, SoftDeleteMixin, Base):
 
     @property
     def category_name(self) -> str:
-        """Get category name."""
-        if self.category:
+        """Get category name, defaulting to 'Без категории' if not set."""
+        if self.category and self.category.name:
             return self.category.name
         return 'Без категории'

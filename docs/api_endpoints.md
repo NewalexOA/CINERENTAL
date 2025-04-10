@@ -243,7 +243,7 @@ POST /
     "barcode": "string",
     "serial_number": "string",
     "category_id": "integer",
-    "replacement_cost": "decimal",
+    "replacement_cost": "integer",
     "notes": "string | null"
 }
 ```
@@ -257,7 +257,7 @@ POST /
     "barcode": "string",
     "serial_number": "string",
     "category_id": "integer",
-    "replacement_cost": "decimal",
+    "": "decimal",
     "notes": "string | null",
     "status": "string",
     "created_at": "datetime",
@@ -295,7 +295,7 @@ GET /
         "serial_number": "string",
         "category_id": "integer",
         "category_name": "string",
-        "replacement_cost": "decimal",
+        "replacement_cost": "integer",
         "notes": "string | null",
         "status": "string",
         "created_at": "datetime",
@@ -324,7 +324,7 @@ GET /{equipment_id}
     "serial_number": "string",
     "category_id": "integer",
     "category_name": "string",
-    "replacement_cost": "decimal",
+    "replacement_cost": "integer",
     "notes": "string | null",
     "status": "string",
     "created_at": "datetime",
@@ -353,7 +353,7 @@ PUT /{equipment_id}
     "barcode": "string | null",
     "serial_number": "string | null",
     "category_id": "integer | null",
-    "replacement_cost": "decimal | null",
+    "replacement_cost": "integer | null",
     "notes": "string | null",
     "status": "string | null"
 }
@@ -368,7 +368,7 @@ PUT /{equipment_id}
     "barcode": "string",
     "serial_number": "string",
     "category_id": "integer",
-    "replacement_cost": "decimal",
+    "replacement_cost": "integer",
     "notes": "string | null",
     "status": "string",
     "created_at": "datetime",
@@ -416,7 +416,7 @@ GET /barcode/{barcode}
     "serial_number": "string",
     "category_id": "integer",
     "category_name": "string",
-    "replacement_cost": "decimal",
+    "replacement_cost": "integer",
     "notes": "string | null",
     "status": "string",
     "created_at": "datetime",
@@ -448,7 +448,7 @@ GET /search/{query}
         "serial_number": "string",
         "category_id": "integer",
         "category_name": "string",
-        "replacement_cost": "decimal",
+        "replacement_cost": "integer",
         "notes": "string | null",
         "status": "string",
         "created_at": "datetime",
@@ -469,7 +469,7 @@ curl -X POST "http://localhost:8000/api/v1/equipment/" \
            "barcode": "CAM-001",
            "serial_number": "FX9-12345",
            "category_id": 1,
-           "replacement_cost": 15000.00
+           "replacement_cost": 1500000
          }'
 ```
 

@@ -2,6 +2,10 @@
 
 {% block title %}Оборудование - {{ APP_NAME }}{% endblock %}
 
+{% block extra_css %}
+    <link rel="stylesheet" href="{{ url_for('static', path='css/equipment.css') }}">
+{% endblock %}
+
 {% block content %}
 <div class="container mt-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
@@ -80,6 +84,9 @@
                                     </a>
                                     <button type="button" class="btn btn-sm btn-outline-secondary" onclick="printBarcode('{{ item.id }}', '{{ item.barcode }}')">
                                         <i class="fas fa-print"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-outline-success btn-qrcode" onclick="addToScanSession('{{ item.id }}')">
+                                        <i class="fas fa-qrcode"></i>
                                     </button>
                                 </div>
                             </td>
@@ -195,496 +202,52 @@
     </div>
 </div>
 
-<style>
-    /* Existing styles... */
-
-    /* Barcode preview styles */
-    .barcode-preview-container {
-        width: 150px;
-        height: 80px;
-        background: #f8f9fa;
-        border: 1px solid #dee2e6;
-        border-radius: 4px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        overflow: hidden;
-    }
-
-    .barcode-preview-inner {
-        width: 100%;
-        height: 100%;
-        padding: 5px;
-    }
-
-    .barcode-container-linear {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-    }
-
-    .barcode-container-datamatrix {
-        display: flex;
-        flex-direction: row;
-        align-items: center;
-        justify-content: flex-start;
-    }
-
-    .barcode-preview-image {
-        max-width: 140px;
-        max-height: 50px;
-        object-fit: contain;
-    }
-
-    .barcode-preview-text {
-        font-size: 8px;
-        font-family: monospace;
-        text-align: center;
-        margin-top: 2px;
-    }
-
-    #datamatrix-text {
-        margin-left: 5px;
-    }
-</style>
+<!-- Add to Scan Session Modal -->
+<div class="modal fade" id="addToScanSessionModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Добавление в сессию сканирования</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="addToSessionLoading" class="text-center py-4 d-none">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Загрузка данных...</span>
+                    </div>
+                    <p class="mt-2">Загрузка данных об оборудовании...</p>
+                </div>
+                <div id="addToSessionContent">
+                <div id="noActiveSessionMessage" class="d-none">
+                    <p class="text-center">У вас нет активной сессии сканирования. Хотите создать новую?</p>
+                    <form id="newScanSessionForm" class="mt-3">
+                        <div class="mb-3">
+                            <label class="form-label">Название сессии</label>
+                            <input type="text" class="form-control" id="newSessionName" required>
+                        </div>
+                    </form>
+                </div>
+                <div id="activeSessionMessage" class="d-none">
+                    <p>Добавить оборудование "<span id="equipmentNameToAdd"></span>" в сессию "<span id="activeSessionName"></span>"?</p>
+                </div>
+                <input type="hidden" id="equipmentIdToAdd">
+                <input type="hidden" id="equipmentBarcodeToAdd">
+                    <input type="hidden" id="equipmentSerialNumberToAdd">
+                <input type="hidden" id="equipmentCategoryIdToAdd">
+                <input type="hidden" id="equipmentCategoryNameToAdd">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                <button type="button" class="btn btn-primary" id="confirmNewSession" style="display: none;">Создать и добавить</button>
+                <button type="button" class="btn btn-success" id="confirmAddToSession" style="display: none;">Добавить в сессию</button>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
-<script>
-// Load categories for add form
-async function loadCategories() {
-    const formSelect = document.querySelector('select[name="category_id"]');
-    formSelect.innerHTML = '<option value="">Загрузка категорий...</option>';
-    formSelect.disabled = true;
-
-    try {
-        const categories = await api.get('/categories');
-        formSelect.innerHTML = categories.map(category =>
-            `<option value="${category.id}">${category.name}</option>`
-        ).join('');
-    } catch (error) {
-        console.error('Error loading categories:', error);
-        showToast('Ошибка при загрузке категорий', 'danger');
-        formSelect.innerHTML = '<option value="">Ошибка загрузки</option>';
-    } finally {
-        formSelect.disabled = false;
-    }
-}
-
-async function previewBarcode() {
-    // Get the preview button and barcode input
-    const previewButton = document.getElementById('preview_barcode');
-    const barcodeInput = document.getElementById('barcode_input');
-
-    // Show loading state on the button
-    const originalButtonText = previewButton.innerHTML;
-    previewButton.disabled = true;
-    previewButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>';
-
-    try {
-        // Reset any global loader that might be active
-        resetLoader();
-
-        // Generate the barcode
-        const response = await api.post('/barcodes/generate', {});
-        barcodeInput.value = response.barcode;
-
-        // Show feedback (optional)
-        showToast('Штрих-код сгенерирован', 'success');
-    } catch (error) {
-        console.error('Error previewing barcode:', error);
-        showToast('Ошибка при предпросмотре штрих-кода', 'danger');
-    } finally {
-        // Restore button state
-        previewButton.disabled = false;
-        previewButton.innerHTML = originalButtonText;
-    }
-}
-
-// Function to forcibly reset loader state if needed
-function resetLoader() {
-    window.loaderCounter = 0;
-
-    const loader = document.getElementById('global-loader');
-    if (loader) {
-        loader.setAttribute('hidden', '');
-
-        // If loader is still visible after setting hidden attribute
-        if (getComputedStyle(loader).display !== 'none') {
-            console.warn('Loader still visible after setting hidden attribute, using CSS display property');
-            loader.style.display = 'none';
-        }
-    }
-}
-
-function formatNumber(num) {
-    return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ");
-}
-
-// Add event listeners after DOM is loaded
-document.addEventListener('DOMContentLoaded', function() {
-    // Reset any active loader first
-    resetLoader();
-
-    // Load categories
-    loadCategories();
-
-    // Listen for preview barcode button clicks
-    document.getElementById('preview_barcode').addEventListener('click', previewBarcode);
-
-    // Listen for generate barcode checkbox changes
-    document.getElementById('generate_barcode').addEventListener('change', function() {
-        const barcodeInput = document.getElementById('barcode_input');
-        const previewButton = document.getElementById('preview_barcode');
-        const barcodeHelp = document.getElementById('barcode_help');
-
-        if (this.checked) {
-            barcodeInput.readOnly = true;
-            previewButton.disabled = false;
-            previewButton.style.display = '';
-            barcodeInput.value = '';
-            barcodeHelp.textContent = 'Штрих-код будет сгенерирован автоматически.';
-        } else {
-            barcodeInput.readOnly = false;
-            previewButton.disabled = true;
-            previewButton.style.display = 'none';
-            barcodeHelp.textContent = 'Введите штрих-код в любом формате.';
-        }
-    });
-
-    // Form submission handler
-    document.getElementById('addEquipment').addEventListener('click', async function() {
-        const form = document.getElementById('addEquipmentForm');
-
-        // Check form validity before submission
-        if (!form.checkValidity()) {
-            // Trigger HTML5 validation
-            form.reportValidity();
-            return;
-        }
-
-        // Get form data
-        const formData = new FormData(form);
-        const data = Object.fromEntries(formData.entries());
-
-        // Convert checkbox value to boolean
-        data.generate_barcode = formData.has('generate_barcode');
-
-        // Convert numeric fields
-        data.category_id = parseInt(data.category_id);
-
-        // Ensure replacement_cost is a number and has a default value
-        data.replacement_cost = parseFloat(data.replacement_cost || 0);
-
-        // If description is empty, set it to null to prevent validation errors
-        if (!data.description.trim()) {
-            data.description = null;
-        }
-
-        // If serial_number is empty, set it to null
-        if (!data.serial_number.trim()) {
-            data.serial_number = null;
-        }
-
-        // If generate_barcode is true, remove the barcode field from the data
-        // as the server will generate it automatically
-        if (data.generate_barcode) {
-            delete data.barcode;
-        } else if (!data.barcode.trim()) {
-            // If generate_barcode is false and barcode is empty, set it to null
-            data.barcode = null;
-        } else {
-            // If barcode is provided manually, use it as custom_barcode
-            data.custom_barcode = data.barcode;
-            // Disable barcode format validation for manually entered barcodes
-            data.validate_barcode = false;
-            delete data.barcode;
-        }
-
-        // Get the button and show loading state
-        const addButton = document.getElementById('addEquipment');
-        const originalButtonText = addButton.innerHTML;
-        addButton.disabled = true;
-        addButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Добавление...';
-
-        // Make sure any previous global loader is reset
-        resetLoader();
-
-        // Send API request
-        try {
-            console.log('Sending data:', data);
-            const response = await api.post('/equipment/', data);
-            showToast('Оборудование успешно добавлено', 'success');
-
-            // Close modal and reload equipment list
-            const modal = bootstrap.Modal.getInstance(document.getElementById('addEquipmentModal'));
-            modal.hide();
-            form.reset();
-
-            // Reload equipment list
-            window.location.reload();
-        } catch (error) {
-            console.error('Error adding equipment:', error);
-
-            // Extended error diagnostics
-            if (error.response) {
-                console.error('Full API response:', error.response);
-                console.error('Error details:', error.response.data);
-                console.error('Complete error object JSON:', JSON.stringify(error.response.data, null, 2));
-
-                if (error.response.data?.detail) {
-                    console.error('Error detail content:', error.response.data.detail);
-                    if (Array.isArray(error.response.data.detail)) {
-                        console.error('Validation errors:');
-                        error.response.data.detail.forEach((item, index) => {
-                            console.error(`Error ${index + 1}:`, item);
-                            if (typeof item === 'object') {
-                                console.error('Fields:', Object.keys(item));
-                                for (const key in item) {
-                                    console.error(`- ${key}:`, item[key]);
-                                }
-                            }
-                        });
-                    }
-                }
-
-                // Reset any existing error indicators
-                document.querySelectorAll('.is-invalid').forEach(el => {
-                    el.classList.remove('is-invalid');
-                });
-                document.querySelectorAll('.invalid-feedback').forEach(el => {
-                    el.remove();
-                });
-
-                let errorMessage = 'Ошибка при добавлении оборудования';
-
-                // Check for field-specific errors
-                if (error.response.data?.details) {
-                    // Process field-specific errors
-                    const details = error.response.data.details;
-
-                    // Highlight fields with errors
-                    Object.keys(details).forEach(fieldName => {
-                        const field = form.querySelector(`[name="${fieldName}"]`);
-                        if (field) {
-                            field.classList.add('is-invalid');
-
-                            // Add error message below the field
-                            const errorDiv = document.createElement('div');
-                            errorDiv.className = 'invalid-feedback';
-                            errorDiv.textContent = details[fieldName];
-                            field.parentNode.appendChild(errorDiv);
-                        }
-                    });
-
-                    // Use the main error message if available
-                    if (error.response.data?.detail) {
-                        errorMessage = error.response.data.detail;
-                    }
-                } else if (typeof error.response.data === 'string') {
-                    errorMessage = error.response.data;
-                } else if (error.response.data?.detail) {
-                    errorMessage = error.response.data.detail;
-
-                    // Handle specific error messages for serial number
-                    if (errorMessage.includes('serial number') && errorMessage.includes('already exists')) {
-                        const serialField = form.querySelector('[name="serial_number"]');
-                        if (serialField) {
-                            serialField.classList.add('is-invalid');
-
-                            const errorDiv = document.createElement('div');
-                            errorDiv.className = 'invalid-feedback';
-                            errorDiv.textContent = 'Серийный номер уже используется';
-                            serialField.parentNode.appendChild(errorDiv);
-                        }
-                    }
-                } else if (error.response.data?.message) {
-                    errorMessage = error.response.data.message;
-                } else if (error.response.data?.error) {
-                    errorMessage = error.response.data.error;
-                }
-
-                showToast(errorMessage, 'danger');
-            } else {
-                showToast('Ошибка сети или сервера', 'danger');
-            }
-
-            // Ensure loader is reset in case of error
-            resetLoader();
-        } finally {
-            // Restore button state
-            addButton.disabled = false;
-            addButton.innerHTML = originalButtonText;
-            // Ensure loader is always reset
-            resetLoader();
-        }
-    });
-
-    // Format amounts in the table
-    const formatAmounts = () => {
-        document.querySelectorAll('.replacement-cost').forEach(element => {
-            const value = parseFloat(element.textContent);
-            if (!isNaN(value)) {
-                element.textContent = formatNumber(value);
-            }
-        });
-    };
-
-    // Run formatting after page load
-    formatAmounts();
-
-    // Also format values after search update
-    if (window.equipmentSearch) {
-        const originalUpdateResults = equipmentSearch.updateResults;
-        equipmentSearch.updateResults = function() {
-            originalUpdateResults.apply(this, arguments);
-            setTimeout(formatAmounts, 100);
-        };
-    }
-});
-
-// barcode print
-function printBarcode(equipmentId, barcode) {
-    // Show modal for barcode type selection
-    const barcodeModal = new bootstrap.Modal(document.getElementById('barcodePrintModal'));
-
-    // Store barcode info to use when printing
-    document.getElementById('print-barcode-equipment-id').value = equipmentId;
-    document.getElementById('print-barcode-value').value = barcode;
-
-    // Load preview images
-    loadBarcodePreviews(barcode);
-
-    // Show the modal
-    barcodeModal.show();
-}
-
-// Function to load barcode preview images
-function loadBarcodePreviews(barcode) {
-    const baseUrl = '/api/v1/barcodes/';
-
-    // Load Code128 preview
-    const code128Preview = document.getElementById('code128-preview');
-    code128Preview.src = `${baseUrl}${barcode}/image?barcode_type=code128`;
-
-    // Set barcode text for Code128
-    const code128Text = document.getElementById('code128-text');
-    code128Text.textContent = barcode;
-
-    // Load DataMatrix preview
-    const datamatrixPreview = document.getElementById('datamatrix-preview');
-    datamatrixPreview.src = `${baseUrl}${barcode}/image?barcode_type=datamatrix`;
-
-    // Set barcode text for DataMatrix
-    const datamatrixText = document.getElementById('datamatrix-text');
-    datamatrixText.textContent = barcode;
-}
-
-// Function to handle the actual printing after selection
-function doPrintBarcode(barcodeType) {
-    const equipmentId = document.getElementById('print-barcode-equipment-id').value;
-    const barcode = document.getElementById('print-barcode-value').value;
-
-    // create invisible iframe for print
-    const iframe = document.createElement('iframe');
-    iframe.style.display = 'none';
-    document.body.appendChild(iframe);
-
-    // Define styles depending on the barcode type
-    const containerStyleClass = barcodeType === 'datamatrix'
-        ? 'barcode-container-datamatrix'
-        : 'barcode-container-linear';
-
-    // create print content
-    const printContent = `
-        <html>
-        <head>
-            <title>Печать штрих-кода для оборудования ${equipmentId}</title>
-            <style>
-                @page {
-                    size: 30mm 10mm;
-                    margin: 0;
-                }
-                body {
-                    font-family: Arial, sans-serif;
-                    text-align: center;
-                    padding: 0;
-                    margin: 0;
-                    width: 30mm;
-                    height: 10mm;
-                }
-                .barcode-container-linear {
-                    margin: 0;
-                    padding: 0;
-                    width: 100%;
-                    height: 100%;
-                    display: flex;
-                    flex-direction: column;
-                    align-items: center;
-                    justify-content: center;
-                }
-                .barcode-container-datamatrix {
-                    margin: 0;
-                    padding: 0;
-                    width: 100%;
-                    height: 100%;
-                    display: flex;
-                    flex-direction: row;
-                    align-items: center;
-                    justify-content: flex-start;
-                }
-                .barcode-image {
-                    max-width: ${barcodeType === 'datamatrix' ? '10mm' : '28mm'};
-                    height: ${barcodeType === 'datamatrix' ? '10mm' : '7mm'};
-                    object-fit: contain;
-                }
-                .barcode {
-                    font-size: 6px;
-                    font-family: monospace;
-                    ${barcodeType === 'datamatrix' ? 'margin-left: 2mm;' : 'margin-top: 1px;'}
-                }
-            </style>
-        </head>
-        <body>
-            <div class="${containerStyleClass}">
-                <img class="barcode-image" src="/api/v1/barcodes/${barcode}/image?barcode_type=${barcodeType}" alt="Штрих-код ${barcode}">
-                <div class="barcode">${barcode}</div>
-            </div>
-        </body>
-        </html>
-    `;
-
-    // fill iframe with content and print
-    iframe.contentWindow.document.open();
-    iframe.contentWindow.document.write(printContent);
-    iframe.contentWindow.document.close();
-
-    iframe.onload = function() {
-        // print content of iframe
-        iframe.contentWindow.print();
-
-        // remove iframe after print
-        setTimeout(function() {
-            document.body.removeChild(iframe);
-        }, 1000);
-    };
-
-    // Close modal
-    const barcodeModal = bootstrap.Modal.getInstance(document.getElementById('barcodePrintModal'));
-    if (barcodeModal) {
-        barcodeModal.hide();
-    }
-
-    showToast('Штрих-код отправлен на печать', 'success');
-}
-
-// Initialize
-loadCategories();
-
-// Initialize equipment search
-if (document.getElementById('searchInput')) {
-    equipmentSearch.init();
-}
-</script>
+<script src="{{ url_for('static', path='js/scan-storage.js') }}"></script>
+<script src="{{ url_for('static', path='js/equipment-list.js') }}"></script>
 {% endblock %}

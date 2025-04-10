@@ -37,7 +37,7 @@ async def test_create_equipment(
         'custom_barcode': custom_barcode,  # Using custom_barcode instead of barcode
         'serial_number': 'SN-002',
         'category_id': test_category.id,
-        'replacement_cost': '1500.00',
+        'replacement_cost': '1500',
         'status': EquipmentStatus.AVAILABLE,
     }
 
@@ -70,7 +70,7 @@ async def test_create_equipment_duplicate_barcode(
         'category_id': test_category.id,
         'custom_barcode': custom_barcode,
         'serial_number': 'SN001-UNIQUE',  # Ensure unique serial number
-        'replacement_cost': '1000.00',
+        'replacement_cost': '1000',
     }
 
     first_response = await async_client.post('/api/v1/equipment/', json=first_data)
@@ -83,7 +83,7 @@ async def test_create_equipment_duplicate_barcode(
         'category_id': test_category.id,
         'custom_barcode': custom_barcode,  # Same barcode as first equipment
         'serial_number': 'SN002-UNIQUE',  # Ensure unique serial number
-        'replacement_cost': '1000.00',
+        'replacement_cost': '1000',
     }
 
     response = await async_client.post('/api/v1/equipment/', json=second_data)
@@ -318,7 +318,7 @@ async def test_update_equipment_invalid_rate(
     test_equipment: Equipment,
 ) -> None:
     """Test updating equipment with invalid replacement cost."""
-    data = {'replacement_cost': '-100.00'}
+    data = {'replacement_cost': '-100'}
     response = await async_client.put(
         f'/api/v1/equipment/{test_equipment.id}',
         json=data,

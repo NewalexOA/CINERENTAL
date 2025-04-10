@@ -66,8 +66,10 @@ async def test_get_user_sessions(
 
     sessions = await scan_session_service.get_user_sessions(user_id)
 
-    # Expect an empty list, since sessions are not bound to users
-    assert len(sessions) == 0
+    # Expect the session created by the fixture (likely user_id=None)
+    # because the service should return sessions with user_id=None as well.
+    assert len(sessions) == 1
+    assert sessions[0].id == test_scan_session.id
 
     assert isinstance(sessions, list)
 

@@ -4,7 +4,6 @@ import asyncio
 import os
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
-from decimal import Decimal
 from functools import wraps
 from typing import (
     Any,
@@ -301,7 +300,7 @@ async def test_equipment(
         category_id=test_category.id,
         barcode='12345678901',  # Numeric format
         serial_number='SN001',
-        replacement_cost=Decimal('1000.00'),
+        replacement_cost=1000,
         status=EquipmentStatus.AVAILABLE,
     )
     db_session.add(equipment)
@@ -500,7 +499,7 @@ async def equipment_with_special_chars(
         serial_number='Test & Equipment',
         category_id=test_category.id,
         status=EquipmentStatus.AVAILABLE,
-        replacement_cost=Decimal('1000.00'),
+        replacement_cost=1000,
     )
     db_session.add(equipment)
     await db_session.commit()
@@ -521,7 +520,7 @@ async def equipment_with_long_strings(
         serial_number='D' * 100,  # Maximum length for serial number
         category_id=test_category.id,
         status=EquipmentStatus.AVAILABLE,
-        replacement_cost=Decimal('1000.00'),
+        replacement_cost=1000,
     )
     db_session.add(equipment)
     await db_session.commit()
@@ -542,7 +541,7 @@ async def equipment_with_unicode(
         serial_number='シリアル-001',
         category_id=test_category.id,
         status=EquipmentStatus.AVAILABLE,
-        replacement_cost=Decimal('1000.00'),
+        replacement_cost=1000,
     )
     db_session.add(equipment)
     await db_session.commit()
