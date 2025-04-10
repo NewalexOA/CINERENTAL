@@ -117,7 +117,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
             // Convert numeric fields
             data.category_id = parseInt(data.category_id);
-            data.replacement_cost = parseFloat(data.replacement_cost || 0);
+            data.replacement_cost = parseInt(data.replacement_cost || 0, 10);
 
             // Handle optional fields
             if (!data.description?.trim()) data.description = null;
@@ -224,7 +224,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Format amounts in the table
     const formatAmounts = () => {
         document.querySelectorAll('.replacement-cost').forEach(element => {
-            const value = parseFloat(element.textContent);
+            const value = parseInt(element.textContent.replace(/\s/g, ''), 10);
             if (!isNaN(value)) {
                 element.textContent = formatNumber(value);
             }

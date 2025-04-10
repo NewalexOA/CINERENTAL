@@ -1,7 +1,6 @@
 """Unit tests for booking service."""
 
 from datetime import datetime, timedelta, timezone
-from decimal import Decimal
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -72,7 +71,7 @@ class TestBookingService:
             description='Test Description',
             serial_number='TEST001',
             barcode='TEST001',
-            replacement_cost=Decimal('1000.00'),
+            replacement_cost=1000,
             status=EquipmentStatus.AVAILABLE,
         )
         db_session.add(equipment)

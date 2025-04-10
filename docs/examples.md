@@ -38,7 +38,7 @@ equipment = await equipment_service.create_equipment(
     name="Sony PXW-FX9",
     description="Полнокадровая видеокамера",
     barcode="CAM-001",
-    replacement_cost=15000.00
+    replacement_cost=1500000
 )
 
 # Проверка доступности

@@ -162,7 +162,7 @@ async def seed_equipment(
             'description': 'Full-frame 6K sensor cinema camera',
             'category': 'Cameras',
             'serial_number': 'FX9-12345',
-            'replacement_cost': 10999.99,
+            'replacement_cost': 1099999,
             'status': EquipmentStatus.AVAILABLE,
         },
         {
@@ -170,7 +170,7 @@ async def seed_equipment(
             'description': '4.6K Super 35 digital film camera',
             'category': 'Cameras',
             'serial_number': 'URSA-67890',
-            'replacement_cost': 5999.99,
+            'replacement_cost': 599999,
             'status': EquipmentStatus.AVAILABLE,
         },
         # Lenses
@@ -179,7 +179,7 @@ async def seed_equipment(
             'description': 'Standard zoom lens for Canon EF mount',
             'category': 'Lenses',
             'serial_number': 'CN24-70-54321',
-            'replacement_cost': 1899.99,
+            'replacement_cost': 189999,
             'status': EquipmentStatus.AVAILABLE,
         },
         {
@@ -187,7 +187,7 @@ async def seed_equipment(
             'description': 'Wide-angle zoom lens for Sony E-mount',
             'category': 'Lenses',
             'serial_number': 'SNY16-35-98765',
-            'replacement_cost': 2199.99,
+            'replacement_cost': 219999,
             'status': EquipmentStatus.AVAILABLE,
         },
         # Lighting
@@ -196,7 +196,7 @@ async def seed_equipment(
             'description': 'Daylight LED light with Bowens mount',
             'category': 'Lighting',
             'serial_number': 'AP300D-11111',
-            'replacement_cost': 799.99,
+            'replacement_cost': 79999,
             'status': EquipmentStatus.AVAILABLE,
         },
         # Audio
@@ -205,7 +205,7 @@ async def seed_equipment(
             'description': 'Short shotgun microphone',
             'category': 'Audio',
             'serial_number': 'RD-NTG5-22222',
-            'replacement_cost': 499.99,
+            'replacement_cost': 49999,
             'status': EquipmentStatus.AVAILABLE,
         },
         # Accessories
@@ -214,7 +214,7 @@ async def seed_equipment(
             'description': 'Camera cage with multiple mounting points',
             'category': 'Accessories',
             'serial_number': 'SR-A7S3-33333',
-            'replacement_cost': 149.99,
+            'replacement_cost': 14999,
             'status': EquipmentStatus.AVAILABLE,
         },
     ]

@@ -37,7 +37,7 @@ ERD диаграмма доступна в файле [database_schema.puml](dat
   - BROKEN (сломано)
   - RETIRED (списано)
 
-- `replacement_cost` (NUMERIC(10,2), NOT NULL) - стоимость замены
+- `replacement_cost` (INTEGER, NOT NULL) - стоимость замены
 - `notes` (VARCHAR(1000)) - дополнительные заметки
 - `created_at` (TIMESTAMP WITH TIMEZONE, NOT NULL, INDEX) - дата и время создания
 - `updated_at` (TIMESTAMP WITH TIMEZONE, NOT NULL, INDEX) - дата и время последнего обновления

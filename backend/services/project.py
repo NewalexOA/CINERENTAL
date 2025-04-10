@@ -809,9 +809,9 @@ class ProjectService:
                     category_id = equipment.category.id
 
                 # Convert Decimal to float for JSON serialization
-                replacement_cost_value = 0.0
+                replacement_cost_value = 0
                 if equipment.replacement_cost:
-                    replacement_cost_value = float(equipment.replacement_cost)
+                    replacement_cost_value = equipment.replacement_cost
 
                 equipment_data = {
                     'id': equipment.id,
