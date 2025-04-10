@@ -34,45 +34,60 @@ body {
 /* Header styles */
 .print-header {
     display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    padding: 0.5cm 0 1cm 0;
-    border-bottom: 1px solid #ccc;
+    align-items: stretch;
+    padding: 0;
+    border: 1px solid #ccc;
     background: none;
-    margin-bottom: 1cm;
+    margin-bottom: 0.5cm;
 }
 
-.company-info {
+.company-info, .project-info, .project-summary-grid, .project-summary-col1, .project-summary-col2 {
+    display: none;
+}
+
+.header-col {
+    padding: 0.3cm;
+    border-right: 1px solid #ccc;
     display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+}
+
+.header-col:last-child {
+    border-right: none;
+}
+
+.header-col-logo {
+    width: 15%;
     align-items: center;
-    flex: 0 0 30%;
+    justify-content: center;
+}
+
+.header-col-details {
+    width: 50%;
+}
+
+.header-col-description {
+    width: 35%;
 }
 
 .company-logo {
-    max-height: 50px;
+    max-height: 60px;
     max-width: 100%;
     height: auto;
-    margin-right: 15px;
-}
-
-.company-name {
-    font-size: 18pt;
-    font-weight: 700;
-    color: #000;
     margin: 0;
 }
 
 .project-info {
-    flex: 1;
-    padding-left: 1cm;
-    font-size: 9pt;
+    padding: 0;
+    font-size: inherit;
 }
 
 .project-title {
-    font-size: 16pt;
+    font-size: 11pt;
     font-weight: bold;
     color: #000;
-    margin: 0 0 0.8em 0;
+    margin: 0 0 0.4em 0;
     border-bottom: none;
     padding-bottom: 0;
     display: block;
@@ -83,20 +98,39 @@ body {
 }
 
 .detail-row {
-    margin-bottom: 0.4em;
+    margin-bottom: 0.2em;
     display: flex;
 }
 
 .detail-label {
     font-weight: normal;
     color: #000;
-    min-width: 80px;
+    min-width: 65px;
     display: inline-block;
+    flex-shrink: 0;
 }
 
 .detail-value {
     flex: 1;
     font-weight: bold;
+    word-break: break-word;
+}
+
+/* New styles for description block */
+
+.description-label-block {
+    font-weight: normal;
+    color: #000;
+    margin-bottom: 0.1em;
+    display: block;
+}
+
+/* Reusing .description-value for the text content */
+.description-value {
+    white-space: pre-wrap;
+    font-weight: normal;
+    word-break: break-word;
+    display: block;
 }
 
 /* Equipment section styles */
@@ -134,7 +168,7 @@ body {
 }
 
 .equipment-table td {
-    padding: 6px 4px;
+    padding: 3px 4px;
     border: none;
     border-bottom: 1px solid #eee;
     text-align: left;
@@ -158,11 +192,16 @@ body {
 }
 
 .col-name {
-    width: 50%;
+    width: 45%;
 }
 
 .col-serial {
     width: 20%;
+}
+
+.col-qty {
+    width: 5%;
+    text-align: center;
 }
 
 .col-amount {
@@ -324,4 +363,19 @@ body {
         opacity: 1 !important;
         break-inside: avoid;
     }
+}
+
+/* New styles for two-column summary */
+.project-summary-grid {
+    display: flex;
+    justify-content: space-between;
+}
+
+.project-summary-col1 {
+    width: 65%;
+    padding-right: 0.5cm;
+}
+
+.project-summary-col2 {
+    width: 35%;
 }
