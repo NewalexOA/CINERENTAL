@@ -4,17 +4,22 @@
 
 let scanner = null;
 let currentEquipment = null;
-let autoSyncIntervalId = null; // Timer ID for auto-sync
-const AUTO_SYNC_INTERVAL_MS = 60000; // 1 minute
+let autoSyncIntervalId = null;
+const AUTO_SYNC_INTERVAL_MS = 60000;
 
 // Initialize scanner
 async function initScanner() {
     try {
-        scanner = new BarcodeScanner();
+        // Get active session ID before initializing scanner
+        const activeSession = scanStorage.getActiveSession();
+        const activeSessionId = activeSession?.id;
 
-        // Override scanner handlers
-        scanner.onScan = handleScan;
-        scanner.onError = handleError;
+        // Initialize scanner with active session ID
+        scanner = new BarcodeScanner(
+            handleScan,
+            handleError,
+            activeSessionId
+        );
 
         // Start listening for scanner input
         scanner.start();
@@ -24,10 +29,9 @@ async function initScanner() {
         initSessionManagement();
 
         // Check for active session on load
-        const activeSession = scanStorage.getActiveSession();
         if (activeSession) {
             updateSessionUI(activeSession);
-            startAutoSyncTimer(); // Start timer if session is active on load
+            startAutoSyncTimer();
         } else {
             // Optionally show message or create a new default session
             document.getElementById('noActiveSessionMessage').classList.remove('d-none');
@@ -57,9 +61,6 @@ function initSessionManagement() {
     document.getElementById('refreshSessionsListBtn').addEventListener('click', refreshSessionsList);
     document.getElementById('cleanExpiredSessionsBtn').addEventListener('click', cleanExpiredSessions);
     document.getElementById('resetAllSessionsBtn').addEventListener('click', resetAllSessions);
-
-    // Setup event listeners (moved from bottom for clarity)
-    setupEventListeners();
 }
 
 // Update session UI based on active session
@@ -197,12 +198,10 @@ function handleDecrementItem(sessionId, equipmentId) {
 
 function handleIncrementItem(sessionId, equipmentId) {
     console.log(`Incrementing item ${equipmentId} in session ${sessionId}`);
-    // We need the original item details to re-add it (which increments quantity)
-    // Find the item in the current session to get its details
     const session = scanStorage.getSession(sessionId);
     const item = session?.items.find(i => i.equipment_id === equipmentId);
     if (item) {
-        const updatedSession = scanStorage.addEquipment(sessionId, item); // Re-adding increments quantity
+        const updatedSession = scanStorage.addEquipment(sessionId, item);
         updateSessionUI(updatedSession);
     } else {
         console.error(`Could not find item with ID ${equipmentId} to increment.`);
@@ -210,7 +209,7 @@ function handleIncrementItem(sessionId, equipmentId) {
 }
 
 // Modify removeEquipmentFromSession to accept sessionId
-function removeEquipmentFromSession(sessionId, equipmentId) { // Added sessionId
+function removeEquipmentFromSession(sessionId, equipmentId) {
     if (!sessionId) {
         console.error("Cannot remove item, session ID is missing.");
         return;
@@ -309,7 +308,7 @@ function showLoadSessionModal() {
             const sessionId = e.currentTarget.getAttribute('data-session-id');
             const session = scanStorage.setActiveSession(sessionId);
             updateSessionUI(session);
-            startAutoSyncTimer(); // Start timer when session is loaded
+            startAutoSyncTimer();
             bootstrap.Modal.getInstance('#loadSessionModal').hide();
             showToast('Локальная сессия загружена', 'success');
         });
@@ -323,7 +322,7 @@ function showLoadSessionModal() {
                 const session = await scanSync.loadSessionFromServer(serverSessionId);
                 if (session) {
                     updateSessionUI(session);
-                    startAutoSyncTimer(); // Start timer when session is loaded
+                    startAutoSyncTimer();
                     bootstrap.Modal.getInstance('#loadSessionModal').hide();
                     showToast('Серверная сессия загружена', 'success');
                 }
@@ -340,10 +339,10 @@ function showLoadSessionModal() {
             if (confirm('Удалить локальную сессию?')) {
                 const isActive = scanStorage.getActiveSession()?.id === sessionId;
                 scanStorage.deleteSession(sessionId);
-                refreshLocalSessionsList(); // Refresh only local list
+                refreshLocalSessionsList();
                 if (isActive) {
-                    stopAutoSyncTimer(); // Stop timer if active session was deleted
-                    updateSessionUI(null); // Clear active session UI
+                    stopAutoSyncTimer();
+                    updateSessionUI(null);
                 }
                 showToast('Локальная сессия удалена', 'success');
             }
@@ -358,7 +357,7 @@ function showLoadSessionModal() {
                  try {
                     // TODO: Implement scanSync.deleteSessionFromServer(serverSessionId);
                     await scanSync.deleteSessionFromServer(serverSessionId);
-                    loadServerSessions(); // Refresh server list
+                    loadServerSessions();
                     showToast('Сессия удалена с сервера', 'success');
                 } catch (error) {
                     showToast('Ошибка удаления сессии с сервера', 'danger');
@@ -484,20 +483,19 @@ function createProjectFromSession() {
     // Prepare data for the project creation page
     // Map session items to the expected 'bookings' format
     const projectData = {
-        name: activeSession.name, // Use session name as default project name
-        client_id: null, // Client needs to be selected on the project page
+        name: activeSession.name,
+        client_id: null,
         description: `Проект на основе сессии ${activeSession.name}`,
         notes: 'Создано из сессии сканирования',
-        start_date: null, // Dates need to be selected on the project page
+        start_date: null,
         end_date: null,
         bookings: activeSession.items.map(item => ({
             equipment_id: item.equipment_id,
             equipment_name: item.name,
-            // Add other relevant fields if available in session item, e.g., category, price
-            price_per_day: item.price_per_day || 0, // Example: Add price if available
-            category: item.category_name || 'Unknown', // Example: Add category if available
-            quantity: 1, // Assuming quantity is 1 from scanner
-            start_date: null, // Dates will be set on the project page
+            price_per_day: item.price_per_day || 0,
+            category: item.category_name || 'Unknown',
+            quantity: 1,
+            start_date: null,
             end_date: null
         }))
     };
@@ -506,8 +504,7 @@ function createProjectFromSession() {
     try {
         sessionStorage.setItem('newProjectData', JSON.stringify(projectData));
         console.log('Saved project data to sessionStorage:', projectData);
-         // Redirect to project creation page with session ID (optional, as data is now in sessionStorage)
-        window.location.href = `/projects/new?session_id=${activeSession.id}`; // Keep session_id for reference if needed
+        window.location.href = `/projects/new?session_id=${activeSession.id}`;
     } catch (e) {
         console.error('Error saving project data to sessionStorage:', e);
         showToast('Ошибка подготовки данных для проекта', 'danger');
@@ -529,10 +526,9 @@ async function handleScan(equipment, scanInfo = { isDuplicate: false, addedToSes
              // Optionally, briefly highlight the existing item in the list?
         } else if (scanInfo.addedToSession) {
              // Item was successfully added by processBarcode
-             updateSessionUI(scanStorage.getSession(activeSession.id)); // Refresh UI from storage
+             updateSessionUI(scanStorage.getSession(activeSession.id));
              showToast(`Оборудование "${equipment.name}" добавлено в сессию`, 'success');
         }
-        // If neither duplicate nor added (e.g., scanStorage disabled or error), do nothing special regarding session toast
     }
 }
 
@@ -567,7 +563,7 @@ function updateScanResult(equipment) {
                 <p>Отсканируйте штрих-код, чтобы увидеть информацию</p>
             </div>
         `;
-        updateQuickActions(false); // Disable quick actions
+        updateQuickActions(false);
         return;
     }
 
@@ -879,47 +875,8 @@ function resetAllSessions() {
     }
 }
 
-// Setup event listeners (moved from bottom for clarity)
+// Setup event listeners - not used now, keeping for reference
 function setupEventListeners() {
-    document.getElementById('newSessionBtn').addEventListener('click', () => {
-        const sessionName = prompt('Введите имя новой сессии:', 'Сессия ' + new Date().toLocaleString());
-        if (sessionName) {
-            const newSession = scanStorage.createSession(sessionName);
-            updateSessionUI(newSession);
-            startAutoSyncTimer();
-            showToast('Новая сессия создана и активирована', 'success');
-        }
-    });
-
-    document.getElementById('loadSessionBtn').addEventListener('click', showLoadSessionModal);
-
-    document.getElementById('manageSessionsBtn').addEventListener('click', showManageSessionsModal);
-
-    document.getElementById('renameSessionBtn').addEventListener('click', () => {
-        const activeSession = scanStorage.getActiveSession();
-        if (activeSession) {
-            const newName = prompt('Введите новое имя сессии:', activeSession.name);
-            if (newName && newName !== activeSession.name) {
-                scanStorage.renameSession(activeSession.id, newName);
-                updateSessionUI(scanStorage.getActiveSession()); // Refresh UI
-                showToast('Сессия переименована', 'success');
-            }
-        }
-    });
-
-    document.getElementById('clearSessionBtn').addEventListener('click', () => {
-        const activeSession = scanStorage.getActiveSession();
-        if (activeSession && confirm('Вы уверены, что хотите очистить текущую сессию? Все отсканированные позиции будут удалены.')) {
-            scanStorage.clearEquipment(activeSession.id);
-            updateSessionUI(scanStorage.getActiveSession());
-            showToast('Сессия очищена', 'warning');
-        }
-    });
-
-    document.getElementById('syncSessionBtn').addEventListener('click', syncActiveSession);
-
-    document.getElementById('createProjectBtn').addEventListener('click', createProjectFromSession);
-
     document.getElementById('updateStatus').addEventListener('click', () => {
         if (currentEquipment) {
             const form = document.getElementById('updateStatusForm');
@@ -987,53 +944,8 @@ function stopAutoSyncTimer() {
 window.addEventListener('beforeunload', stopAutoSyncTimer);
 
 // Initialize page
-document.addEventListener('DOMContentLoaded', initScanner);
-
-// Fix modal accessibility issues by removing aria-hidden attribute
-document.addEventListener('DOMContentLoaded', () => {
-    const historyModal = document.getElementById('historyModal');
-    if (historyModal) {
-        // Setup a mutation observer to watch for aria-hidden attribute
-        const observer = new MutationObserver((mutations) => {
-            mutations.forEach((mutation) => {
-                if (mutation.type === 'attributes' && mutation.attributeName === 'aria-hidden') {
-                    // Remove aria-hidden attribute as soon as it's added
-                    if (historyModal.getAttribute('aria-hidden') === 'true' &&
-                        historyModal.style.display === 'block') {
-                        historyModal.removeAttribute('aria-hidden');
-                    }
-                }
-            });
-        });
-
-        // Start observing the modal for attribute changes
-        observer.observe(historyModal, { attributes: true });
-
-        // Also try with the normal events for belt and suspenders
-        historyModal.addEventListener('shown.bs.modal', () => {
-            historyModal.removeAttribute('aria-hidden');
-        });
-
-        historyModal.addEventListener('show.bs.modal', () => {
-            historyModal.removeAttribute('aria-hidden');
-        });
-
-        // Fix for modal backdrop not being removed
-        historyModal.addEventListener('hidden.bs.modal', () => {
-            // Remove any lingering backdrop elements
-            const backdrops = document.querySelectorAll('.modal-backdrop');
-            backdrops.forEach(backdrop => {
-                backdrop.remove();
-            });
-
-            // Ensure body doesn't have modal-open class
-            document.body.classList.remove('modal-open');
-            document.body.style.removeProperty('overflow');
-            document.body.style.removeProperty('padding-right');
-        });
-    }
-
-    // Fix for all modals
+document.addEventListener('DOMContentLoaded', function() {
+    initScanner();
     fixAllModals();
 });
 
@@ -1052,6 +964,31 @@ function fixAllModals() {
     modalIds.forEach(modalId => {
         const modal = document.getElementById(modalId);
         if (!modal) return;
+
+        // Fix accessibility issues by removing aria-hidden attribute
+        const observer = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                if (mutation.type === 'attributes' && mutation.attributeName === 'aria-hidden') {
+                    // Remove aria-hidden attribute as soon as it's added
+                    if (modal.getAttribute('aria-hidden') === 'true' &&
+                        modal.style.display === 'block') {
+                        modal.removeAttribute('aria-hidden');
+                    }
+                }
+            });
+        });
+
+        // Start observing the modal for attribute changes
+        observer.observe(modal, { attributes: true });
+
+        // Also try with the normal events for belt and suspenders
+        modal.addEventListener('shown.bs.modal', () => {
+            modal.removeAttribute('aria-hidden');
+        });
+
+        modal.addEventListener('show.bs.modal', () => {
+            modal.removeAttribute('aria-hidden');
+        });
 
         // Fix for modal backdrop not being removed
         modal.addEventListener('hidden.bs.modal', () => {

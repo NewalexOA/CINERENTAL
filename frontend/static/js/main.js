@@ -421,10 +421,11 @@ const api = {
 class BarcodeScanner {
     /**
      * Initialize barcode scanner.
-     * @param {Function} onScan - Callback function for successful scan
-     * @param {Function} onError - Callback function for scan errors
+     * @param {function} onScan - Callback for successful scan
+     * @param {function} onError - Callback for scan error
+     * @param {string} sessionId - Initial session ID
      */
-    constructor(onScan = null, onError = null) {
+    constructor(onScan = null, onError = null, sessionId = null) {
         this.isListening = false;
         this.buffer = '';
         this.lastChar = '';
@@ -432,11 +433,11 @@ class BarcodeScanner {
         this.THRESHOLD = 20; // Maximum ms between keystrokes to be considered from scanner
 
         // Default handlers
-        this.onScan = onScan || ((equipment) => console.log('Scanned equipment:', equipment));
-        this.onError = onError || ((error) => console.error('Scanner error:', error));
+        this.onScan = onScan || ((barcode) => console.log('Scanned:', barcode));
+        this.onError = onError || ((error) => console.error('Scan error:', error));
 
         // Initialize session if scanStorage is available
-        this.sessionId = null;
+        this.sessionId = sessionId;
         if (window.scanStorage) {
             const activeSession = window.scanStorage.getActiveSession();
             if (activeSession) {
@@ -539,24 +540,33 @@ class BarcodeScanner {
             }
             const equipment = await response.json();
 
-            let addedToSession = false; // Flag to track if item was actually added
+            let addedToSession = false;
             let isDuplicate = false;
 
-            // Save to session storage if available
+            // Get current active session ID from storage if not set
+            if (!this.sessionId && window.scanStorage) {
+                const activeSession = window.scanStorage.getActiveSession();
+                if (activeSession) {
+                    this.sessionId = activeSession.id;
+                }
+            }
+
+            // Save to session storage if available and session ID exists
             if (window.scanStorage && this.sessionId) {
                 const result = window.scanStorage.addEquipment(this.sessionId, equipment);
                 if (result === 'duplicate') {
                     isDuplicate = true;
                     console.log(`Barcode ${barcode} corresponds to equipment ID ${equipment.id} which is already in session ${this.sessionId}.`);
                 } else if (typeof result === 'object' && result !== null) {
-                    // Check if the result is a session object (success)
                     addedToSession = true;
+                    console.log(`Added equipment ID ${equipment.id} to session ${this.sessionId}`);
                 }
+            } else {
+                console.log('No active session available for adding equipment');
             }
 
-            // Trigger onScan only if successfully added (or if no storage used)
-            // Pass additional info about duplication status
-            this.onScan(equipment, { isDuplicate: isDuplicate, addedToSession: addedToSession });
+            // Trigger onScan with additional info about duplication status
+            this.onScan(equipment, { isDuplicate, addedToSession });
 
         } catch (error) {
             console.error('Barcode scan error:', error);
