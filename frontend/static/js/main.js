@@ -49,10 +49,19 @@ const formatDateTime = (datetime) => {
 };
 
 const formatCurrency = (amount) => {
+    // Ensure amount is a number, handle potential null/undefined/non-numeric input
+    const numericAmount = Number(amount);
+    if (isNaN(numericAmount)) {
+        console.warn('Invalid amount passed to formatCurrency:', amount);
+        // Return a placeholder or default value for non-numeric input
+        return '0 ₽'; // Default to 0 ₽ for invalid inputs
+    }
     return new Intl.NumberFormat('ru-RU', {
         style: 'currency',
-        currency: 'RUB'
-    }).format(amount);
+        currency: 'RUB',
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0
+    }).format(numericAmount);
 };
 
 // Toast notification function
