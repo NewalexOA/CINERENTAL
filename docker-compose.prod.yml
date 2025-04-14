@@ -93,7 +93,7 @@ services:
     command: redis-server --appendonly yes ${REDIS_PASSWORD:+--requirepass ${REDIS_PASSWORD}}
     restart: always
     ports:
-      - "127.0.0.1:6379:6379"  # Только локальный доступ
+      - "127.0.0.1:6379:6379"  # Local access only
     volumes:
       - type: volume
         source: redis_data
