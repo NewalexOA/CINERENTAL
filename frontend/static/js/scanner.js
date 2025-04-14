@@ -515,7 +515,7 @@ function createProjectFromSession() {
 }
 
 // Handle successful scan
-async function handleScan(equipment, scanInfo) {
+async function handleScan(equipment, scanInfo = { isDuplicate: false, addedToSession: false }) {
     currentEquipment = equipment;
     updateScanResult(equipment);
     updateQuickActions(true);
@@ -538,68 +538,100 @@ async function handleScan(equipment, scanInfo) {
 
 // Handle scan error
 function handleError(error) {
-    // Показываем сообщение об ошибке в контейнере ошибок сканера
     const errorContainer = document.getElementById('scannerErrorContainer');
     const errorText = document.getElementById('scannerErrorText');
-
     errorText.textContent = error.message;
     errorContainer.classList.remove('d-none');
-
-    // Также показываем стандартный тост
     showToast(error.message, 'danger');
-
-    // Обновляем отображение
     updateScanResult(null);
     updateQuickActions(false);
-
-    // Автоматическое скрытие ошибки через 10 секунд
     setTimeout(() => {
         errorContainer.classList.add('d-none');
     }, 10000);
 }
 
-// Update scan result display
+// Update scan result display using template
 function updateScanResult(equipment) {
     const container = document.getElementById('scanResult');
+    const errorContainer = document.getElementById('scannerErrorContainer');
+    errorContainer.classList.add('d-none');
+
+    // Clear previous result
+    container.innerHTML = '';
 
     if (!equipment) {
+        // Show placeholder if no equipment data
         container.innerHTML = `
             <div class="text-center text-muted py-5">
                 <i class="fas fa-barcode fa-3x mb-3"></i>
                 <p>Отсканируйте штрих-код, чтобы увидеть информацию</p>
             </div>
         `;
+        updateQuickActions(false); // Disable quick actions
         return;
     }
 
-    // Format currency if function exists
-    const formattedCost = typeof formatCurrency === 'function'
-        ? formatCurrency(equipment.replacement_cost)
-        : equipment.replacement_cost; // Fallback to raw number if formatter unavailable
+    // Get the template content
+    const template = document.getElementById('scan-result-template');
+    if (!template) {
+        console.error('Scan result template not found!');
+        container.innerHTML = '<div class="alert alert-danger">Ошибка: шаблон результата сканирования не найден.</div>';
+        return;
+    }
+    const clone = template.content.cloneNode(true);
 
-    container.innerHTML = `
-        <div class="d-flex justify-content-between align-items-center mb-1">
-            <h5 class="mb-0 me-2">${equipment.name}</h5>
-            <span class="badge bg-${getStatusColor(equipment.status)} fs-6 text-nowrap flex-shrink-0">
-                ${equipment.status}
-            </span>
-        </div>
-        <div class="mb-2">
-            <p class="text-muted small mb-0">${equipment.category_name || 'Без категории'}</p>
-        </div>
-        <div class="mb-2">
-            <small class="d-block text-muted"><i class="fas fa-barcode me-1"></i>${equipment.barcode}</small>
-            ${equipment.serial_number ? `<small class="d-block text-muted"><i class="fas fa-hashtag me-1"></i>${equipment.serial_number}</small>` : ''}
-        </div>
-        <div class="mb-3">
-            <strong class="d-block">МО: ${formattedCost}</strong>
-        </div>
-        <div class="text-center mt-3">
-            <a href="#/equipment/${equipment.id}" class="btn btn-sm btn-outline-primary">
-                <i class="fas fa-info-circle"></i> Подробнее
-            </a>
-        </div>
-    `;
+    // Find elements within the cloned template
+    const nameEl = clone.querySelector('[data-field="name"]');
+    const categoryEl = clone.querySelector('[data-field="category"]');
+    const barcodeEl = clone.querySelector('[data-field="barcode"] span');
+    const serialEl = clone.querySelector('[data-field="serial"]');
+    const serialTextEl = serialEl.querySelector('span');
+    const costEl = clone.querySelector('[data-field="cost"]');
+    const costTextEl = costEl.querySelector('span');
+    const descriptionEl = clone.querySelector('[data-field="description"]');
+    const statusEl = clone.querySelector('[data-field="status"]');
+    const detailsLinkEl = clone.querySelector('[data-field="details-link"]');
+
+    // Populate elements with data
+    if (nameEl) nameEl.textContent = equipment.name || 'Без названия';
+    if (categoryEl) categoryEl.textContent = `Категория: ${equipment.category_name || 'Без категории'}`;
+    if (barcodeEl) barcodeEl.textContent = equipment.barcode || 'N/A';
+
+    if (equipment.serial_number && serialEl && serialTextEl) {
+        serialTextEl.textContent = equipment.serial_number;
+        serialEl.style.display = '';
+    } else if (serialEl) {
+        serialEl.style.display = 'none';
+    }
+
+    if (equipment.replacement_cost !== null && equipment.replacement_cost !== undefined && costEl && costTextEl) {
+        costTextEl.textContent = formatCurrency(equipment.replacement_cost);
+        costEl.style.display = '';
+    } else if (costEl) {
+        costEl.style.display = 'none';
+    }
+
+    if (equipment.description && descriptionEl) {
+        descriptionEl.textContent = equipment.description;
+        descriptionEl.style.display = '';
+    } else if (descriptionEl) {
+        descriptionEl.style.display = 'none';
+    }
+
+    if (statusEl) {
+        const statusText = equipment.status || 'UNKNOWN';
+        statusEl.textContent = statusText;
+        statusEl.className = statusEl.className.replace(/bg-\S+/g, '');
+        statusEl.classList.add(`bg-${getStatusColor(statusText)}`);
+    }
+
+    if (detailsLinkEl) {
+        detailsLinkEl.href = `/equipment/${equipment.id}`;
+    }
+
+    // Append the populated clone to the container
+    container.appendChild(clone);
+    updateQuickActions(true);
 }
 
 // Add scan to history
@@ -630,8 +662,6 @@ function updateScannerControls(isInitialized) {
 
 // Update quick action buttons
 function updateQuickActions(enabled) {
-    // Update standard buttons
-    // document.getElementById('createBooking').disabled = !enabled; // Removed as button no longer exists
     document.getElementById('updateStatus').disabled = !enabled;
     document.getElementById('viewHistory').disabled = !enabled;
 }
@@ -660,10 +690,9 @@ async function loadEquipmentHistory(equipmentId) {
 
         // Update booking history
         const bookingHistoryHtml = bookingHistory.map(booking => {
-            // Safely access related names, providing defaults if null/undefined
             const clientName = booking.client_name || 'Клиент не указан';
             const equipmentName = booking.equipment_name || 'Оборудование не указано';
-            const projectName = booking.project_name || 'Без проекта'; // Access project_name from response
+            const projectName = booking.project_name || 'Без проекта';
             const bookingStatus = booking.status || 'Статус не указан';
 
             return `
@@ -685,17 +714,6 @@ async function loadEquipmentHistory(equipmentId) {
     }
 }
 
-// Event Listeners
-// document.getElementById('startScanner').addEventListener('click', () => {
-//     scanner.start();
-//     updateScannerControls(true);
-// });
-
-// document.getElementById('stopScanner').addEventListener('click', () => {
-//     scanner.stop();
-//     updateScannerControls(false);
-// });
-
 document.getElementById('updateStatus').addEventListener('click', () => {
     if (currentEquipment) {
         const form = document.getElementById('updateStatusForm');
@@ -711,10 +729,7 @@ document.getElementById('saveStatus').addEventListener('click', async () => {
     const data = Object.fromEntries(formData.entries());
 
     try {
-        await api.patch(`/equipment/${data.equipment_id}/status`, {
-            status: data.status,
-            notes: data.notes
-        });
+        await api.put(`/equipment/${data.equipment_id}/status?status=${data.status}`, {});
 
         showToast('Статус успешно обновлен', 'success');
         bootstrap.Modal.getInstance('#updateStatusModal').hide();
@@ -735,16 +750,10 @@ document.getElementById('viewHistory').addEventListener('click', () => {
     }
 });
 
-// document.getElementById('createBooking').addEventListener('click', () => {
-//     if (currentEquipment) {
-//         window.location.href = `/bookings/?equipment=${currentEquipment.id}`;
-//     }
-// });
-
 // Helper function for status colors
 function getStatusColor(status) {
     const colors = {
-        'AVAILABLE': 'success', // Changed to success for AVAILABLE
+        'AVAILABLE': 'success',
         'RENTED': 'warning',
         'MAINTENANCE': 'danger'
     };
@@ -837,20 +846,15 @@ function refreshSessionsList() {
 async function cleanExpiredSessions() {
     try {
         const response = await api.post('/scan-sessions/clean-expired');
-        const removedCount = response.cleaned_count; // Assuming the endpoint returns { cleaned_count: count }
+        const removedCount = response.cleaned_count;
 
         if (removedCount > 0) {
-            // Refresh both local and server lists if the modal is open
             if (document.getElementById('manageSessionsModal').classList.contains('show')) {
-                 refreshSessionsList(); // Refresh local sessions
-                 loadServerSessions(); // Refresh server sessions
+                 refreshSessionsList();
+                 loadServerSessions();
             }
             showToast(`Удалено ${removedCount} устаревших сессий с сервера`, 'success');
 
-            // It's unlikely the *active* session was just expired and cleaned on the server,
-            // so potentially no need to update the main UI unless specifically needed.
-            // const activeSession = scanStorage.getActiveSession();
-            // updateSessionUI(activeSession);
         } else {
             showToast('Устаревших сессий на сервере не найдено', 'info');
         }
@@ -877,24 +881,20 @@ function resetAllSessions() {
 
 // Setup event listeners (moved from bottom for clarity)
 function setupEventListeners() {
-    // New Session Button
     document.getElementById('newSessionBtn').addEventListener('click', () => {
         const sessionName = prompt('Введите имя новой сессии:', 'Сессия ' + new Date().toLocaleString());
         if (sessionName) {
             const newSession = scanStorage.createSession(sessionName);
             updateSessionUI(newSession);
-            startAutoSyncTimer(); // Start timer for new session
+            startAutoSyncTimer();
             showToast('Новая сессия создана и активирована', 'success');
         }
     });
 
-    // Load Session Button
     document.getElementById('loadSessionBtn').addEventListener('click', showLoadSessionModal);
 
-    // Manage Sessions Button
     document.getElementById('manageSessionsBtn').addEventListener('click', showManageSessionsModal);
 
-    // Rename Session Button
     document.getElementById('renameSessionBtn').addEventListener('click', () => {
         const activeSession = scanStorage.getActiveSession();
         if (activeSession) {
@@ -907,32 +907,33 @@ function setupEventListeners() {
         }
     });
 
-    // Clear Session Button
     document.getElementById('clearSessionBtn').addEventListener('click', () => {
         const activeSession = scanStorage.getActiveSession();
         if (activeSession && confirm('Вы уверены, что хотите очистить текущую сессию? Все отсканированные позиции будут удалены.')) {
             scanStorage.clearEquipment(activeSession.id);
-            updateSessionUI(scanStorage.getActiveSession()); // Refresh UI
+            updateSessionUI(scanStorage.getActiveSession());
             showToast('Сессия очищена', 'warning');
-            // No need to stop/start timer, session still active
         }
     });
 
-    // Sync Session Button (Manual Sync)
     document.getElementById('syncSessionBtn').addEventListener('click', syncActiveSession);
 
-    // Create Project Button
     document.getElementById('createProjectBtn').addEventListener('click', createProjectFromSession);
 
-    // Quick Actions
     document.getElementById('updateStatus').addEventListener('click', () => {
-        // ... (existing code) ...
+        if (currentEquipment) {
+            const form = document.getElementById('updateStatusForm');
+            form.elements.equipment_id.value = currentEquipment.id;
+            form.elements.status.value = currentEquipment.status;
+            new bootstrap.Modal('#updateStatusModal').show();
+        }
     });
-    document.getElementById('saveStatus').addEventListener('click', async () => {
-        // ... (existing code) ...
-    });
+
     document.getElementById('viewHistory').addEventListener('click', () => {
-        // ... (existing code) ...
+        if (currentEquipment) {
+            loadEquipmentHistory(currentEquipment.id);
+            new bootstrap.Modal('#historyModal').show();
+        }
     });
 
     // Add other listeners if needed...
@@ -947,27 +948,21 @@ async function autoSyncActiveSession() {
         if (scanStorage.isSessionDirty(activeSession.id)) {
             console.log('[AutoSync] Session dirty, attempting sync:', activeSession.name);
             try {
-                // Use the same sync logic as manual sync, but without aggressive UI updates/toasts
                 const updatedSession = await scanSync.syncSessionWithServer(activeSession.id);
                 if (updatedSession) {
-                    // IMPORTANT: Update the local session data with server response
-                    // This also marks the session as clean (dirty: false)
                     scanStorage.updateSession(updatedSession);
                     console.log('[AutoSync] Sync successful.');
-                    // Optionally, subtly update parts of the UI if needed, e.g., sync status icon
-                    updateSessionUI(updatedSession); // Update UI to reflect sync status change
+                    updateSessionUI(updatedSession);
                 } else {
                     console.warn('[AutoSync] Sync function did not return updated session.');
                 }
             } catch (error) {
                 console.error('[AutoSync] Sync failed:', error);
-                // Consider showing a non-intrusive error indicator
             }
         } else {
             console.log('[AutoSync] Session clean, skipping sync.');
         }
     } else {
-        // If no active session, ensure timer is stopped
         console.log('[AutoSync] No active session, stopping timer.');
         stopAutoSyncTimer();
     }
@@ -975,7 +970,7 @@ async function autoSyncActiveSession() {
 
 // Function to start the auto-sync timer
 function startAutoSyncTimer() {
-    stopAutoSyncTimer(); // Clear any existing timer first
+    stopAutoSyncTimer();
     console.log(`[AutoSync] Starting timer (${AUTO_SYNC_INTERVAL_MS}ms)`);
     autoSyncIntervalId = setInterval(autoSyncActiveSession, AUTO_SYNC_INTERVAL_MS);
 }
@@ -989,8 +984,87 @@ function stopAutoSyncTimer() {
     }
 }
 
-// Ensure timer stops if window is closed/navigated away
 window.addEventListener('beforeunload', stopAutoSyncTimer);
 
 // Initialize page
 document.addEventListener('DOMContentLoaded', initScanner);
+
+// Fix modal accessibility issues by removing aria-hidden attribute
+document.addEventListener('DOMContentLoaded', () => {
+    const historyModal = document.getElementById('historyModal');
+    if (historyModal) {
+        // Setup a mutation observer to watch for aria-hidden attribute
+        const observer = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                if (mutation.type === 'attributes' && mutation.attributeName === 'aria-hidden') {
+                    // Remove aria-hidden attribute as soon as it's added
+                    if (historyModal.getAttribute('aria-hidden') === 'true' &&
+                        historyModal.style.display === 'block') {
+                        historyModal.removeAttribute('aria-hidden');
+                    }
+                }
+            });
+        });
+
+        // Start observing the modal for attribute changes
+        observer.observe(historyModal, { attributes: true });
+
+        // Also try with the normal events for belt and suspenders
+        historyModal.addEventListener('shown.bs.modal', () => {
+            historyModal.removeAttribute('aria-hidden');
+        });
+
+        historyModal.addEventListener('show.bs.modal', () => {
+            historyModal.removeAttribute('aria-hidden');
+        });
+
+        // Fix for modal backdrop not being removed
+        historyModal.addEventListener('hidden.bs.modal', () => {
+            // Remove any lingering backdrop elements
+            const backdrops = document.querySelectorAll('.modal-backdrop');
+            backdrops.forEach(backdrop => {
+                backdrop.remove();
+            });
+
+            // Ensure body doesn't have modal-open class
+            document.body.classList.remove('modal-open');
+            document.body.style.removeProperty('overflow');
+            document.body.style.removeProperty('padding-right');
+        });
+    }
+
+    // Fix for all modals
+    fixAllModals();
+});
+
+// Function to fix all modal dialogs
+function fixAllModals() {
+    // List of all modal IDs
+    const modalIds = [
+        'updateStatusModal',
+        'historyModal',
+        'newSessionModal',
+        'loadSessionModal',
+        'renameSessionModal',
+        'manageSessionsModal'
+    ];
+
+    modalIds.forEach(modalId => {
+        const modal = document.getElementById(modalId);
+        if (!modal) return;
+
+        // Fix for modal backdrop not being removed
+        modal.addEventListener('hidden.bs.modal', () => {
+            // Remove any lingering backdrop elements
+            const backdrops = document.querySelectorAll('.modal-backdrop');
+            backdrops.forEach(backdrop => {
+                backdrop.remove();
+            });
+
+            // Ensure body doesn't have modal-open class
+            document.body.classList.remove('modal-open');
+            document.body.style.removeProperty('overflow');
+            document.body.style.removeProperty('padding-right');
+        });
+    });
+}
