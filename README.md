@@ -18,6 +18,7 @@ ACT-Rental is a comprehensive system for managing cinema equipment rentals. It a
 - [Code Style Guide](docs/code_style.md) - Coding standards and best practices
 - [Project Structure](docs/project_structure.md) - Detailed explanation of project organization
 - [Technical Requirements](docs/техническое_задание.md) - Project specifications and requirements
+- [Changelog](docs/CHANGELOG.md) - History of notable changes and improvements
 
 ## Features
 
