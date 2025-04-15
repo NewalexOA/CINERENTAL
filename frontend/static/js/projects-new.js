@@ -657,7 +657,13 @@ async function applyProjectDatesToAllItems() {
             try {
                 // Dates need to be in YYYY-MM-DD format for this GET endpoint params
                 const startDateParam = projectDateRangePicker.startDate.format('YYYY-MM-DD');
-                const endDateParam = projectDateRangePicker.endDate.format('YYYY-MM-DD');
+                let endDateParam = projectDateRangePicker.endDate.format('YYYY-MM-DD');
+
+                const isOneDay = startDateParam === endDateParam;
+                if (isOneDay) {
+                    const nextDay = moment(endDateParam).add(1, 'days').format('YYYY-MM-DD');
+                    endDateParam = nextDay;
+                }
 
                 const availabilityResult = await api.get(`/equipment/${equipmentId}/availability`, {
                     start_date: startDateParam,
@@ -681,19 +687,15 @@ async function applyProjectDatesToAllItems() {
                     name: item.name || `ID ${equipmentId}`,
                     error: error.message || 'Ошибка проверки'
                 });
-            } finally {
-                 // Optional: Update progress indicator if needed
-                 // updateProgressIndicator(checkedCount, equipmentItemsToCheck.length);
             }
         }
 
         hideLoading(); // Hide loading after all checks
 
         if (conflictsFound.length > 0) {
-            // Conflicts found
-            const conflictingNames = conflictsFound.map(item => item.name).join(', ');
-            // Consider showing more details about the conflicts if needed
-            toast(`Невозможно применить даты: оборудование (${conflictingNames}) занято или возникла ошибка проверки.`, 'danger', 10000);
+            toast(`Найдены конфликты бронирования для ${conflictsFound.length} позиций.`, 'warning');
+
+            displayConflictsInfo(conflictsFound, projectStartDate, projectEndDate);
         } else {
             // No conflicts, apply dates
             selectedEquipment.forEach(item => {
@@ -704,6 +706,7 @@ async function applyProjectDatesToAllItems() {
             updateEquipmentTable(); // Re-render table with new dates
             saveSessionData();
             toast('Даты проекта успешно применены ко всем позициям', 'success');
+            hideConflictsInfo();
         }
 
     } catch (error) {
@@ -711,6 +714,84 @@ async function applyProjectDatesToAllItems() {
         hideLoading();
         console.error('General error during availability check loop:', error);
         toast(`Произошла общая ошибка при проверке доступности: ${error.message}`, 'danger');
+    }
+}
+
+/**
+ * Отображает информацию о конфликтах бронирования в специальном разделе
+ * @param {Array} conflicts - Список конфликтов
+ * @param {string} requestedStartDate - Запрошенная дата начала
+ * @param {string} requestedEndDate - Запрошенная дата окончания
+ */
+function displayConflictsInfo(conflicts, requestedStartDate, requestedEndDate) {
+    let conflictsContainer = document.getElementById('conflictsInfoContainer');
+
+    if (!conflictsContainer) {
+        conflictsContainer = document.createElement('div');
+        conflictsContainer.id = 'conflictsInfoContainer';
+        conflictsContainer.className = 'alert alert-warning mt-3';
+
+        const equipmentList = document.getElementById('equipmentList');
+        if (equipmentList && equipmentList.parentNode) {
+            equipmentList.parentNode.insertBefore(conflictsContainer, equipmentList.nextSibling);
+        } else {
+            const formElement = document.getElementById('newProjectForm');
+            if (formElement) {
+                formElement.appendChild(conflictsContainer);
+            }
+        }
+    }
+
+    const formattedStartDate = moment(requestedStartDate).format('DD.MM.YYYY');
+    const formattedEndDate = moment(requestedEndDate).format('DD.MM.YYYY');
+
+    let html = `
+        <h5><i class="fas fa-exclamation-triangle"></i> Конфликты бронирования</h5>
+        <p>Следующее оборудование не может быть забронировано на период ${formattedStartDate} - ${formattedEndDate}:</p>
+        <ul class="list-group mb-3">
+    `;
+
+    conflicts.forEach(conflict => {
+        html += `<li class="list-group-item">
+            <strong>${conflict.name}</strong>`;
+
+        if (conflict.error) {
+            html += `<div class="text-danger small">Ошибка проверки: ${conflict.error}</div>`;
+        } else if (conflict.conflicts && conflict.conflicts.length > 0) {
+            html += `<div class="small mt-2">Конфликты с бронированиями:</div>
+                <ul class="small">`;
+
+            conflict.conflicts.forEach(c => {
+                const conflictStart = moment(c.start_date).format('DD.MM.YYYY');
+                const conflictEnd = moment(c.end_date).format('DD.MM.YYYY');
+                html += `<li>Проект "${c.project_name || 'Без названия'}" (${conflictStart} - ${conflictEnd})</li>`;
+            });
+
+            html += `</ul>`;
+        }
+
+        html += `</li>`;
+    });
+
+    html += `</ul>
+        <p>Пожалуйста, выберите другие даты или удалите конфликтующее оборудование из проекта.</p>
+        <button type="button" class="btn btn-sm btn-outline-secondary" id="hideConflictsBtn">
+            <i class="fas fa-times"></i> Скрыть информацию
+        </button>
+    `;
+
+    conflictsContainer.innerHTML = html;
+
+    document.getElementById('hideConflictsBtn').addEventListener('click', hideConflictsInfo);
+}
+
+/**
+ * Hide conflict information
+ */
+function hideConflictsInfo() {
+    const conflictsContainer = document.getElementById('conflictsInfoContainer');
+    if (conflictsContainer) {
+        conflictsContainer.remove();
     }
 }
 
