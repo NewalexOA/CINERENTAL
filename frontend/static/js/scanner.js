@@ -485,8 +485,8 @@ function createProjectFromSession() {
     const projectData = {
         name: activeSession.name,
         client_id: null,
-        description: `Проект на основе сессии ${activeSession.name}`,
-        notes: 'Создано из сессии сканирования',
+        description: null,
+        notes: null,
         start_date: null,
         end_date: null,
         bookings: activeSession.items.map(item => ({
@@ -494,7 +494,7 @@ function createProjectFromSession() {
             equipment_name: item.name,
             price_per_day: item.price_per_day || 0,
             category: item.category_name || 'Unknown',
-            quantity: 1,
+            quantity: item.quantity || 1,
             start_date: null,
             end_date: null
         }))

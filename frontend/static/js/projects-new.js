@@ -172,8 +172,55 @@ function updateEquipmentTable() {
 
     selectedEquipment.forEach((item, index) => {
         const row = document.createElement('tr');
+        const displayName = item.name || 'Unknown Equipment';
+
+        const hasSerialNumber = !!item.serial_number;
+        const quantity = item.quantity || 1;
+        const quantityDisplay = !hasSerialNumber && quantity > 1 ? ` (x${quantity})` : '';
+
+        let quantityButtons = '';
+
+        if (hasSerialNumber) {
+            quantityButtons = `
+                <button class="btn btn-sm btn-outline-danger remove-equipment-btn" data-index="${index}" title="Удалить">
+                    <i class="fas fa-times"></i>
+                </button>
+            `;
+        } else {
+            let secondButton;
+            if (quantity > 1) {
+                secondButton = `
+                    <button class="btn btn-outline-secondary quantity-decrease-btn" data-index="${index}" title="Уменьшить кол-во">
+                        <i class="fas fa-minus"></i>
+                    </button>
+                `;
+            } else {
+                secondButton = `
+                    <button class="btn btn-sm btn-outline-danger remove-equipment-btn" data-index="${index}" title="Удалить">
+                        <i class="fas fa-times"></i>
+                    </button>
+                `;
+            }
+
+            const incrementButton = `
+                <button class="btn btn-outline-secondary quantity-increase-btn" data-index="${index}" title="Увеличить кол-во">
+                    <i class="fas fa-plus"></i>
+                </button>
+            `;
+
+            quantityButtons = `
+                <div class="btn-group btn-group-sm" role="group">
+                    ${incrementButton}
+                    ${secondButton}
+                </div>
+            `;
+        }
+
         row.innerHTML = `
-            <td>${item.name || 'Unknown Equipment'}</td>
+            <td>
+                <div>${displayName}${quantityDisplay}</div>
+                <small class="text-muted">${item.category || ''}</small>
+            </td>
             <td>
                 <input type="text" class="form-control form-control-sm equipment-period-input"
                        data-index="${index}"
@@ -181,20 +228,19 @@ function updateEquipmentTable() {
                        value="${item.booking_start && item.booking_end ?
                                  moment(item.booking_start).format('DD.MM.YYYY') + ' - ' + moment(item.booking_end).format('DD.MM.YYYY') : ''}">
             </td>
-            <td class="text-center">
-                <button type="button" class="btn btn-sm btn-outline-secondary edit-period-btn" data-index="${index}">
-                    <i class="fas fa-edit"></i>
-                </button>
-                <button type="button" class="btn btn-sm btn-outline-danger remove-equipment-btn" data-index="${index}">
-                    <i class="fas fa-trash-alt"></i>
-                </button>
+            <td class="text-center align-middle">
+                <div class="btn-group">
+                    ${hasSerialNumber ? quantityButtons : ''}
+                </div>
+                ${!hasSerialNumber ? quantityButtons : ''}
             </td>
         `;
         equipmentItemsTbody.appendChild(row);
     });
 
-    equipmentCountElement.textContent = `${selectedEquipment.length} ${getNoun(selectedEquipment.length, 'позиция', 'позиции', 'позиций')}`;
-    totalItemsElement.textContent = selectedEquipment.length.toString();
+    const totalItems = selectedEquipment.reduce((sum, item) => sum + (item.quantity || 1), 0);
+    equipmentCountElement.textContent = `${selectedEquipment.length} ${getNoun(selectedEquipment.length, 'позиция', 'позиции', 'позиций')} (всего ${totalItems} шт.)`;
+    totalItemsElement.textContent = totalItems.toString();
 
     // Initialize date pickers for equipment items and add other listeners
     addEquipmentItemEventListeners();
@@ -395,20 +441,25 @@ function createProjectPayload(status) {
         // Ensure project dates are valid before using them
         start_date: dateRange?.startDate?.isValid() ? dateRange.startDate.format('YYYY-MM-DDTHH:mm:ss') : null,
         end_date: dateRange?.endDate?.isValid() ? dateRange.endDate.format('YYYY-MM-DDTHH:mm:ss') : null,
-        bookings: selectedEquipment.map((item, index) => {
-            console.log(`[createProjectPayload] Processing item ${index}:`, item);
-            const bookingStartDate = item.booking_start || (dateRange?.startDate?.isValid() ? dateRange.startDate.format('YYYY-MM-DDTHH:mm:ss') : null);
-            const bookingEndDate = item.booking_end || (dateRange?.endDate?.isValid() ? dateRange.endDate.format('YYYY-MM-DDTHH:mm:ss') : null);
-            console.log(`[createProjectPayload] Item ${index} - Final Booking Dates: Start=${bookingStartDate}, End=${bookingEndDate}`);
+        bookings: []
+    };
 
-            return {
+    selectedEquipment.forEach((item, index) => {
+        console.log(`[createProjectPayload] Processing item ${index}:`, item);
+        const bookingStartDate = item.booking_start || (dateRange?.startDate?.isValid() ? dateRange.startDate.format('YYYY-MM-DDTHH:mm:ss') : null);
+        const bookingEndDate = item.booking_end || (dateRange?.endDate?.isValid() ? dateRange.endDate.format('YYYY-MM-DDTHH:mm:ss') : null);
+        console.log(`[createProjectPayload] Item ${index} - Final Booking Dates: Start=${bookingStartDate}, End=${bookingEndDate}`);
+
+        // Если quantity > 1, создаем нужное количество записей бронирований
+        const quantity = item.quantity || 1;
+        for (let i = 0; i < quantity; i++) {
+            payload.bookings.push({
                 equipment_id: parseInt(item.id), // Ensure ID is integer
                 start_date: bookingStartDate,
                 end_date: bookingEndDate
-                // Note: Backend schema BookingCreateForProject requires only these three fields.
-            };
-        })
-    };
+            });
+        }
+    });
 
     // Validate that all bookings have dates
     const bookingsWithoutDates = payload.bookings.filter(b => !b.start_date || !b.end_date);
@@ -502,21 +553,44 @@ function getNoun(number, one, two, five) {
     return five;
 }
 
-// New function to handle event listeners for equipment items
 function addEquipmentItemEventListeners() {
-    // Remove equipment buttons
     document.querySelectorAll('.remove-equipment-btn').forEach(button => {
-        button.addEventListener('click', () => {
-            const index = parseInt(button.dataset.index);
+        button.addEventListener('click', (e) => {
+            const index = parseInt(e.currentTarget.dataset.index);
             if (!isNaN(index) && index >= 0 && index < selectedEquipment.length) {
-                selectedEquipment.splice(index, 1);
+                if (confirm(`Вы уверены, что хотите удалить "${selectedEquipment[index].name}" из проекта?`)) {
+                    selectedEquipment.splice(index, 1);
+                    updateEquipmentTable();
+                    saveSessionData();
+                    toast('Оборудование удалено из проекта', 'success');
+                }
+            }
+        });
+    });
+
+    document.querySelectorAll('.quantity-increase-btn').forEach(button => {
+        button.addEventListener('click', (e) => {
+            const index = parseInt(e.currentTarget.dataset.index);
+            if (!isNaN(index) && index >= 0 && index < selectedEquipment.length) {
+                selectedEquipment[index].quantity = (selectedEquipment[index].quantity || 1) + 1;
                 updateEquipmentTable();
                 saveSessionData();
             }
         });
     });
 
-    // Initialize date range pickers for each equipment item
+    document.querySelectorAll('.quantity-decrease-btn').forEach(button => {
+        button.addEventListener('click', (e) => {
+            const index = parseInt(e.currentTarget.dataset.index);
+            if (!isNaN(index) && index >= 0 && index < selectedEquipment.length && selectedEquipment[index].quantity > 1) {
+                selectedEquipment[index].quantity--;
+                updateEquipmentTable();
+                saveSessionData();
+            }
+        });
+    });
+
+    // Initialize date pickers for equipment items
     $('.equipment-period-input').daterangepicker({
         autoUpdateInput: false,
         singleDatePicker: false, // Ensure it's a range picker
@@ -550,14 +624,6 @@ function addEquipmentItemEventListeners() {
     if(applyDatesBtn) {
         applyDatesBtn.addEventListener('click', applyProjectDatesToAllItems);
     }
-
-    // Add listeners for edit period buttons (optional - if modal needed)
-    document.querySelectorAll('.edit-period-btn').forEach(button => {
-         button.addEventListener('click', (e) => {
-            const index = parseInt(e.currentTarget.dataset.index);
-            openEquipmentPeriodModal(index); // Need to implement this modal logic
-         });
-    });
 }
 
 // New function to apply project dates to all equipment items
