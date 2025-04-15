@@ -15,3 +15,10 @@ This document lists notable changes to the CINERENTAL application.
 - **Interface Cleanup**: Removed redundant edit period button, using calendar picker exclusively
 - **Safety Feature**: Added confirmation dialog when removing equipment
 - **Better Feedback**: Added toast notifications for equipment removal
+
+### Booking Conflict Management
+
+- **Enhanced Conflict Display**: Added detailed conflict information section with affected projects
+- **Single-day Bookings**: Added support for single-day equipment bookings
+- **Improved Feedback**: Show clear conflict details with project names and dates
+- **API Compatibility**: Fixed API compatibility issues for single-day booking availability checks
