@@ -133,7 +133,16 @@ class BookingService:
             # Validate booking duration
             duration = end_date - start_date
             duration_days = duration.days
-            if duration < MIN_BOOKING_DURATION:
+
+            # Special case for same-day bookings
+            same_day_booking = (
+                start_date.year == end_date.year
+                and start_date.month == end_date.month
+                and start_date.day == end_date.day
+            )
+
+            # Allow bookings that span the same calendar day
+            if not same_day_booking and duration < MIN_BOOKING_DURATION:
                 raise DurationError(
                     'Booking duration must be at least '
                     f'{MIN_BOOKING_DURATION.days} day(s)',
@@ -262,6 +271,30 @@ class BookingService:
                         'End date must be after start date',
                         start_date=start_date,
                         end_date=end_date,
+                    )
+
+                # Special case for same-day bookings
+                same_day_booking = (
+                    start_date.year == end_date.year
+                    and start_date.month == end_date.month
+                    and start_date.day == end_date.day
+                )
+
+                # Validate booking duration (except for same-day bookings)
+                duration = end_date - start_date
+                if not same_day_booking and duration < MIN_BOOKING_DURATION:
+                    raise DurationError(
+                        'Booking duration must be at least '
+                        f'{MIN_BOOKING_DURATION.days} day(s)',
+                        min_days=MIN_BOOKING_DURATION.days,
+                        actual_days=duration.days,
+                    )
+                if duration > MAX_BOOKING_DURATION:
+                    raise DurationError(
+                        f'Booking duration cannot exceed {MAX_BOOKING_DURATION.days} '
+                        'days',
+                        max_days=MAX_BOOKING_DURATION.days,
+                        actual_days=duration.days,
                     )
 
                 # Check if new dates overlap with other bookings
