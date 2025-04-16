@@ -138,9 +138,9 @@ def format_currency(value: Union[float, int, Decimal, str, None]) -> str:
     elif isinstance(value, Decimal):
         value = float(value)
 
-    # Format with thousand separators and two decimal places
+    # Format with thousand separators and no decimal places
     # Using the Russian locale style
-    formatted = '{:,.2f}'.format(value).replace(',', ' ').replace('.', ',')
+    formatted = '{:,.0f}'.format(value).replace(',', ' ')
     return f'{formatted} ₽'
 
 

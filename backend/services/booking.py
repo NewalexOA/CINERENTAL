@@ -54,6 +54,7 @@ class BookingService:
         end_date: datetime,
         total_amount: float,
         deposit_amount: float,
+        quantity: int = 1,
         notes: Optional[str] = None,
     ) -> Booking:
         """Create new booking.
@@ -65,6 +66,7 @@ class BookingService:
             end_date: End date of booking
             total_amount: Total booking amount
             deposit_amount: Required deposit amount
+            quantity: Quantity of equipment items (default: 1)
             notes: Additional notes (optional)
 
         Returns:
@@ -80,6 +82,8 @@ class BookingService:
                 raise ValidationError('Client ID must be positive')
             if equipment_id <= 0:
                 raise ValidationError('Equipment ID must be positive')
+            if quantity <= 0:
+                raise ValidationError('Quantity must be positive')
 
             # Ensure dates are timezone-aware
             if start_date.tzinfo is None:
@@ -129,7 +133,16 @@ class BookingService:
             # Validate booking duration
             duration = end_date - start_date
             duration_days = duration.days
-            if duration < MIN_BOOKING_DURATION:
+
+            # Special case for same-day bookings
+            same_day_booking = (
+                start_date.year == end_date.year
+                and start_date.month == end_date.month
+                and start_date.day == end_date.day
+            )
+
+            # Allow bookings that span the same calendar day
+            if not same_day_booking and duration < MIN_BOOKING_DURATION:
                 raise DurationError(
                     'Booking duration must be at least '
                     f'{MIN_BOOKING_DURATION.days} day(s)',
@@ -179,6 +192,7 @@ class BookingService:
             booking = Booking(
                 client_id=client_id,
                 equipment_id=equipment_id,
+                quantity=quantity,
                 start_date=start_date,
                 end_date=end_date,
                 total_amount=Decimal(str(total_amount)),
@@ -209,6 +223,7 @@ class BookingService:
         total_amount: Optional[float] = None,
         deposit_amount: Optional[float] = None,
         paid_amount: Optional[float] = None,
+        quantity: Optional[int] = None,
         notes: Optional[str] = None,
     ) -> Booking:
         """Update booking.
@@ -220,6 +235,7 @@ class BookingService:
             total_amount: New total amount (optional)
             deposit_amount: New deposit amount (optional)
             paid_amount: New paid amount (optional)
+            quantity: New quantity (optional)
             notes: New notes (optional)
 
         Returns:
@@ -243,6 +259,11 @@ class BookingService:
                     details={'booking_id': booking_id},
                 )
 
+            if quantity is not None:
+                if quantity <= 0:
+                    raise ValidationError('Quantity must be positive')
+                booking.quantity = quantity
+
             if start_date and end_date:
                 # Validate dates
                 if start_date >= end_date:
@@ -250,6 +271,30 @@ class BookingService:
                         'End date must be after start date',
                         start_date=start_date,
                         end_date=end_date,
+                    )
+
+                # Special case for same-day bookings
+                same_day_booking = (
+                    start_date.year == end_date.year
+                    and start_date.month == end_date.month
+                    and start_date.day == end_date.day
+                )
+
+                # Validate booking duration (except for same-day bookings)
+                duration = end_date - start_date
+                if not same_day_booking and duration < MIN_BOOKING_DURATION:
+                    raise DurationError(
+                        'Booking duration must be at least '
+                        f'{MIN_BOOKING_DURATION.days} day(s)',
+                        min_days=MIN_BOOKING_DURATION.days,
+                        actual_days=duration.days,
+                    )
+                if duration > MAX_BOOKING_DURATION:
+                    raise DurationError(
+                        f'Booking duration cannot exceed {MAX_BOOKING_DURATION.days} '
+                        'days',
+                        max_days=MAX_BOOKING_DURATION.days,
+                        actual_days=duration.days,
                     )
 
                 # Check if new dates overlap with other bookings

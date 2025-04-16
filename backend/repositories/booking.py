@@ -517,3 +517,43 @@ class BookingRepository(BaseRepository[Booking]):
         result = await self.session.execute(stmt)
         # Use unique() to handle potential duplicates from joins when using joinedload
         return list(result.unique().scalars().all())
+
+    async def update(self, instance: Booking) -> Booking:
+        """Update booking record.
+
+        Args:
+            instance: Booking instance to update
+
+        Returns:
+            Updated booking
+
+        Raises:
+            SQLAlchemyError: If database operation fails
+        """
+        try:
+            # Get current state from database
+            current = await self.get(instance.id)
+            if not current:
+                raise ValueError(f'Booking with ID {instance.id} not found')
+
+            # Update fields that can change
+            current.quantity = instance.quantity
+            current.start_date = instance.start_date
+            current.end_date = instance.end_date
+            current.booking_status = instance.booking_status
+            current.payment_status = instance.payment_status
+            current.total_amount = instance.total_amount
+            current.deposit_amount = instance.deposit_amount
+            current.paid_amount = instance.paid_amount
+            current.notes = instance.notes
+
+            # Save changes
+            self.session.add(current)
+            await self.session.flush()
+            await self.session.refresh(current)
+            await self.session.commit()
+
+            return current
+        except Exception as e:
+            await self.session.rollback()
+            raise e

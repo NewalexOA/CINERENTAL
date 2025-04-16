@@ -196,20 +196,27 @@ async def print_project(
             await db.refresh(booking, ['equipment'])
             equipment = booking.equipment
 
-            # Get equipment serial number and liability amount
+            # Get equipment serial number and replacement cost
             serial_number = getattr(equipment, 'serial_number', None) or ''
-            liability_amount = getattr(equipment, 'liability_amount', 0.0) or 0.0
+            replacement_cost = getattr(equipment, 'replacement_cost', 0) or 0
+
+            # Get booking quantity (default to 1 for backward compatibility)
+            quantity = getattr(booking, 'quantity', 1) or 1
+
+            # Calculate total liability amount for this booking (unit price * quantity)
+            booking_liability = replacement_cost * quantity
 
             # Create equipment item
             equipment_item = EquipmentPrintItem(
                 id=equipment.id,
                 name=equipment.name,
                 serial_number=serial_number,
-                liability_amount=float(liability_amount),
+                liability_amount=replacement_cost,
+                quantity=quantity,
             )
 
             equipment_items.append(equipment_item)
-            total_liability += float(liability_amount)
+            total_liability += booking_liability
 
         # Create print form data
         print_data = {

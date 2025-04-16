@@ -52,6 +52,11 @@ class BookingCreateForProject(BaseModel):
     equipment_id: int = Field(..., title='Equipment ID')
     start_date: datetime = Field(..., title='Booking Start Date')
     end_date: datetime = Field(..., title='Booking End Date')
+    quantity: int = Field(
+        1,
+        title='Quantity',
+        description='Quantity of equipment items in this booking',
+    )
 
 
 class ProjectCreateWithBookings(ProjectCreate):
@@ -150,6 +155,7 @@ class EquipmentPrintItem(BaseModel):
     name: str
     serial_number: Optional[str] = None
     liability_amount: float = 0.0
+    quantity: int = 1
 
     model_config = ConfigDict(
         from_attributes=True,

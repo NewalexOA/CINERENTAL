@@ -8,16 +8,20 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ## Description
+
 ACT-Rental is a comprehensive system for managing cinema equipment rentals. It allows managers to control equipment availability, handle bookings, and track equipment returns efficiently.
 
 ## Documentation
+
 - [Project Architecture](docs/architecture.md) - Detailed system architecture and design decisions
 - [Development Plan](docs/development_plan.md) - Current development status and roadmap
 - [Code Style Guide](docs/code_style.md) - Coding standards and best practices
 - [Project Structure](docs/project_structure.md) - Detailed explanation of project organization
 - [Technical Requirements](docs/техническое_задание.md) - Project specifications and requirements
+- [Changelog](docs/CHANGELOG.md) - History of notable changes and improvements
 
 ## Features
+
 - Equipment management with hierarchical categories
 - Client management
 - Booking system
@@ -26,6 +30,7 @@ ACT-Rental is a comprehensive system for managing cinema equipment rentals. It a
 - Document generation (rental agreements, handover acts)
 
 ## Tech Stack
+
 - Backend: FastAPI
 - Frontend: Bootstrap
 - Database: PostgreSQL
@@ -33,7 +38,8 @@ ACT-Rental is a comprehensive system for managing cinema equipment rentals. It a
 - Containerization: Docker
 
 ## Project Structure
-```
+
+```text
 act-rental/
 ├── backend/             # Backend application
 │   ├── api/            # API endpoints and routers
@@ -53,53 +59,83 @@ act-rental/
 │   └── templates/    # Jinja2 HTML templates
 ├── tests/            # Test suite
 │   ├── unit/        # Unit tests
-│   └── integration/ # Integration tests
+│   ├── integration/ # Integration tests
+│   ├── e2e/         # End-to-end tests
+│   └── factories/   # Test data factories
 ├── docker/          # Docker configuration files
-└── requirements.txt # Python dependencies
+├── migrations/       # Alembic migration scripts
+├── pyproject.toml    # Project metadata and dependencies definition
+└── requirements.txt  # Python dependencies (potentially generated or for specific use cases)
 ```
 
 ## Prerequisites
+
 - Docker and Docker Compose
-- Python 3.10+
+- Python 3.12
 - PostgreSQL 14+
 - Redis 6+
 
 ## Environment Variables
 
 ### Database Settings
+
 - `POSTGRES_USER` - PostgreSQL username (default: postgres)
 - `POSTGRES_PASSWORD` - PostgreSQL password (default: postgres)
 - `POSTGRES_DB` - Database name (default: act-rental)
 - `POSTGRES_SERVER` - Database host (default: db)
 
 ### Redis Settings
+
 - `REDIS_HOST` - Redis host (default: redis)
 - `REDIS_PASSWORD` - Redis password (optional)
 
 ### Application Settings
+
 - `SECRET_KEY` - Secret key for JWT tokens and security
 - `DEBUG` - Enable debug mode (default: false)
 - `WORKERS_COUNT` - Number of uvicorn workers (default: 1)
 - `LOG_LEVEL` - Logging level (default: info)
 
 ### Security Settings
+
 - `ALLOWED_HOSTS` - Comma-separated list of allowed hosts
 - `CORS_ORIGINS` - Comma-separated list of allowed CORS origins
 
-## Development
+## Development setup
 
 1. Clone the repository
 2. Copy `.env.example` to `.env` and adjust values
 3. Run development server:
+
 ```bash
 docker compose up
 ```
 
 ## Testing
 
-Run tests with coverage report:
+To run the entire test suite, including unit, integration, and E2E tests with coverage reporting, use the following Make command:
+
 ```bash
-docker compose up test
+make test
+```
+
+This command utilizes the `docker-compose.test.yml` configuration. It performs the following steps:
+
+1. Builds the necessary Docker images using `Dockerfile.test`.
+2. Starts the required services (test database and Redis) in the background.
+3. Runs `pytest` within a dedicated container, executing all tests found in the `tests/` directory.
+4. Collects code coverage for the `backend` directory.
+5. Displays a coverage report with missing lines in the terminal.
+6. Generates an HTML coverage report (usually in the `htmlcov/` directory).
+
+To run specific tests or pass additional options to `pytest`, you can execute the `docker compose run` command directly:
+
+```bash
+# Example: Run only tests in a specific file
+docker compose -f docker-compose.test.yml run --rm test python -m pytest tests/integration/test_bookings.py
+
+# Example: Run tests matching a keyword expression (-k)
+docker compose -f docker-compose.test.yml run --rm test python -m pytest -k "test_create_booking"
 ```
 
 ## CI/CD with GitHub Actions
@@ -143,11 +179,14 @@ docker compose up test
 
 1. Copy `.env.example` to `.env.production` and set secure values
 2. Build and run production services:
+
 ```bash
 docker compose -f docker-compose.prod.yml up -d
 ```
 
 ## Dependencies Installation
+
+This project uses `uv` for fast dependency management. The dependencies are defined in `pyproject.toml`. You can install them using the provided Make commands or manually with `uv`.
 
 ### For Development
 
@@ -164,7 +203,7 @@ source .venv/bin/activate  # for Linux/macOS
 # Install uv
 curl -LsSf https://astral.sh/uv/install.sh | sh
 
-# Install development dependencies
+# Install development dependencies (including core dependencies)
 uv pip install -e ".[dev]"
 ```
 
@@ -174,11 +213,12 @@ uv pip install -e ".[dev]"
 # Install testing dependencies
 make install-test
 
-# Or manually
+# Or manually with uv
 uv pip install -e ".[test]"
 ```
 
 ## Development
+
 - Follow [Code Style Guide](docs/code_style.md)
 - Use pre-commit hooks
 - Write tests for new features

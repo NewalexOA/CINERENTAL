@@ -165,6 +165,7 @@ class ProjectService:
                         end_date=booking_end,
                         total_amount=0,
                         deposit_amount=0,
+                        quantity=booking_data.get('quantity', 1),
                         notes=None,
                     )
 
@@ -838,7 +839,7 @@ class ProjectService:
             end_iso = booking.end_date.isoformat() if has_end else None
 
             # Get payment status
-            payment_status = 'PENDING'  # Default payment status
+            payment_status = 'PENDING'
             if hasattr(booking, 'payment_status') and booking.payment_status:
                 payment_status = booking.payment_status.value
 
@@ -848,10 +849,10 @@ class ProjectService:
                 'start_date': start_iso,
                 'end_date': end_iso,
                 'booking_status': booking_status,
-                'status': booking_status,  # duplicate for compatibility
+                'status': booking_status,
                 'equipment': equipment_data,
-                'equipment_name': equipment_name,  # for frontend compatibility
-                'quantity': 1,  # for frontend compatibility
+                'equipment_name': equipment_name,
+                'quantity': booking.quantity,
                 'payment_status': payment_status,
             }
             result.append(booking_dict)

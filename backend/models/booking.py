@@ -9,7 +9,7 @@ from datetime import datetime
 from decimal import Decimal
 from typing import TYPE_CHECKING, List, Optional
 
-from sqlalchemy import DateTime, ForeignKey, Numeric, String
+from sqlalchemy import DateTime, ForeignKey, Integer, Numeric, String
 from sqlalchemy.dialects.postgresql import ENUM
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -69,6 +69,7 @@ class Booking(TimestampMixin, Base):
         id: Primary key
         client_id: Reference to client
         equipment_id: Reference to equipment
+        quantity: Quantity of equipment items in this booking
         project_id: Reference to project (optional)
         start_date: Rental start date
         end_date: Rental end date
@@ -92,6 +93,12 @@ class Booking(TimestampMixin, Base):
     )
     equipment_id: Mapped[int] = mapped_column(
         ForeignKey('equipment.id', ondelete='RESTRICT')
+    )
+    quantity: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        default=1,
+        comment='Quantity of equipment items in this booking',
     )
     project_id: Mapped[Optional[int]] = mapped_column(
         ForeignKey('projects.id', ondelete='CASCADE'),

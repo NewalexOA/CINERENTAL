@@ -79,8 +79,9 @@
 
         <!-- Equipment List -->
         <div class="card">
-            <div class="card-header">
+            <div class="card-header d-flex justify-content-between align-items-center">
                 <h5 class="card-title mb-0">Оборудование в проекте</h5>
+                <div class="text-muted" id="equipmentCount">{{ project_data.bookings|length }} позиций</div>
             </div>
             <div class="card-body">
                 <div class="table-responsive">
@@ -89,37 +90,47 @@
                             <tr>
                                 <th>Оборудование</th>
                                 <th>Период</th>
-                                <th>Статус</th>
-                                <th>Действия</th>
+                                <th class="text-center">Действия</th>
                             </tr>
                         </thead>
                         <tbody id="equipmentList">
                             {% for booking in project_data.bookings %}
-                            <tr>
+                            <tr data-booking-id="{{ booking.id }}"
+                                data-has-serial-number="{{ 'true' if booking.equipment.serial_number else 'false' }}"
+                                data-equipment-id="{{ booking.equipment_id }}">
                                 <td>
-                                    <div>{{ booking.equipment_name }}</div>
+                                    <div>{{ booking.equipment_name }}{% if booking.quantity > 1 %} (x{{ booking.quantity }}){% endif %}</div>
                                     <small class="text-muted">{{ booking.equipment_barcode }}</small>
+                                    <span class="quantity d-none">{{ booking.quantity }}</span>
                                 </td>
                                 <td>
-                                    {{ booking.start_date | format_date }} - {{ booking.end_date | format_date }}
+                                    <input type="text" class="form-control form-control-sm booking-period-input"
+                                           data-booking-id="{{ booking.id }}"
+                                           value="{{ booking.start_date | format_date }} - {{ booking.end_date | format_date }}"
+                                           placeholder="ДД.ММ.ГГГГ - ДД.ММ.ГГГГ">
                                 </td>
-                                <td>
-                                    <span class="badge bg-{{ booking.booking_status | lower }}">
-                                        {{ booking.booking_status }}
-                                    </span>
-                                </td>
-                                <td>
-                                    <div class="btn-group">
-                                        <a href="/equipment/{{ booking.equipment_id }}" class="btn btn-sm btn-outline-primary">
-                                            <i class="fas fa-info-circle"></i>
-                                        </a>
-                                        <button type="button" class="btn btn-sm btn-outline-secondary edit-booking-btn"
-                                                data-booking-id="{{ booking.id }}"
-                                                data-equipment-name="{{ booking.equipment_name }}"
-                                                data-start-date="{{ booking.start_date }}"
-                                                data-end-date="{{ booking.end_date }}">
-                                            <i class="fas fa-edit"></i>
+                                <td class="text-center">
+                                    <div class="btn-group" role="group">
+                                        {% if not booking.equipment.serial_number %}
+                                        <div class="btn-group btn-group-sm" role="group">
+                                            <button class="btn btn-outline-secondary quantity-increase-btn" title="Увеличить кол-во">
+                                                <i class="fas fa-plus"></i>
+                                            </button>
+                                            {% if booking.quantity > 1 %}
+                                            <button class="btn btn-outline-secondary quantity-decrease-btn" title="Уменьшить кол-во">
+                                                <i class="fas fa-minus"></i>
+                                            </button>
+                                            {% else %}
+                                            <button class="btn btn-outline-danger remove-booking-btn" title="Удалить">
+                                                <i class="fas fa-times"></i>
+                                            </button>
+                                            {% endif %}
+                                        </div>
+                                        {% else %}
+                                        <button class="btn btn-outline-danger remove-booking-btn" title="Удалить">
+                                            <i class="fas fa-times"></i>
                                         </button>
+                                        {% endif %}
                                     </div>
                                 </td>
                             </tr>

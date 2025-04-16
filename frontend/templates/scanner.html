@@ -196,10 +196,6 @@
                             <option value="MAINTENANCE">В ремонте</option>
                         </select>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label">Комментарий</label>
-                        <textarea class="form-control" name="notes" rows="3"></textarea>
-                    </div>
                 </form>
             </div>
             <div class="modal-footer">
@@ -381,7 +377,35 @@
         </div>
     </div>
 </div>
+
+
+{# --- Template for Scan Result --- #}
+<template id="scan-result-template">
+    <div class="row">
+        {# Left Column #}
+        <div class="col-md-8">
+            <h5 class="mb-1" data-field="name"></h5>
+            <p class="text-muted small mb-2" data-field="category"></p>
+            <small class="d-block text-muted mb-2">
+                <span class="me-3" data-field="barcode"><i class="fas fa-barcode me-1"></i> <span></span></span>
+                <span class="me-3" data-field="serial" style="display: none;"><i class="fas fa-hashtag me-1"></i> <span></span></span>
+                <span data-field="cost" style="display: none;"><i class="fas fa-ruble-sign me-1"></i> <span></span></span>
+            </small>
+            <p class="card-text small mt-2" data-field="description" style="display: none;"></p>
+        </div>
+        {# Right Column #}
+        <div class="col-md-4 text-md-end">
+            <span class="badge fs-6 text-nowrap w-100 mb-2 d-block" data-field="status"></span>
+            <a href="#" class="btn btn-sm btn-outline-primary w-100" data-field="details-link">
+                <i class="fas fa-info-circle"></i> Подробнее
+            </a>
+        </div>
+    </div>
+</template>
+{# --- End Template --- #}
+
 {% endblock %}
+
 
 {% block scripts %}
 <!-- Connect the script for working with scanning sessions -->
