@@ -155,6 +155,7 @@ class EquipmentPrintItem(BaseModel):
     name: str
     serial_number: Optional[str] = None
     liability_amount: float = 0.0
+    quantity: int = 1
 
     model_config = ConfigDict(
         from_attributes=True,

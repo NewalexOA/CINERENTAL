@@ -61,7 +61,7 @@
                         <td class="col-name">{{ item.name }}</td>
                         <td class="col-serial">{{ item.serial_number or "—" }}</td>
                         <td class="col-qty">{{ item.quantity or 1 }}</td>
-                        <td class="col-amount">{{ item.liability_amount | format_currency }}</td>
+                        <td class="col-amount">{{ (item.liability_amount * item.quantity) | format_currency }}</td>
                     </tr>
                     {% endfor %}
                 </tbody>
