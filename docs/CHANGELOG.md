@@ -22,3 +22,16 @@ This document lists notable changes to the CINERENTAL application.
 - **Single-day Bookings**: Added support for single-day equipment bookings
 - **Improved Feedback**: Show clear conflict details with project names and dates
 - **API Compatibility**: Fixed API compatibility issues for single-day booking availability checks
+
+### Booking Quantity Management
+
+- **Database Enhancement**: Added quantity field to Booking model and database table
+- **API Support**: Updated booking endpoints to handle quantity parameter
+- **Backend Logic**: Modified services to properly handle booking quantities
+- **Improved UI**: Updated project view to display booking quantities
+- **Dynamic Controls**: Added quantity increase/decrease buttons in project view
+- **Server Synchronization**: Booking quantity changes now properly sync with server
+- **UI Feedback**: Display updates dynamically reflect actual quantity from server
+- **Non-Serial Equipment**: Quantity management restricted to non-serialized equipment
+- **Project Creation**: Added quantity support when creating projects with multiple items
+- **Backward Compatibility**: Default quantity of 1 for backward compatibility
