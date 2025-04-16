@@ -233,3 +233,4 @@ docs/Current_task/*
 # Explicitly include web manifest files
 !frontend/static/manifest/
 !frontend/static/manifest/*
+!frontend/static/js/lib
