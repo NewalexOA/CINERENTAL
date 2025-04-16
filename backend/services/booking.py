@@ -54,6 +54,7 @@ class BookingService:
         end_date: datetime,
         total_amount: float,
         deposit_amount: float,
+        quantity: int = 1,
         notes: Optional[str] = None,
     ) -> Booking:
         """Create new booking.
@@ -65,6 +66,7 @@ class BookingService:
             end_date: End date of booking
             total_amount: Total booking amount
             deposit_amount: Required deposit amount
+            quantity: Quantity of equipment items (default: 1)
             notes: Additional notes (optional)
 
         Returns:
@@ -80,6 +82,8 @@ class BookingService:
                 raise ValidationError('Client ID must be positive')
             if equipment_id <= 0:
                 raise ValidationError('Equipment ID must be positive')
+            if quantity <= 0:
+                raise ValidationError('Quantity must be positive')
 
             # Ensure dates are timezone-aware
             if start_date.tzinfo is None:
@@ -179,6 +183,7 @@ class BookingService:
             booking = Booking(
                 client_id=client_id,
                 equipment_id=equipment_id,
+                quantity=quantity,
                 start_date=start_date,
                 end_date=end_date,
                 total_amount=Decimal(str(total_amount)),
@@ -209,6 +214,7 @@ class BookingService:
         total_amount: Optional[float] = None,
         deposit_amount: Optional[float] = None,
         paid_amount: Optional[float] = None,
+        quantity: Optional[int] = None,
         notes: Optional[str] = None,
     ) -> Booking:
         """Update booking.
@@ -220,6 +226,7 @@ class BookingService:
             total_amount: New total amount (optional)
             deposit_amount: New deposit amount (optional)
             paid_amount: New paid amount (optional)
+            quantity: New quantity (optional)
             notes: New notes (optional)
 
         Returns:
@@ -242,6 +249,11 @@ class BookingService:
                     f'Booking with ID {booking_id} not found',
                     details={'booking_id': booking_id},
                 )
+
+            if quantity is not None:
+                if quantity <= 0:
+                    raise ValidationError('Quantity must be positive')
+                booking.quantity = quantity
 
             if start_date and end_date:
                 # Validate dates
