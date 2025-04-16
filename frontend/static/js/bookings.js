@@ -85,7 +85,7 @@ const bookingManager = {
         if (!form) return;
 
         // Debounced version of loadBookings for input fields
-        const debouncedLoadBookings = debounce(() => this.loadBookings(), 500); // 500ms delay
+        const debouncedLoadBookings = debounce(() => this.loadBookings(), 500);
 
         // 1. Set initial values from URL
         this.setFormValuesFromUrl();
@@ -118,12 +118,12 @@ const bookingManager = {
 
             $(dateRangeInput).on('apply.daterangepicker', (ev, picker) => {
                 $(dateRangeInput).val(picker.startDate.format('YYYY-MM-DD') + ' - ' + picker.endDate.format('YYYY-MM-DD'));
-                this.loadBookings(); // Load bookings when date range is applied
+                this.loadBookings();
             });
 
             $(dateRangeInput).on('cancel.daterangepicker', () => {
                 $(dateRangeInput).val('');
-                this.loadBookings(); // Load bookings when date range is cleared
+                this.loadBookings();
             });
 
             // Set initial value if present in URL
@@ -141,7 +141,7 @@ const bookingManager = {
                     }
                 }
              } else {
-                $(dateRangeInput).val(''); // Ensure input is empty if no URL param
+                $(dateRangeInput).val('');
             }
 
         } else {
@@ -183,12 +183,11 @@ const bookingManager = {
         const urlParams = new URLSearchParams(window.location.search);
 
         const clientSearch = urlParams.get('client_search') || '';
-        const equipmentSearch = urlParams.get('equipment_search') || ''; // Read equipment search
+        const equipmentSearch = urlParams.get('equipment_search') || '';
         const paymentStatus = urlParams.get('payment_status') || '';
-        // Date range is handled separately in initFilterForm
 
         if (clientSearchInput) clientSearchInput.value = clientSearch;
-        if (equipmentSearchInput) equipmentSearchInput.value = equipmentSearch; // Set equipment search value
+        if (equipmentSearchInput) equipmentSearchInput.value = equipmentSearch;
         if (paymentStatusSelect) paymentStatusSelect.value = paymentStatus;
     },
 
@@ -198,15 +197,15 @@ const bookingManager = {
         const params = {};
 
         const clientQuery = clientSearchInput ? clientSearchInput.value.trim() : '';
-        const equipmentQuery = equipmentSearchInput ? equipmentSearchInput.value.trim() : ''; // Read equipment query
+        const equipmentQuery = equipmentSearchInput ? equipmentSearchInput.value.trim() : '';
         const paymentStatus = paymentStatusSelect ? paymentStatusSelect.value : '';
         const dateRange = dateRangeInput ? dateRangeInput.value : '';
 
-        if (clientQuery.length >= 3 || clientQuery.length === 0) { // Allow empty query to show all
+        if (clientQuery.length >= 3 || clientQuery.length === 0) {
              params.query = clientQuery;
         }
-        if (equipmentQuery.length >= 3 || equipmentQuery.length === 0) { // Allow empty query
-            params.equipment_query = equipmentQuery; // Add equipment query
+        if (equipmentQuery.length >= 3 || equipmentQuery.length === 0) {
+            params.equipment_query = equipmentQuery;
         }
         if (paymentStatus) {
             params.payment_status = paymentStatus;
@@ -224,10 +223,6 @@ const bookingManager = {
             }
         }
 
-        // Add pagination parameters later if needed
-        // params.skip = this.state.currentPage * this.state.limit;
-        // params.limit = this.state.limit;
-
         console.log('API Params:', params);
         return params;
     },
@@ -238,12 +233,12 @@ const bookingManager = {
         const urlParams = new URLSearchParams();
 
         const clientSearch = clientSearchInput ? clientSearchInput.value.trim() : '';
-        const equipmentSearch = equipmentSearchInput ? equipmentSearchInput.value.trim() : ''; // Read equipment search
+        const equipmentSearch = equipmentSearchInput ? equipmentSearchInput.value.trim() : '';
         const paymentStatus = paymentStatusSelect ? paymentStatusSelect.value : '';
         const dateRange = dateRangeInput ? dateRangeInput.value : '';
 
         if (clientSearch) urlParams.set('client_search', clientSearch);
-        if (equipmentSearch) urlParams.set('equipment_search', equipmentSearch); // Add equipment search to URL
+        if (equipmentSearch) urlParams.set('equipment_search', equipmentSearch);
         if (paymentStatus) urlParams.set('payment_status', paymentStatus);
         if (dateRange) urlParams.set('date_range', dateRange);
 
@@ -265,7 +260,7 @@ const bookingManager = {
         if (clientSearchSpinner) clientSearchSpinner.classList.remove('d-none');
         if (equipmentSearchSpinner) equipmentSearchSpinner.classList.remove('d-none');
 
-        this.updateUrl(); // Update URL before fetching
+        this.updateUrl();
         const apiParams = this.getApiParams();
         const queryString = new URLSearchParams(apiParams).toString();
 
@@ -292,7 +287,7 @@ const bookingManager = {
     // Render the list of bookings in the table
     renderBookings(bookings) {
         const { bookingsTableBody } = this.elements;
-        bookingsTableBody.innerHTML = ''; // Clear existing rows
+        bookingsTableBody.innerHTML = '';
 
         if (!bookings || bookings.length === 0) {
             bookingsTableBody.innerHTML = '<tr><td colspan="7" class="text-center">Бронирования не найдены.</td></tr>';
@@ -308,7 +303,7 @@ const bookingManager = {
             const period = `${startDate} - ${endDate}`;
 
             // Payment Status Badge
-            let paymentBadgeClass = 'bg-warning text-dark'; // Pending default
+            let paymentBadgeClass = 'bg-warning text-dark';
             let paymentStatusText = 'Ожидается';
             if (booking.payment_status === 'PAID') {
                 paymentBadgeClass = 'bg-success';
@@ -318,17 +313,25 @@ const bookingManager = {
                 paymentStatusText = booking.payment_status === 'CANCELLED' ? 'Отменен' : 'Возвращен';
             }
 
-             // Project link or N/A
+            // Project link or N/A
             const projectLink = booking.project_id && booking.project_name
                 ? `<a href="/projects/${booking.project_id}">${booking.project_name}</a>`
                 : '<span class="text-muted">N/A</span>';
 
+            // Quantity display
+            const quantityDisplay = booking.quantity > 1 ? ` (x${booking.quantity})` : '';
+
             row.innerHTML = `
                 <td>${booking.id}</td>
                 <td><a href="/clients/${booking.client_id}">${booking.client_name || 'N/A'}</a></td>
-                <td><a href="/equipment/${booking.equipment_id}">${booking.equipment_name || 'N/A'}</a></td>
+                <td>
+                    <div>
+                        <a href="/equipment/${booking.equipment_id}">${booking.equipment_name || 'N/A'}</a>${quantityDisplay}
+                    </div>
+                    ${booking.equipment_serial_number ? `<small class="text-muted">S/N: ${booking.equipment_serial_number}</small>` : ''}
+                </td>
                 <td>${period}</td>
-                 <td>${projectLink}</td>
+                <td>${projectLink}</td>
                 <td><span class="badge ${paymentBadgeClass}">${paymentStatusText}</span></td>
                 <td>
                     <button class="btn btn-sm btn-outline-primary me-1" title="Редактировать" onclick="editBooking(${booking.id})">
@@ -348,13 +351,10 @@ const bookingManager = {
         const { form, clientSearchInput, equipmentSearchInput, paymentStatusSelect, dateRangeInput } = this.elements;
         if (form) form.reset();
                 if (clientSearchInput) clientSearchInput.value = '';
-        if (equipmentSearchInput) equipmentSearchInput.value = ''; // Reset equipment search
+        if (equipmentSearchInput) equipmentSearchInput.value = '';
         if (paymentStatusSelect) paymentStatusSelect.value = '';
          if (dateRangeInput) {
-             $(dateRangeInput).val(''); // Clear daterangepicker input
-             // Reset the picker itself (optional, if needed to clear internal dates)
-             // $(dateRangeInput).data('daterangepicker').setStartDate(moment());
-             // $(dateRangeInput).data('daterangepicker').setEndDate(moment());
+             $(dateRangeInput).val('');
          }
 
         this.loadBookings();
@@ -399,5 +399,105 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // Expose functions to global scope if needed for inline event handlers
-window.editBooking = (id) => { /* Add implementation or integrate */ console.log(`Edit booking ${id}`); };
-window.confirmDeleteBooking = (id) => { /* Add implementation or integrate */ console.log(`Delete booking ${id}`); };
+window.editBooking = async (id) => {
+    try {
+        const response = await fetch(`/api/v1/bookings/${id}`);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const booking = await response.json();
+
+        const modal = document.getElementById('editBookingModal');
+        if (!modal) {
+            throw new Error('Edit booking modal not found');
+        }
+
+        modal.querySelector('#editBookingId').value = booking.id;
+        modal.querySelector('#editClientName').textContent = booking.client_name;
+        modal.querySelector('#editEquipmentName').textContent = booking.equipment_name;
+
+        const periodInput = modal.querySelector('#editBookingPeriod');
+        $(periodInput).daterangepicker({
+            autoUpdateInput: false,
+            locale: {
+                cancelLabel: 'Очистить',
+                applyLabel: 'Применить',
+                format: 'DD.MM.YYYY',
+                separator: ' - ',
+                daysOfWeek: moment.weekdaysMin(),
+                monthNames: moment.monthsShort(),
+                firstDay: 1
+            },
+            startDate: moment(booking.start_date),
+            endDate: moment(booking.end_date)
+        });
+
+        $(periodInput).val(
+            moment(booking.start_date).format('DD.MM.YYYY') + ' - ' +
+            moment(booking.end_date).format('DD.MM.YYYY')
+        );
+
+        const saveButton = modal.querySelector('#saveBookingChanges');
+        const saveHandler = async () => {
+            try {
+                const dates = $(periodInput).data('daterangepicker');
+                if (!dates || !dates.startDate || !dates.endDate) {
+                    showToast('Пожалуйста, выберите период бронирования', 'warning');
+                    return;
+                }
+
+                const updateData = {
+                    start_date: dates.startDate.format('YYYY-MM-DDTHH:mm:ss'),
+                    end_date: dates.endDate.format('YYYY-MM-DDTHH:mm:ss')
+                };
+
+                const updateResponse = await fetch(`/api/v1/bookings/${id}`, {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(updateData)
+                });
+
+                if (!updateResponse.ok) {
+                    throw new Error(`HTTP error! status: ${updateResponse.status}`);
+                }
+
+                showToast('Бронирование успешно обновлено', 'success');
+                bootstrap.Modal.getInstance(modal).hide();
+                bookingManager.loadBookings();
+            } catch (error) {
+                console.error('Error updating booking:', error);
+                showToast('Ошибка при обновлении бронирования', 'danger');
+            }
+        };
+
+        saveButton.removeEventListener('click', saveHandler);
+        saveButton.addEventListener('click', saveHandler);
+
+        new bootstrap.Modal(modal).show();
+    } catch (error) {
+        console.error('Error loading booking details:', error);
+        showToast('Ошибка при загрузке данных бронирования', 'danger');
+    }
+};
+
+window.confirmDeleteBooking = async (id) => {
+    if (confirm('Вы уверены, что хотите удалить это бронирование?')) {
+        try {
+            const response = await fetch(`/api/v1/bookings/${id}`, {
+                method: 'DELETE'
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            showToast('Бронирование успешно удалено', 'success');
+            bookingManager.loadBookings();
+        } catch (error) {
+            console.error('Error deleting booking:', error);
+            showToast('Ошибка при удалении бронирования', 'danger');
+        }
+    }
+};

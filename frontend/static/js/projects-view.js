@@ -34,6 +34,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Initialize edit project modal
     initializeEditProjectModal();
+
+    // Initialize equipment management
+    initializeEquipmentManagement();
 });
 
 /**
@@ -567,4 +570,249 @@ async function updateProjectNotes(projectId, notes) {
             submitBtn.innerHTML = 'Сохранить';
         }
     }
+}
+
+// Initialize equipment management functionality
+function initializeEquipmentManagement() {
+    // Initialize date pickers for booking periods
+    initializeBookingPeriodPickers();
+
+    // Add event listeners for quantity buttons
+    document.querySelectorAll('.quantity-increase-btn').forEach(button => {
+        button.addEventListener('click', handleQuantityIncrease);
+    });
+
+    document.querySelectorAll('.quantity-decrease-btn').forEach(button => {
+        button.addEventListener('click', handleQuantityDecrease);
+    });
+
+    document.querySelectorAll('.remove-booking-btn').forEach(button => {
+        button.addEventListener('click', handleBookingRemoval);
+    });
+}
+
+// Initialize date pickers for booking periods
+function initializeBookingPeriodPickers() {
+    $('.booking-period-input').each(function() {
+        $(this).daterangepicker({
+            autoUpdateInput: false,
+            locale: {
+                cancelLabel: 'Очистить',
+                applyLabel: 'Применить',
+                format: 'DD.MM.YYYY',
+                separator: ' - ',
+                daysOfWeek: moment.weekdaysMin(),
+                monthNames: moment.monthsShort(),
+                firstDay: 1
+            }
+        });
+
+        $(this).on('apply.daterangepicker', async function(ev, picker) {
+            const bookingId = $(this).data('booking-id');
+            const startDate = picker.startDate.format('YYYY-MM-DDTHH:mm:ss');
+            const endDate = picker.endDate.format('YYYY-MM-DDTHH:mm:ss');
+
+            try {
+                await updateBookingDates(bookingId, startDate, endDate);
+                $(this).val(picker.startDate.format('DD.MM.YYYY') + ' - ' + picker.endDate.format('DD.MM.YYYY'));
+                toast('Период бронирования обновлен', 'success');
+            } catch (error) {
+                console.error('Error updating booking dates:', error);
+                toast('Ошибка при обновлении периода бронирования', 'danger');
+            }
+        });
+
+        $(this).on('cancel.daterangepicker', function(ev, picker) {
+            $(this).val($(this).attr('value')); // Restore original value
+        });
+    });
+}
+
+// Handle quantity increase
+async function handleQuantityIncrease(event) {
+    const row = event.target.closest('tr');
+    const bookingId = row.dataset.bookingId;
+    const quantitySpan = row.querySelector('.quantity');
+    const currentQuantity = parseInt(quantitySpan.textContent);
+
+    console.log('Increasing quantity for booking:', bookingId);
+    console.log('Current quantity:', currentQuantity);
+
+    try {
+        // Check if equipment has a serial number
+        if (row.dataset.hasSerialNumber === 'true') {
+            console.log('Equipment has serial number, cannot increase quantity');
+            toast('Нельзя увеличить количество для уникального оборудования', 'error');
+            return;
+        }
+
+        console.log('Sending API request to increase quantity');
+        const data = await api.patch(`/bookings/${bookingId}`, {
+            quantity: currentQuantity + 1
+        });
+
+        console.log('API response:', data);
+        const newQuantity = data.quantity;
+        console.log('New quantity from API:', newQuantity);
+
+        // Update quantity display
+        quantitySpan.textContent = newQuantity;
+        console.log('Updated quantity span:', quantitySpan.textContent);
+
+        // Update the displayed name with quantity
+        const equipmentNameDiv = row.querySelector('td:first-child div');
+        if (equipmentNameDiv) {
+            const name = equipmentNameDiv.textContent.replace(/\s*\(x\d+\)$/, '').trim();
+            equipmentNameDiv.innerHTML = `${name} (x${newQuantity})`;
+            console.log('Updated equipment name display:', equipmentNameDiv.innerHTML);
+        } else {
+            console.warn('Equipment name div not found');
+        }
+
+        // Update buttons based on new quantity
+        const btnGroup = row.querySelector('.btn-group[role="group"]');
+        if (btnGroup) {
+            console.log('Updating button group');
+            btnGroup.innerHTML = `
+                <button class="btn btn-outline-secondary quantity-increase-btn" title="Увеличить кол-во">
+                    <i class="fas fa-plus"></i>
+                </button>
+                <button class="btn btn-outline-secondary quantity-decrease-btn" title="Уменьшить кол-во">
+                    <i class="fas fa-minus"></i>
+                </button>
+            `;
+
+            // Re-attach event listeners
+            const increaseBtn = btnGroup.querySelector('.quantity-increase-btn');
+            const decreaseBtn = btnGroup.querySelector('.quantity-decrease-btn');
+
+            increaseBtn.addEventListener('click', handleQuantityIncrease);
+            decreaseBtn.addEventListener('click', handleQuantityDecrease);
+
+            console.log('Event listeners reattached to buttons');
+        } else {
+            console.warn('Button group not found');
+        }
+
+        toast('Количество увеличено', 'success');
+    } catch (error) {
+        console.error('Error increasing quantity:', error);
+        toast('Ошибка при изменении количества', 'danger');
+    }
+}
+
+// Handle quantity decrease
+async function handleQuantityDecrease(event) {
+    const row = event.target.closest('tr');
+    const bookingId = row.dataset.bookingId;
+    const quantitySpan = row.querySelector('.quantity');
+    const currentQuantity = parseInt(quantitySpan.textContent);
+
+    console.log('Decreasing quantity for booking:', bookingId);
+    console.log('Current quantity:', currentQuantity);
+
+    if (currentQuantity <= 1) {
+        console.log('Cannot decrease: quantity is already 1');
+        return;
+    }
+
+    try {
+        console.log('Sending API request to decrease quantity');
+        const data = await api.patch(`/bookings/${bookingId}`, {
+            quantity: currentQuantity - 1
+        });
+
+        console.log('API response:', data);
+        const newQuantity = data.quantity;
+        console.log('New quantity from API:', newQuantity);
+
+        // Update quantity display
+        quantitySpan.textContent = newQuantity;
+        console.log('Updated quantity span:', quantitySpan.textContent);
+
+        // Update the displayed name with quantity
+        const equipmentNameDiv = row.querySelector('td:first-child div');
+        if (equipmentNameDiv) {
+            const name = equipmentNameDiv.textContent.replace(/\s*\(x\d+\)$/, '').trim();
+            equipmentNameDiv.innerHTML = `${name} (x${newQuantity})`;
+            console.log('Updated equipment name display:', equipmentNameDiv.innerHTML);
+        } else {
+            console.warn('Equipment name div not found');
+        }
+
+        // Update buttons based on new quantity
+        const btnGroup = row.querySelector('.btn-group[role="group"]');
+        if (btnGroup) {
+            console.log('Updating button group for quantity:', newQuantity);
+            if (newQuantity === 1) {
+                console.log('Quantity is 1, showing remove button');
+                btnGroup.innerHTML = `
+                    <button class="btn btn-outline-secondary quantity-increase-btn" title="Увеличить кол-во">
+                        <i class="fas fa-plus"></i>
+                    </button>
+                    <button class="btn btn-outline-danger remove-booking-btn" title="Удалить">
+                        <i class="fas fa-times"></i>
+                    </button>
+                `;
+                // Re-attach event listeners
+                const increaseBtn = btnGroup.querySelector('.quantity-increase-btn');
+                const removeBtn = btnGroup.querySelector('.remove-booking-btn');
+
+                increaseBtn.addEventListener('click', handleQuantityIncrease);
+                removeBtn.addEventListener('click', handleBookingRemoval);
+
+                console.log('Event listeners reattached to buttons (quantity = 1)');
+            }
+        } else {
+            console.warn('Button group not found');
+        }
+
+        toast('Количество уменьшено', 'success');
+    } catch (error) {
+        console.error('Error decreasing quantity:', error);
+        toast('Ошибка при изменении количества', 'danger');
+    }
+}
+
+// Handle booking removal
+async function handleBookingRemoval(event) {
+    const row = event.target.closest('tr');
+    const bookingId = row.dataset.bookingId;
+
+    if (!confirm('Вы уверены, что хотите удалить это бронирование?')) {
+        return;
+    }
+
+    try {
+        const response = await api.delete(`/bookings/${bookingId}`);
+
+        if (response.ok) {
+            row.remove();
+
+            const countElement = document.getElementById('equipmentCount');
+            if (countElement) {
+                const currentCount = parseInt(countElement.textContent);
+                countElement.textContent = `${currentCount - 1} позиций`;
+            }
+
+            toast('Бронирование удалено', 'success');
+        }
+    } catch (error) {
+        console.error('Error removing booking:', error);
+        toast('Ошибка при удалении бронирования', 'danger');
+    }
+}
+
+// Update booking dates
+async function updateBookingDates(bookingId, startDate, endDate) {
+    const response = await api.patch(`/bookings/${bookingId}`, {
+        start_date: startDate,
+        end_date: endDate
+    });
+
+    if (!response.ok) {
+        throw new Error('Failed to update booking dates');
+    }
+
+    return response.json();
 }

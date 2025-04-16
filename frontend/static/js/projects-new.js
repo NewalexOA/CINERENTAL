@@ -178,40 +178,32 @@ function updateEquipmentTable() {
         const quantity = item.quantity || 1;
         const quantityDisplay = !hasSerialNumber && quantity > 1 ? ` (x${quantity})` : '';
 
-        let quantityButtons = '';
+        row.setAttribute('data-has-serial-number', hasSerialNumber ? 'true' : 'false');
+        row.setAttribute('data-equipment-id', item.id);
+        row.setAttribute('data-index', index);
 
+        let actionButtons = '';
         if (hasSerialNumber) {
-            quantityButtons = `
+            actionButtons = `
                 <button class="btn btn-sm btn-outline-danger remove-equipment-btn" data-index="${index}" title="Удалить">
                     <i class="fas fa-times"></i>
                 </button>
             `;
         } else {
-            let secondButton;
-            if (quantity > 1) {
-                secondButton = `
-                    <button class="btn btn-outline-secondary quantity-decrease-btn" data-index="${index}" title="Уменьшить кол-во">
-                        <i class="fas fa-minus"></i>
-                    </button>
-                `;
-            } else {
-                secondButton = `
-                    <button class="btn btn-sm btn-outline-danger remove-equipment-btn" data-index="${index}" title="Удалить">
-                        <i class="fas fa-times"></i>
-                    </button>
-                `;
-            }
-
-            const incrementButton = `
-                <button class="btn btn-outline-secondary quantity-increase-btn" data-index="${index}" title="Увеличить кол-во">
-                    <i class="fas fa-plus"></i>
-                </button>
-            `;
-
-            quantityButtons = `
+            actionButtons = `
                 <div class="btn-group btn-group-sm" role="group">
-                    ${incrementButton}
-                    ${secondButton}
+                    <button class="btn btn-outline-secondary quantity-increase-btn" data-index="${index}" title="Увеличить кол-во">
+                        <i class="fas fa-plus"></i>
+                    </button>
+                    ${quantity > 1 ? `
+                        <button class="btn btn-outline-secondary quantity-decrease-btn" data-index="${index}" title="Уменьшить кол-во">
+                            <i class="fas fa-minus"></i>
+                        </button>
+                    ` : `
+                        <button class="btn btn-outline-danger remove-equipment-btn" data-index="${index}" title="Удалить">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    `}
                 </div>
             `;
         }
@@ -220,6 +212,7 @@ function updateEquipmentTable() {
             <td>
                 <div>${displayName}${quantityDisplay}</div>
                 <small class="text-muted">${item.category || ''}</small>
+                <span class="quantity d-none">${quantity}</span>
             </td>
             <td>
                 <input type="text" class="form-control form-control-sm equipment-period-input"
@@ -229,10 +222,9 @@ function updateEquipmentTable() {
                                  moment(item.booking_start).format('DD.MM.YYYY') + ' - ' + moment(item.booking_end).format('DD.MM.YYYY') : ''}">
             </td>
             <td class="text-center align-middle">
-                <div class="btn-group">
-                    ${hasSerialNumber ? quantityButtons : ''}
+                <div class="btn-group" role="group">
+                    ${actionButtons}
                 </div>
-                ${!hasSerialNumber ? quantityButtons : ''}
             </td>
         `;
         equipmentItemsTbody.appendChild(row);
@@ -265,7 +257,8 @@ function saveSessionData() {
             equipment_name: item.name,
             price_per_day: item.price_per_day,
             category: item.category,
-            quantity: item.quantity,
+            serial_number: item.serial_number,
+            quantity: item.quantity || 1,
             start_date: item.booking_start || dateRange?.startDate?.format('YYYY-MM-DD') || null,
             end_date: item.booking_end || dateRange?.endDate?.format('YYYY-MM-DD') || null
         }))
@@ -283,11 +276,64 @@ function saveSessionData() {
  */
 function loadSessionData() {
     try {
+        //
+         // Get ID session from URL, if it exists
+        const urlParams = new URLSearchParams(window.location.search);
+        const sessionId = urlParams.get('session_id');
+
+        if (sessionId) {
+            // Get scanning data from storage
+            const scanSession = scanStorage.getSession(sessionId);
+
+            if (scanSession && scanSession.items && scanSession.items.length) {
+                console.log('Loading data from scan session:', scanSession);
+
+                // Convert scanning session items to equipment format for selection
+                selectedEquipment = scanSession.items.map(item => ({
+                    id: item.equipment_id,
+                    name: item.name,
+                    barcode: item.barcode,
+                    serial_number: item.serial_number,
+                    category: item.category_name,
+                    quantity: item.quantity || 1,
+                    booking_start: null,
+                    booking_end: null
+                }));
+
+                updateEquipmentTable();
+
+                // Update scanning session info on page
+                document.getElementById('sessionName').textContent = scanSession.name || 'Без названия';
+                document.getElementById('sessionCreated').textContent = formatProjectDateTime(scanSession.updatedAt) || '-';
+                document.getElementById('sessionItems').textContent = scanSession.items.length;
+
+                // Load project data from sessionStorage, if it exists
+                loadProjectDataFromSessionStorage();
+            } else {
+                console.warn('Scan session not found or empty:', sessionId);
+            }
+        } else {
+            loadProjectDataFromSessionStorage();
+        }
+    } catch (e) {
+        console.error('[loadSessionData] Error loading session data:', e);
+        // Clear potentially corrupted data and update table
+        selectedEquipment = [];
+        updateEquipmentTable();
+    }
+}
+
+/**
+ * Load project data from session storage (separate from scan session)
+ */
+function loadProjectDataFromSessionStorage() {
+    try {
         const data = sessionStorage.getItem('newProjectData');
-        console.log('[loadSessionData] Raw data from sessionStorage:', data); // Log raw data
+        console.log('[loadProjectDataFromSessionStorage] Raw data from sessionStorage:', data);
+
         if (data) {
             sessionData = JSON.parse(data);
-            console.log('[loadSessionData] Parsed sessionData:', sessionData); // Log parsed data
+            console.log('[loadProjectDataFromSessionStorage] Parsed sessionData:', sessionData);
 
             // Restore form values
             if (sessionData.name) {
@@ -306,39 +352,33 @@ function loadSessionData() {
                 document.getElementById('clientSelect').value = sessionData.client_id;
             }
 
-            // Restore equipment selection
-            if (sessionData.bookings && Array.isArray(sessionData.bookings)) {
-                // Преобразуем информацию о бронированиях в формат оборудования для выбора
+            // Restore equipment selection only if we don't have items from scan session
+            if (selectedEquipment.length === 0 && sessionData.bookings && Array.isArray(sessionData.bookings)) {
+                // Convert booking info to equipment format for selection
                 selectedEquipment = sessionData.bookings.map(booking => ({
                     id: booking.equipment_id,
                     name: booking.equipment_name,
                     price_per_day: booking.price_per_day,
                     category: booking.category,
+                    serial_number: booking.serial_number,
                     quantity: booking.quantity || 1,
                     booking_start: booking.start_date,
                     booking_end: booking.end_date
                 }));
-                console.log('[loadSessionData] Mapped selectedEquipment from bookings:', selectedEquipment); // Log mapped equipment
+
+                console.log('[loadProjectDataFromSessionStorage] Mapped selectedEquipment from bookings:', selectedEquipment);
                 updateEquipmentTable();
-            } else if (sessionData.equipment && Array.isArray(sessionData.equipment)) {
-                // Поддержка старого формата для обратной совместимости
+            } else if (selectedEquipment.length === 0 && sessionData.equipment && Array.isArray(sessionData.equipment)) {
+                // Support old format for backward compatibility
                 selectedEquipment = sessionData.equipment;
-                 console.log('[loadSessionData] Mapped selectedEquipment from equipment (legacy):', selectedEquipment); // Log mapped equipment (legacy)
+                console.log('[loadProjectDataFromSessionStorage] Mapped selectedEquipment from equipment (legacy):', selectedEquipment);
                 updateEquipmentTable();
-            } else {
-                 console.log('[loadSessionData] No valid bookings or equipment found in session data.');
             }
         } else {
-            console.log('[loadSessionData] No data found in sessionStorage for newProjectData.');
-            // Ensure table shows no equipment if session is empty
-            selectedEquipment = [];
-            updateEquipmentTable();
+            console.log('[loadProjectDataFromSessionStorage] No data found in sessionStorage for newProjectData.');
         }
     } catch (e) {
-        console.error('[loadSessionData] Error loading session data:', e);
-        // Clear potentially corrupted data and update table
-        selectedEquipment = [];
-        updateEquipmentTable();
+        console.error('[loadProjectDataFromSessionStorage] Error loading session data:', e);
     }
 }
 
@@ -427,7 +467,7 @@ function createProjectPayload(status) {
     const formData = new FormData(form);
     const dateRange = $('#projectDates').data('daterangepicker');
 
-    console.log('[createProjectPayload] Creating payload with selectedEquipment:', selectedEquipment); // Log equipment used for payload
+    console.log('[createProjectPayload] Creating payload with selectedEquipment:', selectedEquipment);
     console.log('[createProjectPayload] Project date range picker:', dateRange);
     console.log('[createProjectPayload] Project start date:', dateRange?.startDate?.format());
     console.log('[createProjectPayload] Project end date:', dateRange?.endDate?.format());
@@ -438,40 +478,34 @@ function createProjectPayload(status) {
         description: formData.get('description') || null,
         notes: formData.get('notes') || null,
         status: status,
-        // Ensure project dates are valid before using them
         start_date: dateRange?.startDate?.isValid() ? dateRange.startDate.format('YYYY-MM-DDTHH:mm:ss') : null,
         end_date: dateRange?.endDate?.isValid() ? dateRange.endDate.format('YYYY-MM-DDTHH:mm:ss') : null,
         bookings: []
     };
 
-    selectedEquipment.forEach((item, index) => {
-        console.log(`[createProjectPayload] Processing item ${index}:`, item);
+    selectedEquipment.forEach(item => {
+        console.log(`[createProjectPayload] Processing item:`, item);
         const bookingStartDate = item.booking_start || (dateRange?.startDate?.isValid() ? dateRange.startDate.format('YYYY-MM-DDTHH:mm:ss') : null);
         const bookingEndDate = item.booking_end || (dateRange?.endDate?.isValid() ? dateRange.endDate.format('YYYY-MM-DDTHH:mm:ss') : null);
-        console.log(`[createProjectPayload] Item ${index} - Final Booking Dates: Start=${bookingStartDate}, End=${bookingEndDate}`);
+        console.log(`[createProjectPayload] Item Booking Dates: Start=${bookingStartDate}, End=${bookingEndDate}`);
 
-        // Если quantity > 1, создаем нужное количество записей бронирований
-        const quantity = item.quantity || 1;
-        for (let i = 0; i < quantity; i++) {
-            payload.bookings.push({
-                equipment_id: parseInt(item.id), // Ensure ID is integer
-                start_date: bookingStartDate,
-                end_date: bookingEndDate
-            });
-        }
+        payload.bookings.push({
+            equipment_id: parseInt(item.id),
+            start_date: bookingStartDate,
+            end_date: bookingEndDate,
+            quantity: item.quantity || 1
+        });
     });
 
     // Validate that all bookings have dates
     const bookingsWithoutDates = payload.bookings.filter(b => !b.start_date || !b.end_date);
     if (bookingsWithoutDates.length > 0) {
         console.error('[createProjectPayload] Error: Some bookings are missing dates!', bookingsWithoutDates);
-        // Optionally, prevent API call here by throwing an error or returning null
-        // throw new Error('Не все позиции оборудования имеют установленные даты бронирования.');
         toast('Ошибка: Не все позиции оборудования имеют установленные даты бронирования.', 'danger');
-        return null; // Prevent sending payload with invalid bookings
+        return null;
     }
 
-    console.log('[createProjectPayload] Final payload:', payload); // Log final payload
+    console.log('[createProjectPayload] Final payload:', payload);
     return payload;
 }
 
@@ -572,9 +606,13 @@ function addEquipmentItemEventListeners() {
         button.addEventListener('click', (e) => {
             const index = parseInt(e.currentTarget.dataset.index);
             if (!isNaN(index) && index >= 0 && index < selectedEquipment.length) {
-                selectedEquipment[index].quantity = (selectedEquipment[index].quantity || 1) + 1;
-                updateEquipmentTable();
-                saveSessionData();
+                const hasSerialNumber = button.closest('tr').getAttribute('data-has-serial-number') === 'true';
+
+                if (!hasSerialNumber) {
+                    selectedEquipment[index].quantity = (selectedEquipment[index].quantity || 1) + 1;
+                    updateEquipmentTable();
+                    saveSessionData();
+                }
             }
         });
     });
@@ -582,10 +620,14 @@ function addEquipmentItemEventListeners() {
     document.querySelectorAll('.quantity-decrease-btn').forEach(button => {
         button.addEventListener('click', (e) => {
             const index = parseInt(e.currentTarget.dataset.index);
-            if (!isNaN(index) && index >= 0 && index < selectedEquipment.length && selectedEquipment[index].quantity > 1) {
-                selectedEquipment[index].quantity--;
-                updateEquipmentTable();
-                saveSessionData();
+            if (!isNaN(index) && index >= 0 && index < selectedEquipment.length) {
+                const hasSerialNumber = button.closest('tr').getAttribute('data-has-serial-number') === 'true';
+
+                if (!hasSerialNumber && selectedEquipment[index].quantity > 1) {
+                    selectedEquipment[index].quantity--;
+                    updateEquipmentTable();
+                    saveSessionData();
+                }
             }
         });
     });
