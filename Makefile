@@ -21,7 +21,7 @@ install-test:
 test:
 	docker compose -f docker-compose.test.yml build
 	docker compose -f docker-compose.test.yml up -d test_db test-redis
-	docker compose -f docker-compose.test.yml run --rm test
+	docker compose -f docker-compose.test.yml run --rm test python -m pytest -v --capture=no --cov=backend --cov-report=term-missing --cov-report=html tests/
 
 lint:
 	black --check --diff --skip-string-normalization backend tests

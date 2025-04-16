@@ -48,7 +48,8 @@ repos:
           - types-setuptools
           - types-toml
           - types-ujson
-          - sqlalchemy[mypy]
-          - pydantic
+          - sqlalchemy[mypy]>=2.0.0
+          - pydantic>=2.0.0
+          - fastapi>=0.100.0
         exclude: ^migrations/
         args: [--explicit-package-bases, --config-file=mypy.ini]

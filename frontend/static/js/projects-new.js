@@ -172,8 +172,48 @@ function updateEquipmentTable() {
 
     selectedEquipment.forEach((item, index) => {
         const row = document.createElement('tr');
+        const displayName = item.name || 'Unknown Equipment';
+
+        const hasSerialNumber = !!item.serial_number;
+        const quantity = item.quantity || 1;
+        const quantityDisplay = !hasSerialNumber && quantity > 1 ? ` (x${quantity})` : '';
+
+        row.setAttribute('data-has-serial-number', hasSerialNumber ? 'true' : 'false');
+        row.setAttribute('data-equipment-id', item.id);
+        row.setAttribute('data-index', index);
+
+        let actionButtons = '';
+        if (hasSerialNumber) {
+            actionButtons = `
+                <button class="btn btn-sm btn-outline-danger remove-equipment-btn" data-index="${index}" title="Удалить">
+                    <i class="fas fa-times"></i>
+                </button>
+            `;
+        } else {
+            actionButtons = `
+                <div class="btn-group btn-group-sm" role="group">
+                    <button class="btn btn-outline-secondary quantity-increase-btn" data-index="${index}" title="Увеличить кол-во">
+                        <i class="fas fa-plus"></i>
+                    </button>
+                    ${quantity > 1 ? `
+                        <button class="btn btn-outline-secondary quantity-decrease-btn" data-index="${index}" title="Уменьшить кол-во">
+                            <i class="fas fa-minus"></i>
+                        </button>
+                    ` : `
+                        <button class="btn btn-outline-danger remove-equipment-btn" data-index="${index}" title="Удалить">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    `}
+                </div>
+            `;
+        }
+
         row.innerHTML = `
-            <td>${item.name || 'Unknown Equipment'}</td>
+            <td>
+                <div>${displayName}${quantityDisplay}</div>
+                <small class="text-muted">${item.category || ''}</small>
+                <span class="quantity d-none">${quantity}</span>
+            </td>
             <td>
                 <input type="text" class="form-control form-control-sm equipment-period-input"
                        data-index="${index}"
@@ -181,20 +221,18 @@ function updateEquipmentTable() {
                        value="${item.booking_start && item.booking_end ?
                                  moment(item.booking_start).format('DD.MM.YYYY') + ' - ' + moment(item.booking_end).format('DD.MM.YYYY') : ''}">
             </td>
-            <td class="text-center">
-                <button type="button" class="btn btn-sm btn-outline-secondary edit-period-btn" data-index="${index}">
-                    <i class="fas fa-edit"></i>
-                </button>
-                <button type="button" class="btn btn-sm btn-outline-danger remove-equipment-btn" data-index="${index}">
-                    <i class="fas fa-trash-alt"></i>
-                </button>
+            <td class="text-center align-middle">
+                <div class="btn-group" role="group">
+                    ${actionButtons}
+                </div>
             </td>
         `;
         equipmentItemsTbody.appendChild(row);
     });
 
-    equipmentCountElement.textContent = `${selectedEquipment.length} ${getNoun(selectedEquipment.length, 'позиция', 'позиции', 'позиций')}`;
-    totalItemsElement.textContent = selectedEquipment.length.toString();
+    const totalItems = selectedEquipment.reduce((sum, item) => sum + (item.quantity || 1), 0);
+    equipmentCountElement.textContent = `${selectedEquipment.length} ${getNoun(selectedEquipment.length, 'позиция', 'позиции', 'позиций')} (всего ${totalItems} шт.)`;
+    totalItemsElement.textContent = totalItems.toString();
 
     // Initialize date pickers for equipment items and add other listeners
     addEquipmentItemEventListeners();
@@ -219,7 +257,8 @@ function saveSessionData() {
             equipment_name: item.name,
             price_per_day: item.price_per_day,
             category: item.category,
-            quantity: item.quantity,
+            serial_number: item.serial_number,
+            quantity: item.quantity || 1,
             start_date: item.booking_start || dateRange?.startDate?.format('YYYY-MM-DD') || null,
             end_date: item.booking_end || dateRange?.endDate?.format('YYYY-MM-DD') || null
         }))
@@ -237,11 +276,64 @@ function saveSessionData() {
  */
 function loadSessionData() {
     try {
+        //
+         // Get ID session from URL, if it exists
+        const urlParams = new URLSearchParams(window.location.search);
+        const sessionId = urlParams.get('session_id');
+
+        if (sessionId) {
+            // Get scanning data from storage
+            const scanSession = scanStorage.getSession(sessionId);
+
+            if (scanSession && scanSession.items && scanSession.items.length) {
+                console.log('Loading data from scan session:', scanSession);
+
+                // Convert scanning session items to equipment format for selection
+                selectedEquipment = scanSession.items.map(item => ({
+                    id: item.equipment_id,
+                    name: item.name,
+                    barcode: item.barcode,
+                    serial_number: item.serial_number,
+                    category: item.category_name,
+                    quantity: item.quantity || 1,
+                    booking_start: null,
+                    booking_end: null
+                }));
+
+                updateEquipmentTable();
+
+                // Update scanning session info on page
+                document.getElementById('sessionName').textContent = scanSession.name || 'Без названия';
+                document.getElementById('sessionCreated').textContent = formatProjectDateTime(scanSession.updatedAt) || '-';
+                document.getElementById('sessionItems').textContent = scanSession.items.length;
+
+                // Load project data from sessionStorage, if it exists
+                loadProjectDataFromSessionStorage();
+            } else {
+                console.warn('Scan session not found or empty:', sessionId);
+            }
+        } else {
+            loadProjectDataFromSessionStorage();
+        }
+    } catch (e) {
+        console.error('[loadSessionData] Error loading session data:', e);
+        // Clear potentially corrupted data and update table
+        selectedEquipment = [];
+        updateEquipmentTable();
+    }
+}
+
+/**
+ * Load project data from session storage (separate from scan session)
+ */
+function loadProjectDataFromSessionStorage() {
+    try {
         const data = sessionStorage.getItem('newProjectData');
-        console.log('[loadSessionData] Raw data from sessionStorage:', data); // Log raw data
+        console.log('[loadProjectDataFromSessionStorage] Raw data from sessionStorage:', data);
+
         if (data) {
             sessionData = JSON.parse(data);
-            console.log('[loadSessionData] Parsed sessionData:', sessionData); // Log parsed data
+            console.log('[loadProjectDataFromSessionStorage] Parsed sessionData:', sessionData);
 
             // Restore form values
             if (sessionData.name) {
@@ -260,39 +352,33 @@ function loadSessionData() {
                 document.getElementById('clientSelect').value = sessionData.client_id;
             }
 
-            // Restore equipment selection
-            if (sessionData.bookings && Array.isArray(sessionData.bookings)) {
-                // Преобразуем информацию о бронированиях в формат оборудования для выбора
+            // Restore equipment selection only if we don't have items from scan session
+            if (selectedEquipment.length === 0 && sessionData.bookings && Array.isArray(sessionData.bookings)) {
+                // Convert booking info to equipment format for selection
                 selectedEquipment = sessionData.bookings.map(booking => ({
                     id: booking.equipment_id,
                     name: booking.equipment_name,
                     price_per_day: booking.price_per_day,
                     category: booking.category,
+                    serial_number: booking.serial_number,
                     quantity: booking.quantity || 1,
                     booking_start: booking.start_date,
                     booking_end: booking.end_date
                 }));
-                console.log('[loadSessionData] Mapped selectedEquipment from bookings:', selectedEquipment); // Log mapped equipment
+
+                console.log('[loadProjectDataFromSessionStorage] Mapped selectedEquipment from bookings:', selectedEquipment);
                 updateEquipmentTable();
-            } else if (sessionData.equipment && Array.isArray(sessionData.equipment)) {
-                // Поддержка старого формата для обратной совместимости
+            } else if (selectedEquipment.length === 0 && sessionData.equipment && Array.isArray(sessionData.equipment)) {
+                // Support old format for backward compatibility
                 selectedEquipment = sessionData.equipment;
-                 console.log('[loadSessionData] Mapped selectedEquipment from equipment (legacy):', selectedEquipment); // Log mapped equipment (legacy)
+                console.log('[loadProjectDataFromSessionStorage] Mapped selectedEquipment from equipment (legacy):', selectedEquipment);
                 updateEquipmentTable();
-            } else {
-                 console.log('[loadSessionData] No valid bookings or equipment found in session data.');
             }
         } else {
-            console.log('[loadSessionData] No data found in sessionStorage for newProjectData.');
-            // Ensure table shows no equipment if session is empty
-            selectedEquipment = [];
-            updateEquipmentTable();
+            console.log('[loadProjectDataFromSessionStorage] No data found in sessionStorage for newProjectData.');
         }
     } catch (e) {
-        console.error('[loadSessionData] Error loading session data:', e);
-        // Clear potentially corrupted data and update table
-        selectedEquipment = [];
-        updateEquipmentTable();
+        console.error('[loadProjectDataFromSessionStorage] Error loading session data:', e);
     }
 }
 
@@ -381,7 +467,7 @@ function createProjectPayload(status) {
     const formData = new FormData(form);
     const dateRange = $('#projectDates').data('daterangepicker');
 
-    console.log('[createProjectPayload] Creating payload with selectedEquipment:', selectedEquipment); // Log equipment used for payload
+    console.log('[createProjectPayload] Creating payload with selectedEquipment:', selectedEquipment);
     console.log('[createProjectPayload] Project date range picker:', dateRange);
     console.log('[createProjectPayload] Project start date:', dateRange?.startDate?.format());
     console.log('[createProjectPayload] Project end date:', dateRange?.endDate?.format());
@@ -392,35 +478,34 @@ function createProjectPayload(status) {
         description: formData.get('description') || null,
         notes: formData.get('notes') || null,
         status: status,
-        // Ensure project dates are valid before using them
         start_date: dateRange?.startDate?.isValid() ? dateRange.startDate.format('YYYY-MM-DDTHH:mm:ss') : null,
         end_date: dateRange?.endDate?.isValid() ? dateRange.endDate.format('YYYY-MM-DDTHH:mm:ss') : null,
-        bookings: selectedEquipment.map((item, index) => {
-            console.log(`[createProjectPayload] Processing item ${index}:`, item);
-            const bookingStartDate = item.booking_start || (dateRange?.startDate?.isValid() ? dateRange.startDate.format('YYYY-MM-DDTHH:mm:ss') : null);
-            const bookingEndDate = item.booking_end || (dateRange?.endDate?.isValid() ? dateRange.endDate.format('YYYY-MM-DDTHH:mm:ss') : null);
-            console.log(`[createProjectPayload] Item ${index} - Final Booking Dates: Start=${bookingStartDate}, End=${bookingEndDate}`);
-
-            return {
-                equipment_id: parseInt(item.id), // Ensure ID is integer
-                start_date: bookingStartDate,
-                end_date: bookingEndDate
-                // Note: Backend schema BookingCreateForProject requires only these three fields.
-            };
-        })
+        bookings: []
     };
+
+    selectedEquipment.forEach(item => {
+        console.log(`[createProjectPayload] Processing item:`, item);
+        const bookingStartDate = item.booking_start || (dateRange?.startDate?.isValid() ? dateRange.startDate.format('YYYY-MM-DDTHH:mm:ss') : null);
+        const bookingEndDate = item.booking_end || (dateRange?.endDate?.isValid() ? dateRange.endDate.format('YYYY-MM-DDTHH:mm:ss') : null);
+        console.log(`[createProjectPayload] Item Booking Dates: Start=${bookingStartDate}, End=${bookingEndDate}`);
+
+        payload.bookings.push({
+            equipment_id: parseInt(item.id),
+            start_date: bookingStartDate,
+            end_date: bookingEndDate,
+            quantity: item.quantity || 1
+        });
+    });
 
     // Validate that all bookings have dates
     const bookingsWithoutDates = payload.bookings.filter(b => !b.start_date || !b.end_date);
     if (bookingsWithoutDates.length > 0) {
         console.error('[createProjectPayload] Error: Some bookings are missing dates!', bookingsWithoutDates);
-        // Optionally, prevent API call here by throwing an error or returning null
-        // throw new Error('Не все позиции оборудования имеют установленные даты бронирования.');
         toast('Ошибка: Не все позиции оборудования имеют установленные даты бронирования.', 'danger');
-        return null; // Prevent sending payload with invalid bookings
+        return null;
     }
 
-    console.log('[createProjectPayload] Final payload:', payload); // Log final payload
+    console.log('[createProjectPayload] Final payload:', payload);
     return payload;
 }
 
@@ -502,21 +587,52 @@ function getNoun(number, one, two, five) {
     return five;
 }
 
-// New function to handle event listeners for equipment items
 function addEquipmentItemEventListeners() {
-    // Remove equipment buttons
     document.querySelectorAll('.remove-equipment-btn').forEach(button => {
-        button.addEventListener('click', () => {
-            const index = parseInt(button.dataset.index);
+        button.addEventListener('click', (e) => {
+            const index = parseInt(e.currentTarget.dataset.index);
             if (!isNaN(index) && index >= 0 && index < selectedEquipment.length) {
-                selectedEquipment.splice(index, 1);
-                updateEquipmentTable();
-                saveSessionData();
+                if (confirm(`Вы уверены, что хотите удалить "${selectedEquipment[index].name}" из проекта?`)) {
+                    selectedEquipment.splice(index, 1);
+                    updateEquipmentTable();
+                    saveSessionData();
+                    toast('Оборудование удалено из проекта', 'success');
+                }
             }
         });
     });
 
-    // Initialize date range pickers for each equipment item
+    document.querySelectorAll('.quantity-increase-btn').forEach(button => {
+        button.addEventListener('click', (e) => {
+            const index = parseInt(e.currentTarget.dataset.index);
+            if (!isNaN(index) && index >= 0 && index < selectedEquipment.length) {
+                const hasSerialNumber = button.closest('tr').getAttribute('data-has-serial-number') === 'true';
+
+                if (!hasSerialNumber) {
+                    selectedEquipment[index].quantity = (selectedEquipment[index].quantity || 1) + 1;
+                    updateEquipmentTable();
+                    saveSessionData();
+                }
+            }
+        });
+    });
+
+    document.querySelectorAll('.quantity-decrease-btn').forEach(button => {
+        button.addEventListener('click', (e) => {
+            const index = parseInt(e.currentTarget.dataset.index);
+            if (!isNaN(index) && index >= 0 && index < selectedEquipment.length) {
+                const hasSerialNumber = button.closest('tr').getAttribute('data-has-serial-number') === 'true';
+
+                if (!hasSerialNumber && selectedEquipment[index].quantity > 1) {
+                    selectedEquipment[index].quantity--;
+                    updateEquipmentTable();
+                    saveSessionData();
+                }
+            }
+        });
+    });
+
+    // Initialize date pickers for equipment items
     $('.equipment-period-input').daterangepicker({
         autoUpdateInput: false,
         singleDatePicker: false, // Ensure it's a range picker
@@ -550,14 +666,6 @@ function addEquipmentItemEventListeners() {
     if(applyDatesBtn) {
         applyDatesBtn.addEventListener('click', applyProjectDatesToAllItems);
     }
-
-    // Add listeners for edit period buttons (optional - if modal needed)
-    document.querySelectorAll('.edit-period-btn').forEach(button => {
-         button.addEventListener('click', (e) => {
-            const index = parseInt(e.currentTarget.dataset.index);
-            openEquipmentPeriodModal(index); // Need to implement this modal logic
-         });
-    });
 }
 
 // New function to apply project dates to all equipment items
@@ -591,7 +699,13 @@ async function applyProjectDatesToAllItems() {
             try {
                 // Dates need to be in YYYY-MM-DD format for this GET endpoint params
                 const startDateParam = projectDateRangePicker.startDate.format('YYYY-MM-DD');
-                const endDateParam = projectDateRangePicker.endDate.format('YYYY-MM-DD');
+                let endDateParam = projectDateRangePicker.endDate.format('YYYY-MM-DD');
+
+                const isOneDay = startDateParam === endDateParam;
+                if (isOneDay) {
+                    const nextDay = moment(endDateParam).add(1, 'days').format('YYYY-MM-DD');
+                    endDateParam = nextDay;
+                }
 
                 const availabilityResult = await api.get(`/equipment/${equipmentId}/availability`, {
                     start_date: startDateParam,
@@ -615,19 +729,15 @@ async function applyProjectDatesToAllItems() {
                     name: item.name || `ID ${equipmentId}`,
                     error: error.message || 'Ошибка проверки'
                 });
-            } finally {
-                 // Optional: Update progress indicator if needed
-                 // updateProgressIndicator(checkedCount, equipmentItemsToCheck.length);
             }
         }
 
         hideLoading(); // Hide loading after all checks
 
         if (conflictsFound.length > 0) {
-            // Conflicts found
-            const conflictingNames = conflictsFound.map(item => item.name).join(', ');
-            // Consider showing more details about the conflicts if needed
-            toast(`Невозможно применить даты: оборудование (${conflictingNames}) занято или возникла ошибка проверки.`, 'danger', 10000);
+            toast(`Найдены конфликты бронирования для ${conflictsFound.length} позиций.`, 'warning');
+
+            displayConflictsInfo(conflictsFound, projectStartDate, projectEndDate);
         } else {
             // No conflicts, apply dates
             selectedEquipment.forEach(item => {
@@ -638,6 +748,7 @@ async function applyProjectDatesToAllItems() {
             updateEquipmentTable(); // Re-render table with new dates
             saveSessionData();
             toast('Даты проекта успешно применены ко всем позициям', 'success');
+            hideConflictsInfo();
         }
 
     } catch (error) {
@@ -645,6 +756,84 @@ async function applyProjectDatesToAllItems() {
         hideLoading();
         console.error('General error during availability check loop:', error);
         toast(`Произошла общая ошибка при проверке доступности: ${error.message}`, 'danger');
+    }
+}
+
+/**
+ * Отображает информацию о конфликтах бронирования в специальном разделе
+ * @param {Array} conflicts - Список конфликтов
+ * @param {string} requestedStartDate - Запрошенная дата начала
+ * @param {string} requestedEndDate - Запрошенная дата окончания
+ */
+function displayConflictsInfo(conflicts, requestedStartDate, requestedEndDate) {
+    let conflictsContainer = document.getElementById('conflictsInfoContainer');
+
+    if (!conflictsContainer) {
+        conflictsContainer = document.createElement('div');
+        conflictsContainer.id = 'conflictsInfoContainer';
+        conflictsContainer.className = 'alert alert-warning mt-3';
+
+        const equipmentList = document.getElementById('equipmentList');
+        if (equipmentList && equipmentList.parentNode) {
+            equipmentList.parentNode.insertBefore(conflictsContainer, equipmentList.nextSibling);
+        } else {
+            const formElement = document.getElementById('newProjectForm');
+            if (formElement) {
+                formElement.appendChild(conflictsContainer);
+            }
+        }
+    }
+
+    const formattedStartDate = moment(requestedStartDate).format('DD.MM.YYYY');
+    const formattedEndDate = moment(requestedEndDate).format('DD.MM.YYYY');
+
+    let html = `
+        <h5><i class="fas fa-exclamation-triangle"></i> Конфликты бронирования</h5>
+        <p>Следующее оборудование не может быть забронировано на период ${formattedStartDate} - ${formattedEndDate}:</p>
+        <ul class="list-group mb-3">
+    `;
+
+    conflicts.forEach(conflict => {
+        html += `<li class="list-group-item">
+            <strong>${conflict.name}</strong>`;
+
+        if (conflict.error) {
+            html += `<div class="text-danger small">Ошибка проверки: ${conflict.error}</div>`;
+        } else if (conflict.conflicts && conflict.conflicts.length > 0) {
+            html += `<div class="small mt-2">Конфликты с бронированиями:</div>
+                <ul class="small">`;
+
+            conflict.conflicts.forEach(c => {
+                const conflictStart = moment(c.start_date).format('DD.MM.YYYY');
+                const conflictEnd = moment(c.end_date).format('DD.MM.YYYY');
+                html += `<li>Проект "${c.project_name || 'Без названия'}" (${conflictStart} - ${conflictEnd})</li>`;
+            });
+
+            html += `</ul>`;
+        }
+
+        html += `</li>`;
+    });
+
+    html += `</ul>
+        <p>Пожалуйста, выберите другие даты или удалите конфликтующее оборудование из проекта.</p>
+        <button type="button" class="btn btn-sm btn-outline-secondary" id="hideConflictsBtn">
+            <i class="fas fa-times"></i> Скрыть информацию
+        </button>
+    `;
+
+    conflictsContainer.innerHTML = html;
+
+    document.getElementById('hideConflictsBtn').addEventListener('click', hideConflictsInfo);
+}
+
+/**
+ * Hide conflict information
+ */
+function hideConflictsInfo() {
+    const conflictsContainer = document.getElementById('conflictsInfoContainer');
+    if (conflictsContainer) {
+        conflictsContainer.remove();
     }
 }
 

@@ -31,6 +31,9 @@ class BookingBase(BaseModel):
     total_amount: Decimal = Field(
         ..., title='Total Amount', description='Total amount for the booking'
     )
+    quantity: int = Field(
+        1, title='Quantity', description='Quantity of equipment items in this booking'
+    )
     project_id: Optional[int] = Field(
         None,
         title='Project ID',
@@ -65,6 +68,9 @@ class BookingUpdate(BaseModel):
     )
     payment_status: Optional[PaymentStatus] = Field(
         None, title='Payment Status', description='Payment status'
+    )
+    quantity: Optional[int] = Field(
+        None, title='Quantity', description='Quantity of equipment items'
     )
     project_id: Optional[int] = Field(
         None,

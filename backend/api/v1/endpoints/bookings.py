@@ -68,6 +68,7 @@ def _booking_to_response(booking_obj: Booking) -> BookingResponse:
         equipment_name=equipment_name,
         client_name=client_name,
         project_name=project_name,
+        quantity=booking_obj.quantity,
     )
 
 
@@ -101,7 +102,8 @@ async def create_booking(
             start_date=booking.start_date,
             end_date=booking.end_date,
             total_amount=float(booking.total_amount),
-            deposit_amount=float(booking.total_amount) * 0.2,  # 20% deposit by default
+            deposit_amount=float(booking.total_amount) * 0.2,
+            quantity=booking.quantity,
             notes=None,
         )
 
@@ -266,12 +268,15 @@ async def update_booking(
         # Get current booking to check if it exists
         await booking_service.get_booking(booking_id)
 
-        # Prepare update parameters
-        update_params = {}
-        if booking_update.start_date is not None:
-            update_params['start_date'] = booking_update.start_date
-        if booking_update.end_date is not None:
-            update_params['end_date'] = booking_update.end_date
+        # Update booking
+        booking_obj = await booking_service.update_booking(
+            booking_id=booking_id,
+            start_date=booking_update.start_date,
+            end_date=booking_update.end_date,
+            quantity=booking_update.quantity,
+            notes=None,
+        )
+
         if booking_update.status is not None:
             await booking_service.change_status(
                 booking_id=booking_id,
@@ -282,14 +287,6 @@ async def update_booking(
                 booking_id=booking_id,
                 status=booking_update.payment_status,
             )
-
-        # Update booking
-        booking_obj = await booking_service.update_booking(
-            booking_id=booking_id,
-            start_date=booking_update.start_date,
-            end_date=booking_update.end_date,
-            notes=None,
-        )
 
         # Convert Booking object to BookingResponse
         response = _booking_to_response(booking_obj)
@@ -469,4 +466,75 @@ async def update_payment_status(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f'Failed to update payment status: {str(e)}',
+        )
+
+
+@typed_patch(
+    bookings_router,
+    '/{booking_id}',
+    response_model=BookingResponse,
+)
+async def patch_booking(
+    booking_id: int,
+    booking_update: BookingUpdate,
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> BookingResponse:
+    """Partially update booking.
+
+    Args:
+        booking_id: Booking ID
+        booking_update: Updated booking data (partial)
+        db: Database session
+
+    Returns:
+        Updated booking
+
+    Raises:
+        HTTPException: If booking not found or validation fails
+    """
+    booking_service = BookingService(db)
+    try:
+        # Get current booking to check if it exists
+        await booking_service.get_booking(booking_id)
+
+        # Update booking with provided fields
+        booking_obj = await booking_service.update_booking(
+            booking_id=booking_id,
+            start_date=booking_update.start_date,
+            end_date=booking_update.end_date,
+            quantity=booking_update.quantity,
+            notes=None,
+        )
+
+        # Handle status updates if provided
+        if booking_update.status is not None:
+            await booking_service.change_status(
+                booking_id=booking_id,
+                new_status=booking_update.status,
+            )
+        if booking_update.payment_status is not None:
+            await booking_service.change_payment_status(
+                booking_id=booking_id,
+                status=booking_update.payment_status,
+            )
+
+        # Convert Booking object to BookingResponse
+        response = _booking_to_response(booking_obj)
+
+        return response
+    except NotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f'Booking with ID {booking_id} not found',
+        )
+    except ValidationError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        )
+    except Exception as e:
+        await db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f'Failed to update booking: {str(e)}',
         )
