@@ -919,6 +919,11 @@ async function fetchAndUpdateClients() {
 
 // Initialize client search and sort controls
 function initClientControls() {
+    if (window.disableGlobalClientControls === true) {
+        console.log('Global client controls initialization skipped (disabled by page).');
+        return;
+    }
+
     const searchInput = document.getElementById('searchClient');
     const sortOrderSelect = document.getElementById('sortOrder');
     const clientsGrid = document.getElementById('clientsGrid');
