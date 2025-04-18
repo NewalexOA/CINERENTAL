@@ -1,6 +1,6 @@
 # ACT-Rental - Cinema Equipment Rental Management System
 
-[![Version](https://img.shields.io/badge/version-v0.5.0--alpha.3-blue)](https://github.com/NewalexOA/CINERENTAL/releases/tag/v0.5.0-alpha.3)
+[![Version](https://img.shields.io/badge/version-v0.5.0--alpha.4-blue)](https://github.com/NewalexOA/CINERENTAL/releases/tag/v0.5.0-alpha.4)
 [![Python](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/downloads/release/python-3120/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.104.1-009688.svg?logo=fastapi)](https://fastapi.tiangolo.com)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)

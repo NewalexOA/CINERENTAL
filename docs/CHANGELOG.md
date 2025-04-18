@@ -2,6 +2,39 @@
 
 This document lists notable changes to the ACT-Rental application.
 
+## v0.5.0-alpha.4
+
+### Projects View Improvements
+
+- **Toggle Functionality**: Added ability to switch between table and card viewing modes
+- **Grouped Cards**: Created card view with projects grouped and sorted by status
+- **State Persistence**: Implemented view state persistence with localStorage
+- **Instant Filtering**: Added immediate updates when filtering projects
+- **Enhanced Dropdowns**: Improved Select2 integration for client selection
+
+### UI Consistency Enhancements
+
+- **Standard Sizing**: Added consistent height variables for form controls
+- **Square Buttons**: Implemented square buttons for view toggle controls
+- **Select2 Styling**: Added consistent styling for Select2 dropdowns
+- **DateRangePicker**: Improved appearance and functionality of date pickers
+- **Card Styling**: Created consistent styles for project cards and group headers
+
+### Client Controls Improvements
+
+- **External Scripts**: Moved client list functionality from templates to dedicated JavaScript files
+- **View Toggling**: Implemented toggling between grid and list views for clients
+- **Default Mode**: Set list view as default display mode for client listing
+- **Preference Storage**: Added user preference saving via localStorage
+- **DOM Management**: Ensured consistent UI behavior through proper DOM manipulation
+
+### Core System Improvements
+
+- **Initialization Logic**: Added flag for disabling global client controls initialization
+- **Conditional Processing**: Implemented logic to skip initialization when custom handlers exist
+- **Event Handling**: Prevented duplicate event handling between main.js and page-specific scripts
+- **Documentation**: Added OpenAPI specification JSON for frontend development
+
 ## v0.5.0-alpha.3
 
 ### UI & Select2 Integration
