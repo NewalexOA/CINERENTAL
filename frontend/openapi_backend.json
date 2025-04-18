@@ -1,0 +1,6228 @@
+{
+    "openapi": "3.1.0",
+    "info": {
+      "title": "ACT-Rental API",
+      "description": "ACT-Rental API",
+      "version": "1.0.0"
+    },
+    "paths": {
+      "/api/v1/health": {
+        "get": {
+          "tags": [
+            "Health"
+          ],
+          "summary": "Health Check",
+          "description": "Health check endpoint.\n\nReturns:\n    Status message indicating service is running",
+          "operationId": "health_check_api_v1_health_get",
+          "responses": {
+            "200": {
+              "description": "Successful Response",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "type": "object",
+                    "title": "Response Health Check Api V1 Health Get"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/api/v1/equipment/": {
+        "post": {
+          "tags": [
+            "Equipment"
+          ],
+          "summary": "Create Equipment Endpoint",
+          "description": "Create new equipment.\n\nArgs:\n    equipment: Equipment data\n    db: Database session\n\nReturns:\n    Created equipment\n\nRaises:\n    HTTPException: If equipment creation fails",
+          "operationId": "create_equipment_endpoint_api_v1_equipment__post",
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EquipmentCreate"
+                }
+              }
+            }
+          },
+          "responses": {
+            "201": {
+              "description": "Successful Response",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/EquipmentResponse"
+                  }
+                }
+              }
+            },
+            "422": {
+              "description": "Validation Error",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "get": {
+          "tags": [
+            "Equipment"
+          ],
+          "summary": "Get Equipment List",
+          "description": "Get list of equipment with optional filtering.",
+          "operationId": "get_equipment_list_api_v1_equipment__get",
+          "parameters": [
+            {
+              "name": "skip",
+              "in": "query",
+              "required": false,
+              "schema": {
+                "anyOf": [
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": 0,
+                "title": "Skip"
+              }
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "required": false,
+              "schema": {
+                "anyOf": [
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": 100,
+                "title": "Limit"
+              }
+            },
+            {
+              "name": "status",
+              "in": "query",
+              "required": false,
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/EquipmentStatus"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Status"
+              }
+            },
+            {
+              "name": "category_id",
+              "in": "query",
+              "required": false,
+              "schema": {
+                "anyOf": [
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Category Id"
+              }
+            },
+            {
+              "name": "query",
+              "in": "query",
+              "required": false,
+              "schema": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Query"
+              }
+            },
+            {
+              "name": "available_from",
+              "in": "query",
+              "required": false,
+              "schema": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Available From"
+              }
+            },
+            {
+              "name": "available_to",
+              "in": "query",
+              "required": false,
+              "schema": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Available To"
+              }
+            },
+            {
+              "name": "start_date",
+              "in": "query",
+              "required": false,
+              "schema": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Start Date"
+              }
+            },
+            {
+              "name": "end_date",
+              "in": "query",
+              "required": false,
+              "schema": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "End Date"
+              }
+            },
+            {
+              "name": "include_deleted",
+              "in": "query",
+              "required": false,
+              "schema": {
+                "type": "boolean",
+                "description": "Whether to include deleted equipment",
+                "default": false,
+                "title": "Include Deleted"
+              },
+              "description": "Whether to include deleted equipment"
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Successful Response",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/EquipmentResponse"
+                    },
+                    "title": "Response Get Equipment List Api V1 Equipment  Get"
+                  }
+                }
+              }
+            },
+            "422": {
+              "description": "Validation Error",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/api/v1/equipment/{equipment_id}": {
+        "get": {
+          "tags": [
+            "Equipment"
+          ],
+          "summary": "Get Equipment",
+          "description": "Get equipment by ID.",
+          "operationId": "get_equipment_api_v1_equipment__equipment_id__get",
+          "parameters": [
+            {
+              "name": "equipment_id",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "integer",
+                "title": "Equipment Id"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Successful Response",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/EquipmentResponse"
+                  }
+                }
+              }
+            },
+            "422": {
+              "description": "Validation Error",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "put": {
+          "tags": [
+            "Equipment"
+          ],
+          "summary": "Update Equipment",
+          "description": "Update equipment by ID.",
+          "operationId": "update_equipment_api_v1_equipment__equipment_id__put",
+          "parameters": [
+            {
+              "name": "equipment_id",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "integer",
+                "title": "Equipment Id"
+              }
+            }
+          ],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EquipmentUpdate"
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "Successful Response",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/EquipmentResponse"
+                  }
+                }
+              }
+            },
+            "422": {
+              "description": "Validation Error",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "delete": {
+          "tags": [
+            "Equipment"
+          ],
+          "summary": "Delete Equipment",
+          "description": "Delete equipment by ID.",
+          "operationId": "delete_equipment_api_v1_equipment__equipment_id__delete",
+          "parameters": [
+            {
+              "name": "equipment_id",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "integer",
+                "title": "Equipment Id"
+              }
+            }
+          ],
+          "responses": {
+            "204": {
+              "description": "Successful Response"
+            },
+            "422": {
+              "description": "Validation Error",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/api/v1/equipment/barcode/{barcode}": {
+        "get": {
+          "tags": [
+            "Equipment"
+          ],
+          "summary": "Get Equipment By Barcode",
+          "description": "Get equipment by barcode.\n\nArgs:\n    barcode: Equipment barcode\n    db: Database session\n\nReturns:\n    Equipment data\n\nRaises:\n    HTTPException: If equipment not found",
+          "operationId": "get_equipment_by_barcode_api_v1_equipment_barcode__barcode__get",
+          "parameters": [
+            {
+              "name": "barcode",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "title": "Barcode"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Successful Response",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/EquipmentResponse"
+                  }
+                }
+              }
+            },
+            "422": {
+              "description": "Validation Error",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/api/v1/equipment/{equipment_id}/status": {
+        "put": {
+          "tags": [
+            "Equipment"
+          ],
+          "summary": "Change Equipment Status",
+          "description": "Change equipment status.\n\nArgs:\n    equipment_id: Equipment ID\n    status: New equipment status\n    db: Database session\n\nReturns:\n    Updated equipment\n\nRaises:\n    HTTPException: If invalid status or equipment not found",
+          "operationId": "change_equipment_status_api_v1_equipment__equipment_id__status_put",
+          "parameters": [
+            {
+              "name": "equipment_id",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "integer",
+                "title": "Equipment Id"
+              }
+            },
+            {
+              "name": "status",
+              "in": "query",
+              "required": true,
+              "schema": {
+                "$ref": "#/components/schemas/EquipmentStatus"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Successful Response",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/EquipmentResponse"
+                  }
+                }
+              }
+            },
+            "422": {
+              "description": "Validation Error",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/api/v1/equipment/{equipment_id}/regenerate-barcode": {
+        "post": {
+          "tags": [
+            "Equipment"
+          ],
+          "summary": "Regenerate Equipment Barcode",
+          "description": "Regenerate barcode for equipment.\n\nArgs:\n    equipment_id: Equipment ID\n    request: Empty request, kept for backwards compatibility\n    db: Database session\n\nReturns:\n    Updated equipment with new barcode\n\nRaises:\n    HTTPException: If equipment not found or validation fails",
+          "operationId": "regenerate_equipment_barcode_api_v1_equipment__equipment_id__regenerate_barcode_post",
+          "parameters": [
+            {
+              "name": "equipment_id",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "integer",
+                "title": "Equipment Id"
+              }
+            }
+          ],
+          "requestBody": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/RegenerateBarcodeRequest"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "title": "Request"
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "Successful Response",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/EquipmentResponse"
+                  }
+                }
+              }
+            },
+            "422": {
+              "description": "Validation Error",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/api/v1/equipment/{equipment_id}/bookings": {
+        "get": {
+          "tags": [
+            "Equipment"
+          ],
+          "summary": "Get Equipment Bookings",
+          "description": "Get bookings for a specific equipment item.\n\nArgs:\n    equipment_id: Equipment ID\n    db: Database session\n\nReturns:\n    List of bookings for the specified equipment\n\nRaises:\n    HTTPException: If equipment not found",
+          "operationId": "get_equipment_bookings_api_v1_equipment__equipment_id__bookings_get",
+          "parameters": [
+            {
+              "name": "equipment_id",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "integer",
+                "title": "Equipment Id"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Successful Response",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/BookingResponse"
+                    },
+                    "title": "Response Get Equipment Bookings Api V1 Equipment  Equipment Id  Bookings Get"
+                  }
+                }
+              }
+            },
+            "422": {
+              "description": "Validation Error",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/api/v1/equipment/{equipment_id}/timeline": {
+        "get": {
+          "tags": [
+            "Equipment"
+          ],
+          "summary": "Get Equipment Status Timeline",
+          "description": "Get status timeline for a specific equipment item.\n\nArgs:\n    equipment_id: Equipment ID\n    db: Database session\n\nReturns:\n    Status timeline for the specified equipment\n\nRaises:\n    HTTPException: If equipment not found",
+          "operationId": "get_equipment_status_timeline_api_v1_equipment__equipment_id__timeline_get",
+          "parameters": [
+            {
+              "name": "equipment_id",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "integer",
+                "title": "Equipment Id"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Successful Response",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/StatusTimelineResponse"
+                    },
+                    "title": "Response Get Equipment Status Timeline Api V1 Equipment  Equipment Id  Timeline Get"
+                  }
+                }
+              }
+            },
+            "422": {
+              "description": "Validation Error",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/api/v1/equipment/{equipment_id}/notes": {
+        "patch": {
+          "tags": [
+            "Equipment"
+          ],
+          "summary": "Update Equipment Notes",
+          "description": "Update equipment notes.\n\nArgs:\n    equipment_id: Equipment ID\n    notes: New notes text\n    db: Database session\n\nReturns:\n    Updated equipment\n\nRaises:\n    HTTPException: If equipment not found",
+          "operationId": "update_equipment_notes_api_v1_equipment__equipment_id__notes_patch",
+          "parameters": [
+            {
+              "name": "equipment_id",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "integer",
+                "title": "Equipment Id"
+              }
+            }
+          ],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Body_update_equipment_notes_api_v1_equipment__equipment_id__notes_patch"
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "Successful Response",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/EquipmentResponse"
+                  }
+                }
+              }
+            },
+            "422": {
+              "description": "Validation Error",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/api/v1/equipment/{equipment_id}/availability": {
+        "get": {
+          "tags": [
+            "Equipment"
+          ],
+          "summary": "Check Equipment Availability",
+          "description": "Check equipment availability for a given date range.\n\nArgs:\n    equipment_id: Equipment ID\n    start_date: Start date in ISO format (YYYY-MM-DD)\n    end_date: End date in ISO format (YYYY-MM-DD)\n    db: Database session\n\nReturns:\n    Equipment availability information including any conflicts\n\nRaises:\n    HTTPException: If dates are invalid or equipment not found",
+          "operationId": "check_equipment_availability_api_v1_equipment__equipment_id__availability_get",
+          "parameters": [
+            {
+              "name": "equipment_id",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "integer",
+                "title": "Equipment Id"
+              }
+            },
+            {
+              "name": "start_date",
+              "in": "query",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "title": "Start Date"
+              }
+            },
+            {
+              "name": "end_date",
+              "in": "query",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "title": "End Date"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Successful Response",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/EquipmentAvailabilityResponse"
+                  }
+                }
+              }
+            },
+            "422": {
+              "description": "Validation Error",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/api/v1/categories/": {
+        "get": {
+          "tags": [
+            "Categories"
+          ],
+          "summary": "Get Categories",
+          "description": "Get all categories.\n\nArgs:\n    session: Database session\n\nReturns:\n    List of all categories",
+          "operationId": "get_categories_api_v1_categories__get",
+          "responses": {
+            "200": {
+              "description": "Successful Response",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "items": {
+                      "$ref": "#/components/schemas/CategoryResponse"
+                    },
+                    "type": "array",
+                    "title": "Response Get Categories Api V1 Categories  Get"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "post": {
+          "tags": [
+            "Categories"
+          ],
+          "summary": "Create Category",
+          "description": "Create a new category.\n\nArgs:\n    category: Category data\n    db: Database session\n\nReturns:\n    Created category\n\nRaises:\n    HTTPException: If category with given name already exists",
+          "operationId": "create_category_api_v1_categories__post",
+          "requestBody": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CategoryCreate"
+                }
+              }
+            },
+            "required": true
+          },
+          "responses": {
+            "201": {
+              "description": "Successful Response",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/CategoryResponse"
+                  }
+                }
+              }
+            },
+            "422": {
+              "description": "Validation Error",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/api/v1/categories/with-equipment-count": {
+        "get": {
+          "tags": [
+            "Categories"
+          ],
+          "summary": "Get Categories With Equipment Count",
+          "description": "Get all categories with equipment count.\n\nArgs:\n    session: Database session\n\nReturns:\n    List of categories with equipment count",
+          "operationId": "get_categories_with_equipment_count_api_v1_categories_with_equipment_count_get",
+          "responses": {
+            "200": {
+              "description": "Successful Response",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "items": {
+                      "$ref": "#/components/schemas/CategoryWithEquipmentCount"
+                    },
+                    "type": "array",
+                    "title": "Response Get Categories With Equipment Count Api V1 Categories With Equipment Count Get"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/api/v1/categories/{category_id}": {
+        "get": {
+          "tags": [
+            "Categories"
+          ],
+          "summary": "Get Category",
+          "description": "Get category by ID.\n\nArgs:\n    category_id: Category ID\n    session: Database session\n\nReturns:\n    Category data\n\nRaises:\n    HTTPException: If category not found",
+          "operationId": "get_category_api_v1_categories__category_id__get",
+          "parameters": [
+            {
+              "name": "category_id",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "integer",
+                "title": "Category Id"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Successful Response",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/CategoryResponse"
+                  }
+                }
+              }
+            },
+            "422": {
+              "description": "Validation Error",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "put": {
+          "tags": [
+            "Categories"
+          ],
+          "summary": "Update Category",
+          "description": "Update category.\n\nArgs:\n    category_id: Category ID\n    category: Updated category data\n    session: Database session\n\nReturns:\n    Updated category\n\nRaises:\n    HTTPException: If category not found or if new name already exists",
+          "operationId": "update_category_api_v1_categories__category_id__put",
+          "parameters": [
+            {
+              "name": "category_id",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "integer",
+                "title": "Category Id"
+              }
+            }
+          ],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CategoryUpdate"
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "Successful Response",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/CategoryResponse"
+                  }
+                }
+              }
+            },
+            "422": {
+              "description": "Validation Error",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "delete": {
+          "tags": [
+            "Categories"
+          ],
+          "summary": "Delete Category",
+          "description": "Delete category.\n\nArgs:\n    category_id: Category ID\n    session: Database session\n\nRaises:\n    HTTPException: If category not found or has equipment/subcategories",
+          "operationId": "delete_category_api_v1_categories__category_id__delete",
+          "parameters": [
+            {
+              "name": "category_id",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "integer",
+                "title": "Category Id"
+              }
+            }
+          ],
+          "responses": {
+            "204": {
+              "description": "Successful Response"
+            },
+            "422": {
+              "description": "Validation Error",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/api/v1/categories/search/{query}": {
+        "get": {
+          "tags": [
+            "Categories"
+          ],
+          "summary": "Search Categories",
+          "description": "Search categories by name or description.\n\nArgs:\n    query: Search query\n    session: Database session\n\nReturns:\n    List of categories matching the search query",
+          "operationId": "search_categories_api_v1_categories_search__query__get",
+          "parameters": [
+            {
+              "name": "query",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "title": "Query"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Successful Response",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/CategoryResponse"
+                    },
+                    "title": "Response Search Categories Api V1 Categories Search  Query  Get"
+                  }
+                }
+              }
+            },
+            "422": {
+              "description": "Validation Error",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/api/v1/categories/{category_id}/subcategories": {
+        "get": {
+          "tags": [
+            "Categories"
+          ],
+          "summary": "Get Subcategories",
+          "description": "Get all subcategories of a category.\n\nArgs:\n    category_id: ID of the parent category\n    session: Database session\n\nReturns:\n    List of subcategories\n\nRaises:\n    HTTPException: If category not found",
+          "operationId": "get_subcategories_api_v1_categories__category_id__subcategories_get",
+          "parameters": [
+            {
+              "name": "category_id",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "integer",
+                "title": "Category Id"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Successful Response",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/CategoryResponse"
+                    },
+                    "title": "Response Get Subcategories Api V1 Categories  Category Id  Subcategories Get"
+                  }
+                }
+              }
+            },
+            "422": {
+              "description": "Validation Error",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/api/v1/clients/": {
+        "get": {
+          "tags": [
+            "Clients"
+          ],
+          "summary": "Get Clients",
+          "description": "Get list of clients with optional filtering and sorting.\n\nArgs:\n    db: Database session\n    skip: Number of clients to skip (for pagination)\n    limit: Maximum number of clients to return (for pagination)\n    query: Search query for filtering clients\n    sort_by: Field to sort clients by\n    sort_order: Sort order (asc/desc)\n\nReturns:\n    List of clients matching the criteria",
+          "operationId": "get_clients_api_v1_clients__get",
+          "parameters": [
+            {
+              "name": "skip",
+              "in": "query",
+              "required": false,
+              "schema": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "description": "Number of clients to skip",
+                "default": 0,
+                "title": "Skip"
+              },
+              "description": "Number of clients to skip"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "required": false,
+              "schema": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "maximum": 1000,
+                    "minimum": 1
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "description": "Maximum number of clients to return",
+                "default": 100,
+                "title": "Limit"
+              },
+              "description": "Maximum number of clients to return"
+            },
+            {
+              "name": "query",
+              "in": "query",
+              "required": false,
+              "schema": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "description": "Search query for filtering clients by name, email or phone",
+                "title": "Query"
+              },
+              "description": "Search query for filtering clients by name, email or phone"
+            },
+            {
+              "name": "sort_by",
+              "in": "query",
+              "required": false,
+              "schema": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "description": "Field to sort by (e.g., name, created_at, bookings_count)",
+                "default": "name",
+                "title": "Sort By"
+              },
+              "description": "Field to sort by (e.g., name, created_at, bookings_count)"
+            },
+            {
+              "name": "sort_order",
+              "in": "query",
+              "required": false,
+              "schema": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "description": "Sort order (asc or desc)",
+                "default": "asc",
+                "title": "Sort Order"
+              },
+              "description": "Sort order (asc or desc)"
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Successful Response",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/ClientResponse"
+                    },
+                    "title": "Response Get Clients Api V1 Clients  Get"
+                  }
+                }
+              }
+            },
+            "422": {
+              "description": "Validation Error",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "post": {
+          "tags": [
+            "Clients"
+          ],
+          "summary": "Create Client",
+          "description": "Create a new client.\n\nArgs:\n    client: Client data\n    db: Database session\n\nReturns:\n    Created client\n\nRaises:\n    HTTPException: If validation fails or client with same email/phone\n    already exists",
+          "operationId": "create_client_api_v1_clients__post",
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientCreate"
+                }
+              }
+            }
+          },
+          "responses": {
+            "201": {
+              "description": "Successful Response",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/ClientResponse"
+                  }
+                }
+              }
+            },
+            "422": {
+              "description": "Validation Error",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/api/v1/clients/{client_id}/": {
+        "get": {
+          "tags": [
+            "Clients"
+          ],
+          "summary": "Get Client",
+          "description": "Get client by ID.\n\nArgs:\n    client_id: Client ID\n    db: Database session\n\nReturns:\n    Client details\n\nRaises:\n    HTTPException: If client not found",
+          "operationId": "get_client_api_v1_clients__client_id___get",
+          "parameters": [
+            {
+              "name": "client_id",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "integer",
+                "title": "Client Id"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Successful Response",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/ClientResponse"
+                  }
+                }
+              }
+            },
+            "422": {
+              "description": "Validation Error",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "put": {
+          "tags": [
+            "Clients"
+          ],
+          "summary": "Update Client",
+          "description": "Update client details.\n\nArgs:\n    client_id: Client ID\n    client: Updated client data\n    db: Database session\n\nReturns:\n    Updated client\n\nRaises:\n    HTTPException: If client not found or validation fails",
+          "operationId": "update_client_api_v1_clients__client_id___put",
+          "parameters": [
+            {
+              "name": "client_id",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "integer",
+                "title": "Client Id"
+              }
+            }
+          ],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientUpdate"
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "Successful Response",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/ClientResponse"
+                  }
+                }
+              }
+            },
+            "422": {
+              "description": "Validation Error",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "delete": {
+          "tags": [
+            "Clients"
+          ],
+          "summary": "Delete Client",
+          "description": "Delete client.\n\nArgs:\n    client_id: Client ID\n    db: Database session\n\nRaises:\n    HTTPException: If client not found or has active bookings",
+          "operationId": "delete_client_api_v1_clients__client_id___delete",
+          "parameters": [
+            {
+              "name": "client_id",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "integer",
+                "title": "Client Id"
+              }
+            }
+          ],
+          "responses": {
+            "204": {
+              "description": "Successful Response"
+            },
+            "422": {
+              "description": "Validation Error",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/api/v1/clients/{client_id}/bookings/": {
+        "get": {
+          "tags": [
+            "Clients"
+          ],
+          "summary": "Get Client Bookings",
+          "description": "Get client's booking history.\n\nArgs:\n    client_id: Client ID\n    db: Database session\n    skip: Number of bookings to skip (for pagination)\n    limit: Maximum number of bookings to return (for pagination)\n    booking_status: Filter bookings by status\n\nReturns:\n    List of client's bookings\n\nRaises:\n    HTTPException: If client not found",
+          "operationId": "get_client_bookings_api_v1_clients__client_id__bookings__get",
+          "parameters": [
+            {
+              "name": "client_id",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "integer",
+                "title": "Client Id"
+              }
+            },
+            {
+              "name": "skip",
+              "in": "query",
+              "required": false,
+              "schema": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "description": "Number of bookings to skip",
+                "default": 0,
+                "title": "Skip"
+              },
+              "description": "Number of bookings to skip"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "required": false,
+              "schema": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "maximum": 1000,
+                    "minimum": 1
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "description": "Maximum number of bookings to return",
+                "default": 100,
+                "title": "Limit"
+              },
+              "description": "Maximum number of bookings to return"
+            },
+            {
+              "name": "booking_status",
+              "in": "query",
+              "required": false,
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/BookingStatus"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "description": "Filter bookings by status",
+                "title": "Booking Status"
+              },
+              "description": "Filter bookings by status"
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Successful Response",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/BookingResponse"
+                    },
+                    "title": "Response Get Client Bookings Api V1 Clients  Client Id  Bookings  Get"
+                  }
+                }
+              }
+            },
+            "422": {
+              "description": "Validation Error",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/api/v1/documents/": {
+        "post": {
+          "tags": [
+            "Documents"
+          ],
+          "summary": "Create Document",
+          "description": "Create a new document.\n\nArgs:\n    document: Document data\n    client_id: Client ID\n    booking_id: Booking ID (optional)\n    file_name: Original file name\n    file_size: File size in bytes\n    mime_type: File MIME type\n    notes: Additional notes (optional)\n    db: Database session\n\nReturns:\n    Created document\n\nRaises:\n    HTTPException: If there is an error creating the document",
+          "operationId": "create_document_api_v1_documents__post",
+          "parameters": [
+            {
+              "name": "client_id",
+              "in": "query",
+              "required": true,
+              "schema": {
+                "type": "integer",
+                "description": "ID клиента",
+                "title": "Client Id"
+              },
+              "description": "ID клиента"
+            },
+            {
+              "name": "booking_id",
+              "in": "query",
+              "required": false,
+              "schema": {
+                "anyOf": [
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "description": "ID бронирования",
+                "title": "Booking Id"
+              },
+              "description": "ID бронирования"
+            },
+            {
+              "name": "file_name",
+              "in": "query",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "description": "Оригинальное имя файла",
+                "title": "File Name"
+              },
+              "description": "Оригинальное имя файла"
+            },
+            {
+              "name": "file_size",
+              "in": "query",
+              "required": true,
+              "schema": {
+                "type": "integer",
+                "description": "Размер файла в байтах",
+                "title": "File Size"
+              },
+              "description": "Размер файла в байтах"
+            },
+            {
+              "name": "mime_type",
+              "in": "query",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "description": "MIME-тип файла",
+                "title": "Mime Type"
+              },
+              "description": "MIME-тип файла"
+            },
+            {
+              "name": "notes",
+              "in": "query",
+              "required": false,
+              "schema": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "description": "Дополнительные заметки",
+                "title": "Notes"
+              },
+              "description": "Дополнительные заметки"
+            }
+          ],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentCreate"
+                }
+              }
+            }
+          },
+          "responses": {
+            "201": {
+              "description": "Successful Response",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/DocumentResponse"
+                  }
+                }
+              }
+            },
+            "422": {
+              "description": "Validation Error",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "get": {
+          "tags": [
+            "Documents"
+          ],
+          "summary": "Get Documents",
+          "description": "Get a list of documents with optional filtering.\n\nArgs:\n    skip: Number of documents to skip (for pagination)\n    limit: Maximum number of documents to return (for pagination)\n    document_type: Filter by document type\n    status: Filter by document status\n    query: Search query for filtering documents\n    db: Database session\n\nReturns:\n    List of documents matching the criteria",
+          "operationId": "get_documents_api_v1_documents__get",
+          "parameters": [
+            {
+              "name": "skip",
+              "in": "query",
+              "required": false,
+              "schema": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "description": "Документов для пропуска",
+                "default": 0,
+                "title": "Skip"
+              },
+              "description": "Документов для пропуска"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "required": false,
+              "schema": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "maximum": 1000,
+                    "minimum": 1
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "description": "Максимальное количество документов",
+                "default": 100,
+                "title": "Limit"
+              },
+              "description": "Максимальное количество документов"
+            },
+            {
+              "name": "document_type",
+              "in": "query",
+              "required": false,
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/DocumentType"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "description": "Фильтр по типу документа",
+                "title": "Document Type"
+              },
+              "description": "Фильтр по типу документа"
+            },
+            {
+              "name": "status",
+              "in": "query",
+              "required": false,
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/DocumentStatus"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "description": "Фильтр по статусу документа",
+                "title": "Status"
+              },
+              "description": "Фильтр по статусу документа"
+            },
+            {
+              "name": "query",
+              "in": "query",
+              "required": false,
+              "schema": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "description": "Поисковый запрос для фильтрации документов",
+                "title": "Query"
+              },
+              "description": "Поисковый запрос для фильтрации документов"
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Successful Response",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/DocumentResponse"
+                    },
+                    "title": "Response Get Documents Api V1 Documents  Get"
+                  }
+                }
+              }
+            },
+            "422": {
+              "description": "Validation Error",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/api/v1/documents/{document_id}/": {
+        "get": {
+          "tags": [
+            "Documents"
+          ],
+          "summary": "Get Document",
+          "description": "Get a document by ID.\n\nArgs:\n    document_id: Document ID\n    db: Database session\n\nReturns:\n    Document details\n\nRaises:\n    HTTPException: If the document is not found",
+          "operationId": "get_document_api_v1_documents__document_id___get",
+          "parameters": [
+            {
+              "name": "document_id",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "integer",
+                "title": "Document Id"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Successful Response",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/DocumentResponse"
+                  }
+                }
+              }
+            },
+            "422": {
+              "description": "Validation Error",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "put": {
+          "tags": [
+            "Documents"
+          ],
+          "summary": "Update Document",
+          "description": "Update a document.\n\nArgs:\n    document_id: Document ID\n    document: Data for update\n    db: Database session\n\nReturns:\n    Updated document\n\nRaises:\n    HTTPException: If the document is not found or the update failed",
+          "operationId": "update_document_api_v1_documents__document_id___put",
+          "parameters": [
+            {
+              "name": "document_id",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "integer",
+                "title": "Document Id"
+              }
+            }
+          ],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentUpdate"
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "Successful Response",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/DocumentResponse"
+                  }
+                }
+              }
+            },
+            "422": {
+              "description": "Validation Error",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "delete": {
+          "tags": [
+            "Documents"
+          ],
+          "summary": "Delete Document",
+          "description": "Delete a document.\n\nArgs:\n    document_id: Document ID\n    db: Database session\n\nRaises:\n    HTTPException: If the document is not found or the deletion failed",
+          "operationId": "delete_document_api_v1_documents__document_id___delete",
+          "parameters": [
+            {
+              "name": "document_id",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "integer",
+                "title": "Document Id"
+              }
+            }
+          ],
+          "responses": {
+            "204": {
+              "description": "Successful Response"
+            },
+            "422": {
+              "description": "Validation Error",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/api/v1/documents/client/{client_id}/": {
+        "get": {
+          "tags": [
+            "Documents"
+          ],
+          "summary": "Get Client Documents",
+          "description": "Get all documents for a client.\n\nArgs:\n    client_id: Client ID\n    db: Database session\n\nReturns:\n    List of client's documents\n\nRaises:\n    HTTPException: If there is an error retrieving the documents",
+          "operationId": "get_client_documents_api_v1_documents_client__client_id___get",
+          "parameters": [
+            {
+              "name": "client_id",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "integer",
+                "title": "Client Id"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Successful Response",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/DocumentResponse"
+                    },
+                    "title": "Response Get Client Documents Api V1 Documents Client  Client Id   Get"
+                  }
+                }
+              }
+            },
+            "422": {
+              "description": "Validation Error",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/api/v1/documents/booking/{booking_id}/": {
+        "get": {
+          "tags": [
+            "Documents"
+          ],
+          "summary": "Get Booking Documents",
+          "description": "Get all documents for a booking.\n\nArgs:\n    booking_id: Booking ID\n    db: Database session\n\nReturns:\n    List of booking's documents\n\nRaises:\n    HTTPException: If there is an error retrieving the documents",
+          "operationId": "get_booking_documents_api_v1_documents_booking__booking_id___get",
+          "parameters": [
+            {
+              "name": "booking_id",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "integer",
+                "title": "Booking Id"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Successful Response",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/DocumentResponse"
+                    },
+                    "title": "Response Get Booking Documents Api V1 Documents Booking  Booking Id   Get"
+                  }
+                }
+              }
+            },
+            "422": {
+              "description": "Validation Error",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/api/v1/documents/{document_id}/status/": {
+        "post": {
+          "tags": [
+            "Documents"
+          ],
+          "summary": "Change Document Status",
+          "description": "Change document status.\n\nArgs:\n    document_id: Document ID\n    status: New status\n    db: Database session\n\nReturns:\n    Updated document\n\nRaises:\n    HTTPException: If the document is not found or the status change failed",
+          "operationId": "change_document_status_api_v1_documents__document_id__status__post",
+          "parameters": [
+            {
+              "name": "document_id",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "integer",
+                "title": "Document Id"
+              }
+            },
+            {
+              "name": "status",
+              "in": "query",
+              "required": true,
+              "schema": {
+                "$ref": "#/components/schemas/DocumentStatus"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Successful Response",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/DocumentResponse"
+                  }
+                }
+              }
+            },
+            "422": {
+              "description": "Validation Error",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/api/v1/bookings/": {
+        "post": {
+          "tags": [
+            "Bookings"
+          ],
+          "summary": "Create Booking",
+          "description": "Create a new booking.\n\nArgs:\n    booking: Booking data\n    db: Database session\n\nReturns:\n    Created booking\n\nRaises:\n    HTTPException: If validation fails or equipment is not available",
+          "operationId": "create_booking_api_v1_bookings__post",
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BookingCreate"
+                }
+              }
+            }
+          },
+          "responses": {
+            "201": {
+              "description": "Successful Response",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/BookingResponse"
+                  }
+                }
+              }
+            },
+            "422": {
+              "description": "Validation Error",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "get": {
+          "tags": [
+            "Bookings"
+          ],
+          "summary": "Get Bookings",
+          "description": "Get bookings with optional filtering.\n\nArgs:\n    db: Database session\n    query: Search by client name, email, or phone\n    equipment_query: Search by equipment name or serial number\n    equipment_id: Filter by equipment ID\n    booking_status: Filter by booking status\n    payment_status: Filter by payment status\n    start_date: Filter by start date\n    end_date: Filter by end date\n    skip: Number of records to skip\n    limit: Maximum number of records to return\n\nReturns:\n    List of bookings",
+          "operationId": "get_bookings_api_v1_bookings__get",
+          "parameters": [
+            {
+              "name": "query",
+              "in": "query",
+              "required": false,
+              "schema": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "description": "Search by client name, email, or phone",
+                "title": "Query"
+              },
+              "description": "Search by client name, email, or phone"
+            },
+            {
+              "name": "equipment_query",
+              "in": "query",
+              "required": false,
+              "schema": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "description": "Search by equipment name or serial number",
+                "title": "Equipment Query"
+              },
+              "description": "Search by equipment name or serial number"
+            },
+            {
+              "name": "equipment_id",
+              "in": "query",
+              "required": false,
+              "schema": {
+                "anyOf": [
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "description": "Filter by equipment ID",
+                "title": "Equipment Id"
+              },
+              "description": "Filter by equipment ID"
+            },
+            {
+              "name": "booking_status",
+              "in": "query",
+              "required": false,
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/BookingStatus"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "description": "Filter by booking status",
+                "title": "Booking Status"
+              },
+              "description": "Filter by booking status"
+            },
+            {
+              "name": "payment_status",
+              "in": "query",
+              "required": false,
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/PaymentStatus"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "description": "Filter by payment status",
+                "title": "Payment Status"
+              },
+              "description": "Filter by payment status"
+            },
+            {
+              "name": "start_date",
+              "in": "query",
+              "required": false,
+              "schema": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "description": "Filter by start date (inclusive)",
+                "title": "Start Date"
+              },
+              "description": "Filter by start date (inclusive)"
+            },
+            {
+              "name": "end_date",
+              "in": "query",
+              "required": false,
+              "schema": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "description": "Filter by end date (inclusive)",
+                "title": "End Date"
+              },
+              "description": "Filter by end date (inclusive)"
+            },
+            {
+              "name": "skip",
+              "in": "query",
+              "required": false,
+              "schema": {
+                "type": "integer",
+                "description": "Number of records to skip",
+                "default": 0,
+                "title": "Skip"
+              },
+              "description": "Number of records to skip"
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "required": false,
+              "schema": {
+                "type": "integer",
+                "description": "Maximum number of records to return",
+                "default": 100,
+                "title": "Limit"
+              },
+              "description": "Maximum number of records to return"
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Successful Response",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/BookingResponse"
+                    },
+                    "title": "Response Get Bookings Api V1 Bookings  Get"
+                  }
+                }
+              }
+            },
+            "422": {
+              "description": "Validation Error",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/api/v1/bookings/{booking_id}": {
+        "get": {
+          "tags": [
+            "Bookings"
+          ],
+          "summary": "Get Booking",
+          "description": "Get booking by ID.",
+          "operationId": "get_booking_api_v1_bookings__booking_id__get",
+          "parameters": [
+            {
+              "name": "booking_id",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "integer",
+                "title": "Booking Id"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Successful Response",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/BookingResponse"
+                  }
+                }
+              }
+            },
+            "422": {
+              "description": "Validation Error",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "put": {
+          "tags": [
+            "Bookings"
+          ],
+          "summary": "Update Booking",
+          "description": "Update booking.\n\nArgs:\n    booking_id: Booking ID\n    booking_update: Updated booking data\n    db: Database session\n\nReturns:\n    Updated booking\n\nRaises:\n    HTTPException: If booking not found or validation fails",
+          "operationId": "update_booking_api_v1_bookings__booking_id__put",
+          "parameters": [
+            {
+              "name": "booking_id",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "integer",
+                "title": "Booking Id"
+              }
+            }
+          ],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BookingUpdate"
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "Successful Response",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/BookingResponse"
+                  }
+                }
+              }
+            },
+            "422": {
+              "description": "Validation Error",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "delete": {
+          "tags": [
+            "Bookings"
+          ],
+          "summary": "Delete Booking",
+          "description": "Delete a booking.\n\nArgs:\n    booking_id: Booking ID\n    db: Database session\n\nRaises:\n    HTTPException: If booking is not found",
+          "operationId": "delete_booking_api_v1_bookings__booking_id__delete",
+          "parameters": [
+            {
+              "name": "booking_id",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "integer",
+                "title": "Booking Id"
+              }
+            }
+          ],
+          "responses": {
+            "204": {
+              "description": "Successful Response"
+            },
+            "422": {
+              "description": "Validation Error",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "patch": {
+          "tags": [
+            "Bookings"
+          ],
+          "summary": "Patch Booking",
+          "description": "Partially update booking.\n\nArgs:\n    booking_id: Booking ID\n    booking_update: Updated booking data (partial)\n    db: Database session\n\nReturns:\n    Updated booking\n\nRaises:\n    HTTPException: If booking not found or validation fails",
+          "operationId": "patch_booking_api_v1_bookings__booking_id__patch",
+          "parameters": [
+            {
+              "name": "booking_id",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "integer",
+                "title": "Booking Id"
+              }
+            }
+          ],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BookingUpdate"
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "Successful Response",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/BookingResponse"
+                  }
+                }
+              }
+            },
+            "422": {
+              "description": "Validation Error",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/api/v1/bookings/{booking_id}/status": {
+        "patch": {
+          "tags": [
+            "Bookings"
+          ],
+          "summary": "Update Booking Status",
+          "description": "Update booking status.\n\nArgs:\n    booking_id: Booking ID\n    db: Database session\n    booking_status: New booking status\n\nReturns:\n    Updated booking\n\nRaises:\n    HTTPException: If booking not found or status transition invalid",
+          "operationId": "update_booking_status_api_v1_bookings__booking_id__status_patch",
+          "parameters": [
+            {
+              "name": "booking_id",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "integer",
+                "title": "Booking Id"
+              }
+            }
+          ],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Body_update_booking_status_api_v1_bookings__booking_id__status_patch"
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "Successful Response",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/BookingResponse"
+                  }
+                }
+              }
+            },
+            "422": {
+              "description": "Validation Error",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/api/v1/bookings/{booking_id}/payment": {
+        "patch": {
+          "tags": [
+            "Bookings"
+          ],
+          "summary": "Update Payment Status",
+          "description": "Update booking payment status.\n\nArgs:\n    booking_id: Booking ID\n    db: Database session\n    payment_data: Payment data with payment_status\n\nReturns:\n    Updated booking\n\nRaises:\n    HTTPException: If booking not found or payment status transition invalid",
+          "operationId": "update_payment_status_api_v1_bookings__booking_id__payment_patch",
+          "parameters": [
+            {
+              "name": "booking_id",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "integer",
+                "title": "Booking Id"
+              }
+            }
+          ],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Payment Data"
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "Successful Response",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/BookingResponse"
+                  }
+                }
+              }
+            },
+            "422": {
+              "description": "Validation Error",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/api/v1/barcodes/generate": {
+        "post": {
+          "tags": [
+            "Barcodes"
+          ],
+          "summary": "Generate barcode",
+          "description": "Generate a new barcode.\n\nArgs:\n    db: Database session\n    current_user: Current authenticated user (temporarily disabled)\n\nReturns:\n    Generated barcode\n\nRaises:\n    ValidationError: If barcode generation fails",
+          "operationId": "generate_barcode_api_v1_barcodes_generate_post",
+          "responses": {
+            "200": {
+              "description": "Successful Response",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/BarcodeGenerateResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/api/v1/barcodes/validate": {
+        "post": {
+          "tags": [
+            "Barcodes"
+          ],
+          "summary": "Validate barcode",
+          "description": "Validate a barcode.\n\nArgs:\n    request: Barcode validation request\n    db: Database session\n    current_user: Current authenticated user (temporarily disabled)\n\nReturns:\n    Validation result and sequence number",
+          "operationId": "validate_barcode_api_v1_barcodes_validate_post",
+          "requestBody": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BarcodeValidateRequest"
+                }
+              }
+            },
+            "required": true
+          },
+          "responses": {
+            "200": {
+              "description": "Successful Response",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/BarcodeValidateResponse"
+                  }
+                }
+              }
+            },
+            "422": {
+              "description": "Validation Error",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/api/v1/barcodes/next": {
+        "get": {
+          "tags": [
+            "Barcodes"
+          ],
+          "summary": "Get next sequence number",
+          "description": "Get the next sequence number that will be used for a barcode.\n\nArgs:\n    db: Database session\n    current_user: Current authenticated user (temporarily disabled)\n\nReturns:\n    Response with the next sequence number",
+          "operationId": "get_next_sequence_number_api_v1_barcodes_next_get",
+          "responses": {
+            "200": {
+              "description": "Successful Response",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/NextSequenceResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/api/v1/barcodes/{barcode}/image": {
+        "get": {
+          "tags": [
+            "Barcodes"
+          ],
+          "summary": "Get barcode image",
+          "description": "Get a barcode image by its value",
+          "operationId": "get_barcode_image_api_v1_barcodes__barcode__image_get",
+          "parameters": [
+            {
+              "name": "barcode",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "title": "Barcode"
+              }
+            },
+            {
+              "name": "barcode_type",
+              "in": "query",
+              "required": false,
+              "schema": {
+                "$ref": "#/components/schemas/BarcodeType",
+                "description": "Type of barcode to generate",
+                "default": "code128"
+              },
+              "description": "Type of barcode to generate"
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Successful Response"
+            },
+            "422": {
+              "description": "Validation Error",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/api/v1/projects/": {
+        "get": {
+          "tags": [
+            "Projects"
+          ],
+          "summary": "Get all projects",
+          "description": "Get all projects with pagination and filtering.\n\nArgs:\n    db: Database session\n    limit: Maximum number of projects to return\n    offset: Number of projects to skip\n    client_id: Filter by client ID\n    project_status: Filter by project status\n    start_date: Filter by start date\n    end_date: Filter by end date\n\nReturns:\n    List of projects",
+          "operationId": "get_projects_api_v1_projects__get",
+          "parameters": [
+            {
+              "name": "limit",
+              "in": "query",
+              "required": false,
+              "schema": {
+                "type": "integer",
+                "default": 100,
+                "title": "Limit"
+              }
+            },
+            {
+              "name": "offset",
+              "in": "query",
+              "required": false,
+              "schema": {
+                "type": "integer",
+                "default": 0,
+                "title": "Offset"
+              }
+            },
+            {
+              "name": "client_id",
+              "in": "query",
+              "required": false,
+              "schema": {
+                "anyOf": [
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Client Id"
+              }
+            },
+            {
+              "name": "project_status",
+              "in": "query",
+              "required": false,
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/ProjectStatus"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Project Status"
+              }
+            },
+            {
+              "name": "start_date",
+              "in": "query",
+              "required": false,
+              "schema": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Start Date"
+              }
+            },
+            {
+              "name": "end_date",
+              "in": "query",
+              "required": false,
+              "schema": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "End Date"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Successful Response",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/ProjectResponse"
+                    },
+                    "title": "Response Get Projects Api V1 Projects  Get"
+                  }
+                }
+              }
+            },
+            "422": {
+              "description": "Validation Error",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "post": {
+          "tags": [
+            "Projects"
+          ],
+          "summary": "Create new project",
+          "description": "Create new project.\n\nThis endpoint creates a new project. If 'bookings' data is provided,\nit will also create bookings for the project. It handles validation of input data\nand returns the created project with a 201 Created status.\n\nArgs:\n    project: Project data with optional bookings\n    db: Database session\n\nReturns:\n    Created project\n\nRaises:\n    HTTPException: If project creation fails, client not found, or validation\n    error occurs",
+          "operationId": "create_project_api_v1_projects__post",
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectCreateWithBookings"
+                }
+              }
+            }
+          },
+          "responses": {
+            "201": {
+              "description": "Successful Response",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/ProjectResponse"
+                  }
+                }
+              }
+            },
+            "422": {
+              "description": "Validation Error",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/api/v1/projects/{project_id}": {
+        "get": {
+          "tags": [
+            "Projects"
+          ],
+          "summary": "Get project by ID",
+          "description": "Get project by ID.\n\nArgs:\n    project_id: Project ID\n    db: Database session\n\nReturns:\n    Project with bookings",
+          "operationId": "get_project_api_v1_projects__project_id__get",
+          "parameters": [
+            {
+              "name": "project_id",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "integer",
+                "title": "Project Id"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Successful Response",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/ProjectWithBookings"
+                  }
+                }
+              }
+            },
+            "422": {
+              "description": "Validation Error",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "put": {
+          "tags": [
+            "Projects"
+          ],
+          "summary": "Update project",
+          "description": "Update project.\n\nArgs:\n    project_id: Project ID\n    project: Project data\n    db: Database session\n\nReturns:\n    Updated project",
+          "operationId": "update_project_api_v1_projects__project_id__put",
+          "parameters": [
+            {
+              "name": "project_id",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "integer",
+                "title": "Project Id"
+              }
+            }
+          ],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectUpdate"
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "Successful Response",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/ProjectResponse"
+                  }
+                }
+              }
+            },
+            "422": {
+              "description": "Validation Error",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "delete": {
+          "tags": [
+            "Projects"
+          ],
+          "summary": "Delete project",
+          "description": "Delete project.\n\nArgs:\n    project_id: Project ID\n    db: Database session\n\nReturns:\n    True if project was deleted, False otherwise",
+          "operationId": "delete_project_api_v1_projects__project_id__delete",
+          "parameters": [
+            {
+              "name": "project_id",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "integer",
+                "title": "Project Id"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Successful Response",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "boolean",
+                    "title": "Response Delete Project Api V1 Projects  Project Id  Delete"
+                  }
+                }
+              }
+            },
+            "422": {
+              "description": "Validation Error",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "patch": {
+          "tags": [
+            "Projects"
+          ],
+          "summary": "Partially update project",
+          "description": "Partially update project.\n\nArgs:\n    project_id: Project ID\n    project: Project data for update\n    db: Database session\n\nReturns:\n    Updated project\n\nRaises:\n    HTTPException: If project not found or validation fails",
+          "operationId": "patch_project_api_v1_projects__project_id__patch",
+          "parameters": [
+            {
+              "name": "project_id",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "integer",
+                "title": "Project Id"
+              }
+            }
+          ],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectUpdate"
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "Successful Response",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/ProjectResponse"
+                  }
+                }
+              }
+            },
+            "422": {
+              "description": "Validation Error",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/api/v1/projects/{project_id}/bookings/{booking_id}": {
+        "post": {
+          "tags": [
+            "Projects"
+          ],
+          "summary": "Add booking to project",
+          "description": "Add booking to project.\n\nArgs:\n    project_id: Project ID\n    booking_id: Booking ID\n    db: Database session\n\nReturns:\n    Updated project",
+          "operationId": "add_booking_to_project_api_v1_projects__project_id__bookings__booking_id__post",
+          "parameters": [
+            {
+              "name": "project_id",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "integer",
+                "title": "Project Id"
+              }
+            },
+            {
+              "name": "booking_id",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "integer",
+                "title": "Booking Id"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Successful Response",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/ProjectWithBookings"
+                  }
+                }
+              }
+            },
+            "422": {
+              "description": "Validation Error",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "delete": {
+          "tags": [
+            "Projects"
+          ],
+          "summary": "Remove booking from project",
+          "description": "Remove booking from project.\n\nArgs:\n    project_id: Project ID\n    booking_id: Booking ID\n    db: Database session\n\nReturns:\n    Updated project",
+          "operationId": "remove_booking_from_project_api_v1_projects__project_id__bookings__booking_id__delete",
+          "parameters": [
+            {
+              "name": "project_id",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "integer",
+                "title": "Project Id"
+              }
+            },
+            {
+              "name": "booking_id",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "integer",
+                "title": "Booking Id"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Successful Response",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/ProjectWithBookings"
+                  }
+                }
+              }
+            },
+            "422": {
+              "description": "Validation Error",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/api/v1/projects/{project_id}/bookings": {
+        "get": {
+          "tags": [
+            "Projects"
+          ],
+          "summary": "Get project bookings",
+          "description": "Get bookings for a project.\n\nArgs:\n    project_id: Project ID\n    db: Database session\n\nReturns:\n    List of bookings",
+          "operationId": "get_project_bookings_api_v1_projects__project_id__bookings_get",
+          "parameters": [
+            {
+              "name": "project_id",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "integer",
+                "title": "Project Id"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Successful Response",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": true
+                    },
+                    "title": "Response Get Project Bookings Api V1 Projects  Project Id  Bookings Get"
+                  }
+                }
+              }
+            },
+            "422": {
+              "description": "Validation Error",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/api/v1/projects/{project_id}/print": {
+        "get": {
+          "tags": [
+            "Projects"
+          ],
+          "summary": "Get project print data",
+          "description": "Get project data for print form.\n\nArgs:\n    project_id: Project ID\n    db: Database session\n\nReturns:\n    Project print data including client and equipment information\n\nRaises:\n    HTTPException: If project not found or other error occurs",
+          "operationId": "get_project_print_data_api_v1_projects__project_id__print_get",
+          "parameters": [
+            {
+              "name": "project_id",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "integer",
+                "title": "Project Id"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Successful Response",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/ProjectPrint"
+                  }
+                }
+              }
+            },
+            "422": {
+              "description": "Validation Error",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/api/v1/scan-sessions/": {
+        "post": {
+          "tags": [
+            "Scan Sessions"
+          ],
+          "summary": "Create new scan session",
+          "description": "Create a new scan session.\n\nArgs:\n    scan_session: Scan session data\n    service: Scan session service\n\nReturns:\n    ScanSessionResponse: Created scan session",
+          "operationId": "create_scan_session_api_v1_scan_sessions__post",
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScanSessionCreate"
+                }
+              }
+            }
+          },
+          "responses": {
+            "201": {
+              "description": "Successful Response",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/ScanSessionResponse"
+                  }
+                }
+              }
+            },
+            "422": {
+              "description": "Validation Error",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "get": {
+          "tags": [
+            "Scan Sessions"
+          ],
+          "summary": "Get all scan sessions",
+          "description": "Get a list of scan sessions.\n\nArgs:\n    user_id: Optional user ID to filter sessions\n    service: Scan session service\n\nReturns:\n    List[ScanSessionResponse]: List of scan sessions",
+          "operationId": "get_scan_sessions_api_v1_scan_sessions__get",
+          "parameters": [
+            {
+              "name": "user_id",
+              "in": "query",
+              "required": false,
+              "schema": {
+                "anyOf": [
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "User Id"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Successful Response",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/ScanSessionResponse"
+                    },
+                    "title": "Response Get Scan Sessions Api V1 Scan Sessions  Get"
+                  }
+                }
+              }
+            },
+            "422": {
+              "description": "Validation Error",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/api/v1/scan-sessions/{session_id}": {
+        "get": {
+          "tags": [
+            "Scan Sessions"
+          ],
+          "summary": "Get scan session by ID",
+          "description": "Get a scan session by ID.\n\nArgs:\n    session_id: Scan session ID\n    service: Scan session service\n\nReturns:\n    ScanSessionResponse: Scan session\n\nRaises:\n    NotFoundError: If scan session not found",
+          "operationId": "get_scan_session_api_v1_scan_sessions__session_id__get",
+          "parameters": [
+            {
+              "name": "session_id",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "integer",
+                "title": "Session Id"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Successful Response",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/ScanSessionResponse"
+                  }
+                }
+              }
+            },
+            "422": {
+              "description": "Validation Error",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "put": {
+          "tags": [
+            "Scan Sessions"
+          ],
+          "summary": "Update scan session",
+          "description": "Update a scan session.\n\nArgs:\n    session_id: Scan session ID\n    session_update: Updated scan session data\n    service: Scan session service\n\nReturns:\n    ScanSessionResponse: Updated scan session\n\nRaises:\n    NotFoundError: If scan session not found",
+          "operationId": "update_scan_session_api_v1_scan_sessions__session_id__put",
+          "parameters": [
+            {
+              "name": "session_id",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "integer",
+                "title": "Session Id"
+              }
+            }
+          ],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScanSessionUpdate"
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "Successful Response",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/ScanSessionResponse"
+                  }
+                }
+              }
+            },
+            "422": {
+              "description": "Validation Error",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "delete": {
+          "tags": [
+            "Scan Sessions"
+          ],
+          "summary": "Delete scan session",
+          "description": "Delete a scan session.\n\nArgs:\n    session_id: Scan session ID\n    service: Scan session service\n\nRaises:\n    NotFoundError: If scan session not found",
+          "operationId": "delete_scan_session_api_v1_scan_sessions__session_id__delete",
+          "parameters": [
+            {
+              "name": "session_id",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "integer",
+                "title": "Session Id"
+              }
+            }
+          ],
+          "responses": {
+            "204": {
+              "description": "Successful Response"
+            },
+            "422": {
+              "description": "Validation Error",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/api/v1/scan-sessions/clean-expired": {
+        "post": {
+          "tags": [
+            "Scan Sessions"
+          ],
+          "summary": "Clean expired scan sessions",
+          "description": "Clean (soft delete) all expired scan sessions.\n\nReturns:\n    dict: Dictionary containing the number of cleaned sessions.",
+          "operationId": "clean_expired_sessions_endpoint_api_v1_scan_sessions_clean_expired_post",
+          "responses": {
+            "200": {
+              "description": "Successful Response",
+              "content": {
+                "application/json": {
+                  "schema": {
+
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/": {
+        "get": {
+          "tags": [
+            "Home Web"
+          ],
+          "summary": "Index",
+          "description": "Render index page.\n\nArgs:\n    request: FastAPI request\n    db: Database session\n\nReturns:\n    _TemplateResponse: Rendered template",
+          "operationId": "index__get",
+          "responses": {
+            "200": {
+              "description": "Successful Response",
+              "content": {
+                "text/html": {
+                  "schema": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/equipment/": {
+        "get": {
+          "tags": [
+            "Equipment Web"
+          ],
+          "summary": "Equipment List",
+          "description": "Render equipment list page.\n\nArgs:\n    request: FastAPI request\n    db: Database session\n    category_id: Optional category filter\n    status: Optional status filter\n    query: Optional search query\n\nReturns:\n    _TemplateResponse: Rendered template",
+          "operationId": "equipment_list_equipment__get",
+          "parameters": [
+            {
+              "name": "category_id",
+              "in": "query",
+              "required": false,
+              "schema": {
+                "anyOf": [
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Category Id"
+              }
+            },
+            {
+              "name": "status",
+              "in": "query",
+              "required": false,
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/EquipmentStatus"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Status"
+              }
+            },
+            {
+              "name": "query",
+              "in": "query",
+              "required": false,
+              "schema": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Query"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Successful Response",
+              "content": {
+                "text/html": {
+                  "schema": {
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "422": {
+              "description": "Validation Error",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/equipment/{equipment_id}": {
+        "get": {
+          "tags": [
+            "Equipment Web"
+          ],
+          "summary": "Equipment Detail",
+          "description": "Render equipment detail page.\n\nArgs:\n    request: FastAPI request\n    equipment_id: Equipment ID\n    db: Database session\n    category_id: Optional category ID to override equipment's category\n\nReturns:\n    _TemplateResponse: Rendered template",
+          "operationId": "equipment_detail_equipment__equipment_id__get",
+          "parameters": [
+            {
+              "name": "equipment_id",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "integer",
+                "title": "Equipment Id"
+              }
+            },
+            {
+              "name": "category_id",
+              "in": "query",
+              "required": false,
+              "schema": {
+                "anyOf": [
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Category Id"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Successful Response",
+              "content": {
+                "text/html": {
+                  "schema": {
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "422": {
+              "description": "Validation Error",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/categories/": {
+        "get": {
+          "tags": [
+            "Categories Web"
+          ],
+          "summary": "Categories List",
+          "description": "Render categories list page.\n\nArgs:\n    request: FastAPI request\n    db: Database session\n\nReturns:\n    _TemplateResponse: Rendered template",
+          "operationId": "categories_list_categories__get",
+          "responses": {
+            "200": {
+              "description": "Successful Response",
+              "content": {
+                "text/html": {
+                  "schema": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/categories/api": {
+        "get": {
+          "tags": [
+            "Categories Web"
+          ],
+          "summary": "Get Categories",
+          "description": "Get all categories as JSON.\n\nArgs:\n    request: FastAPI request\n    db: Database session\n\nReturns:\n    List[Dict[str, Any]]: List of categories",
+          "operationId": "get_categories_categories_api_get",
+          "responses": {
+            "200": {
+              "description": "Successful Response",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "items": {
+                      "additionalProperties": true,
+                      "type": "object"
+                    },
+                    "type": "array",
+                    "title": "Response Get Categories Categories Api Get"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/clients/": {
+        "get": {
+          "tags": [
+            "Clients Web"
+          ],
+          "summary": "Clients List",
+          "description": "Render clients list page.\n\nArgs:\n    request: FastAPI request\n\nReturns:\n    _TemplateResponse: Rendered template",
+          "operationId": "clients_list_clients__get",
+          "responses": {
+            "200": {
+              "description": "Successful Response",
+              "content": {
+                "text/html": {
+                  "schema": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/bookings/": {
+        "get": {
+          "tags": [
+            "Bookings Web"
+          ],
+          "summary": "List Bookings",
+          "description": "Bookings list page.",
+          "operationId": "list_bookings_bookings__get",
+          "responses": {
+            "200": {
+              "description": "Successful Response",
+              "content": {
+                "text/html": {
+                  "schema": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/bookings/{booking_id}": {
+        "get": {
+          "tags": [
+            "Bookings Web"
+          ],
+          "summary": "Booking Detail",
+          "description": "Booking detail page.",
+          "operationId": "booking_detail_bookings__booking_id__get",
+          "parameters": [
+            {
+              "name": "booking_id",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "integer",
+                "title": "Booking Id"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Successful Response",
+              "content": {
+                "text/html": {
+                  "schema": {
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "422": {
+              "description": "Validation Error",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/scanner/": {
+        "get": {
+          "tags": [
+            "Scanner Web"
+          ],
+          "summary": "Scanner",
+          "description": "Render scanner page.\n\nArgs:\n    request: FastAPI request\n\nReturns:\n    _TemplateResponse: Rendered template",
+          "operationId": "scanner_scanner__get",
+          "responses": {
+            "200": {
+              "description": "Successful Response",
+              "content": {
+                "text/html": {
+                  "schema": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/projects/": {
+        "get": {
+          "tags": [
+            "Projects Web"
+          ],
+          "summary": "Projects List",
+          "description": "Render projects list page.\n\nArgs:\n    request: FastAPI request\n    db: Database session\n\nReturns:\n    _TemplateResponse: Rendered template",
+          "operationId": "projects_list_projects__get",
+          "responses": {
+            "200": {
+              "description": "Successful Response",
+              "content": {
+                "text/html": {
+                  "schema": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/projects/new": {
+        "get": {
+          "tags": [
+            "Projects Web"
+          ],
+          "summary": "New Project",
+          "description": "Render new project creation page.\n\nArgs:\n    request: FastAPI request\n    db: Database session\n    session_id: Optional scan session ID to initialize the project\n\nReturns:\n    _TemplateResponse: Rendered template",
+          "operationId": "new_project_projects_new_get",
+          "parameters": [
+            {
+              "name": "session_id",
+              "in": "query",
+              "required": false,
+              "schema": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Session Id"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Successful Response",
+              "content": {
+                "text/html": {
+                  "schema": {
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "422": {
+              "description": "Validation Error",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/projects/{project_id}": {
+        "get": {
+          "tags": [
+            "Projects Web"
+          ],
+          "summary": "View Project",
+          "description": "Render project details page.\n\nArgs:\n    request: FastAPI request object\n    project_id: Project ID\n    db: Database session\n\nReturns:\n    Rendered template for project details",
+          "operationId": "view_project_projects__project_id__get",
+          "parameters": [
+            {
+              "name": "project_id",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "integer",
+                "title": "Project Id"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Successful Response",
+              "content": {
+                "text/html": {
+                  "schema": {
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "422": {
+              "description": "Validation Error",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/projects/{project_id}/print": {
+        "get": {
+          "tags": [
+            "Projects Web"
+          ],
+          "summary": "Print Project",
+          "description": "Render project print form.\n\nArgs:\n    request: FastAPI request object\n    project_id: Project ID\n    db: Database session\n\nReturns:\n    Rendered template for project print form",
+          "operationId": "print_project_projects__project_id__print_get",
+          "parameters": [
+            {
+              "name": "project_id",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "integer",
+                "title": "Project Id"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Successful Response",
+              "content": {
+                "text/html": {
+                  "schema": {
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "422": {
+              "description": "Validation Error",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "components": {
+      "schemas": {
+        "BarcodeGenerateResponse": {
+          "properties": {
+            "success": {
+              "type": "boolean",
+              "title": "Success",
+              "description": "Whether the operation was successful",
+              "default": true
+            },
+            "message": {
+              "type": "string",
+              "title": "Message",
+              "description": "Response message",
+              "default": "Operation completed successfully"
+            },
+            "barcode": {
+              "type": "string",
+              "title": "Barcode",
+              "description": "Generated barcode"
+            }
+          },
+          "type": "object",
+          "required": [
+            "barcode"
+          ],
+          "title": "BarcodeGenerateResponse",
+          "description": "Barcode generation response schema."
+        },
+        "BarcodeType": {
+          "type": "string",
+          "enum": [
+            "code128",
+            "datamatrix"
+          ],
+          "title": "BarcodeType",
+          "description": "Barcode type enumeration."
+        },
+        "BarcodeValidateRequest": {
+          "properties": {
+            "barcode": {
+              "type": "string",
+              "title": "Barcode",
+              "description": "Barcode to validate"
+            }
+          },
+          "type": "object",
+          "required": [
+            "barcode"
+          ],
+          "title": "BarcodeValidateRequest",
+          "description": "Barcode validation request schema."
+        },
+        "BarcodeValidateResponse": {
+          "properties": {
+            "success": {
+              "type": "boolean",
+              "title": "Success",
+              "description": "Whether the operation was successful",
+              "default": true
+            },
+            "message": {
+              "type": "string",
+              "title": "Message",
+              "description": "Response message",
+              "default": "Operation completed successfully"
+            },
+            "is_valid": {
+              "type": "boolean",
+              "title": "Is Valid",
+              "description": "Whether the barcode is valid"
+            },
+            "sequence_number": {
+              "type": "integer",
+              "title": "Sequence Number",
+              "description": "Sequence number extracted from the barcode",
+              "default": 0
+            }
+          },
+          "type": "object",
+          "required": [
+            "is_valid"
+          ],
+          "title": "BarcodeValidateResponse",
+          "description": "Barcode validation response schema."
+        },
+        "Body_update_booking_status_api_v1_bookings__booking_id__status_patch": {
+          "properties": {
+            "booking_status": {
+              "$ref": "#/components/schemas/BookingStatus"
+            }
+          },
+          "type": "object",
+          "required": [
+            "booking_status"
+          ],
+          "title": "Body_update_booking_status_api_v1_bookings__booking_id__status_patch"
+        },
+        "Body_update_equipment_notes_api_v1_equipment__equipment_id__notes_patch": {
+          "properties": {
+            "notes": {
+              "type": "string",
+              "title": "Notes"
+            }
+          },
+          "type": "object",
+          "required": [
+            "notes"
+          ],
+          "title": "Body_update_equipment_notes_api_v1_equipment__equipment_id__notes_patch"
+        },
+        "BookingConflictInfo": {
+          "properties": {
+            "booking_id": {
+              "type": "integer",
+              "title": "Booking Id",
+              "description": "Booking ID"
+            },
+            "start_date": {
+              "type": "string",
+              "title": "Start Date",
+              "description": "Booking start date"
+            },
+            "end_date": {
+              "type": "string",
+              "title": "End Date",
+              "description": "Booking end date"
+            },
+            "status": {
+              "type": "string",
+              "title": "Status",
+              "description": "Booking status"
+            },
+            "project_id": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Project Id",
+              "description": "Project ID if available"
+            },
+            "project_name": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Project Name",
+              "description": "Project name if available"
+            }
+          },
+          "type": "object",
+          "required": [
+            "booking_id",
+            "start_date",
+            "end_date",
+            "status"
+          ],
+          "title": "BookingConflictInfo",
+          "description": "Booking conflict information schema."
+        },
+        "BookingCreate": {
+          "properties": {
+            "equipment_id": {
+              "type": "integer",
+              "title": "Equipment ID",
+              "description": "ID of the equipment being booked"
+            },
+            "client_id": {
+              "type": "integer",
+              "title": "Client ID",
+              "description": "ID of the client making the booking"
+            },
+            "start_date": {
+              "type": "string",
+              "format": "date-time",
+              "title": "Start Date",
+              "description": "Start date of the booking"
+            },
+            "end_date": {
+              "type": "string",
+              "format": "date-time",
+              "title": "End Date",
+              "description": "End date of the booking"
+            },
+            "total_amount": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "string"
+                }
+              ],
+              "title": "Total Amount",
+              "description": "Total amount for the booking"
+            },
+            "quantity": {
+              "type": "integer",
+              "title": "Quantity",
+              "description": "Quantity of equipment items in this booking",
+              "default": 1
+            },
+            "project_id": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Project ID",
+              "description": "ID of the project this booking belongs to"
+            }
+          },
+          "type": "object",
+          "required": [
+            "equipment_id",
+            "client_id",
+            "start_date",
+            "end_date",
+            "total_amount"
+          ],
+          "title": "BookingCreate",
+          "description": "Create booking request schema."
+        },
+        "BookingCreateForProject": {
+          "properties": {
+            "equipment_id": {
+              "type": "integer",
+              "title": "Equipment ID"
+            },
+            "start_date": {
+              "type": "string",
+              "format": "date-time",
+              "title": "Booking Start Date"
+            },
+            "end_date": {
+              "type": "string",
+              "format": "date-time",
+              "title": "Booking End Date"
+            },
+            "quantity": {
+              "type": "integer",
+              "title": "Quantity",
+              "description": "Quantity of equipment items in this booking",
+              "default": 1
+            }
+          },
+          "type": "object",
+          "required": [
+            "equipment_id",
+            "start_date",
+            "end_date"
+          ],
+          "title": "BookingCreateForProject",
+          "description": "Booking schema for project creation."
+        },
+        "BookingInProject": {
+          "properties": {
+            "id": {
+              "type": "integer",
+              "title": "Id"
+            },
+            "equipment_id": {
+              "type": "integer",
+              "title": "Equipment Id"
+            },
+            "equipment_name": {
+              "type": "string",
+              "title": "Equipment Name"
+            },
+            "start_date": {
+              "type": "string",
+              "format": "date-time",
+              "title": "Start Date"
+            },
+            "end_date": {
+              "type": "string",
+              "format": "date-time",
+              "title": "End Date"
+            },
+            "booking_status": {
+              "type": "string",
+              "title": "Booking Status"
+            },
+            "payment_status": {
+              "type": "string",
+              "title": "Payment Status"
+            }
+          },
+          "type": "object",
+          "required": [
+            "id",
+            "equipment_id",
+            "equipment_name",
+            "start_date",
+            "end_date",
+            "booking_status",
+            "payment_status"
+          ],
+          "title": "BookingInProject",
+          "description": "Simplified booking schema for project response."
+        },
+        "BookingResponse": {
+          "properties": {
+            "equipment_id": {
+              "type": "integer",
+              "title": "Equipment ID",
+              "description": "ID of the equipment being booked"
+            },
+            "client_id": {
+              "type": "integer",
+              "title": "Client ID",
+              "description": "ID of the client making the booking"
+            },
+            "start_date": {
+              "type": "string",
+              "format": "date-time",
+              "title": "Start Date",
+              "description": "Start date of the booking"
+            },
+            "end_date": {
+              "type": "string",
+              "format": "date-time",
+              "title": "End Date",
+              "description": "End date of the booking"
+            },
+            "total_amount": {
+              "type": "string",
+              "title": "Total Amount",
+              "description": "Total amount for the booking"
+            },
+            "quantity": {
+              "type": "integer",
+              "title": "Quantity",
+              "description": "Quantity of equipment items in this booking",
+              "default": 1
+            },
+            "project_id": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Project ID",
+              "description": "ID of the project this booking belongs to"
+            },
+            "id": {
+              "type": "integer",
+              "title": "Id"
+            },
+            "status": {
+              "$ref": "#/components/schemas/BookingStatus"
+            },
+            "payment_status": {
+              "$ref": "#/components/schemas/PaymentStatus"
+            },
+            "created_at": {
+              "type": "string",
+              "format": "date-time",
+              "title": "Created At"
+            },
+            "updated_at": {
+              "type": "string",
+              "format": "date-time",
+              "title": "Updated At"
+            },
+            "equipment_name": {
+              "type": "string",
+              "title": "Equipment Name"
+            },
+            "client_name": {
+              "type": "string",
+              "title": "Client Name"
+            },
+            "project_name": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Project Name"
+            }
+          },
+          "type": "object",
+          "required": [
+            "equipment_id",
+            "client_id",
+            "start_date",
+            "end_date",
+            "total_amount",
+            "id",
+            "status",
+            "payment_status",
+            "created_at",
+            "updated_at",
+            "equipment_name",
+            "client_name"
+          ],
+          "title": "BookingResponse",
+          "description": "Booking response schema."
+        },
+        "BookingStatus": {
+          "type": "string",
+          "enum": [
+            "PENDING",
+            "CONFIRMED",
+            "ACTIVE",
+            "COMPLETED",
+            "CANCELLED",
+            "OVERDUE"
+          ],
+          "title": "BookingStatus",
+          "description": "Booking status enumeration."
+        },
+        "BookingUpdate": {
+          "properties": {
+            "start_date": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Start Date",
+              "description": "Start date of the booking"
+            },
+            "end_date": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "End Date",
+              "description": "End date of the booking"
+            },
+            "status": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/BookingStatus"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status",
+              "description": "Booking status"
+            },
+            "payment_status": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/PaymentStatus"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Payment Status",
+              "description": "Payment status"
+            },
+            "quantity": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Quantity",
+              "description": "Quantity of equipment items"
+            },
+            "project_id": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Project ID",
+              "description": "ID of the project this booking belongs to"
+            }
+          },
+          "type": "object",
+          "title": "BookingUpdate",
+          "description": "Update booking request schema."
+        },
+        "CategoryCreate": {
+          "properties": {
+            "name": {
+              "type": "string",
+              "title": "Name"
+            },
+            "description": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Description"
+            },
+            "parent_id": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Parent Id"
+            }
+          },
+          "type": "object",
+          "required": [
+            "name"
+          ],
+          "title": "CategoryCreate",
+          "description": "Category create schema."
+        },
+        "CategoryInfo": {
+          "properties": {
+            "id": {
+              "type": "integer",
+              "title": "Id",
+              "description": "Category ID"
+            },
+            "name": {
+              "type": "string",
+              "title": "Name",
+              "description": "Category name"
+            }
+          },
+          "type": "object",
+          "required": [
+            "id",
+            "name"
+          ],
+          "title": "CategoryInfo",
+          "description": "Category information schema."
+        },
+        "CategoryResponse": {
+          "properties": {
+            "name": {
+              "type": "string",
+              "title": "Name"
+            },
+            "description": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Description"
+            },
+            "parent_id": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Parent Id"
+            },
+            "id": {
+              "type": "integer",
+              "title": "Id"
+            },
+            "created_at": {
+              "type": "string",
+              "format": "date-time",
+              "title": "Created At"
+            },
+            "updated_at": {
+              "type": "string",
+              "format": "date-time",
+              "title": "Updated At"
+            }
+          },
+          "type": "object",
+          "required": [
+            "name",
+            "id",
+            "created_at",
+            "updated_at"
+          ],
+          "title": "CategoryResponse",
+          "description": "Category response schema."
+        },
+        "CategoryUpdate": {
+          "properties": {
+            "name": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Name"
+            },
+            "description": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Description"
+            },
+            "parent_id": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Parent Id"
+            }
+          },
+          "type": "object",
+          "title": "CategoryUpdate",
+          "description": "Category update schema."
+        },
+        "CategoryWithEquipmentCount": {
+          "properties": {
+            "name": {
+              "type": "string",
+              "title": "Name"
+            },
+            "description": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Description"
+            },
+            "parent_id": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Parent Id"
+            },
+            "id": {
+              "type": "integer",
+              "title": "Id"
+            },
+            "created_at": {
+              "type": "string",
+              "format": "date-time",
+              "title": "Created At"
+            },
+            "updated_at": {
+              "type": "string",
+              "format": "date-time",
+              "title": "Updated At"
+            },
+            "equipment_count": {
+              "type": "integer",
+              "title": "Equipment Count",
+              "description": "Number of equipment items in this category"
+            }
+          },
+          "type": "object",
+          "required": [
+            "name",
+            "id",
+            "created_at",
+            "updated_at",
+            "equipment_count"
+          ],
+          "title": "CategoryWithEquipmentCount",
+          "description": "Category with equipment count schema."
+        },
+        "ClientCreate": {
+          "properties": {
+            "name": {
+              "type": "string",
+              "title": "Full Name",
+              "description": "Client full name"
+            },
+            "email": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Email",
+              "description": "Client email address"
+            },
+            "phone": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Phone",
+              "description": "Client phone number"
+            },
+            "company": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Company",
+              "description": "Client company name"
+            },
+            "notes": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Notes",
+              "description": "Additional notes"
+            }
+          },
+          "type": "object",
+          "required": [
+            "name"
+          ],
+          "title": "ClientCreate",
+          "description": "Create client request schema."
+        },
+        "ClientInfo": {
+          "properties": {
+            "id": {
+              "type": "integer",
+              "title": "Id"
+            },
+            "name": {
+              "type": "string",
+              "title": "Name"
+            },
+            "company": {
+              "type": "string",
+              "title": "Company"
+            },
+            "phone": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Phone"
+            }
+          },
+          "type": "object",
+          "required": [
+            "id",
+            "name",
+            "company"
+          ],
+          "title": "ClientInfo",
+          "description": "Client information for print form."
+        },
+        "ClientResponse": {
+          "properties": {
+            "name": {
+              "type": "string",
+              "title": "Full Name",
+              "description": "Client full name"
+            },
+            "email": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Email",
+              "description": "Client email address"
+            },
+            "phone": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Phone",
+              "description": "Client phone number"
+            },
+            "company": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Company",
+              "description": "Client company name"
+            },
+            "notes": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Notes",
+              "description": "Additional notes"
+            },
+            "id": {
+              "type": "integer",
+              "title": "Id"
+            },
+            "status": {
+              "$ref": "#/components/schemas/ClientStatus"
+            },
+            "created_at": {
+              "type": "string",
+              "format": "date-time",
+              "title": "Created At"
+            },
+            "updated_at": {
+              "type": "string",
+              "format": "date-time",
+              "title": "Updated At"
+            }
+          },
+          "type": "object",
+          "required": [
+            "name",
+            "id",
+            "status",
+            "created_at",
+            "updated_at"
+          ],
+          "title": "ClientResponse",
+          "description": "Client response schema."
+        },
+        "ClientStatus": {
+          "type": "string",
+          "enum": [
+            "ACTIVE",
+            "BLOCKED",
+            "ARCHIVED"
+          ],
+          "title": "ClientStatus",
+          "description": "Client status enumeration."
+        },
+        "ClientUpdate": {
+          "properties": {
+            "name": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Full Name",
+              "description": "Client full name"
+            },
+            "email": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Email",
+              "description": "Client email address"
+            },
+            "phone": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Phone",
+              "description": "Client phone number"
+            },
+            "company": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Company",
+              "description": "Client company name"
+            },
+            "notes": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Notes",
+              "description": "Additional notes"
+            },
+            "status": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/ClientStatus"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status",
+              "description": "Client status"
+            }
+          },
+          "type": "object",
+          "title": "ClientUpdate",
+          "description": "Update client request schema."
+        },
+        "DocumentCreate": {
+          "properties": {
+            "title": {
+              "type": "string",
+              "title": "Title",
+              "description": "Document title"
+            },
+            "description": {
+              "type": "string",
+              "title": "Description",
+              "description": "Document description"
+            },
+            "document_type": {
+              "$ref": "#/components/schemas/DocumentType",
+              "title": "Type",
+              "description": "Document type"
+            },
+            "file_path": {
+              "type": "string",
+              "title": "File Path",
+              "description": "Path to document file"
+            }
+          },
+          "type": "object",
+          "required": [
+            "title",
+            "description",
+            "document_type",
+            "file_path"
+          ],
+          "title": "DocumentCreate",
+          "description": "Create document request schema."
+        },
+        "DocumentResponse": {
+          "properties": {
+            "id": {
+              "type": "integer",
+              "title": "Id"
+            },
+            "client_id": {
+              "type": "integer",
+              "title": "Client Id"
+            },
+            "booking_id": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Booking Id"
+            },
+            "type": {
+              "$ref": "#/components/schemas/DocumentType"
+            },
+            "title": {
+              "type": "string",
+              "title": "Title"
+            },
+            "description": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Description"
+            },
+            "file_path": {
+              "type": "string",
+              "title": "File Path"
+            },
+            "file_name": {
+              "type": "string",
+              "title": "File Name"
+            },
+            "file_size": {
+              "type": "integer",
+              "title": "File Size"
+            },
+            "mime_type": {
+              "type": "string",
+              "title": "Mime Type"
+            },
+            "status": {
+              "$ref": "#/components/schemas/DocumentStatus"
+            },
+            "created_at": {
+              "type": "string",
+              "format": "date-time",
+              "title": "Created At"
+            },
+            "updated_at": {
+              "type": "string",
+              "format": "date-time",
+              "title": "Updated At"
+            }
+          },
+          "type": "object",
+          "required": [
+            "id",
+            "client_id",
+            "type",
+            "title",
+            "file_path",
+            "file_name",
+            "file_size",
+            "mime_type",
+            "status",
+            "created_at",
+            "updated_at"
+          ],
+          "title": "DocumentResponse",
+          "description": "Document response schema."
+        },
+        "DocumentStatus": {
+          "type": "string",
+          "enum": [
+            "DRAFT",
+            "PENDING",
+            "UNDER_REVIEW",
+            "APPROVED",
+            "REJECTED",
+            "EXPIRED",
+            "CANCELLED"
+          ],
+          "title": "DocumentStatus",
+          "description": "Document status enumeration."
+        },
+        "DocumentType": {
+          "type": "string",
+          "enum": [
+            "CONTRACT",
+            "INVOICE",
+            "RECEIPT",
+            "PASSPORT",
+            "DAMAGE_REPORT",
+            "INSURANCE",
+            "OTHER"
+          ],
+          "title": "DocumentType",
+          "description": "Document type enumeration."
+        },
+        "DocumentUpdate": {
+          "properties": {
+            "title": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Title",
+              "description": "Document title"
+            },
+            "description": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Description",
+              "description": "Document description"
+            },
+            "file_path": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "File Path",
+              "description": "Path to document file"
+            },
+            "status": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/DocumentStatus"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status",
+              "description": "Document status"
+            }
+          },
+          "type": "object",
+          "title": "DocumentUpdate",
+          "description": "Update document request schema."
+        },
+        "EquipmentAvailabilityResponse": {
+          "properties": {
+            "equipment_id": {
+              "type": "integer",
+              "title": "Equipment Id",
+              "description": "Equipment ID"
+            },
+            "is_available": {
+              "type": "boolean",
+              "title": "Is Available",
+              "description": "Whether equipment is available for the specified period"
+            },
+            "equipment_status": {
+              "$ref": "#/components/schemas/EquipmentStatus",
+              "description": "Current equipment status"
+            },
+            "conflicts": {
+              "items": {
+                "$ref": "#/components/schemas/BookingConflictInfo"
+              },
+              "type": "array",
+              "title": "Conflicts",
+              "description": "List of booking conflicts if not available"
+            },
+            "message": {
+              "type": "string",
+              "title": "Message",
+              "description": "Availability message"
+            }
+          },
+          "type": "object",
+          "required": [
+            "equipment_id",
+            "is_available",
+            "equipment_status",
+            "message"
+          ],
+          "title": "EquipmentAvailabilityResponse",
+          "description": "Equipment availability response schema."
+        },
+        "EquipmentCreate": {
+          "properties": {
+            "name": {
+              "type": "string",
+              "title": "Name",
+              "description": "Equipment name"
+            },
+            "description": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Description",
+              "description": "Equipment description",
+              "default": ""
+            },
+            "category_id": {
+              "type": "integer",
+              "title": "Category ID",
+              "description": "Category ID"
+            },
+            "replacement_cost": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Replacement Cost",
+              "description": "Cost to replace if damaged"
+            },
+            "custom_barcode": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Custom Barcode",
+              "description": "Optional custom barcode (auto-generated if not provided)"
+            },
+            "validate_barcode": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Validate Barcode",
+              "description": "Whether to validate the custom barcode format",
+              "default": true
+            },
+            "serial_number": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Serial Number",
+              "description": "Serial number"
+            },
+            "notes": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Notes",
+              "description": "Additional notes"
+            }
+          },
+          "type": "object",
+          "required": [
+            "name",
+            "category_id"
+          ],
+          "title": "EquipmentCreate",
+          "description": "Create equipment request schema."
+        },
+        "EquipmentItem": {
+          "properties": {
+            "equipment_id": {
+              "type": "integer",
+              "title": "Equipment Id"
+            },
+            "barcode": {
+              "type": "string",
+              "title": "Barcode"
+            },
+            "name": {
+              "type": "string",
+              "title": "Name"
+            },
+            "category_id": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Category Id"
+            },
+            "category_name": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Category Name"
+            },
+            "booking_start_date": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Booking Start Date"
+            },
+            "booking_end_date": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Booking End Date"
+            }
+          },
+          "type": "object",
+          "required": [
+            "equipment_id",
+            "barcode",
+            "name"
+          ],
+          "title": "EquipmentItem",
+          "description": "Schema for scanned equipment item."
+        },
+        "EquipmentPrintItem": {
+          "properties": {
+            "id": {
+              "type": "integer",
+              "title": "Id"
+            },
+            "name": {
+              "type": "string",
+              "title": "Name"
+            },
+            "serial_number": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Serial Number"
+            },
+            "liability_amount": {
+              "type": "number",
+              "title": "Liability Amount",
+              "default": 0
+            },
+            "quantity": {
+              "type": "integer",
+              "title": "Quantity",
+              "default": 1
+            }
+          },
+          "type": "object",
+          "required": [
+            "id",
+            "name"
+          ],
+          "title": "EquipmentPrintItem",
+          "description": "Equipment item for project print form."
+        },
+        "EquipmentResponse": {
+          "properties": {
+            "id": {
+              "type": "integer",
+              "title": "Id"
+            },
+            "name": {
+              "type": "string",
+              "title": "Name"
+            },
+            "description": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Description"
+            },
+            "replacement_cost": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Replacement Cost"
+            },
+            "barcode": {
+              "type": "string",
+              "title": "Barcode"
+            },
+            "serial_number": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Serial Number"
+            },
+            "category_id": {
+              "type": "integer",
+              "title": "Category Id"
+            },
+            "status": {
+              "$ref": "#/components/schemas/EquipmentStatus"
+            },
+            "created_at": {
+              "type": "string",
+              "format": "date-time",
+              "title": "Created At"
+            },
+            "updated_at": {
+              "type": "string",
+              "format": "date-time",
+              "title": "Updated At"
+            },
+            "notes": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Notes"
+            },
+            "category_name": {
+              "type": "string",
+              "title": "Category Name",
+              "description": "Category name"
+            },
+            "category": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/CategoryInfo"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Category information"
+            },
+            "is_available": {
+              "type": "boolean",
+              "title": "Is Available",
+              "description": "Check if equipment is available for rent.",
+              "readOnly": true
+            }
+          },
+          "type": "object",
+          "required": [
+            "id",
+            "name",
+            "replacement_cost",
+            "barcode",
+            "serial_number",
+            "category_id",
+            "status",
+            "created_at",
+            "updated_at",
+            "category_name",
+            "is_available"
+          ],
+          "title": "EquipmentResponse",
+          "description": "Equipment response schema."
+        },
+        "EquipmentStatus": {
+          "type": "string",
+          "enum": [
+            "AVAILABLE",
+            "RENTED",
+            "MAINTENANCE",
+            "BROKEN",
+            "RETIRED"
+          ],
+          "title": "EquipmentStatus",
+          "description": "Equipment status enumeration."
+        },
+        "EquipmentUpdate": {
+          "properties": {
+            "name": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Name",
+              "description": "Equipment name"
+            },
+            "description": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Description",
+              "description": "Equipment description"
+            },
+            "replacement_cost": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Replacement Cost",
+              "description": "Cost to replace if damaged"
+            },
+            "barcode": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Barcode",
+              "description": "Equipment barcode"
+            },
+            "serial_number": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Serial Number",
+              "description": "Serial number"
+            },
+            "category_id": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Category ID",
+              "description": "Category ID"
+            },
+            "status": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/EquipmentStatus"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status",
+              "description": "Equipment status"
+            }
+          },
+          "type": "object",
+          "title": "EquipmentUpdate",
+          "description": "Update equipment request schema."
+        },
+        "HTTPValidationError": {
+          "properties": {
+            "detail": {
+              "items": {
+                "$ref": "#/components/schemas/ValidationError"
+              },
+              "type": "array",
+              "title": "Detail"
+            }
+          },
+          "type": "object",
+          "title": "HTTPValidationError"
+        },
+        "NextSequenceResponse": {
+          "properties": {
+            "success": {
+              "type": "boolean",
+              "title": "Success",
+              "description": "Whether the operation was successful",
+              "default": true
+            },
+            "message": {
+              "type": "string",
+              "title": "Message",
+              "description": "Response message",
+              "default": "Operation completed successfully"
+            },
+            "next_sequence_number": {
+              "type": "integer",
+              "title": "Next Sequence Number",
+              "description": "Next sequence number for barcode generation"
+            }
+          },
+          "type": "object",
+          "required": [
+            "next_sequence_number"
+          ],
+          "title": "NextSequenceResponse",
+          "description": "Next sequence number response schema."
+        },
+        "PaymentStatus": {
+          "type": "string",
+          "enum": [
+            "PENDING",
+            "PARTIAL",
+            "PAID",
+            "REFUNDED",
+            "OVERDUE"
+          ],
+          "title": "PaymentStatus",
+          "description": "Payment status enumeration."
+        },
+        "ProjectCreateWithBookings": {
+          "properties": {
+            "name": {
+              "type": "string",
+              "title": "Project Name",
+              "description": "Name of the project"
+            },
+            "client_id": {
+              "type": "integer",
+              "title": "Client ID",
+              "description": "ID of the client for the project"
+            },
+            "start_date": {
+              "type": "string",
+              "format": "date-time",
+              "title": "Start Date",
+              "description": "Start date of the project"
+            },
+            "end_date": {
+              "type": "string",
+              "format": "date-time",
+              "title": "End Date",
+              "description": "End date of the project"
+            },
+            "description": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Description",
+              "description": "Description of the project"
+            },
+            "notes": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Notes",
+              "description": "Additional notes for the project"
+            },
+            "status": {
+              "$ref": "#/components/schemas/ProjectStatus",
+              "title": "Project Status",
+              "default": "DRAFT"
+            },
+            "bookings": {
+              "items": {
+                "$ref": "#/components/schemas/BookingCreateForProject"
+              },
+              "type": "array",
+              "title": "Bookings"
+            }
+          },
+          "type": "object",
+          "required": [
+            "name",
+            "client_id",
+            "start_date",
+            "end_date"
+          ],
+          "title": "ProjectCreateWithBookings",
+          "description": "Create project with bookings request schema."
+        },
+        "ProjectPrint": {
+          "properties": {
+            "project": {
+              "$ref": "#/components/schemas/ProjectResponse"
+            },
+            "client": {
+              "$ref": "#/components/schemas/ClientInfo"
+            },
+            "equipment": {
+              "items": {
+                "$ref": "#/components/schemas/EquipmentPrintItem"
+              },
+              "type": "array",
+              "title": "Equipment"
+            },
+            "total_items": {
+              "type": "integer",
+              "title": "Total Items"
+            },
+            "total_liability": {
+              "type": "number",
+              "title": "Total Liability"
+            },
+            "generated_at": {
+              "type": "string",
+              "format": "date-time",
+              "title": "Generated At"
+            }
+          },
+          "type": "object",
+          "required": [
+            "project",
+            "client",
+            "equipment",
+            "total_items",
+            "total_liability"
+          ],
+          "title": "ProjectPrint",
+          "description": "Project print form schema."
+        },
+        "ProjectResponse": {
+          "properties": {
+            "name": {
+              "type": "string",
+              "title": "Project Name",
+              "description": "Name of the project"
+            },
+            "client_id": {
+              "type": "integer",
+              "title": "Client ID",
+              "description": "ID of the client for the project"
+            },
+            "start_date": {
+              "type": "string",
+              "format": "date-time",
+              "title": "Start Date",
+              "description": "Start date of the project"
+            },
+            "end_date": {
+              "type": "string",
+              "format": "date-time",
+              "title": "End Date",
+              "description": "End date of the project"
+            },
+            "description": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Description",
+              "description": "Description of the project"
+            },
+            "notes": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Notes",
+              "description": "Additional notes for the project"
+            },
+            "id": {
+              "type": "integer",
+              "title": "Id"
+            },
+            "status": {
+              "$ref": "#/components/schemas/ProjectStatus"
+            },
+            "created_at": {
+              "type": "string",
+              "format": "date-time",
+              "title": "Created At"
+            },
+            "updated_at": {
+              "type": "string",
+              "format": "date-time",
+              "title": "Updated At"
+            },
+            "client_name": {
+              "type": "string",
+              "title": "Client Name"
+            }
+          },
+          "type": "object",
+          "required": [
+            "name",
+            "client_id",
+            "start_date",
+            "end_date",
+            "id",
+            "status",
+            "created_at",
+            "updated_at",
+            "client_name"
+          ],
+          "title": "ProjectResponse",
+          "description": "Project response schema."
+        },
+        "ProjectStatus": {
+          "type": "string",
+          "enum": [
+            "DRAFT",
+            "ACTIVE",
+            "COMPLETED",
+            "CANCELLED"
+          ],
+          "title": "ProjectStatus",
+          "description": "Project status enumeration."
+        },
+        "ProjectUpdate": {
+          "properties": {
+            "name": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Project Name"
+            },
+            "description": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Description"
+            },
+            "client_id": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Client ID"
+            },
+            "start_date": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Start Date"
+            },
+            "end_date": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "End Date"
+            },
+            "status": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/ProjectStatus"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            },
+            "notes": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Notes"
+            }
+          },
+          "type": "object",
+          "title": "ProjectUpdate",
+          "description": "Update project request schema."
+        },
+        "ProjectWithBookings": {
+          "properties": {
+            "name": {
+              "type": "string",
+              "title": "Project Name",
+              "description": "Name of the project"
+            },
+            "client_id": {
+              "type": "integer",
+              "title": "Client ID",
+              "description": "ID of the client for the project"
+            },
+            "start_date": {
+              "type": "string",
+              "format": "date-time",
+              "title": "Start Date",
+              "description": "Start date of the project"
+            },
+            "end_date": {
+              "type": "string",
+              "format": "date-time",
+              "title": "End Date",
+              "description": "End date of the project"
+            },
+            "description": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Description",
+              "description": "Description of the project"
+            },
+            "notes": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Notes",
+              "description": "Additional notes for the project"
+            },
+            "id": {
+              "type": "integer",
+              "title": "Id"
+            },
+            "status": {
+              "$ref": "#/components/schemas/ProjectStatus"
+            },
+            "created_at": {
+              "type": "string",
+              "format": "date-time",
+              "title": "Created At"
+            },
+            "updated_at": {
+              "type": "string",
+              "format": "date-time",
+              "title": "Updated At"
+            },
+            "client_name": {
+              "type": "string",
+              "title": "Client Name"
+            },
+            "bookings": {
+              "items": {
+                "$ref": "#/components/schemas/BookingInProject"
+              },
+              "type": "array",
+              "title": "Bookings"
+            }
+          },
+          "type": "object",
+          "required": [
+            "name",
+            "client_id",
+            "start_date",
+            "end_date",
+            "id",
+            "status",
+            "created_at",
+            "updated_at",
+            "client_name",
+            "bookings"
+          ],
+          "title": "ProjectWithBookings",
+          "description": "Project response schema with bookings."
+        },
+        "RegenerateBarcodeRequest": {
+          "properties": {
+
+          },
+          "type": "object",
+          "title": "RegenerateBarcodeRequest",
+          "description": "Regenerate barcode request schema."
+        },
+        "ScanSessionCreate": {
+          "properties": {
+            "name": {
+              "type": "string",
+              "title": "Name"
+            },
+            "items": {
+              "items": {
+                "$ref": "#/components/schemas/EquipmentItem"
+              },
+              "type": "array",
+              "title": "Items"
+            },
+            "user_id": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "User Id"
+            }
+          },
+          "type": "object",
+          "required": [
+            "name"
+          ],
+          "title": "ScanSessionCreate",
+          "description": "Schema for creating a scan session."
+        },
+        "ScanSessionResponse": {
+          "properties": {
+            "name": {
+              "type": "string",
+              "title": "Name"
+            },
+            "items": {
+              "items": {
+                "$ref": "#/components/schemas/EquipmentItem"
+              },
+              "type": "array",
+              "title": "Items"
+            },
+            "id": {
+              "type": "integer",
+              "title": "Id"
+            },
+            "user_id": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "User Id"
+            },
+            "created_at": {
+              "type": "string",
+              "format": "date-time",
+              "title": "Created At"
+            },
+            "updated_at": {
+              "type": "string",
+              "format": "date-time",
+              "title": "Updated At"
+            },
+            "expires_at": {
+              "type": "string",
+              "format": "date-time",
+              "title": "Expires At"
+            }
+          },
+          "type": "object",
+          "required": [
+            "name",
+            "id",
+            "created_at",
+            "updated_at",
+            "expires_at"
+          ],
+          "title": "ScanSessionResponse",
+          "description": "Schema for scan session response."
+        },
+        "ScanSessionUpdate": {
+          "properties": {
+            "name": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Name"
+            },
+            "items": {
+              "anyOf": [
+                {
+                  "items": {
+                    "$ref": "#/components/schemas/EquipmentItem"
+                  },
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Items"
+            }
+          },
+          "type": "object",
+          "title": "ScanSessionUpdate",
+          "description": "Schema for updating a scan session."
+        },
+        "StatusTimelineResponse": {
+          "properties": {
+            "id": {
+              "type": "integer",
+              "title": "Id"
+            },
+            "equipment_id": {
+              "type": "integer",
+              "title": "Equipment Id"
+            },
+            "status": {
+              "$ref": "#/components/schemas/EquipmentStatus"
+            },
+            "timestamp": {
+              "type": "string",
+              "format": "date-time",
+              "title": "Timestamp"
+            },
+            "notes": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Notes"
+            }
+          },
+          "type": "object",
+          "required": [
+            "id",
+            "equipment_id",
+            "status",
+            "timestamp"
+          ],
+          "title": "StatusTimelineResponse",
+          "description": "Status timeline response schema."
+        },
+        "ValidationError": {
+          "properties": {
+            "loc": {
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "integer"
+                  }
+                ]
+              },
+              "type": "array",
+              "title": "Location"
+            },
+            "msg": {
+              "type": "string",
+              "title": "Message"
+            },
+            "type": {
+              "type": "string",
+              "title": "Error Type"
+            }
+          },
+          "type": "object",
+          "required": [
+            "loc",
+            "msg",
+            "type"
+          ],
+          "title": "ValidationError"
+        }
+      }
+    }
+  }
