@@ -30,7 +30,7 @@ ACT-Rental is a comprehensive system for managing cinema equipment rentals. It a
 - Real-time equipment status updates
 - Document generation (rental agreements, handover acts)
 - Local static asset management for reliable operation
-- Bootstrap-based responsive UI with Select2 integration
+- Bootstrap-based responsive UI
 
 ## Tech Stack
 
