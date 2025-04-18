@@ -1,5 +1,6 @@
 # ACT-Rental - Cinema Equipment Rental Management System
 
+[![Version](https://img.shields.io/badge/version-v0.5.0--alpha.3-blue)](https://github.com/NewalexOA/CINERENTAL/releases/tag/v0.5.0-alpha.3)
 [![Python](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/downloads/release/python-3120/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.104.1-009688.svg?logo=fastapi)](https://fastapi.tiangolo.com)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
@@ -23,11 +24,13 @@ ACT-Rental is a comprehensive system for managing cinema equipment rentals. It a
 ## Features
 
 - Equipment management with hierarchical categories
-- Client management
-- Booking system
+- Client management with fast search functionality
+- Booking system with quantity support
 - Barcode scanner integration
 - Real-time equipment status updates
 - Document generation (rental agreements, handover acts)
+- Local static asset management for reliable operation
+- Bootstrap-based responsive UI with Select2 integration
 
 ## Tech Stack
 
