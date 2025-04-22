@@ -6,10 +6,12 @@ including their specifications, availability, and replacement costs.
 """
 
 from datetime import datetime, timedelta, timezone
-from typing import List, Optional
+from typing import List, Optional, cast
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Query
 from fastapi import status as http_status
+from fastapi_pagination import Page, Params
+from fastapi_pagination.ext.sqlalchemy import paginate
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.api.v1.decorators import (
@@ -206,6 +208,70 @@ async def get_equipment_list(
             status_code=http_status.HTTP_404_NOT_FOUND,
             detail=str(e),
         )
+
+
+@typed_get(
+    equipment_router,
+    '/paginated',
+    response_model=Page[EquipmentResponse],
+    summary='Get Paginated Equipment List',
+)
+async def get_equipment_list_paginated(
+    params: Params = Depends(),
+    status: Optional[EquipmentStatus] = Query(None, description='Filter by status'),
+    category_id: Optional[int] = Query(None, description='Filter by category ID'),
+    query: Optional[str] = Query(
+        None, description='Search by name, description, barcode, serial number'
+    ),
+    available_from: Optional[datetime] = Query(
+        None, description='Filter by availability start date (ISO format)'
+    ),
+    available_to: Optional[datetime] = Query(
+        None, description='Filter by availability end date (ISO format)'
+    ),
+    include_deleted: bool = Query(
+        False, description='Whether to include deleted equipment'
+    ),
+    db: AsyncSession = Depends(get_db),
+) -> Page[EquipmentResponse]:
+    """Get paginated list of equipment with optional filtering and search."""
+    try:
+        if available_from and available_to and available_from >= available_to:
+            raise HTTPException(
+                status_code=http_status.HTTP_400_BAD_REQUEST,
+                detail='Start date must be before end date',
+            )
+
+        if query and len(query) > 255:
+            raise HTTPException(
+                status_code=http_status.HTTP_400_BAD_REQUEST,
+                detail='Search query is too long. Maximum length is 255 characters.',
+            )
+
+        if available_from and available_from.tzinfo is None:
+            available_from = available_from.replace(tzinfo=timezone.utc)
+        if available_to and available_to.tzinfo is None:
+            available_to = available_to.replace(tzinfo=timezone.utc)
+
+        equipment_service = EquipmentService(db)
+
+        equipment_query = await equipment_service.get_equipment_list_query(
+            status=status,
+            category_id=category_id,
+            query=query,
+            available_from=available_from,
+            available_to=available_to,
+            include_deleted=include_deleted,
+        )
+
+        result = await paginate(db, equipment_query, params)
+        return cast(Page[EquipmentResponse], result)
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f'An unexpected error occurred: {e}',
+        ) from e
 
 
 @typed_get(
