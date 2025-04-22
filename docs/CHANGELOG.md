@@ -2,6 +2,32 @@
 
 This document lists notable changes to the ACT-Rental application.
 
+## v0.5.0-alpha.3
+
+### UI & Select2 Integration
+
+- **Client Search**: Integrated Select2 for the client dropdown on the project creation page, enabling fast and user-friendly client search
+- **Unified Styles**: Added `select2-bootstrap-fix.css` to visually align Select2 dropdowns with the app's Bootstrap-based form controls
+- **Base Template Update**: Updated `base.html` to use local Select2 assets and custom styles for consistent appearance
+
+### Static Libraries & Asset Management
+
+- **Local Static Assets**: Added local versions of `select2.min.js`, `select2.min.css`, `moment.min.js`, and `daterangepicker.min.js` for reliable frontend functionality
+- **.gitignore Update**: Explicitly allowed tracking of `static/js/lib` to ensure required JS libraries are properly versioned
+
+### Documentation & Repository Improvements
+
+- **Implementation Plan Update**: Updated implementation plan documentation to reflect completed and partial tasks
+- **Changelog Enhancement**: Expanded `CHANGELOG.md` with detailed descriptions of new features
+- **Repository Hygiene**: Removed `implementation_plan.md` from the repository to comply with `.gitignore`
+
+### Other Improvements
+
+- **User Experience**: Enhanced client selection with searchable dropdowns that match the app's design
+- **Reliability**: Critical frontend libraries now served locally for consistent behavior regardless of network conditions
+- **Documentation**: Improved planning and changelog documentation for better project tracking
+- **Testing**: All 247 tests pass successfully with 78% code coverage
+
 ## v0.5.0-alpha.2
 
 ### Equipment Management Improvements
