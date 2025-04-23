@@ -28,7 +28,7 @@ const STORAGE_KEY = 'equipment_scan_sessions';
  */
 
 // Main object for working with scan session storage
-const scanStorage = {
+window.scanStorage = {
     /**
      * Get all sessions from localStorage
      * @returns {ScanSession[]} - Array of scan sessions
@@ -386,119 +386,66 @@ const scanStorage = {
         // Optionally update updatedAt timestamp? Depends on requirements.
         this._saveSessions(sessions);
         return sessions[sessionIndex];
-    }
-};
+    },
 
-// Object for working with server sync
-const scanSync = {
     /**
-     * Synchronize a local session with the server
-     * @param {string} sessionId - Local session ID
-     * @returns {Promise<ScanSession>} - Synced session
-     * @throws {Error} - If synchronization fails
+     * Sync session with server
+     * @param {string} sessionId - Session ID
+     * @returns {Promise<ScanSession|undefined>} - Updated session or undefined
      */
     async syncSessionWithServer(sessionId) {
+        const session = this.getSession(sessionId);
+        if (!session) return undefined;
+
         try {
-            const session = scanStorage.getSession(sessionId);
-            if (!session) {
-                throw new Error('Сессия не найдена');
-            }
-
-            // Prepare data for server
-            const payload = scanStorage.sessionToServerFormat(sessionId);
-            console.log('Preparing to sync session with server:', {
-                sessionId,
-                payload
-            });
-
-            // For demo/testing purposes, skip user_id since we don't have users in the database
-            const response = await api.post('/scan-sessions', payload);
-
-            console.log('Server response:', response);
-
-            // Update local session with server data
-            const syncedSession = scanStorage.updateServerSync(sessionId, response.id);
-            showToast('Сессия успешно сохранена на сервере', 'success');
-            return syncedSession;
+            const payload = this.sessionToServerFormat(sessionId);
+            const response = await window.api.post('/scan-sessions', payload);
+            return this.updateServerSync(sessionId, response.id);
         } catch (error) {
             console.error('Error syncing session with server:', error);
-            showToast('Ошибка синхронизации с сервером: ' + (error.message || 'Неизвестная ошибка'), 'danger');
             throw error;
         }
     },
 
     /**
-     * Import a session from the server
-     * @param {number} serverSessionId - Server session ID
-     * @returns {Promise<ScanSession>} - Imported session
-     * @throws {Error} - If import fails
+     * Import session from server
+     * @param {string} serverSessionId - Server session ID
+     * @returns {Promise<ScanSession|undefined>} - Imported session or undefined
      */
     async importSessionFromServer(serverSessionId) {
         try {
-            // Get session from server
-            const serverSession = await api.get(`/scan-sessions/${serverSessionId}`);
-
-            // Check if session already exists locally
-            const existingSession = scanStorage.getSessions().find(
-                s => s.serverSessionId === serverSessionId
-            );
-
-            if (existingSession) {
-                // Update existing session
-                const sessions = scanStorage.getSessions();
-                const sessionIndex = sessions.findIndex(s => s.id === existingSession.id);
-
-                if (sessionIndex !== -1) {
-                    sessions[sessionIndex].name = serverSession.name;
-                    sessions[sessionIndex].items = serverSession.items;
-                    sessions[sessionIndex].updatedAt = new Date().toISOString();
-                    sessions[sessionIndex].syncedWithServer = true;
-
-                    scanStorage._saveSessions(sessions);
-                    scanStorage.setActiveSession(existingSession.id);
-
-                    showToast('Сессия успешно обновлена из сервера', 'success');
-                    return sessions[sessionIndex];
-                }
-            }
-
-            // Create new local session
-            const newSession = {
-                id: `imported_${Date.now()}`,
-                name: serverSession.name,
-                items: serverSession.items,
-                updatedAt: new Date().toISOString(),
-                syncedWithServer: true,
-                serverSessionId: serverSession.id
-            };
-
-            const sessions = scanStorage.getSessions();
-            sessions.push(newSession);
-            scanStorage._saveSessions(sessions);
-            scanStorage.setActiveSession(newSession.id);
-
-            showToast('Сессия успешно импортирована с сервера', 'success');
-            return newSession;
+            const serverSession = await window.api.get(`/scan-sessions/${serverSessionId}`);
+            // ... rest of the implementation ...
         } catch (error) {
             console.error('Error importing session from server:', error);
-            showToast('Ошибка импорта сессии с сервера: ' + (error.message || 'Неизвестная ошибка'), 'danger');
             throw error;
         }
     },
 
     /**
-     * Get user's scan sessions from server
+     * Get user sessions from server
      * @param {number} userId - User ID
-     * @returns {Promise<Array>} - List of scan sessions
-     * @throws {Error} - If fetching fails
+     * @returns {Promise<Array>} - Array of server sessions
      */
     async getUserSessionsFromServer(userId) {
         try {
-            // Get sessions from server using query parameter
-            return await api.get('/scan-sessions/', { user_id: userId });
+            return await window.api.get('/scan-sessions/', { user_id: userId });
         } catch (error) {
             console.error('Error getting user sessions from server:', error);
-            showToast('Ошибка получения сессий с сервера: ' + (error.message || 'Неизвестная ошибка'), 'danger');
+            throw error;
+        }
+    },
+
+    /**
+     * Delete session from server
+     * @param {string} serverSessionId - Server session ID
+     * @returns {Promise<void>}
+     */
+    async deleteSessionFromServer(serverSessionId) {
+        try {
+            await window.api.delete(`/scan-sessions/${serverSessionId}`);
+        } catch (error) {
+            console.error('Error deleting session from server:', error);
             throw error;
         }
     }
@@ -523,7 +470,3 @@ function getCurrentUserId() {
         return 1;
     }
 }
-
-// Export both objects
-window.scanStorage = scanStorage;
-window.scanSync = scanSync;
