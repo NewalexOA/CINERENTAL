@@ -6,7 +6,7 @@ rental bookings, as well as managing their status and payment information.
 """
 
 from datetime import datetime
-from typing import Annotated, List, Optional
+from typing import Annotated, Any, List, Optional
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -22,14 +22,14 @@ from backend.core.database import get_db
 from backend.exceptions import AvailabilityError, NotFoundError, StatusTransitionError
 from backend.exceptions.state_exceptions import StateError
 from backend.exceptions.validation_exceptions import ValidationError
-from backend.models import Booking, BookingStatus, PaymentStatus
+from backend.models import BookingStatus, PaymentStatus
 from backend.schemas import BookingCreate, BookingResponse, BookingUpdate
 from backend.services import BookingService
 
 bookings_router: APIRouter = APIRouter()
 
 
-def _booking_to_response(booking_obj: Booking) -> BookingResponse:
+def _booking_to_response(booking_obj: Any) -> BookingResponse:
     """Convert Booking model to BookingResponse schema.
 
     Args:
