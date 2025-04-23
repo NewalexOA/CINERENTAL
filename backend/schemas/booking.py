@@ -11,6 +11,8 @@ from typing import Optional
 from pydantic import BaseModel, ConfigDict, Field
 
 from backend.models import BookingStatus, PaymentStatus
+from backend.schemas.equipment import EquipmentBase
+from backend.schemas.project import ProjectBase
 
 
 class BookingBase(BaseModel):
@@ -97,6 +99,38 @@ class BookingResponse(BookingBase):
     equipment_name: str
     client_name: str
     project_name: Optional[str] = None
+
+    model_config = ConfigDict(
+        from_attributes=True,
+        ser_json_bytes='utf8',
+        ser_json_timedelta='iso8601',
+        validate_default=True,
+    )
+
+
+class BookingWithDetails(BookingBase):
+    """Booking schema with additional details.
+
+    Extends:
+        BookingBase
+
+    Attributes:
+        id: Booking ID
+        created_at: Creation timestamp
+        updated_at: Last update timestamp
+        status: Current booking status
+        payment_status: Current payment status
+        equipment: Equipment details
+        project: Project details if associated
+    """
+
+    id: int
+    created_at: datetime
+    updated_at: datetime
+    status: BookingStatus
+    payment_status: PaymentStatus
+    equipment: Optional[EquipmentBase] = None
+    project: Optional[ProjectBase] = None
 
     model_config = ConfigDict(
         from_attributes=True,

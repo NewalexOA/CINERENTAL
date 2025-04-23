@@ -5,13 +5,15 @@ including client registration, profile updates, and rental history tracking.
 """
 
 from datetime import datetime, timezone
-from typing import List, Optional
+from typing import List, Optional, Sequence
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.exceptions import ConflictError, NotFoundError, StatusTransitionError
-from backend.models import Booking, Client, ClientStatus
-from backend.repositories import BookingRepository, ClientRepository
+from backend.models import BookingStatus, Client, ClientStatus
+from backend.repositories.booking import BookingRepository
+from backend.repositories.client import ClientRepository
+from backend.schemas.booking import BookingWithDetails
 
 
 class ClientService:
@@ -254,11 +256,16 @@ class ClientService:
         """
         return await self.repository.get_by_status(status)
 
-    async def get_client_bookings(self, client_id: int) -> list[Booking]:
+    async def get_client_bookings(
+        self,
+        client_id: int,
+        status_filter: Optional[Sequence[BookingStatus]] = None,
+    ) -> List[BookingWithDetails]:
         """Get all bookings for a client.
 
         Args:
             client_id: ID of the client.
+            status_filter: Optional list of booking statuses to filter by.
 
         Returns:
             List of bookings.
@@ -271,7 +278,10 @@ class ClientService:
             raise NotFoundError(
                 f'Client with ID {client_id} not found', {'client_id': client_id}
             )
-        return await self.booking_repository.get_by_client(client.id)
+        return await self.booking_repository.get_by_client(
+            client_id=client.id,
+            status_filter=status_filter,
+        )
 
     async def delete_client(self, client_id: int) -> None:
         """Soft delete client.

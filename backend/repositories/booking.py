@@ -5,7 +5,7 @@ including creating, retrieving, updating, and canceling rental records.
 """
 
 from datetime import datetime
-from typing import List, Optional
+from typing import List, Optional, Sequence
 
 from sqlalchemy import and_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -15,6 +15,9 @@ from sqlalchemy.orm import joinedload
 from backend.models import Project  # noqa: F401
 from backend.models import Booking, BookingStatus, Client, Equipment, PaymentStatus
 from backend.repositories import BaseRepository
+from backend.schemas.booking import BookingWithDetails
+from backend.schemas.equipment import EquipmentBase
+from backend.schemas.project import ProjectBase
 
 
 class BookingRepository(BaseRepository[Booking]):
@@ -60,39 +63,99 @@ class BookingRepository(BaseRepository[Booking]):
         query = select(Booking.id).where(
             Booking.equipment_id == equipment_id,
             Booking.booking_status.in_(conflicting_statuses),
-            Booking.start_date <= end_date,  # Existing starts before or when Req ends
-            Booking.end_date >= start_date,  # Existing ends after or when Req starts
+            Booking.start_date <= end_date,
+            Booking.end_date >= start_date,
         )
 
         if exclude_booking_id:
             query = query.where(Booking.id != exclude_booking_id)
 
-        # Limit 1 because we only need to know if *any* conflict exists
         query = query.limit(1)
 
         result = await self.session.execute(query)
-        # If any row is returned, it means there is a conflict (not available)
         return result.scalar_one_or_none() is None
 
-    async def get_by_client(self, client_id: int) -> List[Booking]:
-        """Get all bookings for client.
+    async def get_by_client(
+        self,
+        client_id: int,
+        status_filter: Optional[Sequence[BookingStatus]] = None,
+    ) -> List[BookingWithDetails]:
+        """Get bookings by client ID.
 
         Args:
-            client_id: Client ID
+            client_id: Client ID.
+            status_filter: Optional list of booking statuses to filter by.
 
         Returns:
-            List of bookings
+            List of bookings with related project and equipment data.
         """
-        stmt = (
+        query = (
             select(self.model)
             .where(self.model.client_id == client_id)
-            .options(
-                joinedload(self.model.equipment),
-                joinedload(self.model.project),
-            )
+            .options(joinedload(self.model.equipment), joinedload(self.model.project))
+            .order_by(self.model.created_at.desc())
         )
-        result = await self.session.execute(stmt)
-        return list(result.unique().scalars().all())
+
+        # Add status filter if provided
+        if status_filter:
+            query = query.where(self.model.booking_status.in_(status_filter))
+
+        result = await self.session.execute(query)
+        bookings = result.unique().scalars().all()
+
+        booking_details = []
+        for booking in bookings:
+            # Convert Equipment model to dictionary if exists
+            equipment_data = None
+            if booking.equipment:
+                equipment_dict = {
+                    'id': booking.equipment.id,
+                    'name': booking.equipment.name,
+                    'description': booking.equipment.description,
+                    'serial_number': booking.equipment.serial_number,
+                    'barcode': booking.equipment.barcode,
+                    'category_id': booking.equipment.category_id,
+                    'status': booking.equipment.status,
+                    'replacement_cost': booking.equipment.replacement_cost,
+                    'notes': booking.equipment.notes,
+                }
+                equipment_data = EquipmentBase.model_validate(equipment_dict)
+
+            # Convert Project model to dictionary if exists
+            project_data = None
+            if booking.project:
+                project_dict = {
+                    'id': booking.project.id,
+                    'name': booking.project.name,
+                    'description': booking.project.description,
+                    'client_id': booking.project.client_id,
+                    'start_date': booking.project.start_date,
+                    'end_date': booking.project.end_date,
+                    'status': booking.project.status,
+                    'notes': booking.project.notes,
+                }
+                project_data = ProjectBase.model_validate(project_dict)
+
+            # Create BookingWithDetails with converted related data
+            booking_detail = BookingWithDetails(
+                id=booking.id,
+                equipment_id=booking.equipment_id,
+                client_id=booking.client_id,
+                project_id=booking.project_id,
+                start_date=booking.start_date,
+                end_date=booking.end_date,
+                total_amount=booking.total_amount,
+                quantity=booking.quantity,
+                created_at=booking.created_at,
+                updated_at=booking.updated_at,
+                status=booking.booking_status,
+                payment_status=booking.payment_status,
+                equipment=equipment_data,
+                project=project_data,
+            )
+            booking_details.append(booking_detail)
+
+        return booking_details
 
     async def get_active_by_client(self, client_id: int) -> List[Booking]:
         """Get active bookings for client.
@@ -430,24 +493,20 @@ class BookingRepository(BaseRepository[Booking]):
         payment_status: Optional[PaymentStatus] = None,
         start_date: Optional[datetime] = None,
         end_date: Optional[datetime] = None,
-        # skip: int = 0,  # Add if pagination is handled here
-        # limit: int = 100, # Add if pagination is handled here
-    ) -> List[Booking]:
-        """Get bookings based on various filter criteria with relations loaded.
+    ) -> List[BookingWithDetails]:
+        """Get filtered bookings.
 
         Args:
-            query: Search query for client name, email, or phone.
-            equipment_query: Search query for equipment name or serial number.
-            equipment_id: Filter by equipment ID.
-            booking_status: Filter by booking status.
-            payment_status: Filter by payment status.
-            start_date: Filter by start date (overlap).
-            end_date: Filter by end date (overlap).
-            # skip: Number of records to skip.
-            # limit: Maximum number of records to return.
+            query: Search query for booking details
+            equipment_query: Search query for equipment details
+            equipment_id: Filter by equipment ID
+            booking_status: Filter by booking status
+            payment_status: Filter by payment status
+            start_date: Filter by start date
+            end_date: Filter by end date
 
         Returns:
-            List of filtered bookings.
+            List of filtered bookings with details
         """
         stmt = (
             select(Booking)
@@ -456,7 +515,7 @@ class BookingRepository(BaseRepository[Booking]):
                 joinedload(Booking.equipment),
                 joinedload(Booking.project),
             )
-            .order_by(Booking.created_at.desc())  # Default sort order
+            .order_by(Booking.created_at.desc())
         )
 
         # Apply filters conditionally
@@ -511,49 +570,56 @@ class BookingRepository(BaseRepository[Booking]):
             # If only end_date, find bookings starting on or before end_date
             stmt = stmt.where(Booking.start_date <= end_date)
 
-        # Apply pagination if handled here
-        # stmt = stmt.offset(skip).limit(limit)
-
         result = await self.session.execute(stmt)
         # Use unique() to handle potential duplicates from joins when using joinedload
-        return list(result.unique().scalars().all())
+        bookings = result.unique().scalars().all()
+
+        booking_details = []
+        for booking in bookings:
+            # Convert related models appropriately
+            equipment_data = None
+            if booking.equipment:
+                equipment_data = EquipmentBase.model_validate(booking.equipment)
+
+            project_data = None
+            if booking.project:
+                project_data = ProjectBase.model_validate(booking.project)
+
+            # Create BookingWithDetails with all required fields
+            booking_detail = BookingWithDetails(
+                id=booking.id,
+                equipment_id=booking.equipment_id,
+                client_id=booking.client_id,
+                project_id=booking.project_id,
+                start_date=booking.start_date,
+                end_date=booking.end_date,
+                total_amount=booking.total_amount,
+                quantity=booking.quantity,
+                created_at=booking.created_at,
+                updated_at=booking.updated_at,
+                status=booking.booking_status,
+                payment_status=booking.payment_status,
+                equipment=equipment_data,
+                project=project_data,
+            )
+            booking_details.append(booking_detail)
+
+        return booking_details
 
     async def update(self, instance: Booking) -> Booking:
-        """Update booking record.
+        """Update booking instance.
 
         Args:
             instance: Booking instance to update
 
         Returns:
-            Updated booking
-
-        Raises:
-            SQLAlchemyError: If database operation fails
+            Updated booking instance
         """
         try:
-            # Get current state from database
-            current = await self.get(instance.id)
-            if not current:
-                raise ValueError(f'Booking with ID {instance.id} not found')
-
-            # Update fields that can change
-            current.quantity = instance.quantity
-            current.start_date = instance.start_date
-            current.end_date = instance.end_date
-            current.booking_status = instance.booking_status
-            current.payment_status = instance.payment_status
-            current.total_amount = instance.total_amount
-            current.deposit_amount = instance.deposit_amount
-            current.paid_amount = instance.paid_amount
-            current.notes = instance.notes
-
-            # Save changes
-            self.session.add(current)
-            await self.session.flush()
-            await self.session.refresh(current)
+            self.session.add(instance)
             await self.session.commit()
-
-            return current
+            await self.session.refresh(instance)
+            return instance
         except Exception as e:
             await self.session.rollback()
             raise e
