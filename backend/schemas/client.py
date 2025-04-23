@@ -56,5 +56,6 @@ class ClientResponse(ClientBase):
     status: ClientStatus
     created_at: datetime
     updated_at: datetime
+    bookings_count: Optional[int] = Field(0, description='Number of client bookings')
 
     model_config = ConfigDict(from_attributes=True)
