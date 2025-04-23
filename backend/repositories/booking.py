@@ -4,9 +4,11 @@ This module provides database operations for managing equipment bookings,
 including creating, retrieving, updating, and canceling rental records.
 """
 
+import traceback
 from datetime import datetime
 from typing import List, Optional, Sequence
 
+from loguru import logger
 from sqlalchemy import and_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
@@ -15,8 +17,7 @@ from sqlalchemy.orm import joinedload
 from backend.models import Project  # noqa: F401
 from backend.models import Booking, BookingStatus, Client, Equipment, PaymentStatus
 from backend.repositories import BaseRepository
-from backend.schemas.booking import BookingWithDetails
-from backend.schemas.equipment import EquipmentBase
+from backend.schemas import BookingWithDetails, EquipmentResponse
 from backend.schemas.project import ProjectBase
 
 
@@ -92,7 +93,10 @@ class BookingRepository(BaseRepository[Booking]):
         query = (
             select(self.model)
             .where(self.model.client_id == client_id)
-            .options(joinedload(self.model.equipment), joinedload(self.model.project))
+            .options(
+                joinedload(self.model.equipment).joinedload(Equipment.category),
+                joinedload(self.model.project),
+            )
             .order_by(self.model.created_at.desc())
         )
 
@@ -118,8 +122,11 @@ class BookingRepository(BaseRepository[Booking]):
                     'status': booking.equipment.status,
                     'replacement_cost': booking.equipment.replacement_cost,
                     'notes': booking.equipment.notes,
+                    'created_at': booking.equipment.created_at,
+                    'updated_at': booking.equipment.updated_at,
+                    'category_name': booking.equipment.category_name,
                 }
-                equipment_data = EquipmentBase.model_validate(equipment_dict)
+                equipment_data = EquipmentResponse.model_validate(equipment_dict)
 
             # Convert Project model to dictionary if exists
             project_data = None
@@ -508,103 +515,160 @@ class BookingRepository(BaseRepository[Booking]):
         Returns:
             List of filtered bookings with details
         """
-        stmt = (
-            select(Booking)
-            .options(
-                joinedload(Booking.client),
-                joinedload(Booking.equipment),
-                joinedload(Booking.project),
-            )
-            .order_by(Booking.created_at.desc())
-        )
-
-        # Apply filters conditionally
-        if query:
-            search_query = f'%{query}%'
-            # Ensure Client relationship is joined before filtering on it
-            stmt = stmt.join(Booking.client).where(
-                or_(
-                    Client.name.ilike(search_query),
-                    Client.email.ilike(search_query),
-                    Client.phone.ilike(search_query),
+        try:
+            logger.debug('Starting get_filtered method')
+            stmt = (
+                select(Booking)
+                .options(
+                    joinedload(Booking.client),
+                    joinedload(Booking.equipment).joinedload(Equipment.category),
+                    joinedload(Booking.project),
                 )
+                .order_by(Booking.created_at.desc())
             )
 
-        if equipment_query:
-            search_eq_query = f'%{equipment_query}%'
-            # Ensure Equipment relationship is joined before filtering on it
-            stmt = stmt.join(Booking.equipment).where(
-                or_(
-                    Equipment.name.ilike(search_eq_query),
-                    # Add serial number search if Equipment model has it
-                    Equipment.serial_number.ilike(search_eq_query),
-                    # Add barcode search
-                    Equipment.barcode.ilike(search_eq_query),
+            # Apply filters conditionally
+            if query:
+                search_query = f'%{query}%'
+                # Ensure Client relationship is joined before filtering on it
+                stmt = stmt.join(Booking.client).where(
+                    or_(
+                        Client.name.ilike(search_query),
+                        Client.email.ilike(search_query),
+                        Client.phone.ilike(search_query),
+                    )
                 )
-            )
 
-        if equipment_id is not None:
-            stmt = stmt.where(Booking.equipment_id == equipment_id)
-
-        if booking_status is not None:
-            stmt = stmt.where(Booking.booking_status == booking_status)
-
-        if payment_status is not None:
-            stmt = stmt.where(Booking.payment_status == payment_status)
-
-        # Apply date range filter (overlap logic)
-        if start_date and end_date:
-            # Find bookings that overlap with the [start_date, end_date] range
-            # Overlap condition: booking.start_date <= end_date
-            # AND booking.end_date >= start_date
-            stmt = stmt.where(
-                and_(
-                    Booking.start_date <= end_date,
-                    Booking.end_date >= start_date,
+            if equipment_query:
+                search_eq_query = f'%{equipment_query}%'
+                # Ensure Equipment relationship is joined before filtering on it
+                stmt = stmt.join(Booking.equipment).where(
+                    or_(
+                        Equipment.name.ilike(search_eq_query),
+                        # Add serial number search if Equipment model has it
+                        Equipment.serial_number.ilike(search_eq_query),
+                        # Add barcode search
+                        Equipment.barcode.ilike(search_eq_query),
+                    )
                 )
-            )
-        elif start_date:
-            # If only start_date, find bookings ending on or after start_date
-            stmt = stmt.where(Booking.end_date >= start_date)
-        elif end_date:
-            # If only end_date, find bookings starting on or before end_date
-            stmt = stmt.where(Booking.start_date <= end_date)
 
-        result = await self.session.execute(stmt)
-        # Use unique() to handle potential duplicates from joins when using joinedload
-        bookings = result.unique().scalars().all()
+            if equipment_id is not None:
+                stmt = stmt.where(Booking.equipment_id == equipment_id)
 
-        booking_details = []
-        for booking in bookings:
-            # Convert related models appropriately
-            equipment_data = None
-            if booking.equipment:
-                equipment_data = EquipmentBase.model_validate(booking.equipment)
+            if booking_status is not None:
+                stmt = stmt.where(Booking.booking_status == booking_status)
 
-            project_data = None
-            if booking.project:
-                project_data = ProjectBase.model_validate(booking.project)
+            if payment_status is not None:
+                stmt = stmt.where(Booking.payment_status == payment_status)
 
-            # Create BookingWithDetails with all required fields
-            booking_detail = BookingWithDetails(
-                id=booking.id,
-                equipment_id=booking.equipment_id,
-                client_id=booking.client_id,
-                project_id=booking.project_id,
-                start_date=booking.start_date,
-                end_date=booking.end_date,
-                total_amount=booking.total_amount,
-                quantity=booking.quantity,
-                created_at=booking.created_at,
-                updated_at=booking.updated_at,
-                status=booking.booking_status,
-                payment_status=booking.payment_status,
-                equipment=equipment_data,
-                project=project_data,
-            )
-            booking_details.append(booking_detail)
+            # Apply date range filter (overlap logic)
+            if start_date and end_date:
+                # Find bookings that overlap with the [start_date, end_date] range
+                # Overlap condition: booking.start_date <= end_date
+                # AND booking.end_date >= start_date
+                stmt = stmt.where(
+                    and_(
+                        Booking.start_date <= end_date,
+                        Booking.end_date >= start_date,
+                    )
+                )
+            elif start_date:
+                stmt = stmt.where(Booking.end_date >= start_date)
+            elif end_date:
+                stmt = stmt.where(Booking.start_date <= end_date)
 
-        return booking_details
+            logger.debug('Executing SQL query')
+            result = await self.session.execute(stmt)
+            bookings = result.unique().scalars().all()
+            logger.debug(f'Found {len(bookings)} bookings')
+
+            booking_details = []
+            for booking in bookings:
+                try:
+                    logger.debug(f'Processing booking {booking.id}')
+                    equipment_data = None
+                    if booking.equipment:
+                        try:
+                            logger.debug(f'Processing equipment {booking.equipment.id}')
+                            equipment_dict = {
+                                'id': booking.equipment.id,
+                                'name': booking.equipment.name,
+                                'description': booking.equipment.description or '',
+                                'serial_number': booking.equipment.serial_number or '',
+                                'barcode': booking.equipment.barcode or '',
+                                'category_id': booking.equipment.category_id,
+                                'status': booking.equipment.status,
+                                'replacement_cost': booking.equipment.replacement_cost,
+                                'notes': booking.equipment.notes or '',
+                                'created_at': booking.equipment.created_at,
+                                'updated_at': booking.equipment.updated_at,
+                                'category_name': booking.equipment.category_name,
+                            }
+                            logger.debug('Created equipment dictionary')
+                            equipment_data = EquipmentResponse.model_validate(
+                                equipment_dict
+                            )
+                            logger.debug('Validated equipment model')
+                        except Exception as e:
+                            logger.error(
+                                'Error processing equipment for booking '
+                                f'{booking.id}: {str(e)}',
+                            )
+
+                    project_data = None
+                    if booking.project:
+                        try:
+                            logger.debug(f'Processing project {booking.project.id}')
+                            project_dict = {
+                                'id': booking.project.id,
+                                'name': booking.project.name,
+                                'description': booking.project.description or '',
+                                'client_id': booking.project.client_id,
+                                'start_date': booking.project.start_date,
+                                'end_date': booking.project.end_date,
+                                'status': booking.project.status,
+                                'notes': booking.project.notes or '',
+                            }
+                            logger.debug('Created project dictionary')
+                            project_data = ProjectBase.model_validate(project_dict)
+                            logger.debug('Validated project model')
+                        except Exception as e:
+                            logger.error(
+                                'Error processing project for booking '
+                                f'{booking.id}: {str(e)}',
+                            )
+
+                    logger.debug('Creating BookingWithDetails')
+                    # Create BookingWithDetails with all required fields
+                    booking_detail = BookingWithDetails(
+                        id=booking.id,
+                        equipment_id=booking.equipment_id,
+                        client_id=booking.client_id,
+                        project_id=booking.project_id,
+                        start_date=booking.start_date,
+                        end_date=booking.end_date,
+                        total_amount=booking.total_amount,
+                        quantity=booking.quantity,
+                        created_at=booking.created_at,
+                        updated_at=booking.updated_at,
+                        status=booking.booking_status,
+                        payment_status=booking.payment_status,
+                        equipment=equipment_data,
+                        project=project_data,
+                    )
+                    logger.debug('Successfully created BookingWithDetails')
+                    booking_details.append(booking_detail)
+                except Exception as e:
+                    logger.error(f'Error processing booking {booking.id}: {str(e)}')
+                    continue
+
+            logger.debug(f'Returning {len(booking_details)} booking details')
+            return booking_details
+
+        except Exception as e:
+            logger.error(f'Error in get_filtered method: {str(e)}')
+            logger.error(traceback.format_exc())
+            raise
 
     async def update(self, instance: Booking) -> Booking:
         """Update booking instance.

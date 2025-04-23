@@ -11,7 +11,7 @@ from typing import Optional
 from pydantic import BaseModel, ConfigDict, Field
 
 from backend.models import BookingStatus, PaymentStatus
-from backend.schemas.equipment import EquipmentBase
+from backend.schemas.equipment import EquipmentResponse
 from backend.schemas.project import ProjectBase
 
 
@@ -129,7 +129,7 @@ class BookingWithDetails(BookingBase):
     updated_at: datetime
     status: BookingStatus
     payment_status: PaymentStatus
-    equipment: Optional[EquipmentBase] = None
+    equipment: Optional[EquipmentResponse] = None
     project: Optional[ProjectBase] = None
 
     model_config = ConfigDict(
