@@ -341,7 +341,6 @@ function renderTableView(projects) {
             </td>
             <td>${project.client_name}</td>
             <td>${formatDate(project.start_date)} - ${formatDate(project.end_date)}</td>
-            <td>${project.booking_count || 0}</td>
             <td><span class="badge bg-${statusColor}">${project.status}</span></td>
             <td>
                 <button class="btn btn-sm btn-outline-primary view-project-btn" data-project-id="${project.id}">
