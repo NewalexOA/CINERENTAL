@@ -855,7 +855,14 @@ async def check_equipment_availability(
         conflicts = []
         for booking in conflicting_bookings:
             # Skip non-active bookings
-            if booking.booking_status not in [
+            if hasattr(booking, 'booking_status'):
+                status = booking.booking_status
+            elif hasattr(booking, 'status'):
+                status = booking.status
+            else:
+                continue
+
+            if status not in [
                 BookingStatus.ACTIVE,
                 BookingStatus.CONFIRMED,
                 BookingStatus.PENDING,
@@ -875,7 +882,7 @@ async def check_equipment_availability(
                     booking_id=booking.id,
                     start_date=booking.start_date.isoformat(),
                     end_date=booking.end_date.isoformat(),
-                    status=booking.booking_status,
+                    status=status,
                     project_id=project_id,
                     project_name=project_name,
                 )
