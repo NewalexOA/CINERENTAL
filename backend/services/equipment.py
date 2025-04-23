@@ -10,6 +10,7 @@ from typing import Any, Dict, List, Optional, Set
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
+from sqlalchemy.sql import Select
 
 from backend.exceptions import (
     AvailabilityError,
@@ -168,6 +169,60 @@ class EquipmentService:
             )
         loaded_equipment = await self._load_equipment_with_category(equipment)
         return loaded_equipment
+
+    async def get_equipment_list_query(
+        self,
+        status: Optional[EquipmentStatus] = None,
+        category_id: Optional[int] = None,
+        query: Optional[str] = None,
+        available_from: Optional[datetime] = None,
+        available_to: Optional[datetime] = None,
+        include_deleted: bool = False,
+    ) -> Select:
+        """Get a paginatable query for equipment list with optional filtering.
+
+        This method prepares the query for pagination by fastapi-pagination.
+
+        Args:
+            status: Filter by equipment status
+            category_id: Filter by category ID
+            query: Search query
+            available_from: Filter by availability start date
+            available_to: Filter by availability end date
+            include_deleted: Whether to include deleted equipment
+
+        Returns:
+            SQLAlchemy Select query object
+
+        Raises:
+            BusinessError: If validation fails
+            NotFoundError: If category not found
+        """
+        # Validate dates if both are provided
+        if available_from and available_to and available_from >= available_to:
+            raise BusinessError(
+                'Start date must be before end date',
+                details={
+                    'available_from': available_from.isoformat(),
+                    'available_to': available_to.isoformat(),
+                },
+            )
+
+        # Ensure dates are timezone-aware
+        if available_from and available_from.tzinfo is None:
+            available_from = available_from.replace(tzinfo=timezone.utc)
+        if available_to and available_to.tzinfo is None:
+            available_to = available_to.replace(tzinfo=timezone.utc)
+
+        # Get the base query from the repository
+        return self.repository.get_paginatable_query(
+            status=status,
+            category_id=category_id,
+            query=query,
+            available_from=available_from,
+            available_to=available_to,
+            include_deleted=include_deleted,
+        )
 
     async def get_equipment_list(
         self,

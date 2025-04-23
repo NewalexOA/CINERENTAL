@@ -424,3 +424,73 @@ class EquipmentRepository(BaseRepository[Equipment]):
                 'Failed to get equipment list',
                 details={'error': str(e)},
             ) from e
+
+    def get_paginatable_query(
+        self,
+        status: Optional[EquipmentStatus] = None,
+        category_id: Optional[int] = None,
+        query: Optional[str] = None,
+        available_from: Optional[datetime] = None,
+        available_to: Optional[datetime] = None,
+        include_deleted: bool = False,
+    ) -> Select:
+        """Get a paginatable query for equipment with optional filtering and search.
+
+        Args:
+            status: Filter by equipment status
+            category_id: Filter by category ID
+            query: Search query
+            available_from: Filter by availability start date
+            available_to: Filter by availability end date
+            include_deleted: Whether to include deleted equipment
+
+        Returns:
+            SQLAlchemy Select query object
+        """
+        stmt = select(Equipment).options(joinedload(Equipment.category))
+
+        # Filter deleted items if include_deleted=False
+        if not include_deleted:
+            stmt = stmt.where(Equipment.deleted_at.is_(None))
+
+        if status:
+            stmt = stmt.where(Equipment.status == status)
+        if category_id:
+            stmt = stmt.where(Equipment.category_id == category_id)
+        if query:
+            search_pattern = f'%{query}%'
+            stmt = stmt.where(
+                or_(
+                    Equipment.name.ilike(search_pattern),
+                    Equipment.description.ilike(search_pattern),
+                    Equipment.barcode.ilike(search_pattern),
+                    Equipment.serial_number.ilike(search_pattern),
+                )
+            )
+
+        # Add date filtering if both dates are provided
+        if available_from and available_to:
+            # Get equipment IDs that are not booked during the specified period
+            booked_equipment = (
+                select(Booking.equipment_id)
+                .where(
+                    and_(
+                        Booking.start_date < available_to,
+                        Booking.end_date > available_from,
+                        Booking.booking_status.in_(
+                            [
+                                BookingStatus.PENDING,
+                                BookingStatus.CONFIRMED,
+                                BookingStatus.ACTIVE,
+                            ]
+                        ),
+                    )
+                )
+                .distinct()
+            )
+            stmt = stmt.where(~Equipment.id.in_(booked_equipment))
+
+        # Order by name by default for consistent pagination
+        stmt = stmt.order_by(Equipment.name)
+
+        return stmt

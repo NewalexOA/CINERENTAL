@@ -5,10 +5,12 @@ It provides routes for creating, retrieving, updating, and canceling
 rental bookings, as well as managing their status and payment information.
 """
 
+import traceback
 from datetime import datetime
-from typing import Annotated, List, Optional
+from typing import Annotated, Any, List, Optional
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Query, status
+from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.api.v1.decorators import (
@@ -22,36 +24,47 @@ from backend.core.database import get_db
 from backend.exceptions import AvailabilityError, NotFoundError, StatusTransitionError
 from backend.exceptions.state_exceptions import StateError
 from backend.exceptions.validation_exceptions import ValidationError
-from backend.models import Booking, BookingStatus, PaymentStatus
+from backend.models import BookingStatus, PaymentStatus
 from backend.schemas import BookingCreate, BookingResponse, BookingUpdate
 from backend.services import BookingService
 
 bookings_router: APIRouter = APIRouter()
 
 
-def _booking_to_response(booking_obj: Booking) -> BookingResponse:
+def _booking_to_response(booking_obj: Any) -> BookingResponse:
     """Convert Booking model to BookingResponse schema.
 
     Args:
-        booking_obj: Booking model instance
+        booking_obj: Booking model instance or BookingWithDetails
 
     Returns:
         BookingResponse schema
     """
     equipment_name = ''
-    if booking_obj.equipment is not None:
-        equipment_name = booking_obj.equipment.name
+    if hasattr(booking_obj, 'equipment'):
+        if booking_obj.equipment is not None:
+            if hasattr(booking_obj.equipment, 'name'):
+                equipment_name = booking_obj.equipment.name
+            else:
+                equipment_name = booking_obj.equipment.name
 
     client_name = ''
-    if booking_obj.client is not None:
+    if hasattr(booking_obj, 'client') and booking_obj.client is not None:
         client_name = booking_obj.client.name
 
+    if client_name == '' and hasattr(booking_obj, 'client_id'):
+        client_name = f'Client {booking_obj.client_id}'
+
     project_name = None
-    if booking_obj.project is not None:
-        project_name = booking_obj.project.name
-        print(f'Found project for booking {booking_obj.id}: {project_name}')
+    if hasattr(booking_obj, 'project') and booking_obj.project is not None:
+        if hasattr(booking_obj.project, 'name'):
+            project_name = booking_obj.project.name
+            logger.debug(f'Found project for booking {booking_obj.id}: {project_name}')
+        else:
+            project_name = booking_obj.project.name
+            logger.debug(f'Found project for booking {booking_obj.id}: {project_name}')
     else:
-        print(f'No project found for booking {booking_obj.id}')
+        logger.debug(f'No project found for booking {booking_obj.id}')
 
     return BookingResponse(
         id=booking_obj.id,
@@ -61,7 +74,11 @@ def _booking_to_response(booking_obj: Booking) -> BookingResponse:
         start_date=booking_obj.start_date,
         end_date=booking_obj.end_date,
         total_amount=booking_obj.total_amount,
-        status=booking_obj.booking_status,
+        status=(
+            booking_obj.status
+            if hasattr(booking_obj, 'status')
+            else booking_obj.booking_status
+        ),
         payment_status=booking_obj.payment_status,
         created_at=booking_obj.created_at,
         updated_at=booking_obj.updated_at,
@@ -177,6 +194,7 @@ async def get_bookings(
     """
     booking_service = BookingService(db)
     try:
+        logger.debug('Starting get_bookings method')
         # Fetch bookings using the service layer, passing filters
         # The service/repository should handle the actual filtering logic
         filtered_bookings = await booking_service.get_filtered_bookings(
@@ -188,19 +206,30 @@ async def get_bookings(
             start_date=start_date,
             end_date=end_date,
         )
+        logger.debug(f'Service returned {len(filtered_bookings)} bookings')
 
         # Apply pagination (consider moving to service/repo)
         paginated_bookings = filtered_bookings[skip : skip + limit]
+        logger.debug('After pagination: {} bookings', len(paginated_bookings))
 
         # Convert Booking objects to BookingResponse objects
         responses = []
         for booking_obj in paginated_bookings:
-            # Ensure related objects are loaded or handle potential None values
-            response = _booking_to_response(booking_obj)
-            responses.append(response)
+            try:
+                logger.debug('Converting booking {} to response', booking_obj.id)
+                # Ensure related objects are loaded or handle potential None values
+                response = _booking_to_response(booking_obj)
+                responses.append(response)
+                logger.debug('Successfully converted booking {}', booking_obj.id)
+            except Exception as e:
+                logger.error('Error converting booking to response: {}', str(e))
+                logger.error(traceback.format_exc())
 
+        logger.debug('Returning {} responses', len(responses))
         return responses
     except Exception as e:
+        logger.error('Error in get_bookings method: {}', str(e))
+        logger.error(traceback.format_exc())
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f'Failed to retrieve bookings: {str(e)}',

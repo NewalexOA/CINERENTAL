@@ -104,7 +104,7 @@ async def equipment_detail(
             category = await category_service.get_category(category_id)
 
             if category is not None:
-                logger.info(
+                logger.debug(
                     f'Overriding equipment #{equipment_id} category with '
                     f'category #{category_id} ({category.name})'
                 )

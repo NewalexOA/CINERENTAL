@@ -288,8 +288,8 @@ async def get_client_bookings(
     limit: Optional[int] = Query(
         100, ge=1, le=1000, description='Maximum number of bookings to return'
     ),
-    booking_status: Optional[BookingStatus] = Query(
-        None, description='Filter bookings by status'
+    status: Optional[str] = Query(
+        None, description='Filter bookings by status (comma-separated list of statuses)'
     ),
 ) -> List[BookingResponse]:
     """Get client's booking history.
@@ -299,13 +299,13 @@ async def get_client_bookings(
         db: Database session
         skip: Number of bookings to skip (for pagination)
         limit: Maximum number of bookings to return (for pagination)
-        booking_status: Filter bookings by status
+        status: Comma-separated list of booking statuses to filter by
 
     Returns:
         List of client's bookings
 
     Raises:
-        HTTPException: If client not found
+        HTTPException: If client not found or invalid status provided
     """
     try:
         client_service = ClientService(db)
@@ -318,12 +318,22 @@ async def get_client_bookings(
                 detail=f'Client with ID {client_id} not found',
             )
 
-        # Get client's bookings
-        bookings = await client_service.get_client_bookings(client_id)
+        # Parse status filter if provided
+        status_filter = None
+        if status:
+            try:
+                status_filter = [BookingStatus[s.strip()] for s in status.split(',')]
+            except KeyError as e:
+                raise HTTPException(
+                    status_code=http_status.HTTP_400_BAD_REQUEST,
+                    detail=f'Invalid booking status: {str(e)}',
+                )
 
-        # Filter by status if provided
-        if booking_status:
-            bookings = [b for b in bookings if b.booking_status == booking_status]
+        # Get client's bookings with status filter
+        bookings = await client_service.get_client_bookings(
+            client_id=client_id,
+            status_filter=status_filter,
+        )
 
         # Apply pagination manually
         skip_val = skip or 0
@@ -334,21 +344,28 @@ async def get_client_bookings(
         for booking in bookings[skip_val : skip_val + limit_val]:
             # Create base fields required for BookingResponse schema
             client_name = client.name
-            equipment_name = f'Equipment {booking.equipment_id}'
+            equipment_name = (
+                booking.equipment.name
+                if booking.equipment
+                else f'Equipment {booking.equipment_id}'
+            )
 
             booking_dict = {
                 'id': booking.id,
                 'equipment_id': booking.equipment_id,
                 'client_id': booking.client_id,
+                'project_id': booking.project_id,
                 'start_date': booking.start_date,
                 'end_date': booking.end_date,
-                'status': booking.booking_status,
+                'status': booking.status,
                 'payment_status': booking.payment_status,
                 'total_amount': booking.total_amount,
                 'equipment_name': equipment_name,
                 'client_name': client_name,
+                'project_name': booking.project.name if booking.project else None,
                 'created_at': booking.created_at,
                 'updated_at': booking.updated_at,
+                'quantity': booking.quantity,
             }
             booking_responses.append(booking_dict)
 

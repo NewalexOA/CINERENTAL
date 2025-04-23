@@ -19,22 +19,22 @@
     <link rel="apple-touch-icon" href="{{ url_for('static', path='img/favicon.png') }}">
 
     <!-- Bootstrap CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="{{ url_for('static', path='css/lib/bootstrap.min.css') }}" rel="stylesheet">
 
     <!-- Inter Font -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="{{ url_for('static', path='css/lib/inter.css') }}" rel="stylesheet">
 
     <!-- Font Awesome -->
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="{{ url_for('static', path='css/lib/all.min.css') }}" rel="stylesheet">
 
     <!-- Date Range Picker -->
-    <link rel="stylesheet" type="text/css" href="{{ url_for('static', path='css/daterangepicker.css') }}">
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', path='css/lib/daterangepicker.css') }}">
 
     <!-- Custom CSS -->
     <link href="{{ url_for('static', path='css/main.css') }}" rel="stylesheet">
 
     <!-- Select2 CSS -->
-    <link href="{{ url_for('static', path='css/select2.min.css') }}" rel="stylesheet" />
+    <link href="{{ url_for('static', path='css/lib/select2.min.css') }}" rel="stylesheet" />
     <link href="{{ url_for('static', path='css/select2-bootstrap-fix.css') }}" rel="stylesheet" />
     {% block extra_css %}{% endblock %}
 </head>
@@ -123,136 +123,20 @@
     <!-- Toast Container -->
     <div id="toast-container" class="position-fixed bottom-0 end-0 p-3"></div>
 
-    <!-- Bootstrap Bundle with Popper -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-
-    <!-- jQuery -->
-    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-
-    <!-- Select2 JS -->
-    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-
-    <!-- Moment.js -->
+    <!-- External Libraries -->
+    <script src="{{ url_for('static', path='js/lib/jquery-3.7.1.min.js') }}"></script>
+    <script src="{{ url_for('static', path='js/lib/bootstrap.bundle.min.js') }}"></script>
     <script src="{{ url_for('static', path='js/lib/moment.min.js') }}"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/locale/ru.js"></script>
+    <script src="{{ url_for('static', path='js/lib/ru.js') }}"></script>
+    <script src="{{ url_for('static', path='js/lib/daterangepicker.min.js') }}"></script>
+    <script src="{{ url_for('static', path='js/lib/select2.min.js') }}"></script>
+    <script src="{{ url_for('static', path='js/lib/quagga.min.js') }}"></script>
 
-    <!-- Date Range Picker -->
-    <script type="text/javascript" src="{{ url_for('static', path='js/lib/daterangepicker.min.js') }}"></script>
-
-    <!-- Custom JavaScript -->
+    <!-- Core Application Scripts -->
     <script src="{{ url_for('static', path='js/main.js') }}"></script>
-
-    <!-- JavaScript Modules -->
-    <script src="{{ url_for('static', path='js/modules/print.js') }}"></script>
-
-    <!-- Global JavaScript error handler -->
-    <script>
-        // Console functionality check
-        console.log('%c[BASE] Base template initialization', 'color: #4CAF50; font-size: 14px; font-weight: bold;');
-
-        // Check if console is available and working
-        if (typeof console === 'undefined') {
-            alert('Console is not available! Logging will not work.');
-        } else {
-            console.log('[BASE] Console is available and working');
-            console.log('[BASE] User Agent:', navigator.userAgent);
-            console.log('[BASE] Window Size:', window.innerWidth, 'x', window.innerHeight);
-        }
-
-        // Global error handler
-        window.onerror = function(message, source, lineno, colno, error) {
-            console.group('%c[ERROR] Unhandled JavaScript Error', 'color: #ff0000; font-size: 14px; font-weight: bold;');
-            console.error('Message:', message);
-            console.error('Source:', source);
-            console.error('Line:Column:', lineno + ':' + colno);
-            if (error) {
-                console.error('Stack trace:', error.stack);
-            }
-            console.error('User Agent:', navigator.userAgent);
-            console.error('Page URL:', window.location.href);
-            console.error('Timestamp:', new Date().toISOString());
-            console.groupEnd();
-
-            // Display error to user
-            showToast('Произошла ошибка JavaScript. Проверьте консоль браузера для деталей.', 'danger');
-
-            return false; // Allow the browser's default error handler to execute
-        };
-
-        // Unhandled promise rejection handler
-        window.onunhandledrejection = function(event) {
-            console.group('%c[ERROR] Unhandled Promise Rejection', 'color: #ff0000; font-size: 14px; font-weight: bold;');
-            console.error('Reason:', event.reason);
-            if (event.reason.stack) {
-                console.error('Stack trace:', event.reason.stack);
-            }
-            console.error('Promise:', event.promise);
-            console.error('Timestamp:', new Date().toISOString());
-            console.groupEnd();
-
-            // Display error to user
-            showToast('Произошла ошибка при асинхронной операции. Проверьте консоль браузера для деталей.', 'danger');
-        };
-    </script>
-
-    <!-- Additional scripts -->
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // Main JavaScript code for the entire site
-
-            // Initialize datepickers
-            if (document.querySelectorAll('.datepicker').length > 0) {
-                $('.datepicker').daterangepicker({
-                    singleDatePicker: true,
-                    showDropdowns: true,
-                    locale: {
-                        format: 'DD.MM.YYYY'
-                    }
-                });
-            }
-        });
-    </script>
+    <script src="{{ url_for('static', path='js/notifications.js') }}"></script>
+    <script src="{{ url_for('static', path='js/datepicker.js') }}"></script>
 
     {% block scripts %}{% endblock %}
-
-    <script>
-        // Initialize scanner for modal
-        const modalScanner = new BarcodeScanner();
-
-        // Handle scanner modal
-        const scannerModal = document.getElementById('scannerModal');
-        scannerModal.addEventListener('show.bs.modal', () => {
-            modalScanner.start();
-        });
-
-        scannerModal.addEventListener('hide.bs.modal', () => {
-            modalScanner.stop();
-        });
-
-        // Override scanner handlers
-        modalScanner.onScan = (equipment) => {
-            const resultDiv = document.getElementById('scannerResult');
-            resultDiv.innerHTML = `
-                <div class="alert alert-success">
-                    <h6>${equipment.name}</h6>
-                    <p class="mb-0">Категория: ${equipment.category.name}</p>
-                    <p class="mb-0">Статус: ${equipment.status}</p>
-                </div>
-            `;
-
-            showToast('Оборудование успешно отсканировано', 'success');
-        };
-
-        modalScanner.onError = (error) => {
-            const resultDiv = document.getElementById('scannerResult');
-            resultDiv.innerHTML = `
-                <div class="alert alert-danger">
-                    Ошибка сканирования: ${error.message}
-                </div>
-            `;
-
-            showToast('Ошибка сканирования', 'danger');
-        };
-    </script>
 </body>
 </html>
