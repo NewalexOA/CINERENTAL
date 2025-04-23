@@ -3,6 +3,11 @@
 // Constants
 const API_BASE_URL = '/api/v1';
 
+// Global API configuration
+window.API_CONFIG = {
+    user_id: document.querySelector('meta[name="user-id"]')?.content || '1'
+};
+
 // Utility functions
 const debounce = (func, wait, immediate) => {
     let timeout;
@@ -594,6 +599,9 @@ class BarcodeScanner {
     }
 }
 
+// Export BarcodeScanner to global scope
+window.BarcodeScanner = BarcodeScanner;
+
 // Form validation
 const validateForm = (formElement) => {
     const form = formElement instanceof HTMLFormElement ? formElement : document.querySelector(formElement);
@@ -919,6 +927,11 @@ async function fetchAndUpdateClients() {
 
 // Initialize client search and sort controls
 function initClientControls() {
+    if (window.disableGlobalClientControls === true) {
+        console.log('Global client controls initialization skipped (disabled by page).');
+        return;
+    }
+
     const searchInput = document.getElementById('searchClient');
     const sortOrderSelect = document.getElementById('sortOrder');
     const clientsGrid = document.getElementById('clientsGrid');
@@ -941,8 +954,11 @@ function initClientControls() {
 
 }
 
-// Document ready handler
-document.addEventListener('DOMContentLoaded', () => {
+// Main initialization
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize components here
+    console.log('Main application initialized');
+
     // Initialize tooltips
     const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
     tooltipTriggerList.map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));

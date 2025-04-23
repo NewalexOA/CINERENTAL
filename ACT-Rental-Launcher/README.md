@@ -27,20 +27,23 @@ An application for managing ACT-Rental Docker containers. Makes it easy to start
 ### For developers
 
 1. Clone the repository:
-   ```
+
+   ```bash
    git clone https://github.com/yourusername/ACT-Rental-Launcher.git
    cd ACT-Rental-Launcher
    ```
 
 2. Create a virtual environment and install dependencies:
-   ```
+
+   ```bash
    python3 -m venv venv
    source venv/bin/activate
    pip install -r requirements.txt
    ```
 
 3. Run the application in development mode:
-   ```
+
+   ```bash
    python src/main.py
    ```
 
@@ -49,12 +52,14 @@ An application for managing ACT-Rental Docker containers. Makes it easy to start
 To build a standalone macOS application, py2app is used:
 
 1. Install py2app:
-   ```
+
+   ```bash
    pip install py2app
    ```
 
 2. Build the application:
-   ```
+
+   ```bash
    # For a full build
    python setup.py py2app
 
@@ -65,7 +70,8 @@ To build a standalone macOS application, py2app is used:
 3. The finished application will be located in the `dist/ACT-Rental Launcher.app` folder
 
 4. Set the correct permissions for execution:
-   ```
+
+   ```bash
    chmod -R 755 "dist/ACT-Rental Launcher.app"
    chmod +x "dist/ACT-Rental Launcher.app/Contents/MacOS/ACT-Rental Launcher"
    ```
@@ -75,12 +81,14 @@ To build a standalone macOS application, py2app is used:
 To create a DMG distribution, you can use the create-dmg utility:
 
 1. Install the utility:
-   ```
+
+   ```bash
    brew install create-dmg
    ```
 
 2. Create the DMG image:
-   ```
+
+   ```bash
    create-dmg \
        --volname "ACT-Rental Launcher" \
        --volicon "assets/icon.icns" \

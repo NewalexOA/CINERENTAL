@@ -57,12 +57,207 @@ function formatNumber(num) {
     return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ");
 }
 
+// Pagination state variables
+let currentPage = 1;
+let totalPages = 1;
+let pageSize = 20; // Default page size
+let totalCount = 0;
+
+// DOM Elements
+const equipmentTableBody = document.getElementById('equipmentTable');
+const searchInput = document.getElementById('searchInput');
+const categoryFilter = document.getElementById('categoryFilter');
+const statusFilter = document.getElementById('statusFilter');
+const searchSpinner = document.getElementById('search-spinner');
+const paginationElement = document.getElementById('pagination');
+const pageStartElement = document.getElementById('pageStart');
+const pageEndElement = document.getElementById('pageEnd');
+const totalItemsElement = document.getElementById('totalItems');
+const prevPageButton = document.getElementById('prevPage');
+const nextPageButton = document.getElementById('nextPage');
+
+// Debounce timer for search input
+let searchDebounceTimer;
+
+// Function to render the equipment table
+function renderEquipment(items) {
+    equipmentTableBody.innerHTML = ''; // Clear existing rows
+    if (!items || items.length === 0) {
+        const row = equipmentTableBody.insertRow();
+        const cell = row.insertCell();
+        cell.colSpan = 5; // Span across all columns
+        cell.textContent = 'Оборудование не найдено.';
+        cell.classList.add('text-center', 'text-muted');
+        return;
+    }
+
+    items.forEach(item => {
+        const row = equipmentTableBody.insertRow();
+        const statusBadgeBg = item.status === 'AVAILABLE' ? 'bg-success' :
+                            item.status === 'RENTED' ? 'bg-warning' :
+                            'bg-danger'; // Or map other statuses
+
+        // Cell for Name and Description
+        const nameCell = row.insertCell();
+        nameCell.innerHTML = `
+            <div class="fw-bold">${item.name}</div>
+            <small class="text-muted">${item.description || ''}</small>
+        `;
+
+        // Cell for Category
+        row.insertCell().textContent = item.category_name;
+
+        // Cell for Serial Number
+        row.insertCell().textContent = item.serial_number || ''
+
+        // Cell for Status
+        const statusCell = row.insertCell();
+        statusCell.innerHTML = `<span class="badge ${statusBadgeBg}">${item.status}</span>`;
+
+        // Cell for Actions
+        const actionsCell = row.insertCell();
+        actionsCell.innerHTML = `
+            <div class="btn-group">
+                <a href="/equipment/${item.id}" class="btn btn-sm btn-outline-primary" title="Details">
+                    <i class="fas fa-info-circle"></i>
+                </a>
+                <button type="button" class="btn btn-sm btn-outline-secondary" title="Print Barcode" onclick="printBarcode('${item.id}', '${item.barcode}')">
+                    <i class="fas fa-print"></i>
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-success btn-qrcode" title="Add to Scan Session" onclick="addToScanSession('${item.id}')">
+                    <i class="fas fa-qrcode"></i>
+                </button>
+            </div>
+        `;
+    });
+    // formatAmounts(); // Re-enable if replacement_cost is shown in the list
+}
+
+// Function to update pagination UI
+function updatePaginationUI() {
+    if (totalCount > 0) {
+        paginationElement.classList.remove('d-none');
+        const startItem = (currentPage - 1) * pageSize + 1;
+        const endItem = Math.min(currentPage * pageSize, totalCount);
+        pageStartElement.textContent = startItem;
+        pageEndElement.textContent = endItem;
+        totalItemsElement.textContent = totalCount;
+
+        prevPageButton.parentElement.classList.toggle('disabled', currentPage <= 1);
+        nextPageButton.parentElement.classList.toggle('disabled', currentPage >= totalPages);
+    } else {
+        paginationElement.classList.add('d-none');
+    }
+}
+
+// Function to load equipment data
+async function loadEquipment() {
+    if (!equipmentTableBody) return; // Exit if table body not found
+
+    searchSpinner?.classList.remove('d-none');
+    paginationElement?.classList.add('d-none'); // Hide pagination while loading
+
+    const params = new URLSearchParams({
+        page: currentPage,
+        size: pageSize
+    });
+
+    const query = searchInput?.value.trim();
+    const categoryId = categoryFilter?.value;
+    const status = statusFilter?.value;
+
+    if (query && query.length >= 3) params.append('query', query);
+    if (categoryId) params.append('category_id', categoryId);
+    if (status) params.append('status', status);
+
+    try {
+        // Assuming 'api' is a global object for API calls
+        const response = await api.get(`/equipment/paginated?${params.toString()}`);
+
+        totalCount = response.total;
+        totalPages = response.pages;
+        currentPage = response.page;
+        pageSize = response.size;
+
+        renderEquipment(response.items);
+        updatePaginationUI();
+
+    } catch (error) {
+        console.error('Error loading equipment:', error);
+        showToast('Ошибка при загрузке списка оборудования', 'danger'); // Assuming showToast is global
+        equipmentTableBody.innerHTML = ''; // Clear table on error
+        const row = equipmentTableBody.insertRow();
+        const cell = row.insertCell();
+        cell.colSpan = 5;
+        cell.textContent = 'Не удалось загрузить оборудование.';
+        cell.classList.add('text-center', 'text-danger');
+        totalCount = 0; // Reset count on error
+        updatePaginationUI(); // Hide pagination block on error
+    } finally {
+        searchSpinner?.classList.add('d-none');
+    }
+}
+
+// Event listeners for filters and search
+function setupEventListeners() {
+    if (searchInput) {
+        searchInput.addEventListener('input', () => {
+            clearTimeout(searchDebounceTimer);
+            const query = searchInput.value.trim();
+            if (query.length === 0 || query.length >= 3) {
+                searchDebounceTimer = setTimeout(() => {
+                    currentPage = 1; // Reset page on new search/filter
+                    loadEquipment();
+                }, 500); // 500ms debounce
+            } else {
+                 searchSpinner?.classList.add('d-none'); // Hide spinner if query too short
+            }
+        });
+    }
+
+    [categoryFilter, statusFilter].forEach(filter => {
+        if (filter) {
+            filter.addEventListener('change', () => {
+                currentPage = 1; // Reset page on new search/filter
+                loadEquipment();
+            });
+        }
+    });
+
+    // Pagination button listeners
+    if (prevPageButton) {
+        prevPageButton.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (currentPage > 1) {
+                currentPage--;
+                loadEquipment();
+            }
+        });
+    }
+
+    if (nextPageButton) {
+        nextPageButton.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (currentPage < totalPages) {
+                currentPage++;
+                loadEquipment();
+            }
+        });
+    }
+}
+
 // Add event listeners after DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
     // Reset any active loader first (assuming resetLoader is global)
     if (typeof resetLoader === 'function') resetLoader();
 
-    // Load categories
+    // Initial load of equipment
+    loadEquipment();
+
+    // Setup filter and pagination listeners
+    setupEventListeners();
+
+    // Load categories for the modal form
     loadCategories();
 
     // Listen for preview barcode button clicks

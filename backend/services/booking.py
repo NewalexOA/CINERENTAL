@@ -22,6 +22,7 @@ from backend.exceptions import (
 )
 from backend.models import Booking, BookingStatus, EquipmentStatus, PaymentStatus
 from backend.repositories import BookingRepository, EquipmentRepository
+from backend.schemas import BookingWithDetails
 from backend.services.equipment import EquipmentService
 
 # Constants for booking validation
@@ -99,7 +100,7 @@ class BookingService:
 
             # Log date information
             log.debug(
-                'Booking date validation: start_date={}, today_start={}, now={}',
+                'Booking date validation: start_date=%s, today_start=%s, now=%s',
                 start_date.isoformat(),
                 today_start.isoformat(),
                 now.isoformat(),
@@ -376,14 +377,14 @@ class BookingService:
         """
         return await self.repository.get_all()
 
-    async def get_by_client(self, client_id: int) -> List[Booking]:
+    async def get_by_client(self, client_id: int) -> List[BookingWithDetails]:
         """Get bookings by client.
 
         Args:
             client_id: Client ID
 
         Returns:
-            List of client's bookings
+            List of client's bookings with details
 
         Raises:
             ValidationError: If client_id is not positive
@@ -785,7 +786,7 @@ class BookingService:
         start_date: Optional[datetime] = None,
         end_date: Optional[datetime] = None,
         # Add skip/limit if pagination handled here, otherwise in repository
-    ) -> List[Booking]:
+    ) -> List[BookingWithDetails]:
         """Get bookings based on various filter criteria.
 
         Args:
@@ -798,7 +799,7 @@ class BookingService:
             end_date: Filter by end date.
 
         Returns:
-            List of filtered bookings with relations loaded.
+            List of filtered bookings with details and relations loaded.
         """
         # Delegate filtering logic to the repository
         # Ensure the repository method loads necessary relations

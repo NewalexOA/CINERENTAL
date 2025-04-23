@@ -17,16 +17,14 @@
 
 <div class="card mb-4">
     <div class="card-header">
-        <form id="searchForm" class="row g-3">
-            <div class="col-md-4">
-                <label for="searchClient" class="form-label">Клиент</label>
+        <form id="searchForm" class="row g-3 align-items-center">
+            <div class="col-md-3">
                 <select class="form-select" id="searchClient" name="client_id">
                     <option value="">Все клиенты</option>
                     <!-- Clients list will be loaded dynamically -->
                 </select>
             </div>
             <div class="col-md-3">
-                <label for="searchStatus" class="form-label">Статус</label>
                 <select class="form-select" id="searchStatus" name="status">
                     <option value="">Все статусы</option>
                     <option value="DRAFT">Черновик</option>
@@ -35,42 +33,86 @@
                     <option value="CANCELLED">Отмененный</option>
                 </select>
             </div>
-            <div class="col-md-4">
-                <label for="searchPeriod" class="form-label">Период</label>
-                <input type="text" class="form-control" id="searchPeriod" name="period">
+            <div class="col-md-3">
+                <input type="text" class="form-control daterangepicker-input" id="searchPeriod" placeholder="Период" name="period">
             </div>
-            <div class="col-md-1">
-                <label class="form-label d-none d-md-block">&nbsp;</label>
-                <button type="submit" class="btn btn-primary">
-                    <i class="fas fa-search"></i>
-                </button>
+            <div class="col-md-auto ms-auto">
+                <div class="btn-group view-toggle-group" role="group" aria-label="Переключение режима просмотра">
+                    <button type="button" class="btn btn-outline-primary btn-square" id="cardViewBtn">
+                        <i class="fas fa-th-large"></i>
+                    </button>
+                    <button type="button" class="btn btn-outline-primary btn-square active" id="tableViewBtn">
+                        <i class="fas fa-list"></i>
+                    </button>
+                </div>
             </div>
         </form>
     </div>
 </div>
 
-<div class="table-responsive">
-    <table class="table table-hover">
-        <thead>
-            <tr>
-                <th>Проект</th>
-                <th>Клиент</th>
-                <th>Период</th>
-                <th>Бронирований</th>
-                <th>Статус</th>
-                <th>Действия</th>
-            </tr>
-        </thead>
-        <tbody id="projectsList">
-            <tr>
-                <td colspan="6" class="text-center py-4">
-                    <div class="spinner-border text-primary" role="status">
-                        <span class="visually-hidden">Загрузка...</span>
-                    </div>
-                </td>
-            </tr>
-        </tbody>
-    </table>
+<!-- Table view -->
+<div id="tableView" class="view-container">
+    <div class="table-responsive">
+        <table class="table table-hover">
+            <thead>
+                <tr>
+                    <th>Проект</th>
+                    <th>Клиент</th>
+                    <th>Период</th>
+                    <th>Статус</th>
+                    <th>Действия</th>
+                </tr>
+            </thead>
+            <tbody id="projectsList">
+                <tr>
+                    <td colspan="5" class="text-center py-4">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Загрузка...</span>
+                        </div>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Card view -->
+<div id="cardView" class="view-container d-none">
+    <!-- Draft projects group -->
+    <div id="draftProjects" class="project-group mb-4">
+        <div class="group-header bg-secondary bg-opacity-10 p-3 mb-3">
+            <h4 class="m-0"><i class="fas fa-file-alt me-2"></i>Черновики</h4>
+        </div>
+        <div class="row g-3" id="draftProjectsList"></div>
+        <div class="empty-message d-none" id="emptyDraftMessage">
+            <i class="fas fa-file-alt fa-2x mb-3"></i>
+            <p>Нет черновиков проектов</p>
+        </div>
+    </div>
+
+    <!-- Active projects group -->
+    <div id="activeProjects" class="project-group mb-4">
+        <div class="group-header bg-success bg-opacity-10 p-3 mb-3">
+            <h4 class="m-0"><i class="fas fa-play me-2"></i>Активные проекты</h4>
+        </div>
+        <div class="row g-3" id="activeProjectsList"></div>
+        <div class="empty-message d-none" id="emptyActiveMessage">
+            <i class="fas fa-play fa-2x mb-3"></i>
+            <p>Нет активных проектов</p>
+        </div>
+    </div>
+
+    <!-- Other projects group -->
+    <div id="otherProjects" class="project-group mb-4">
+        <div class="group-header bg-info bg-opacity-10 p-3 mb-3">
+            <h4 class="m-0"><i class="fas fa-archive me-2"></i>Прочие проекты</h4>
+        </div>
+        <div class="row g-3" id="otherProjectsList"></div>
+        <div class="empty-message d-none" id="emptyOtherMessage">
+            <i class="fas fa-archive fa-2x mb-3"></i>
+            <p>Нет прочих проектов</p>
+        </div>
+    </div>
 </div>
 
 <div id="pagination" class="d-flex justify-content-between align-items-center mt-3">

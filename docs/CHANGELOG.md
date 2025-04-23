@@ -2,6 +2,61 @@
 
 This document lists notable changes to the ACT-Rental application.
 
+## v0.5.0-alpha.4
+
+### Projects & UI
+
+- Added toggle between table and card views for projects, with state persistence and instant filtering.
+- Unified UI: consistent form control heights, square toggle buttons, improved Select2 and DateRangePicker styling, and updated project card/group header design.
+- Refactored and improved client list controls and view toggling.
+
+### Equipment
+
+- Implemented server- and client-side pagination for equipment list with advanced filtering and improved performance.
+- Updated frontend and backend to support paginated equipment API responses.
+
+### Bookings & Clients
+
+- Enhanced booking API: filtering by status, detailed booking schema, and improved client booking endpoints.
+- Added bookings count to client data and improved client repository logic.
+
+### Core & Frontend
+
+- Refactored and modularized frontend JavaScript, improved error handling and notifications.
+- Updated and added required frontend libraries and assets.
+- Improved logging with Loguru.
+
+### Documentation & Dependencies
+
+- Added OpenAPI specification for frontend.
+- Added `fastapi-pagination` to dependencies.
+
+## v0.5.0-alpha.3
+
+### UI & Select2 Integration
+
+- **Client Search**: Integrated Select2 for the client dropdown on the project creation page, enabling fast and user-friendly client search
+- **Unified Styles**: Added `select2-bootstrap-fix.css` to visually align Select2 dropdowns with the app's Bootstrap-based form controls
+- **Base Template Update**: Updated `base.html` to use local Select2 assets and custom styles for consistent appearance
+
+### Static Libraries & Asset Management
+
+- **Local Static Assets**: Added local versions of `select2.min.js`, `select2.min.css`, `moment.min.js`, and `daterangepicker.min.js` for reliable frontend functionality
+- **.gitignore Update**: Explicitly allowed tracking of `static/js/lib` to ensure required JS libraries are properly versioned
+
+### Documentation & Repository Improvements
+
+- **Implementation Plan Update**: Updated implementation plan documentation to reflect completed and partial tasks
+- **Changelog Enhancement**: Expanded `CHANGELOG.md` with detailed descriptions of new features
+- **Repository Hygiene**: Removed `implementation_plan.md` from the repository to comply with `.gitignore`
+
+### Other Improvements
+
+- **User Experience**: Enhanced client selection with searchable dropdowns that match the app's design
+- **Reliability**: Critical frontend libraries now served locally for consistent behavior regardless of network conditions
+- **Documentation**: Improved planning and changelog documentation for better project tracking
+- **Testing**: All 247 tests pass successfully with 78% code coverage
+
 ## v0.5.0-alpha.2
 
 ### Equipment Management Improvements

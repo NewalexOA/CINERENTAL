@@ -13,6 +13,7 @@ from backend.schemas.booking import (
     BookingCreate,
     BookingResponse,
     BookingUpdate,
+    BookingWithDetails,
 )
 from backend.schemas.category import (
     CategoryCreate,
@@ -77,6 +78,7 @@ __all__ = [
     'BookingCreate',
     'BookingResponse',
     'BookingUpdate',
+    'BookingWithDetails',
     # Client schemas
     'ClientBase',
     'ClientCreate',

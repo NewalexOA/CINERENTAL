@@ -2,20 +2,77 @@
  * Scanner page logic
  */
 
+// Use global objects from main.js
+const { scanStorage } = window;
+
+// Global variables
 let scanner = null;
 let currentEquipment = null;
 let autoSyncIntervalId = null;
 const AUTO_SYNC_INTERVAL_MS = 60000;
 
+// Initialize modal scanner
+function initModalScanner() {
+    const scannerModal = document.getElementById('scannerModal');
+    if (!scannerModal) return;
+
+    let modalScanner = null;
+
+    scannerModal.addEventListener('show.bs.modal', () => {
+        if (!modalScanner) {
+            modalScanner = new window.BarcodeScanner();
+            // Override scanner handlers
+            modalScanner.onScan = (equipment) => {
+                const resultDiv = document.getElementById('scannerResult');
+                if (resultDiv) {
+                    resultDiv.innerHTML = `
+                        <div class="alert alert-success">
+                            <h6>${equipment.name}</h6>
+                            <p class="mb-0">Категория: ${equipment.category.name}</p>
+                            <p class="mb-0">Статус: ${equipment.status}</p>
+                        </div>
+                    `;
+                }
+                showToast('Оборудование успешно отсканировано', 'success');
+            };
+
+            modalScanner.onError = (error) => {
+                const resultDiv = document.getElementById('scannerResult');
+                if (resultDiv) {
+                    resultDiv.innerHTML = `
+                        <div class="alert alert-danger">
+                            Ошибка сканирования: ${error.message}
+                        </div>
+                    `;
+                }
+                showToast('Ошибка сканирования', 'danger');
+            };
+        }
+        modalScanner.start();
+    });
+
+    scannerModal.addEventListener('hide.bs.modal', () => {
+        if (modalScanner) {
+            modalScanner.stop();
+        }
+    });
+}
+
 // Initialize scanner
 async function initScanner() {
     try {
+        // Wait for scanStorage to be available
+        if (!window.scanStorage) {
+            console.error('scanStorage is not available');
+            return;
+        }
+
         // Get active session ID before initializing scanner
-        const activeSession = scanStorage.getActiveSession();
+        const activeSession = window.scanStorage.getActiveSession();
         const activeSessionId = activeSession?.id;
 
         // Initialize scanner with active session ID
-        scanner = new BarcodeScanner(
+        scanner = new window.BarcodeScanner(
             handleScan,
             handleError,
             activeSessionId
@@ -49,38 +106,28 @@ function initSessionManagement() {
     updateSessionUI(activeSession);
 
     // Event listeners for session management
-    document.getElementById('newSessionBtn').addEventListener('click', showNewSessionModal);
-    document.getElementById('loadSessionBtn').addEventListener('click', showLoadSessionModal);
-    document.getElementById('manageSessionsBtn').addEventListener('click', showManageSessionsModal);
-    document.getElementById('renameSessionBtn').addEventListener('click', showRenameSessionModal);
-    document.getElementById('clearSessionBtn').addEventListener('click', confirmClearSession);
-    document.getElementById('syncSessionBtn').addEventListener('click', syncActiveSession);
-    document.getElementById('createProjectBtn').addEventListener('click', createProjectFromSession);
-    document.getElementById('createSessionBtn').addEventListener('click', createNewSession);
-    document.getElementById('saveRenameBtn').addEventListener('click', renameActiveSession);
-    document.getElementById('refreshSessionsListBtn').addEventListener('click', refreshSessionsList);
-    document.getElementById('cleanExpiredSessionsBtn').addEventListener('click', cleanExpiredSessions);
-    document.getElementById('resetAllSessionsBtn').addEventListener('click', resetAllSessions);
+    initEventListeners();
 }
 
 // Update session UI based on active session
 function updateSessionUI(session) {
     const noActiveSessionMessage = document.getElementById('noActiveSessionMessage');
     const activeSessionInfo = document.getElementById('activeSessionInfo');
+    const sessionName = document.getElementById('sessionName');
+    const itemCount = document.getElementById('itemCount');
+    const itemsList = document.getElementById('sessionItemsList');
+
+    if (!noActiveSessionMessage || !activeSessionInfo || !sessionName || !itemCount || !itemsList) {
+        console.error('Required session UI elements not found');
+        return;
+    }
 
     if (session) {
-        // Hide message, show session info
         noActiveSessionMessage.classList.add('d-none');
         activeSessionInfo.classList.remove('d-none');
-
-        // Update session info
-        document.getElementById('sessionName').textContent = session.name;
+        sessionName.textContent = session.name;
         const totalItems = session.items.reduce((sum, item) => sum + (item.quantity || 1), 0);
-        document.getElementById('itemCount').textContent = `${totalItems} шт. (${session.items.length} поз.)`;
-
-        // Update items list
-        const itemsList = document.getElementById('sessionItemsList');
-        itemsList.innerHTML = '';
+        itemCount.textContent = `${totalItems} шт. (${session.items.length} поз.)`;
 
         if (session.items.length === 0) {
             itemsList.innerHTML = '<div class="text-center text-muted py-2">Нет отсканированного оборудования</div>';
@@ -149,7 +196,6 @@ function updateSessionUI(session) {
             attachItemButtonListeners(session.id);
         }
     } else {
-        // Show message, hide session info
         noActiveSessionMessage.classList.remove('d-none');
         activeSessionInfo.classList.add('d-none');
     }
@@ -319,15 +365,16 @@ function showLoadSessionModal() {
         btn.addEventListener('click', async (e) => {
             const serverSessionId = e.currentTarget.getAttribute('data-session-id');
             try {
-                const session = await scanSync.loadSessionFromServer(serverSessionId);
+                const session = await scanStorage.importSessionFromServer(serverSessionId);
                 if (session) {
                     updateSessionUI(session);
                     startAutoSyncTimer();
                     bootstrap.Modal.getInstance('#loadSessionModal').hide();
-                    showToast('Серверная сессия загружена', 'success');
+                    showToast('Сессия успешно импортирована с сервера', 'success');
                 }
             } catch (error) {
-                showToast('Ошибка загрузки сессии с сервера', 'danger');
+                console.error('Error importing session:', error);
+                showToast('Ошибка импорта сессии с сервера: ' + (error.message || 'Неизвестная ошибка'), 'danger');
             }
         });
     });
@@ -356,7 +403,7 @@ function showLoadSessionModal() {
             if (confirm('Удалить сессию с сервера? Локальная копия (если есть) останется.')) {
                  try {
                     // TODO: Implement scanSync.deleteSessionFromServer(serverSessionId);
-                    await scanSync.deleteSessionFromServer(serverSessionId);
+                    await scanStorage.deleteSessionFromServer(serverSessionId);
                     loadServerSessions();
                     showToast('Сессия удалена с сервера', 'success');
                 } catch (error) {
@@ -375,7 +422,7 @@ async function loadServerSessions() {
     try {
         // Assume user ID is available in some way, for demo we'll use 1
         const userId = 1; // This should be replaced with actual user ID
-        const serverSessions = await scanSync.getUserSessionsFromServer(userId);
+        const serverSessions = await scanStorage.getUserSessionsFromServer(userId);
 
         if (serverSessions.length === 0) {
             serverSessionsList.innerHTML = '<div class="text-center text-muted py-3">Нет сохраненных сессий на сервере</div>';
@@ -396,12 +443,15 @@ async function loadServerSessions() {
                 sessionElement.addEventListener('click', async (e) => {
                     e.preventDefault();
                     try {
-                        const importedSession = await scanSync.importSessionFromServer(session.id);
-                        updateSessionUI(importedSession);
-                        bootstrap.Modal.getInstance('#loadSessionModal').hide();
+                        const importedSession = await scanStorage.importSessionFromServer(session.id);
+                        if (importedSession) {
+                            updateSessionUI(importedSession);
+                            bootstrap.Modal.getInstance('#loadSessionModal').hide();
+                            showToast('Сессия успешно импортирована с сервера', 'success');
+                        }
                     } catch (error) {
                         console.error('Error importing session:', error);
-                        showToast('Ошибка импорта сессии', 'danger');
+                        showToast('Ошибка импорта сессии с сервера: ' + (error.message || 'Неизвестная ошибка'), 'danger');
                     }
                 });
                 serverSessionsList.appendChild(sessionElement);
@@ -410,6 +460,7 @@ async function loadServerSessions() {
     } catch (error) {
         console.error('Error loading server sessions:', error);
         serverSessionsList.innerHTML = '<div class="text-center text-danger py-3">Ошибка загрузки сессий с сервера</div>';
+        showToast('Ошибка получения сессий с сервера: ' + (error.message || 'Неизвестная ошибка'), 'danger');
     }
 }
 
@@ -464,11 +515,14 @@ async function syncActiveSession() {
     if (!activeSession) return;
 
     try {
-        const syncedSession = await scanSync.syncSessionWithServer(activeSession.id);
-        updateSessionUI(syncedSession);
+        const syncedSession = await scanStorage.syncSessionWithServer(activeSession.id);
+        if (syncedSession) {
+            updateSessionUI(syncedSession);
+            showToast('Сессия успешно сохранена на сервере', 'success');
+        }
     } catch (error) {
         console.error('Error syncing session:', error);
-        // Error toast is already shown in scanSync.syncSessionWithServer
+        showToast('Ошибка синхронизации с сервером: ' + (error.message || 'Неизвестная ошибка'), 'danger');
     }
 }
 
@@ -550,13 +604,17 @@ function handleError(error) {
 function updateScanResult(equipment) {
     const container = document.getElementById('scanResult');
     const errorContainer = document.getElementById('scannerErrorContainer');
-    errorContainer.classList.add('d-none');
+    const errorText = document.getElementById('scannerErrorText');
 
-    // Clear previous result
+    if (!container || !errorContainer || !errorText) {
+        console.error('Required scan result elements not found');
+        return;
+    }
+
+    errorContainer.classList.add('d-none');
     container.innerHTML = '';
 
     if (!equipment) {
-        // Show placeholder if no equipment data
         container.innerHTML = `
             <div class="text-center text-muted py-5">
                 <i class="fas fa-barcode fa-3x mb-3"></i>
@@ -633,8 +691,12 @@ function updateScanResult(equipment) {
 // Add scan to history
 function addToScanHistory(equipment) {
     const container = document.getElementById('scanHistory');
-    const timestamp = moment().format('HH:mm:ss');
+    if (!container) {
+        console.error('Scan history container not found');
+        return;
+    }
 
+    const timestamp = moment().format('HH:mm:ss');
     const historyItem = document.createElement('div');
     historyItem.className = 'list-group-item';
     historyItem.innerHTML = `
@@ -658,16 +720,23 @@ function updateScannerControls(isInitialized) {
 
 // Update quick action buttons
 function updateQuickActions(enabled) {
-    document.getElementById('updateStatus').disabled = !enabled;
-    document.getElementById('viewHistory').disabled = !enabled;
+    const updateStatusBtn = document.getElementById('updateStatus');
+    const viewHistoryBtn = document.getElementById('viewHistory');
+
+    if (updateStatusBtn) {
+        updateStatusBtn.disabled = !enabled;
+    }
+    if (viewHistoryBtn) {
+        viewHistoryBtn.disabled = !enabled;
+    }
 }
 
 // Load equipment history
 async function loadEquipmentHistory(equipmentId) {
     try {
         const [statusHistory, bookingHistory] = await Promise.all([
-            api.get(`/equipment/${equipmentId}/timeline`),
-            api.get(`/equipment/${equipmentId}/bookings`)
+            window.api.get(`/equipment/${equipmentId}/timeline`),
+            window.api.get(`/equipment/${equipmentId}/bookings`)
         ]);
 
         // Update status history
@@ -710,55 +779,16 @@ async function loadEquipmentHistory(equipmentId) {
     }
 }
 
-document.getElementById('updateStatus').addEventListener('click', () => {
-    if (currentEquipment) {
-        const form = document.getElementById('updateStatusForm');
-        form.elements.equipment_id.value = currentEquipment.id;
-        form.elements.status.value = currentEquipment.status;
-        new bootstrap.Modal('#updateStatusModal').show();
-    }
-});
-
-document.getElementById('saveStatus').addEventListener('click', async () => {
-    const form = document.getElementById('updateStatusForm');
-    const formData = new FormData(form);
-    const data = Object.fromEntries(formData.entries());
-
-    try {
-        await api.put(`/equipment/${data.equipment_id}/status?status=${data.status}`, {});
-
-        showToast('Статус успешно обновлен', 'success');
-        bootstrap.Modal.getInstance('#updateStatusModal').hide();
-
-        // Refresh equipment data
-        const equipment = await api.get(`/equipment/${data.equipment_id}`);
-        handleScan(equipment);
-    } catch (error) {
-        console.error('Error updating status:', error);
-        showToast('Ошибка при обновлении статуса', 'danger');
-    }
-});
-
-document.getElementById('viewHistory').addEventListener('click', () => {
-    if (currentEquipment) {
-        loadEquipmentHistory(currentEquipment.id);
-        new bootstrap.Modal('#historyModal').show();
-    }
-});
-
-// Helper function for status colors
-function getStatusColor(status) {
-    const colors = {
-        'AVAILABLE': 'success',
-        'RENTED': 'warning',
-        'MAINTENANCE': 'danger'
-    };
-    return colors[status] || 'secondary';
-}
-
-// Helper function for date formatting
-function formatDateRange(start, end) {
-    return `${formatDate(start)} - ${formatDate(end)}`;
+const updateStatusBtn = document.getElementById('updateStatus');
+if (updateStatusBtn) {
+    updateStatusBtn.addEventListener('click', () => {
+        if (currentEquipment) {
+            const form = document.getElementById('updateStatusForm');
+            form.elements.equipment_id.value = currentEquipment.id;
+            form.elements.status.value = currentEquipment.status;
+            new bootstrap.Modal('#updateStatusModal').show();
+        }
+    });
 }
 
 // Show manage sessions modal
@@ -841,7 +871,7 @@ function refreshSessionsList() {
 // Clean expired sessions
 async function cleanExpiredSessions() {
     try {
-        const response = await api.post('/scan-sessions/clean-expired');
+        const response = await window.api.post('/scan-sessions/clean-expired');
         const removedCount = response.cleaned_count;
 
         if (removedCount > 0) {
@@ -905,7 +935,7 @@ async function autoSyncActiveSession() {
         if (scanStorage.isSessionDirty(activeSession.id)) {
             console.log('[AutoSync] Session dirty, attempting sync:', activeSession.name);
             try {
-                const updatedSession = await scanSync.syncSessionWithServer(activeSession.id);
+                const updatedSession = await scanStorage.syncSessionWithServer(activeSession.id);
                 if (updatedSession) {
                     scanStorage.updateSession(updatedSession);
                     console.log('[AutoSync] Sync successful.');
@@ -944,9 +974,49 @@ function stopAutoSyncTimer() {
 window.addEventListener('beforeunload', stopAutoSyncTimer);
 
 // Initialize page
-document.addEventListener('DOMContentLoaded', function() {
-    initScanner();
-    fixAllModals();
+document.addEventListener('DOMContentLoaded', () => {
+    // Check if we're on the scanner page by looking for a specific element
+    const scannerPage = document.getElementById('scanResult');
+    if (!scannerPage) {
+        // Not on scanner page, exit gracefully
+        return;
+    }
+
+    const requiredElements = [
+        'noActiveSessionMessage',
+        'activeSessionInfo',
+        'sessionName',
+        'itemCount',
+        'sessionItemsList',
+        'scanResult',
+        'scannerErrorContainer',
+        'scannerErrorText',
+        'scanHistory'
+    ];
+
+    const missingElements = requiredElements.filter(id => !document.getElementById(id));
+    if (missingElements.length > 0) {
+        console.error('Missing required elements:', missingElements);
+        showToast('Ошибка инициализации: отсутствуют необходимые элементы', 'danger');
+        return;
+    }
+
+    // Make sure scanStorage is available before initializing
+    if (!window.scanStorage) {
+        console.error('scanStorage is not available');
+        showToast('Ошибка инициализации: хранилище сессий недоступно', 'danger');
+        return;
+    }
+
+    try {
+        initScanner();
+        initEventListeners();
+        initModalScanner();
+        fixAllModals();
+    } catch (error) {
+        console.error('Error during initialization:', error);
+        showToast('Ошибка инициализации приложения', 'danger');
+    }
 });
 
 // Function to fix all modal dialogs
@@ -1005,3 +1075,115 @@ function fixAllModals() {
         });
     });
 }
+
+// Event listeners initialization
+const initEventListeners = () => {
+    const elements = {
+        newSessionBtn: 'newSessionBtn',
+        loadSessionBtn: 'loadSessionBtn',
+        manageSessionsBtn: 'manageSessionsBtn',
+        renameSessionBtn: 'renameSessionBtn',
+        clearSessionBtn: 'clearSessionBtn',
+        syncSessionBtn: 'syncSessionBtn',
+        createProjectBtn: 'createProjectBtn',
+        createSessionBtn: 'createSessionBtn',
+        saveRenameBtn: 'saveRenameBtn',
+        refreshSessionsListBtn: 'refreshSessionsListBtn',
+        cleanExpiredSessionsBtn: 'cleanExpiredSessionsBtn',
+        resetAllSessionsBtn: 'resetAllSessionsBtn',
+        saveStatus: 'saveStatus',
+        viewHistory: 'viewHistory',
+        updateStatus: 'updateStatus'
+    };
+
+    for (const [key, id] of Object.entries(elements)) {
+        const element = document.getElementById(id);
+        if (element) {
+            switch (key) {
+                case 'newSessionBtn':
+                    element.addEventListener('click', showNewSessionModal);
+                    break;
+                case 'loadSessionBtn':
+                    element.addEventListener('click', showLoadSessionModal);
+                    break;
+                case 'manageSessionsBtn':
+                    element.addEventListener('click', showManageSessionsModal);
+                    break;
+                case 'renameSessionBtn':
+                    element.addEventListener('click', showRenameSessionModal);
+                    break;
+                case 'clearSessionBtn':
+                    element.addEventListener('click', confirmClearSession);
+                    break;
+                case 'syncSessionBtn':
+                    element.addEventListener('click', syncActiveSession);
+                    break;
+                case 'createProjectBtn':
+                    element.addEventListener('click', createProjectFromSession);
+                    break;
+                case 'createSessionBtn':
+                    element.addEventListener('click', createNewSession);
+                    break;
+                case 'saveRenameBtn':
+                    element.addEventListener('click', renameActiveSession);
+                    break;
+                case 'refreshSessionsListBtn':
+                    element.addEventListener('click', refreshSessionsList);
+                    break;
+                case 'cleanExpiredSessionsBtn':
+                    element.addEventListener('click', cleanExpiredSessions);
+                    break;
+                case 'resetAllSessionsBtn':
+                    element.addEventListener('click', resetAllSessions);
+                    break;
+                case 'saveStatus':
+                    element.addEventListener('click', async () => {
+                        const form = document.getElementById('updateStatusForm');
+                        if (!form) {
+                            console.error('Update status form not found');
+                            return;
+                        }
+
+                        const formData = new FormData(form);
+                        const data = Object.fromEntries(formData.entries());
+
+                        try {
+                            await window.api.put(`/equipment/${data.equipment_id}/status?status=${data.status}`, {});
+
+                            showToast('Статус успешно обновлен', 'success');
+                            bootstrap.Modal.getInstance('#updateStatusModal').hide();
+
+                            // Refresh equipment data
+                            const equipment = await window.api.get(`/equipment/${data.equipment_id}`);
+                            handleScan(equipment);
+                        } catch (error) {
+                            console.error('Error updating status:', error);
+                            showToast('Ошибка при обновлении статуса', 'danger');
+                        }
+                    });
+                    break;
+                case 'viewHistory':
+                    element.addEventListener('click', () => {
+                        if (currentEquipment) {
+                            loadEquipmentHistory(currentEquipment.id);
+                            new bootstrap.Modal('#historyModal').show();
+                        }
+                    });
+                    break;
+                case 'updateStatus':
+                    element.addEventListener('click', () => {
+                        if (currentEquipment) {
+                            const form = document.getElementById('updateStatusForm');
+                            form.elements.equipment_id.value = currentEquipment.id;
+                            form.elements.status.value = currentEquipment.status;
+                            new bootstrap.Modal('#updateStatusModal').show();
+                        }
+                    });
+                    break;
+            }
+        }
+    }
+};
+
+// Initialize page
+document.addEventListener('DOMContentLoaded', initEventListeners);
