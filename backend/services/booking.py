@@ -100,7 +100,7 @@ class BookingService:
 
             # Log date information
             log.debug(
-                'Booking date validation: start_date={}, today_start={}, now={}',
+                'Booking date validation: start_date=%s, today_start=%s, now=%s',
                 start_date.isoformat(),
                 today_start.isoformat(),
                 now.isoformat(),
