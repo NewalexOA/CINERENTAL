@@ -4,44 +4,32 @@ This document lists notable changes to the ACT-Rental application.
 
 ## v0.5.0-alpha.4
 
-### Projects View Improvements
+### Projects & UI
 
-- **Toggle Functionality**: Added ability to switch between table and card viewing modes
-- **Grouped Cards**: Created card view with projects grouped and sorted by status
-- **State Persistence**: Implemented view state persistence with localStorage
-- **Instant Filtering**: Added immediate updates when filtering projects
-- **Enhanced Dropdowns**: Improved Select2 integration for client selection
+- Added toggle between table and card views for projects, with state persistence and instant filtering.
+- Unified UI: consistent form control heights, square toggle buttons, improved Select2 and DateRangePicker styling, and updated project card/group header design.
+- Refactored and improved client list controls and view toggling.
 
-### UI Consistency Enhancements
+### Equipment
 
-- **Standard Sizing**: Added consistent height variables for form controls
-- **Square Buttons**: Implemented square buttons for view toggle controls
-- **Select2 Styling**: Added consistent styling for Select2 dropdowns
-- **DateRangePicker**: Improved appearance and functionality of date pickers
-- **Card Styling**: Created consistent styles for project cards and group headers
+- Implemented server- and client-side pagination for equipment list with advanced filtering and improved performance.
+- Updated frontend and backend to support paginated equipment API responses.
 
-### Client Controls Improvements
+### Bookings & Clients
 
-- **External Scripts**: Moved client list functionality from templates to dedicated JavaScript files
-- **View Toggling**: Implemented toggling between grid and list views for clients
-- **Default Mode**: Set list view as default display mode for client listing
-- **Preference Storage**: Added user preference saving via localStorage
-- **DOM Management**: Ensured consistent UI behavior through proper DOM manipulation
+- Enhanced booking API: filtering by status, detailed booking schema, and improved client booking endpoints.
+- Added bookings count to client data and improved client repository logic.
 
-### Core System Improvements
+### Core & Frontend
 
-- **Initialization Logic**: Added flag for disabling global client controls initialization
-- **Conditional Processing**: Implemented logic to skip initialization when custom handlers exist
-- **Event Handling**: Prevented duplicate event handling between main.js and page-specific scripts
-- **Documentation**: Added OpenAPI specification JSON for frontend development
+- Refactored and modularized frontend JavaScript, improved error handling and notifications.
+- Updated and added required frontend libraries and assets.
+- Improved logging with Loguru.
 
-### Equipment List Improvements
+### Documentation & Dependencies
 
-- **Pagination**: Added server-side pagination for equipment list
-- **Performance**: Optimized database queries with proper indexing
-- **UI Enhancement**: Added pagination controls with page size selection
-- **State Management**: Implemented URL-based state management for pagination
-- **Dependencies**: Added fastapi-pagination for consistent API responses
+- Added OpenAPI specification for frontend.
+- Added `fastapi-pagination` to dependencies.
 
 ## v0.5.0-alpha.3
 
