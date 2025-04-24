@@ -187,6 +187,17 @@ ENV/
 env.bak/
 venv.bak/
 
+# Project specific
+.env.dev
+.env.prod
+.env.local
+.env.*.local
+!.env.example
+!.env.test
+.env.production
+logs/
+media/
+
 # Spyder project settings
 .spyderproject
 .spyproject
