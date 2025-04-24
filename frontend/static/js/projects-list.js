@@ -415,7 +415,7 @@ function renderCardView(projects) {
                     </div>
                     <p class="card-text mb-2">${project.client_name}</p>
                     <p class="project-period text-muted mt-3">
-                        <i class="far fa-calendar-alt me-1"></i>
+                        <i class="fa-solid fa-calendar-alt me-1"></i>
                         ${formatDate(project.start_date)} - ${formatDate(project.end_date)}
                     </p>
                     ${bookingCount > 0 ? `<div class="bookings-count">${bookingCount}</div>` : ''}
