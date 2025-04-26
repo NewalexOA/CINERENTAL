@@ -638,24 +638,47 @@ class BookingRepository(BaseRepository[Booking]):
                                 f'{booking.id}: {str(e)}',
                             )
 
+                    # Process client information
+                    client_name = None
+                    if booking.client:
+                        try:
+                            logger.debug('Processing client {}', booking.client.id)
+                            client_name = booking.client.name
+                            logger.debug('Client name: {}', client_name)
+                        except Exception as e:
+                            logger.error(
+                                'Error processing client for booking {}: {}',
+                                booking.id,
+                                str(e),
+                            )
+                            client_name = None
+
                     logger.debug('Creating BookingWithDetails')
                     # Create BookingWithDetails with all required fields
-                    booking_detail = BookingWithDetails(
-                        id=booking.id,
-                        equipment_id=booking.equipment_id,
-                        client_id=booking.client_id,
-                        project_id=booking.project_id,
-                        start_date=booking.start_date,
-                        end_date=booking.end_date,
-                        total_amount=booking.total_amount,
-                        quantity=booking.quantity,
-                        created_at=booking.created_at,
-                        updated_at=booking.updated_at,
-                        status=booking.booking_status,
-                        payment_status=booking.payment_status,
-                        equipment=equipment_data,
-                        project=project_data,
+                    booking_detail_dict = {
+                        'id': booking.id,
+                        'equipment_id': booking.equipment_id,
+                        'client_id': booking.client_id,
+                        'project_id': booking.project_id,
+                        'start_date': booking.start_date,
+                        'end_date': booking.end_date,
+                        'total_amount': booking.total_amount,
+                        'quantity': booking.quantity,
+                        'created_at': booking.created_at,
+                        'updated_at': booking.updated_at,
+                        'status': booking.booking_status,
+                        'payment_status': booking.payment_status,
+                        'equipment': equipment_data,
+                        'project': project_data,
+                    }
+
+                    # Add client name to the object
+                    booking_detail = BookingWithDetails.model_validate(
+                        booking_detail_dict
                     )
+                    if client_name:
+                        # Set client_name after model validation
+                        booking_detail.client_name = client_name
                     logger.debug('Successfully created BookingWithDetails')
                     booking_details.append(booking_detail)
                 except Exception as e:
