@@ -122,6 +122,7 @@ class BookingWithDetails(BookingBase):
         payment_status: Current payment status
         equipment: Equipment details
         project: Project details if associated
+        client_name: Client name (optional)
     """
 
     id: int
@@ -131,6 +132,7 @@ class BookingWithDetails(BookingBase):
     payment_status: PaymentStatus
     equipment: Optional[EquipmentResponse] = None
     project: Optional[ProjectBase] = None
+    client_name: Optional[str] = None
 
     model_config = ConfigDict(
         from_attributes=True,
