@@ -276,12 +276,18 @@ function saveSessionData() {
  */
 function loadSessionData() {
     try {
-        //
-         // Get ID session from URL, if it exists
+        // Get ID session from URL, if it exists
         const urlParams = new URLSearchParams(window.location.search);
         const sessionId = urlParams.get('session_id');
 
         if (sessionId) {
+            // Check if scanStorage is available
+            if (typeof scanStorage === 'undefined') {
+                console.warn('scanStorage is not available, trying to load from sessionStorage only');
+                loadProjectDataFromSessionStorage();
+                return;
+            }
+
             // Get scanning data from storage
             const scanSession = scanStorage.getSession(sessionId);
 
@@ -311,15 +317,15 @@ function loadSessionData() {
                 loadProjectDataFromSessionStorage();
             } else {
                 console.warn('Scan session not found or empty:', sessionId);
+                loadProjectDataFromSessionStorage();
             }
         } else {
             loadProjectDataFromSessionStorage();
         }
     } catch (e) {
         console.error('[loadSessionData] Error loading session data:', e);
-        // Clear potentially corrupted data and update table
-        selectedEquipment = [];
-        updateEquipmentTable();
+        // Try to load from sessionStorage as fallback
+        loadProjectDataFromSessionStorage();
     }
 }
 
