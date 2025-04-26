@@ -129,13 +129,20 @@ function updateSessionUI(session) {
         const totalItems = session.items.reduce((sum, item) => sum + (item.quantity || 1), 0);
         itemCount.textContent = `${totalItems} шт. (${session.items.length} поз.)`;
 
+        // Clear the list before updating to avoid duplicates
+        itemsList.innerHTML = '';
+
         if (session.items.length === 0) {
             itemsList.innerHTML = '<div class="text-center text-muted py-2">Нет отсканированного оборудования</div>';
         } else {
+            console.log('Updating session UI with items:', session.items);
+
+            // Render each item in the list
             session.items.forEach(item => {
                 const itemElement = document.createElement('div');
                 itemElement.className = 'list-group-item list-group-item-action d-flex justify-content-between align-items-center';
 
+                // Determine if the item has a serial number
                 const hasSerialNumber = !!item.serial_number;
                 const quantity = item.quantity || 1;
                 const quantityDisplay = !hasSerialNumber && quantity > 1 ? ` (x${quantity})` : '';
@@ -365,16 +372,21 @@ function showLoadSessionModal() {
         btn.addEventListener('click', async (e) => {
             const serverSessionId = e.currentTarget.getAttribute('data-session-id');
             try {
+                console.log('Начинаем импорт сессии с сервера:', serverSessionId);
                 const session = await scanStorage.importSessionFromServer(serverSessionId);
                 if (session) {
+                    console.log('Сессия успешно импортирована:', session);
                     updateSessionUI(session);
                     startAutoSyncTimer();
                     bootstrap.Modal.getInstance('#loadSessionModal').hide();
                     showToast('Сессия успешно импортирована с сервера', 'success');
+                } else {
+                    console.error('Сессия не была импортирована (undefined)');
+                    showToast('Ошибка импорта сессии: сервер вернул пустые данные', 'danger');
                 }
             } catch (error) {
                 console.error('Error importing session:', error);
-                showToast('Ошибка импорта сессии с сервера: ' + (error.message || 'Неизвестная ошибка'), 'danger');
+                showToast('Ошибка импорта сессии: ' + (error.message || 'Неизвестная ошибка'), 'danger');
             }
         });
     });
@@ -443,15 +455,20 @@ async function loadServerSessions() {
                 sessionElement.addEventListener('click', async (e) => {
                     e.preventDefault();
                     try {
+                        console.log('Начинаем импорт сессии с сервера по клику:', session.id);
                         const importedSession = await scanStorage.importSessionFromServer(session.id);
                         if (importedSession) {
+                            console.log('Сессия успешно импортирована по клику:', importedSession);
                             updateSessionUI(importedSession);
                             bootstrap.Modal.getInstance('#loadSessionModal').hide();
                             showToast('Сессия успешно импортирована с сервера', 'success');
+                        } else {
+                            console.error('Сессия не была импортирована (undefined)');
+                            showToast('Ошибка импорта сессии: сервер вернул пустые данные', 'danger');
                         }
                     } catch (error) {
                         console.error('Error importing session:', error);
-                        showToast('Ошибка импорта сессии с сервера: ' + (error.message || 'Неизвестная ошибка'), 'danger');
+                        showToast('Ошибка импорта сессии: ' + (error.message || 'Неизвестная ошибка'), 'danger');
                     }
                 });
                 serverSessionsList.appendChild(sessionElement);
@@ -733,49 +750,33 @@ function updateQuickActions(enabled) {
 
 // Load equipment history
 async function loadEquipmentHistory(equipmentId) {
+    const container = document.getElementById('equipmentHistoryContainer');
+    if (!container) {
+        console.error('Equipment history container not found');
+        return;
+    }
+
     try {
-        const [statusHistory, bookingHistory] = await Promise.all([
-            window.api.get(`/equipment/${equipmentId}/timeline`),
-            window.api.get(`/equipment/${equipmentId}/bookings`)
+        // Get both timeline and bookings data for the equipment
+        const [timelineData, bookingsData] = await Promise.all([
+            api.get(`/equipment/${equipmentId}/timeline`),
+            api.get(`/equipment/${equipmentId}/bookings`)
         ]);
 
-        // Update status history
-        document.querySelector('#statusHistory .timeline').innerHTML = statusHistory.map(entry => `
-            <div class="timeline-item">
-                <div class="timeline-badge bg-${getStatusColor(entry.status)}">
-                    <i class="fas fa-circle"></i>
-                </div>
-                <div class="timeline-content">
-                    <h6 class="mb-1">${entry.status}</h6>
-                    <small class="text-muted">${formatDate(entry.created_at)}</small>
-                    ${entry.notes ? `<p class="mb-0">${entry.notes}</p>` : ''}
-                </div>
-            </div>
-        `).join('');
+        if (timelineData && timelineData.events && timelineData.events.length) {
+            renderEquipmentTimeline(timelineData.events);
+        } else {
+            document.getElementById('equipmentTimeline').innerHTML = '<div class="text-center text-muted py-3">Нет данных об истории использования</div>';
+        }
 
-        // Update booking history
-        const bookingHistoryHtml = bookingHistory.map(booking => {
-            const clientName = booking.client_name || 'Клиент не указан';
-            const equipmentName = booking.equipment_name || 'Оборудование не указано';
-            const projectName = booking.project_name || 'Без проекта';
-            const bookingStatus = booking.status || 'Статус не указан';
-
-            return `
-                <a href="/bookings/${booking.id}" class="list-group-item list-group-item-action">
-                    <div class="d-flex w-100 justify-content-between">
-                        <h6 class="mb-1">${clientName} (${projectName})</h6>
-                        <small class="text-muted">${formatDate(booking.start_date)}</small>
-                    </div>
-                    <p class="mb-1">${formatDateRange(booking.start_date, booking.end_date)}</p>
-                    <small class="text-${getStatusColor(bookingStatus)}">${bookingStatus}</small>
-                </a>
-            `;
-        }).join('');
-        document.querySelector('#bookingHistory .list-group').innerHTML = bookingHistoryHtml || '<li class="list-group-item">Нет истории бронирований</li>';
-
+        if (bookingsData && bookingsData.length) {
+            renderEquipmentBookings(bookingsData);
+        } else {
+            document.getElementById('equipmentBookings').innerHTML = '<div class="text-center text-muted py-3">Нет данных о бронированиях</div>';
+        }
     } catch (error) {
         console.error('Error loading equipment history:', error);
-        showToast('Ошибка загрузки истории', 'danger');
+        container.innerHTML = '<div class="alert alert-danger">Ошибка при загрузке истории оборудования</div>';
     }
 }
 
@@ -871,7 +872,7 @@ function refreshSessionsList() {
 // Clean expired sessions
 async function cleanExpiredSessions() {
     try {
-        const response = await window.api.post('/scan-sessions/clean-expired');
+        const response = await api.post('/scan-sessions/clean-expired');
         const removedCount = response.cleaned_count;
 
         if (removedCount > 0) {
@@ -1148,13 +1149,13 @@ const initEventListeners = () => {
                         const data = Object.fromEntries(formData.entries());
 
                         try {
-                            await window.api.put(`/equipment/${data.equipment_id}/status?status=${data.status}`, {});
+                            await api.put(`/equipment/${data.equipment_id}/status?status=${data.status}`, {});
 
                             showToast('Статус успешно обновлен', 'success');
                             bootstrap.Modal.getInstance('#updateStatusModal').hide();
 
                             // Refresh equipment data
-                            const equipment = await window.api.get(`/equipment/${data.equipment_id}`);
+                            const equipment = await api.get(`/equipment/${data.equipment_id}`);
                             handleScan(equipment);
                         } catch (error) {
                             console.error('Error updating status:', error);

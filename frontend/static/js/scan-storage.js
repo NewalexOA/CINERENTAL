@@ -129,40 +129,71 @@ window.scanStorage = {
             quantity: 1
         };
 
+        console.group(`Adding equipment ID: ${equipmentId} to session ${sessionId}`);
+        console.log('Normalized equipment:', normalizedEquipment);
+
         const sessionItems = sessions[sessionIndex].items;
-        const existingItemIndex = sessionItems.findIndex(item => item.equipment_id === normalizedEquipment.equipment_id);
+
+        // Find existing items by equipment_id
+        const existingItemIndices = sessionItems.reduce((indices, item, index) => {
+            if (Number(item.equipment_id) === equipmentId) {
+                indices.push({index, item});
+            }
+            return indices;
+        }, []);
+
+        console.log(`Found ${existingItemIndices.length} existing items with same equipment_id`);
 
         // Check if the incoming item has a serial number
         const hasSerialNumber = !!normalizedEquipment.serial_number;
 
         if (hasSerialNumber) {
-            // Item HAS serial number: check if ANY item with the same equipment_id already exists
-            if (existingItemIndex !== -1) {
-                console.log(`Equipment with ID ${equipmentId} (with serial number) already represented in session, skipping duplicate.`);
+            console.log(`Equipment has serial number: ${normalizedEquipment.serial_number}`);
+
+            // Check if there is a duplicate with the same serial number
+            const duplicateIndex = existingItemIndices.findIndex(
+                ({item}) => item.serial_number === normalizedEquipment.serial_number
+            );
+
+            if (duplicateIndex !== -1) {
+                console.log(`Duplicate found with same serial number: ${normalizedEquipment.serial_number}`);
+                console.groupEnd();
                 return 'duplicate';
             }
-            // No existing item with this ID found, add the new one
+
+            // Add as new item, even if there are items with same equipment_id but different serial numbers
             sessionItems.push(normalizedEquipment);
+            console.log('Added new equipment with serial number');
         } else {
-            // Item does NOT have serial number: check if an item with the same equipment_id exists to increment quantity
-            if (existingItemIndex !== -1) {
-                // Found existing item, increment quantity
-                const existingItem = sessionItems[existingItemIndex];
-                existingItem.quantity = (existingItem.quantity || 1) + 1; // Increment quantity
-                console.log(`Incremented quantity for equipment ID ${equipmentId} (no serial number). New quantity: ${existingItem.quantity}`);
+            console.log('Equipment does not have a serial number');
+
+            // For equipment without a serial number, find an item also without a serial number
+            const existingWithoutSerial = existingItemIndices.find(
+                ({item}) => !item.serial_number
+            );
+
+            if (existingWithoutSerial) {
+                // Increment quantity for existing item without serial number
+                const existingItem = existingWithoutSerial.item;
+                existingItem.quantity = (existingItem.quantity || 1) + 1;
+                console.log(`Incremented quantity for equipment without serial. New quantity: ${existingItem.quantity}`);
             } else {
-                // No existing item found, add the new one (with quantity: 1)
+                // No existing item without serial number found, add the new one
                 sessionItems.push(normalizedEquipment);
+                console.log('Added new equipment without serial number');
             }
         }
 
         // Update session metadata and save
         sessions[sessionIndex].updatedAt = new Date().toISOString();
-        sessions[sessionIndex].syncedWithServer = false; // Mark as unsynced after modification
-        sessions[sessionIndex].dirty = true; // Mark session as dirty
+        sessions[sessionIndex].syncedWithServer = false;
+        sessions[sessionIndex].dirty = true;
         this._saveSessions(sessions);
 
-        // Return the updated session (important for UI updates)
+        console.log('Session updated successfully');
+        console.groupEnd();
+
+        // Return updated session
         return sessions[sessionIndex];
     },
 
@@ -222,10 +253,25 @@ window.scanStorage = {
 
         if (sessionIndex === -1) return undefined;
 
+        console.log(`Removing equipment ID ${equipmentId} from session ${sessionId}`);
+        console.log('Before removing:', sessions[sessionIndex].items);
+
+        const equipmentIdNum = Number(equipmentId);
+
         // Filter equipment, checking both id and equipment_id fields
-        sessions[sessionIndex].items = sessions[sessionIndex].items.filter(
-            item => item.equipment_id !== equipmentId && item.id !== equipmentId
-        );
+        sessions[sessionIndex].items = sessions[sessionIndex].items.filter(item => {
+            const itemEquipmentId = Number(item.equipment_id);
+            const itemId = Number(item.id || 0);
+            const keepItem = itemEquipmentId !== equipmentIdNum && itemId !== equipmentIdNum;
+
+            if (!keepItem) {
+                console.log(`Found matching item to remove:`, item);
+            }
+
+            return keepItem;
+        });
+
+        console.log('After removing:', sessions[sessionIndex].items);
 
         sessions[sessionIndex].updatedAt = new Date().toISOString();
         sessions[sessionIndex].syncedWithServer = false;
@@ -398,11 +444,33 @@ window.scanStorage = {
         if (!session) return undefined;
 
         try {
+            console.group('[SyncSession]');
+            console.log('Синхронизация сессии:', session.name);
+
             const payload = this.sessionToServerFormat(sessionId);
-            const response = await window.api.post('/scan-sessions', payload);
-            return this.updateServerSync(sessionId, response.id);
+            let response;
+
+            if (session.serverSessionId) {
+                console.log(`Обновляем существующую сессию на сервере с ID: ${session.serverSessionId}`);
+                response = await api.put(`/scan-sessions/${session.serverSessionId}`, payload);
+                console.log('Сессия успешно обновлена на сервере:', response);
+
+                const updatedSession = this.markSessionAsClean(sessionId);
+                console.groupEnd();
+                return updatedSession;
+            } else {
+                console.log('Создаем новую сессию на сервере');
+                response = await api.post('/scan-sessions', payload);
+                console.log('Новая сессия создана на сервере с ID:', response.id);
+
+                const updatedSession = this.updateServerSync(sessionId, response.id);
+                this.markSessionAsClean(sessionId);
+                console.groupEnd();
+                return updatedSession;
+            }
         } catch (error) {
             console.error('Error syncing session with server:', error);
+            console.groupEnd();
             throw error;
         }
     },
@@ -410,15 +478,74 @@ window.scanStorage = {
     /**
      * Import session from server
      * @param {string} serverSessionId - Server session ID
-     * @returns {Promise<ScanSession|undefined>} - Imported session or undefined
+     * @returns {Promise<ScanSession|undefined>}
      */
     async importSessionFromServer(serverSessionId) {
+        if (typeof api === 'undefined') {
+            console.error('API object not available');
+            throw new Error('API недоступен. Пожалуйста, обновите страницу.');
+        }
+
         try {
-            const serverSession = await window.api.get(`/scan-sessions/${serverSessionId}`);
-            // ... rest of the implementation ...
+            console.group('Импорт сессии с сервера');
+            console.log(`Fetching session ${serverSessionId} from server...`);
+            const serverSession = await api.get(`/scan-sessions/${serverSessionId}`);
+
+            console.log('Получены данные сессии с сервера:', serverSession);
+
+            if (!serverSession) {
+                console.error('Сервер вернул пустой ответ');
+                throw new Error('Сервер вернул пустой ответ');
+            }
+
+            if (!serverSession.id) {
+                console.error('Некорректные данные сессии (отсутствует ID):', serverSession);
+                throw new Error('Полученные данные сессии некорректны (отсутствует ID)');
+            }
+
+            if (!Array.isArray(serverSession.items)) {
+                console.error('Некорректные данные сессии (items не является массивом):', serverSession);
+                throw new Error('Полученные данные сессии некорректны (ошибка в формате items)');
+            }
+
+            // Create a new local session with data from server
+            const localSessionId = `imported_${Date.now()}`;
+            const newSession = {
+                id: localSessionId,
+                name: serverSession.name || 'Импортированная сессия',
+                items: serverSession.items.map(item => ({
+                    equipment_id: Number(item.equipment_id),
+                    barcode: item.barcode || '',
+                    name: item.name || 'Неизвестное оборудование',
+                    quantity: item.quantity || 1,
+                    serial_number: item.serial_number || null,
+                    category_id: item.category_id || null,
+                    category_name: item.category_name || 'Без категории'
+                })),
+                updatedAt: new Date().toISOString(),
+                syncedWithServer: true,
+                serverSessionId: serverSession.id,
+                dirty: false
+            };
+
+            console.log('Создана локальная сессия:', newSession);
+
+            // Save new session to storage
+            const sessions = this.getSessions();
+            sessions.push(newSession);
+            this._saveSessions(sessions);
+
+            // Set as active session
+            this.setActiveSession(localSessionId);
+
+            console.log('Локальная сессия сохранена и установлена активной');
+            console.groupEnd();
+            return newSession;
+
         } catch (error) {
             console.error('Error importing session from server:', error);
-            throw error;
+            console.groupEnd();
+            throw new Error(`Ошибка импорта сессии: ${error.message || 'Неизвестная ошибка'}`);
         }
     },
 
@@ -429,7 +556,7 @@ window.scanStorage = {
      */
     async getUserSessionsFromServer(userId) {
         try {
-            return await window.api.get('/scan-sessions/', { user_id: userId });
+            return await api.get('/scan-sessions/', { user_id: userId });
         } catch (error) {
             console.error('Error getting user sessions from server:', error);
             throw error;
@@ -443,7 +570,7 @@ window.scanStorage = {
      */
     async deleteSessionFromServer(serverSessionId) {
         try {
-            await window.api.delete(`/scan-sessions/${serverSessionId}`);
+            await api.delete(`/scan-sessions/${serverSessionId}`);
         } catch (error) {
             console.error('Error deleting session from server:', error);
             throw error;
