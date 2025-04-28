@@ -58,7 +58,8 @@ const bookingManager = {
         bookingsTableBody: document.getElementById('bookingsTableBody'),
         resetButton: document.getElementById('resetFilter'),
         clientSearchSpinner: document.getElementById('client-search-spinner'),
-        equipmentSearchSpinner: document.getElementById('equipment-search-spinner')
+        equipmentSearchSpinner: document.getElementById('equipment-search-spinner'),
+        activeOnlyCheckbox: document.getElementById('activeOnlyCheckbox'),
     },
 
     // State
@@ -80,7 +81,7 @@ const bookingManager = {
 
     // Initialize filter form functionality
     initFilterForm() {
-        const { form, dateRangeInput, resetButton, clientSearchInput, equipmentSearchInput, paymentStatusSelect } = this.elements;
+        const { form, dateRangeInput, resetButton, clientSearchInput, equipmentSearchInput, paymentStatusSelect, activeOnlyCheckbox } = this.elements;
 
         if (!form) return;
 
@@ -173,6 +174,9 @@ const bookingManager = {
         if (paymentStatusSelect) {
             paymentStatusSelect.addEventListener('change', () => this.loadBookings());
         }
+        if (activeOnlyCheckbox) {
+            activeOnlyCheckbox.addEventListener('change', () => this.loadBookings());
+        }
         // --- End Interactive filtering listeners ---
 
     },
@@ -193,7 +197,7 @@ const bookingManager = {
 
     // Get API parameters from the current form state
     getApiParams() {
-        const { clientSearchInput, equipmentSearchInput, paymentStatusSelect, dateRangeInput } = this.elements;
+        const { clientSearchInput, equipmentSearchInput, paymentStatusSelect, dateRangeInput, activeOnlyCheckbox } = this.elements;
         const params = {};
 
         const clientQuery = clientSearchInput ? clientSearchInput.value.trim() : '';
@@ -221,6 +225,13 @@ const bookingManager = {
                      params.end_date = endDate.toISOString();
                 }
             }
+        }
+
+        // Add active_only parameter
+        if (activeOnlyCheckbox && activeOnlyCheckbox.checked) {
+            params.active_only = 'true';
+        } else {
+            params.active_only = 'false';
         }
 
         console.log('API Params:', params);
@@ -313,6 +324,29 @@ const bookingManager = {
                 paymentStatusText = booking.payment_status === 'CANCELLED' ? 'Отменен' : 'Возвращен';
             }
 
+            // Booking Status Badge
+            let statusBadgeClass = 'bg-info';
+            let statusText = booking.status || booking.booking_status;
+            if (statusText === 'COMPLETED') {
+                statusBadgeClass = 'bg-success';
+                statusText = 'Завершено';
+            } else if (statusText === 'CANCELLED') {
+                statusBadgeClass = 'bg-secondary';
+                statusText = 'Отменено';
+            } else if (statusText === 'ACTIVE') {
+                statusBadgeClass = 'bg-primary';
+                statusText = 'Активно';
+            } else if (statusText === 'CONFIRMED') {
+                statusBadgeClass = 'bg-warning text-dark';
+                statusText = 'Подтверждено';
+            } else if (statusText === 'PENDING') {
+                statusBadgeClass = 'bg-light text-dark';
+                statusText = 'Ожидает';
+            } else if (statusText === 'OVERDUE') {
+                statusBadgeClass = 'bg-danger';
+                statusText = 'Просрочено';
+            }
+
             // Project link or N/A
             const projectLink = booking.project_id && booking.project_name
                 ? `<a href="/projects/${booking.project_id}">${booking.project_name}</a>`
@@ -331,6 +365,7 @@ const bookingManager = {
                 </td>
                 <td>${period}</td>
                 <td>${projectLink}</td>
+                <td><span class="badge ${statusBadgeClass}">${statusText}</span></td>
                 <td><span class="badge ${paymentBadgeClass}">${paymentStatusText}</span></td>
             `;
             bookingsTableBody.appendChild(row);
