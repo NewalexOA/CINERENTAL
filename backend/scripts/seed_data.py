@@ -415,9 +415,9 @@ async def seed_data() -> None:
                 logger.info('Successfully created all clients')
 
                 # Create bookings
-                logger.info('Creating bookings...')
-                await create_bookings(session)
-                logger.info('Successfully created all bookings')
+                # logger.info('Creating bookings...')
+                # await create_bookings(session)
+                # logger.info('Successfully created all bookings')
 
                 logger.info('Database seeding completed successfully')
             except Exception as e:
