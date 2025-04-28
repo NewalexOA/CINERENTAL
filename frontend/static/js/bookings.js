@@ -274,7 +274,7 @@ const bookingManager = {
             this.renderBookings(bookings);
         } catch (error) {
             console.error('Error loading bookings:', error);
-            bookingsTableBody.innerHTML = '<tr><td colspan="7" class="text-center text-danger">Ошибка загрузки бронирований.</td></tr>';
+            bookingsTableBody.innerHTML = '<tr><td colspan="5" class="text-center text-danger">Ошибка загрузки бронирований.</td></tr>';
             showToast('Ошибка загрузки бронирований', 'danger');
         } finally {
             // Hide spinners
@@ -290,7 +290,7 @@ const bookingManager = {
         bookingsTableBody.innerHTML = '';
 
         if (!bookings || bookings.length === 0) {
-            bookingsTableBody.innerHTML = '<tr><td colspan="7" class="text-center">Бронирования не найдены.</td></tr>';
+            bookingsTableBody.innerHTML = '<tr><td colspan="5" class="text-center">Бронирования не найдены.</td></tr>';
             return;
         }
 
@@ -322,8 +322,7 @@ const bookingManager = {
             const quantityDisplay = booking.quantity > 1 ? ` (x${booking.quantity})` : '';
 
             row.innerHTML = `
-                <td>${booking.id}</td>
-                <td><a href="/clients/${booking.client_id}">${booking.client_name || 'N/A'}</a></td>
+                <td><a href="/clients/${booking.client_id}">${booking.client_name || 'Не указан'}</a></td>
                 <td>
                     <div>
                         <a href="/equipment/${booking.equipment_id}">${booking.equipment_name || 'N/A'}</a>${quantityDisplay}
@@ -333,14 +332,6 @@ const bookingManager = {
                 <td>${period}</td>
                 <td>${projectLink}</td>
                 <td><span class="badge ${paymentBadgeClass}">${paymentStatusText}</span></td>
-                <td>
-                    <button class="btn btn-sm btn-outline-primary me-1" title="Редактировать" onclick="editBooking(${booking.id})">
-                        <i class="fas fa-edit"></i>
-                    </button>
-                    <button class="btn btn-sm btn-outline-danger" title="Удалить" onclick="confirmDeleteBooking(${booking.id})">
-                        <i class="fas fa-trash-alt"></i>
-                    </button>
-                </td>
             `;
             bookingsTableBody.appendChild(row);
         });
@@ -397,107 +388,3 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(() => clearInterval(checkEquipmentLoaded), 5000);
     }
 });
-
-// Expose functions to global scope if needed for inline event handlers
-window.editBooking = async (id) => {
-    try {
-        const response = await fetch(`/api/v1/bookings/${id}`);
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        const booking = await response.json();
-
-        const modal = document.getElementById('editBookingModal');
-        if (!modal) {
-            throw new Error('Edit booking modal not found');
-        }
-
-        modal.querySelector('#editBookingId').value = booking.id;
-        modal.querySelector('#editClientName').textContent = booking.client_name;
-        modal.querySelector('#editEquipmentName').textContent = booking.equipment_name;
-
-        const periodInput = modal.querySelector('#editBookingPeriod');
-        $(periodInput).daterangepicker({
-            autoUpdateInput: false,
-            locale: {
-                cancelLabel: 'Очистить',
-                applyLabel: 'Применить',
-                format: 'DD.MM.YYYY',
-                separator: ' - ',
-                daysOfWeek: moment.weekdaysMin(),
-                monthNames: moment.monthsShort(),
-                firstDay: 1
-            },
-            startDate: moment(booking.start_date),
-            endDate: moment(booking.end_date)
-        });
-
-        $(periodInput).val(
-            moment(booking.start_date).format('DD.MM.YYYY') + ' - ' +
-            moment(booking.end_date).format('DD.MM.YYYY')
-        );
-
-        const saveButton = modal.querySelector('#saveBookingChanges');
-        const saveHandler = async () => {
-            try {
-                const dates = $(periodInput).data('daterangepicker');
-                if (!dates || !dates.startDate || !dates.endDate) {
-                    showToast('Пожалуйста, выберите период бронирования', 'warning');
-                    return;
-                }
-
-                const updateData = {
-                    start_date: dates.startDate.format('YYYY-MM-DDTHH:mm:ss'),
-                    end_date: dates.endDate.format('YYYY-MM-DDTHH:mm:ss')
-                };
-
-                const updateResponse = await fetch(`/api/v1/bookings/${id}`, {
-                    method: 'PATCH',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(updateData)
-                });
-
-                if (!updateResponse.ok) {
-                    throw new Error(`HTTP error! status: ${updateResponse.status}`);
-                }
-
-                showToast('Бронирование успешно обновлено', 'success');
-                bootstrap.Modal.getInstance(modal).hide();
-                bookingManager.loadBookings();
-            } catch (error) {
-                console.error('Error updating booking:', error);
-                showToast('Ошибка при обновлении бронирования', 'danger');
-            }
-        };
-
-        saveButton.removeEventListener('click', saveHandler);
-        saveButton.addEventListener('click', saveHandler);
-
-        new bootstrap.Modal(modal).show();
-    } catch (error) {
-        console.error('Error loading booking details:', error);
-        showToast('Ошибка при загрузке данных бронирования', 'danger');
-    }
-};
-
-window.confirmDeleteBooking = async (id) => {
-    if (confirm('Вы уверены, что хотите удалить это бронирование?')) {
-        try {
-            const response = await fetch(`/api/v1/bookings/${id}`, {
-                method: 'DELETE'
-            });
-
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-
-            showToast('Бронирование успешно удалено', 'success');
-            bookingManager.loadBookings();
-        } catch (error) {
-            console.error('Error deleting booking:', error);
-            showToast('Ошибка при удалении бронирования', 'danger');
-        }
-    }
-};

@@ -26,16 +26,19 @@ from backend.exceptions.state_exceptions import StateError
 from backend.exceptions.validation_exceptions import ValidationError
 from backend.models import BookingStatus, PaymentStatus
 from backend.schemas import BookingCreate, BookingResponse, BookingUpdate
-from backend.services import BookingService
+from backend.services import BookingService, ClientService
 
 bookings_router: APIRouter = APIRouter()
 
 
-def _booking_to_response(booking_obj: Any) -> BookingResponse:
+async def _booking_to_response(
+    booking_obj: Any, db: Optional[AsyncSession] = None
+) -> BookingResponse:
     """Convert Booking model to BookingResponse schema.
 
     Args:
         booking_obj: Booking model instance or BookingWithDetails
+        db: Database session (optional)
 
     Returns:
         BookingResponse schema
@@ -46,25 +49,64 @@ def _booking_to_response(booking_obj: Any) -> BookingResponse:
             if hasattr(booking_obj.equipment, 'name'):
                 equipment_name = booking_obj.equipment.name
             else:
-                equipment_name = booking_obj.equipment.name
+                equipment_name = f'Equipment {booking_obj.equipment_id}'
 
+    # Get client name
     client_name = ''
-    if hasattr(booking_obj, 'client') and booking_obj.client is not None:
-        client_name = booking_obj.client.name
 
-    if client_name == '' and hasattr(booking_obj, 'client_id'):
-        client_name = f'Client {booking_obj.client_id}'
+    # Check if we can get client name from client object
+    if hasattr(booking_obj, 'client') and booking_obj.client is not None:
+        logger.debug('Client object found for booking {}', booking_obj.id)
+        if hasattr(booking_obj.client, 'name'):
+            client_name = booking_obj.client.name
+            logger.debug('Client name from client object: {}', client_name)
+
+    # If name not found, check for explicit client_name
+    if (
+        not client_name
+        and hasattr(booking_obj, 'client_name')
+        and booking_obj.client_name
+    ):
+        client_name = booking_obj.client_name
+        logger.debug('Client name from booking_obj.client_name: {}', client_name)
+
+    # If still no name and we have DB session, fetch client from database
+    if not client_name and hasattr(booking_obj, 'client_id') and db is not None:
+        # Fetch client from database
+        client_id = booking_obj.client_id
+        logger.debug('Getting client name from database for client_id: {}', client_id)
+
+        try:
+            client_service = ClientService(db)
+            client = await client_service.get_client(client_id)
+            if client:
+                client_name = client.name
+                logger.debug('Found client name from database: {}', client_name)
+        except Exception as e:
+            logger.error('Error fetching client from database: {}', str(e))
+
+    # If still no name, use ID-based name as last resort
+    if not client_name and hasattr(booking_obj, 'client_id'):
+        client_id = booking_obj.client_id
+        client_name = f'Client {client_id}'
+        logger.debug('Using fallback client name: {}', client_name)
 
     project_name = None
     if hasattr(booking_obj, 'project') and booking_obj.project is not None:
         if hasattr(booking_obj.project, 'name'):
             project_name = booking_obj.project.name
-            logger.debug(f'Found project for booking {booking_obj.id}: {project_name}')
+            # Log project found
+            log_msg = 'Found project for booking {}: {}'
+            logger.debug(log_msg, booking_obj.id, project_name)
         else:
-            project_name = booking_obj.project.name
-            logger.debug(f'Found project for booking {booking_obj.id}: {project_name}')
+            project_name = f'Project {booking_obj.project_id}'
+            logger.debug(
+                'Found project without name for booking {}: {}',
+                booking_obj.id,
+                project_name,
+            )
     else:
-        logger.debug(f'No project found for booking {booking_obj.id}')
+        logger.debug('No project found for booking {}', booking_obj.id)
 
     return BookingResponse(
         id=booking_obj.id,
@@ -125,7 +167,7 @@ async def create_booking(
         )
 
         # Create a proper BookingResponse object with all required fields
-        response = _booking_to_response(booking_obj)
+        response = await _booking_to_response(booking_obj, db)
 
         return response
     except AvailabilityError as e:
@@ -218,7 +260,7 @@ async def get_bookings(
             try:
                 logger.debug('Converting booking {} to response', booking_obj.id)
                 # Ensure related objects are loaded or handle potential None values
-                response = _booking_to_response(booking_obj)
+                response = await _booking_to_response(booking_obj, db)
                 responses.append(response)
                 logger.debug('Successfully converted booking {}', booking_obj.id)
             except Exception as e:
@@ -248,13 +290,10 @@ async def get_booking(
     """Get booking by ID."""
     booking_service = BookingService(db)
     try:
-        # Use get_booking to include soft-deleted records
-        booking_obj = await booking_service.get_booking(booking_id)
+        booking_obj = await booking_service.get_booking_with_relations(booking_id)
 
         # Convert Booking object to BookingResponse
-        # Note: _booking_to_response might need adjustment if it relies on
-        # eagerly loaded relations from get_booking_with_relations
-        response = _booking_to_response(booking_obj)
+        response = await _booking_to_response(booking_obj, db)
 
         return response
     except NotFoundError:
@@ -318,7 +357,7 @@ async def update_booking(
             )
 
         # Convert Booking object to BookingResponse
-        response = _booking_to_response(booking_obj)
+        response = await _booking_to_response(booking_obj, db)
 
         return response
     except NotFoundError:
@@ -408,7 +447,7 @@ async def update_booking_status(
         )
 
         # Convert Booking object to BookingResponse
-        response = _booking_to_response(booking_obj)
+        response = await _booking_to_response(booking_obj, db)
 
         return response
     except NotFoundError:
@@ -477,7 +516,7 @@ async def update_payment_status(
         )
 
         # Convert Booking object to BookingResponse
-        response = _booking_to_response(booking_obj)
+        response = await _booking_to_response(booking_obj, db)
 
         return response
     except NotFoundError:
@@ -548,7 +587,7 @@ async def patch_booking(
             )
 
         # Convert Booking object to BookingResponse
-        response = _booking_to_response(booking_obj)
+        response = await _booking_to_response(booking_obj, db)
 
         return response
     except NotFoundError:

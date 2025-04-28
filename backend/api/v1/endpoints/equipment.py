@@ -649,7 +649,7 @@ async def get_equipment_bookings(
         bookings = await booking_service.get_by_equipment(equipment_id)
 
         # Use the helper function to correctly format the response
-        return [_booking_to_response(booking) for booking in bookings]
+        return [await _booking_to_response(booking) for booking in bookings]
     except NotFoundError as e:
         raise HTTPException(
             status_code=http_status.HTTP_404_NOT_FOUND,
