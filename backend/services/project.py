@@ -17,7 +17,7 @@ from backend.constants.log_messages import (
 )
 from backend.exceptions import DateError, NotFoundError, ValidationError
 from backend.exceptions.messages import DateErrorMessages, ProjectErrorMessages
-from backend.models import Project, ProjectStatus
+from backend.models import BookingStatus, Project, ProjectStatus
 from backend.repositories import BookingRepository, ClientRepository, ProjectRepository
 from backend.services.booking import BookingService
 
@@ -537,6 +537,22 @@ class ProjectService:
                     ProjectErrorMessages.PROJECT_NOT_FOUND.format(project_id),
                     details={'project_id': project_id},
                 )
+
+            # Cascade completion and soft deletion of bookings if project is completed
+            if status == ProjectStatus.COMPLETED:
+                project_with_bookings = await self.repository.get_by_id_with_bookings(
+                    project_id
+                )
+                if project_with_bookings and project_with_bookings.bookings:
+                    for booking in project_with_bookings.bookings:
+                        if booking.booking_status not in [
+                            BookingStatus.COMPLETED,
+                            BookingStatus.CANCELLED,
+                        ]:
+                            booking.booking_status = BookingStatus.COMPLETED
+                            await self.booking_repository.update(booking)
+                        await self.booking_repository.soft_delete(booking.id)
+                await self.db_session.flush()
 
             # Get client name for response
             client = await self.client_repository.get(updated_project.client_id)

@@ -785,6 +785,7 @@ class BookingService:
         payment_status: Optional[PaymentStatus] = None,
         start_date: Optional[datetime] = None,
         end_date: Optional[datetime] = None,
+        active_only: bool = False,
         # Add skip/limit if pagination handled here, otherwise in repository
     ) -> List[BookingWithDetails]:
         """Get bookings based on various filter criteria.
@@ -797,14 +798,12 @@ class BookingService:
             payment_status: Filter by payment status.
             start_date: Filter by start date.
             end_date: Filter by end date.
+            active_only: Return only active bookings.
 
         Returns:
             List of filtered bookings with details and relations loaded.
         """
-        # Delegate filtering logic to the repository
-        # Ensure the repository method loads necessary relations
-        # (client, equipment, project)
-        return await self.repository.get_filtered(
+        bookings = await self.repository.get_filtered(
             query=query,
             equipment_query=equipment_query,
             equipment_id=equipment_id,
@@ -812,5 +811,13 @@ class BookingService:
             payment_status=payment_status,
             start_date=start_date,
             end_date=end_date,
-            # Pass skip/limit if needed
         )
+        if active_only:
+            active_statuses = [
+                BookingStatus.PENDING,
+                BookingStatus.CONFIRMED,
+                BookingStatus.ACTIVE,
+                BookingStatus.OVERDUE,
+            ]
+            bookings = [b for b in bookings if b.status in active_statuses]
+        return bookings

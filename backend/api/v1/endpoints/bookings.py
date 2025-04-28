@@ -214,6 +214,7 @@ async def get_bookings(
     end_date: Optional[datetime] = Query(
         None, description='Filter by end date (inclusive)'
     ),
+    active_only: bool = Query(False, description='Return only active bookings'),
     skip: int = Query(0, description='Number of records to skip'),
     limit: int = Query(100, description='Maximum number of records to return'),
 ) -> List[BookingResponse]:
@@ -228,6 +229,7 @@ async def get_bookings(
         payment_status: Filter by payment status
         start_date: Filter by start date
         end_date: Filter by end date
+        active_only: Return only active bookings
         skip: Number of records to skip
         limit: Maximum number of records to return
 
@@ -249,6 +251,17 @@ async def get_bookings(
             end_date=end_date,
         )
         logger.debug(f'Service returned {len(filtered_bookings)} bookings')
+
+        if active_only:
+            active_statuses = [
+                BookingStatus.PENDING,
+                BookingStatus.CONFIRMED,
+                BookingStatus.ACTIVE,
+                BookingStatus.OVERDUE,
+            ]
+            filtered_bookings = [
+                b for b in filtered_bookings if b.status in active_statuses
+            ]
 
         # Apply pagination (consider moving to service/repo)
         paginated_bookings = filtered_bookings[skip : skip + limit]
