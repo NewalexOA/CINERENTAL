@@ -2,6 +2,49 @@
 
 This document lists notable changes to the ACT-Rental application.
 
+## v0.5.1-alpha.1
+
+### Schemas & Data Layer
+
+- **BookingWithDetails Schema**: Added optional `client_name` field for direct client name reference in booking details.
+- Improved schema documentation for clarity and maintainability.
+
+### Repository Logic
+
+- Implemented robust extraction of client names from related objects in the booking repository.
+- Standardized logger formatting using `{}` placeholders.
+- Fixed type issues by separating model validation and field assignment.
+- Enhanced error handling for client data processing.
+
+### API Refactor
+
+- Converted `_booking_to_response` function to async for improved scalability.
+- Added database lookup for missing client names and implemented cascading fallback system.
+- Updated all relevant API endpoints to use the new async logic.
+- Improved logging with a standardized format.
+
+### Frontend & UI
+
+- Simplified bookings table by removing the ID column and action buttons.
+- Improved client name display with better fallback text.
+- Enhanced error handling in the projects UI.
+- Added fallback to `sessionStorage` when `scanStorage` is unavailable.
+- Fixed column count in empty state messages for better UI consistency.
+
+### Templates & Scanning Tools
+
+- Updated bookings list template to match the new table structure.
+- Improved equipment list and projects templates for better error handling and display.
+- Fixed error handling and session management in `scan-storage.js`.
+- Enhanced `scanner.js` with improved error recovery.
+
+### Other Improvements
+
+- All changes tested and verified for compatibility with existing database instances.
+- No database migration required for this update.
+- No new dependencies introduced in this release.
+- Updated frontend assets and improved asset management.
+
 ## v0.5.0-alpha.4
 
 ### Projects & UI
