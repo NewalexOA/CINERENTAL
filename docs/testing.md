@@ -90,7 +90,7 @@ docker compose -f docker-compose.test.yml up -d
 
 ```bash
 # Запуск конкретного теста
-docker compose -f docker-compose.test.yml run --rm test tests/unit/test_equipment_service.py::test_create_equipment
+docker compose -f docker-compose.test.yml run --rm test pytests/unit/test_equipment_service.py::test_create_equipment
 
 # Запуск всех тестов в директории
 docker compose -f docker-compose.test.yml run --rm test pytest tests/
