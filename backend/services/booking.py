@@ -12,7 +12,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.exceptions import (
     AvailabilityError,
-    BusinessError,
     DateError,
     DurationError,
     NotFoundError,
@@ -525,58 +524,14 @@ class BookingService:
 
         Raises:
             NotFoundError: If booking not found
-            StatusTransitionError: If status transition is not allowed
-            StateError: If booking cannot be activated without payment
+            StateError: If equipment is not available for booking
         """
         booking = await self.repository.get(booking_id)
         if not booking:
             raise NotFoundError(f'Booking with ID {booking_id} not found')
 
-        # Check if status transition is allowed
-        allowed_transitions: dict[BookingStatus, list[BookingStatus]] = {
-            BookingStatus.PENDING: [
-                BookingStatus.CONFIRMED,
-                BookingStatus.CANCELLED,
-                BookingStatus.ACTIVE,
-                BookingStatus.COMPLETED,
-            ],
-            BookingStatus.CONFIRMED: [
-                BookingStatus.ACTIVE,
-                BookingStatus.CANCELLED,
-                BookingStatus.COMPLETED,
-            ],
-            BookingStatus.ACTIVE: [
-                BookingStatus.COMPLETED,
-                BookingStatus.OVERDUE,
-                BookingStatus.CANCELLED,
-            ],
-            BookingStatus.COMPLETED: [],
-            BookingStatus.CANCELLED: [],
-            BookingStatus.OVERDUE: [
-                BookingStatus.CANCELLED,
-            ],
-        }
-
-        current_status = booking.booking_status
-        if current_status not in allowed_transitions:
-            allowed = []
-        else:
-            allowed = allowed_transitions[current_status]
-
-        if new_status not in allowed:
-            msg = f'Invalid status transition from {current_status} to {new_status}'
-            raise StatusTransitionError(
-                msg,
-                current_status=current_status,
-                new_status=new_status,
-            )
-
-        # Additional validation for specific transitions
+        # Only check equipment availability for ACTIVE status
         if new_status == BookingStatus.ACTIVE:
-            # Check payment status
-            if booking.payment_status != PaymentStatus.PAID:
-                raise StateError('Cannot activate booking without payment')
-
             # Check equipment availability
             equipment = await self.equipment_repository.get(booking.equipment_id)
             if not equipment or equipment.status not in [
@@ -595,19 +550,9 @@ class BookingService:
             if not is_available:
                 raise StateError('Equipment is already booked for this period')
 
-        # Check payment status for COMPLETED transition
-        elif new_status == BookingStatus.COMPLETED:
-            if booking.payment_status != PaymentStatus.PAID:
-                raise BusinessError(
-                    'Cannot complete booking without payment',
-                    details={
-                        'booking_id': booking.id,
-                        'payment_status': booking.payment_status,
-                    },
-                )
-
         booking.booking_status = new_status
 
+        # Update equipment status
         if new_status == BookingStatus.ACTIVE:
             await self.equipment_service.change_status(
                 booking.equipment_id,
@@ -620,7 +565,6 @@ class BookingService:
             )
 
         updated_booking = await self.repository.update(booking)
-
         return await self.get_booking_with_relations(updated_booking.id)
 
     async def change_payment_status(
@@ -785,6 +729,7 @@ class BookingService:
         payment_status: Optional[PaymentStatus] = None,
         start_date: Optional[datetime] = None,
         end_date: Optional[datetime] = None,
+        active_only: bool = False,
         # Add skip/limit if pagination handled here, otherwise in repository
     ) -> List[BookingWithDetails]:
         """Get bookings based on various filter criteria.
@@ -797,14 +742,12 @@ class BookingService:
             payment_status: Filter by payment status.
             start_date: Filter by start date.
             end_date: Filter by end date.
+            active_only: Return only active bookings.
 
         Returns:
             List of filtered bookings with details and relations loaded.
         """
-        # Delegate filtering logic to the repository
-        # Ensure the repository method loads necessary relations
-        # (client, equipment, project)
-        return await self.repository.get_filtered(
+        result: List[BookingWithDetails] = await self.repository.get_filtered(
             query=query,
             equipment_query=equipment_query,
             equipment_id=equipment_id,
@@ -812,5 +755,19 @@ class BookingService:
             payment_status=payment_status,
             start_date=start_date,
             end_date=end_date,
-            # Pass skip/limit if needed
         )
+
+        if active_only:
+            active_statuses = [
+                BookingStatus.PENDING,
+                BookingStatus.CONFIRMED,
+                BookingStatus.ACTIVE,
+                BookingStatus.OVERDUE,
+            ]
+            filtered_result: List[BookingWithDetails] = []
+            for booking in result:
+                status: BookingStatus = getattr(booking, 'booking_status')
+                if status in active_statuses:
+                    filtered_result.append(booking)
+            return filtered_result
+        return result

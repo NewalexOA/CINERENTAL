@@ -357,7 +357,7 @@ async def get_client_bookings(
                 'project_id': booking.project_id,
                 'start_date': booking.start_date,
                 'end_date': booking.end_date,
-                'status': booking.status,
+                'booking_status': booking.booking_status,
                 'payment_status': booking.payment_status,
                 'total_amount': booking.total_amount,
                 'equipment_name': equipment_name,

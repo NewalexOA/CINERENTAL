@@ -83,8 +83,12 @@
 <div class="row">
     <div class="col-12">
         <div class="card">
-            <div class="card-header">
+            <div class="card-header d-flex justify-content-between align-items-center">
                 <h5 class="card-title mb-0">Список бронирований</h5>
+                <div>
+                    <input type="checkbox" id="activeOnlyCheckbox" class="form-check-input" checked>
+                    <label for="activeOnlyCheckbox" class="form-check-label ms-2">Только активные</label>
+                </div>
             </div>
             <div class="card-body">
                 <div class="table-responsive">
@@ -95,11 +99,12 @@
                                 <th>Оборудование</th>
                                 <th>Период</th>
                                 <th>Проект</th>
+                                <th>Статус</th>
                                 <th>Оплата</th>
                             </tr>
                         </thead>
                         <tbody id="bookingsTableBody">
-                            <!-- Заполняется через API -->
+                            <!-- Filled via API -->
                         </tbody>
                     </table>
                 </div>
@@ -122,7 +127,7 @@
                         <div class="col-md-6">
                             <label class="form-label">Клиент</label>
                             <select class="form-select" name="client_id" required>
-                                <!-- Заполняется через API -->
+                                <!-- Filled via API -->
                             </select>
                         </div>
                         <div class="col-md-6">
@@ -134,7 +139,7 @@
                     <div class="mb-3">
                         <label class="form-label">Оборудование</label>
                         <div id="equipmentSelection">
-                            <!-- Заполняется через API -->
+                            <!-- Filled via API -->
                         </div>
                     </div>
                     <div class="mb-3">

@@ -65,7 +65,7 @@ class BookingUpdate(BaseModel):
     end_date: Optional[datetime] = Field(
         None, title='End Date', description='End date of the booking'
     )
-    status: Optional[BookingStatus] = Field(
+    booking_status: Optional[BookingStatus] = Field(
         None, title='Status', description='Booking status'
     )
     payment_status: Optional[PaymentStatus] = Field(
@@ -92,7 +92,7 @@ class BookingResponse(BookingBase):
     """Booking response schema."""
 
     id: int
-    status: BookingStatus
+    booking_status: BookingStatus
     payment_status: PaymentStatus
     created_at: datetime
     updated_at: datetime
@@ -118,7 +118,7 @@ class BookingWithDetails(BookingBase):
         id: Booking ID
         created_at: Creation timestamp
         updated_at: Last update timestamp
-        status: Current booking status
+        booking_status: Current booking status
         payment_status: Current payment status
         equipment: Equipment details
         project: Project details if associated
@@ -128,7 +128,7 @@ class BookingWithDetails(BookingBase):
     id: int
     created_at: datetime
     updated_at: datetime
-    status: BookingStatus
+    booking_status: BookingStatus
     payment_status: PaymentStatus
     equipment: Optional[EquipmentResponse] = None
     project: Optional[ProjectBase] = None
