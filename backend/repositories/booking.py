@@ -155,7 +155,7 @@ class BookingRepository(BaseRepository[Booking]):
                 quantity=booking.quantity,
                 created_at=booking.created_at,
                 updated_at=booking.updated_at,
-                status=booking.booking_status,
+                booking_status=booking.booking_status,
                 payment_status=booking.payment_status,
                 equipment=equipment_data,
                 project=project_data,
@@ -516,7 +516,15 @@ class BookingRepository(BaseRepository[Booking]):
             List of filtered bookings with details
         """
         try:
-            logger.debug('Starting get_filtered method')
+            logger.debug('Starting get_filtered method with parameters:')
+            logger.debug('  booking_status: {}', booking_status)
+            logger.debug('  payment_status: {}', payment_status)
+            logger.debug('  equipment_id: {}', equipment_id)
+            logger.debug('  query: {}', query)
+            logger.debug('  equipment_query: {}', equipment_query)
+            logger.debug('  start_date: {}', start_date)
+            logger.debug('  end_date: {}', end_date)
+
             stmt = (
                 select(Booking)
                 .options(
@@ -556,7 +564,9 @@ class BookingRepository(BaseRepository[Booking]):
                 stmt = stmt.where(Booking.equipment_id == equipment_id)
 
             if booking_status is not None:
+                logger.debug('Applying filter for booking_status: {}', booking_status)
                 stmt = stmt.where(Booking.booking_status == booking_status)
+                logger.debug('SQL condition added for booking_status')
 
             if payment_status is not None:
                 stmt = stmt.where(Booking.payment_status == payment_status)
@@ -581,6 +591,13 @@ class BookingRepository(BaseRepository[Booking]):
             result = await self.session.execute(stmt)
             bookings = result.unique().scalars().all()
             logger.debug(f'Found {len(bookings)} bookings')
+
+            if booking_status is not None:
+                logger.debug(
+                    'Bookings after filtering by status {}: {}',
+                    booking_status,
+                    [(b.id, b.booking_status) for b in bookings],
+                )
 
             booking_details = []
             for booking in bookings:
@@ -666,7 +683,7 @@ class BookingRepository(BaseRepository[Booking]):
                         'quantity': booking.quantity,
                         'created_at': booking.created_at,
                         'updated_at': booking.updated_at,
-                        'status': booking.booking_status,
+                        'booking_status': booking.booking_status,
                         'payment_status': booking.payment_status,
                         'equipment': equipment_data,
                         'project': project_data,
@@ -686,6 +703,12 @@ class BookingRepository(BaseRepository[Booking]):
                     continue
 
             logger.debug(f'Returning {len(booking_details)} booking details')
+            if booking_status is not None:
+                logger.debug(
+                    'Final booking details with status {}: {}',
+                    booking_status,
+                    [(b.id, b.booking_status) for b in booking_details],
+                )
             return booking_details
 
         except Exception as e:
