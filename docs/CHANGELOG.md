@@ -2,6 +2,50 @@
 
 This document lists notable changes to the ACT-Rental application.
 
+## v0.6.0-alpha.1
+
+### B2B Booking Model
+
+- Removed all booking status transition restrictions to support flexible B2B workflows.
+- Decoupled payment status from booking status changes, allowing post-rental payments.
+- Renamed ambiguous "status" field to "booking_status" for better code clarity.
+- Implemented consistent field naming across schemas, repositories, and API endpoints.
+- Added cascade booking completion when projects are marked as completed.
+
+### API Enhancements
+
+- Added "active_only" query parameter to bookings API for filtering active bookings.
+- Fixed quantity and serial number handling in project bookings API responses.
+- Added proper equipment data retrieval in ProjectService for accurate display.
+- Enhanced error logging and traceability throughout booking and project APIs.
+- Updated backend category repository and services for better maintainability.
+
+### Frontend Architecture
+
+- Migrated all JavaScript files to ES6 module syntax for improved code organization.
+- Created a dedicated utils directory for common helper modules (api.js, common.js).
+- Updated all HTML templates to use module imports with type="module".
+- Removed outdated inline scripts and non-modular code for cleaner templates.
+- Implemented consistent event handling patterns across all components.
+
+### UI/UX Improvements
+
+- Added "Active Only" checkbox to bookings table for filtering active bookings.
+- Added and reordered status/payment columns in booking tables for better visibility.
+- Implemented stable equipment sorting in project view to prevent UI jumps after updates.
+- Added confirmation dialogs for equipment quantity changes and removals with clear messages.
+- Created new equipment management zone in project view for direct equipment addition.
+- Added equipment searching and barcode scanning capabilities to project view.
+- Implemented real-time equipment availability checking with date selection.
+
+### Other Improvements
+
+- Updated all tests to reflect the new B2B booking model and status transition logic.
+- Commented out verbose booking creation logs in seed data for cleaner development.
+- Improved documentation with typo fixes and clearer test command examples.
+- Enhanced equipment quantity display logic for both serialized and non-serialized items.
+- Refactored category management with modular architecture for better maintainability.
+
 ## v0.5.1-alpha.1
 
 ### Schemas & Data Layer
