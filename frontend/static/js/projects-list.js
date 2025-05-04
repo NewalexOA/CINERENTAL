@@ -8,6 +8,10 @@
  * - Rendering project cards
  */
 
+// Import API client
+import { api } from './utils/api.js';
+import { showToast, DATERANGEPICKER_LOCALE } from './utils/common.js';
+
 // Pagination state
 let currentPage = 1;
 let totalPages = 1;

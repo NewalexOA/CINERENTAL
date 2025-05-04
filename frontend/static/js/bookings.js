@@ -1,5 +1,8 @@
 // Bookings management for ACT-RENTAL
 
+// Import utilities
+import { debounce } from './utils/common.js';
+
 // Check if the showToast function already exists
 if (typeof window.showToast !== 'function') {
     // Toast notification

@@ -136,10 +136,10 @@
 <script src="{{ url_for('static', path='js/projects-common.js') }}"></script>
 
 {% if request.path == '/projects' or request.path == '/projects/' %}
-<script src="{{ url_for('static', path='js/projects-list.js') }}"></script>
+<script src="{{ url_for('static', path='js/projects-list.js') }}" type="module"></script>
 {% elif request.path.startswith('/projects/') and not '/new' in request.path %}
-<script src="{{ url_for('static', path='js/projects-view.js') }}"></script>
+<script src="{{ url_for('static', path='js/projects-view.js') }}" type="module"></script>
 {% elif '/projects/new' in request.path %}
-<script src="{{ url_for('static', path='js/projects-new.js') }}"></script>
+<script src="{{ url_for('static', path='js/projects-new.js') }}" type="module"></script>
 {% endif %}
 {% endblock %}
