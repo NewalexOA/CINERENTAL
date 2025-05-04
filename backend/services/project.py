@@ -19,6 +19,7 @@ from backend.exceptions import DateError, NotFoundError, ValidationError
 from backend.exceptions.messages import DateErrorMessages, ProjectErrorMessages
 from backend.models import BookingStatus, Project, ProjectStatus
 from backend.repositories import BookingRepository, ClientRepository, ProjectRepository
+from backend.repositories.equipment import EquipmentRepository
 from backend.services.booking import BookingService
 
 
@@ -808,14 +809,24 @@ class ProjectService:
         bookings_count = len(project_with_bookings.bookings)
         log.debug(BookingLogMessages.BOOKING_FORMATTING, bookings_count)
 
+        # Prepare equipment repository for direct lookup
+        equipment_repo = EquipmentRepository(self.db_session)
+
         for booking in project_with_bookings.bookings:
+            # Get equipment information
+            equipment = None
+            if booking.equipment_id:
+                equipment = await equipment_repo.get(booking.equipment_id)
+
             # Process equipment data
             equipment_data = {}
             equipment_name = 'Неизвестно'
+            serial_number = None
+            quantity = booking.quantity or 1
 
-            if booking.equipment:
-                equipment = booking.equipment
+            if equipment:
                 equipment_name = equipment.name
+                serial_number = equipment.serial_number
 
                 # Get category information
                 category_name = 'Не указана'
@@ -846,7 +857,7 @@ class ProjectService:
             elif hasattr(booking, 'status') and booking.status:
                 booking_status = booking.status.value
             else:
-                booking_status = 'DRAFT'  # Default value
+                booking_status = 'DRAFT'
 
             # Convert dates to ISO format for JSON serialization
             has_start = booking.start_date is not None
@@ -868,7 +879,9 @@ class ProjectService:
                 'status': booking_status,
                 'equipment': equipment_data,
                 'equipment_name': equipment_name,
-                'quantity': booking.quantity,
+                'equipment_id': booking.equipment_id,
+                'serial_number': serial_number,
+                'quantity': quantity,
                 'payment_status': payment_status,
             }
             result.append(booking_dict)

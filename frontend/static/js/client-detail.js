@@ -3,6 +3,9 @@
  * Handles loading and displaying client bookings, editing client details, and deletion
  */
 
+import { api } from './utils/api.js';
+import { showToast } from './utils/common.js';
+
 document.addEventListener('DOMContentLoaded', function() {
     // Get client ID from URL
     const clientId = window.location.pathname.split('/').pop();

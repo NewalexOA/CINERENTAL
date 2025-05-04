@@ -3,6 +3,9 @@
  * Handles displaying, searching, and interacting with client records
  */
 
+import { api } from './utils/api.js';
+import { showToast } from './utils/common.js';
+
 // Global variables
 let currentView = 'list'; // 'grid' or 'list' - default view is 'list'
 let allClients = [];

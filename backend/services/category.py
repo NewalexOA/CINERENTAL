@@ -229,6 +229,7 @@ class CategoryService:
         category = await self.get_category(category_id)
         if not category:
             raise ValueError(f'Category with ID {category_id} not found')
+
         return await self.repository.get_children(category.id)
 
     async def get_categories_with_equipment_count(
