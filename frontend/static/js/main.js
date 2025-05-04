@@ -1,116 +1,14 @@
 // Main JavaScript for rental equipment management system
-
-// Constants
-const API_BASE_URL = '/api/v1';
+import { formatDate, showToast, debounce, formatCurrency, validateForm, initDateRangePicker } from './utils/common.js';
+import { api } from './utils/api.js';
 
 // Global API configuration
 window.API_CONFIG = {
     user_id: document.querySelector('meta[name="user-id"]')?.content || '1'
 };
 
-// Utility functions
-const debounce = (func, wait, immediate) => {
-    let timeout;
-    return function executedFunction() {
-        const context = this;
-        const args = arguments;
-        const later = function() {
-            timeout = null;
-            if (!immediate) func.apply(context, args);
-        };
-        const callNow = immediate && !timeout;
-        clearTimeout(timeout);
-        timeout = setTimeout(later, wait);
-        if (callNow) func.apply(context, args);
-    };
-};
-
-const formatDate = (date) => {
-    // Use Moment.js for reliable date formatting
-    const m = moment(date); // moment() handles various input formats
-    if (!m.isValid()) {
-        // Return placeholder or empty string if date is invalid
-        return 'Неверная дата';
-    }
-    // Format using Moment's format function (LL is locale-aware long date format like 'September 4, 1986')
-    // Using 'L' for a shorter format like '09/04/1986' or customize as needed 'DD.MM.YYYY'
-    return m.format('DD.MM.YYYY'); // Example: 10.04.2025
-    // Or use toLocaleDateString if preferred, but moment parsing helps reliability
-    // return m.toDate().toLocaleDateString('ru-RU', {
-    //     year: 'numeric',
-    //     month: 'long',
-    //     day: 'numeric'
-    // });
-};
-
-const formatDateTime = (datetime) => {
-    return new Date(datetime).toLocaleString('ru-RU', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-    });
-};
-
-const formatCurrency = (amount) => {
-    // Ensure amount is a number, handle potential null/undefined/non-numeric input
-    const numericAmount = Number(amount);
-    if (isNaN(numericAmount)) {
-        console.warn('Invalid amount passed to formatCurrency:', amount);
-        // Return a placeholder or default value for non-numeric input
-        return '0 ₽'; // Default to 0 ₽ for invalid inputs
-    }
-    return new Intl.NumberFormat('ru-RU', {
-        style: 'currency',
-        currency: 'RUB',
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0
-    }).format(numericAmount);
-};
-
-// Toast notification function
-window.showToast = function(message, type = 'info') {
-    const toastContainer = document.getElementById('toastContainer');
-
-    if (!toastContainer) {
-        // Create toast container if it doesn't exis
-        const container = document.createElement('div');
-        container.id = 'toastContainer';
-        container.className = 'toast-container position-fixed bottom-0 end-0 p-3';
-        document.body.appendChild(container);
-    }
-
-    // Create toast elemen
-    const toastId = `toast-${Date.now()}`;
-    const toast = document.createElement('div');
-    toast.className = `toast align-items-center text-white bg-${type} border-0`;
-    toast.id = toastId;
-    toast.setAttribute('role', 'alert');
-    toast.setAttribute('aria-live', 'assertive');
-    toast.setAttribute('aria-atomic', 'true');
-
-    toast.innerHTML = `
-        <div class="d-flex">
-            <div class="toast-body">
-                ${message}
-            </div>
-            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
-        </div>
-    `;
-
-    // Add toast to container
-    document.getElementById('toastContainer').appendChild(toast);
-
-    // Initialize and show toast with shorter delay
-    const bsToast = new bootstrap.Toast(toast, { delay: 3000 }); // Add delay option (3 seconds)
-    bsToast.show();
-
-    // Remove toast after it's hidden
-    toast.addEventListener('hidden.bs.toast', () => {
-        toast.remove();
-    });
-};
+// Make showToast available globally
+window.showToast = showToast;
 
 // Loader functions
 window.loaderCounter = 0; // Counter of active operations using loader
@@ -188,235 +86,6 @@ window.resetLoader = function() {
     }
 
     console.log('Loader state has been forcibly reset');
-};
-
-// API calls
-const api = {
-    async get(endpoint, params = null) {
-        const startTime = performance.now();
-        let url = endpoint;
-
-        // Build query string if params are provided
-        if (params && Object.keys(params).length > 0) {
-            const queryString = new URLSearchParams(params).toString();
-            // Append query string correctly
-            url += (url.includes('?') ? '&' : '?') + queryString;
-        }
-
-        // Optional: Decide if trailing slash is needed for non-parameterized requests
-        // For consistency, maybe remove the auto-adding slash logic here
-        // if backend handles both with/without slash, or ensure it's correct.
-        // Let's remove the automatic slash adding for now, assuming backend is flexible or we provide correct endpoints.
-        // const finalUrl = url.includes('?') || url.endsWith('/') ? url : `${url}/`; // Old logic
-        const finalUrl = url; // Simplified
-
-        try {
-            console.group(`%c[API] GET Request: ${API_BASE_URL}${finalUrl}`, 'color: #2196F3; font-weight: bold;');
-            console.log('Time:', new Date().toISOString());
-
-            const response = await fetch(`${API_BASE_URL}${finalUrl}`);
-            console.log('Status:', response.status, response.statusText);
-            console.log('Headers:', Object.fromEntries(response.headers.entries()));
-
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({ detail: 'Ошибка сети' }));
-                console.error('Error Data:', errorData);
-                const error = new Error(errorData.detail || 'Ошибка при получении данных');
-                error.response = { data: errorData, status: response.status };
-                throw error;
-            }
-
-            const data = await response.json();
-            const endTime = performance.now();
-            console.log('Response Data:', data);
-            console.log(`Request took ${(endTime - startTime).toFixed(2)}ms`);
-            console.groupEnd();
-            return data;
-        } catch (error) {
-            console.error('Error Details:', error);
-            console.groupEnd();
-            // Re-throw a more informative error if possible
-            const errorMessage = error.response?.data?.detail || error.message || 'Ошибка при получении данных';
-            throw new Error(errorMessage);
-        }
-    },
-
-    async post(endpoint, data) {
-        const startTime = performance.now();
-        try {
-            console.group(`%c[API] POST Request: ${API_BASE_URL}${endpoint}`, 'color: #4CAF50; font-weight: bold;');
-            console.log('Time:', new Date().toISOString());
-            console.log('Request Data:', data);
-
-            // Convert decimal fields to strings to avoid precision issues
-            if (data && typeof data === 'object') {
-                Object.keys(data).forEach(key => {
-                    if (typeof data[key] === 'number' && key.includes('cost')) {
-                        data[key] = String(data[key]);
-                    }
-                });
-            }
-
-            const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(data)
-            });
-
-            console.log('Status:', response.status, response.statusText);
-            console.log('Headers:', Object.fromEntries(response.headers.entries()));
-
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({ detail: 'Ошибка сети' }));
-                console.error('Error Data:', errorData);
-                const error = new Error(errorData.detail || 'Ошибка при отправке данных');
-                error.response = { data: errorData, status: response.status };
-                throw error;
-            }
-
-            const responseData = await response.json();
-            const endTime = performance.now();
-            console.log('Response Data:', responseData);
-            console.log(`Request took ${(endTime - startTime).toFixed(2)}ms`);
-            console.groupEnd();
-            return responseData;
-        } catch (error) {
-            console.error('Error Data:', error.response?.data);
-            // Log detailed validation errors if available (FastAPI)
-            let errorMessage = 'Произошла ошибка при выполнении запроса'; // Default message
-            if (error.response?.data?.detail) {
-                if (Array.isArray(error.response.data.detail)) {
-                    // Handle FastAPI validation errors (list of objects)
-                    console.error('Validation Errors:', error.response.data.detail);
-                    errorMessage = error.response.data.detail.map(err => `${err.loc ? err.loc.join(' -> ') : 'field'}: ${err.msg}`).join('; \n');
-                } else if (typeof error.response.data.detail === 'string') {
-                    // Handle simple string detail messages
-                    console.error('Error Detail:', error.response.data.detail);
-                    errorMessage = error.response.data.detail;
-                } else {
-                     console.error('Unknown Error Detail Format:', error.response.data.detail);
-                     errorMessage = JSON.stringify(error.response.data.detail);
-                }
-            } else if (error.message) {
-                errorMessage = error.message;
-            }
-            console.error('User-facing Error Message:', errorMessage); // Log the message shown to user
-            console.error('Full Error Object:', error); // Log the full error object for debugging
-            throw new Error(errorMessage); // Throw the specific message
-        }
-    },
-
-    async put(endpoint, data) {
-        const startTime = performance.now();
-        try {
-            console.group(`%c[API] PUT Request: ${API_BASE_URL}${endpoint}`, 'color: #FF9800; font-weight: bold;');
-            console.log('Time:', new Date().toISOString());
-            console.log('Request Data:', data);
-
-            const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(data)
-            });
-
-            console.log('Status:', response.status, response.statusText);
-            console.log('Headers:', Object.fromEntries(response.headers.entries()));
-
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({ detail: 'Ошибка сети' }));
-                console.error('Error Data:', errorData);
-                const error = new Error(errorData.detail || 'Ошибка при обновлении данных');
-                error.response = { data: errorData, status: response.status };
-                throw error;
-            }
-
-            const responseData = await response.json();
-            const endTime = performance.now();
-            console.log('Response Data:', responseData);
-            console.log(`Request took ${(endTime - startTime).toFixed(2)}ms`);
-            console.groupEnd();
-            return responseData;
-        } catch (error) {
-            console.error('Error Details:', error);
-            console.groupEnd();
-            throw error;
-        }
-    },
-
-    async delete(endpoint) {
-        const startTime = performance.now();
-        try {
-            console.group(`%c[API] DELETE Request: ${API_BASE_URL}${endpoint}`, 'color: #F44336; font-weight: bold;');
-            console.log('Time:', new Date().toISOString());
-
-            const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-                method: 'DELETE'
-            });
-
-            console.log('Status:', response.status, response.statusText);
-            console.log('Headers:', Object.fromEntries(response.headers.entries()));
-
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({ detail: 'Ошибка сети' }));
-                console.error('Error Data:', errorData);
-                const error = new Error(errorData.detail || 'Ошибка при удалении данных');
-                error.response = { data: errorData, status: response.status };
-                throw error;
-            }
-
-            const endTime = performance.now();
-            console.log(`Request took ${(endTime - startTime).toFixed(2)}ms`);
-            console.groupEnd();
-            return true;
-        } catch (error) {
-            console.error('Error Details:', error);
-            console.groupEnd();
-            throw error;
-        }
-    },
-
-    async patch(endpoint, data) {
-        const startTime = performance.now();
-        try {
-            console.group(`%c[API] PATCH Request: ${API_BASE_URL}${endpoint}`, 'color: #9C27B0; font-weight: bold;');
-            console.log('Time:', new Date().toISOString());
-            console.log('Request Data:', data);
-
-            const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-                method: 'PATCH',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(data)
-            });
-
-            console.log('Status:', response.status, response.statusText);
-            console.log('Headers:', Object.fromEntries(response.headers.entries()));
-
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({ detail: 'Ошибка сети' }));
-                console.error('Error Data:', errorData);
-                const error = new Error(errorData.detail || 'Ошибка при частичном обновлении данных');
-                error.response = { data: errorData, status: response.status };
-                throw error;
-            }
-
-            const responseData = await response.json();
-            const endTime = performance.now();
-            console.log('Response Data:', responseData);
-            console.log(`Request took ${(endTime - startTime).toFixed(2)}ms`);
-            console.groupEnd();
-            return responseData;
-        } catch (error) {
-            console.error('Error Details:', error);
-            console.groupEnd();
-            throw error;
-        }
-    }
 };
 
 /**
@@ -602,42 +271,6 @@ class BarcodeScanner {
 // Export BarcodeScanner to global scope
 window.BarcodeScanner = BarcodeScanner;
 
-// Form validation
-const validateForm = (formElement) => {
-    const form = formElement instanceof HTMLFormElement ? formElement : document.querySelector(formElement);
-    if (!form) return false;
-
-    form.classList.add('was-validated');
-    return form.checkValidity();
-};
-
-// Date range picker initialization
-const initDateRangePicker = (element, options = {}) => {
-    const defaultOptions = {
-        locale: {
-            format: 'DD.MM.YYYY',
-            separator: ' - ',
-            applyLabel: 'Применить',
-            cancelLabel: 'Отмена',
-            fromLabel: 'С',
-            toLabel: 'По',
-            customRangeLabel: 'Произвольный',
-            weekLabel: 'Н',
-            daysOfWeek: ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'],
-            monthNames: [
-                'Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
-                'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'
-            ],
-            firstDay: 1
-        },
-        opens: 'right',
-        autoApply: true,
-        ...options
-    };
-
-    return new daterangepicker(element, defaultOptions);
-};
-
 // Equipment search functionality
 window.equipmentSearch = {
     init() {
@@ -692,7 +325,7 @@ window.equipmentSearch = {
                 const newUrl = params.toString() ? `?${params.toString()}` : window.location.pathname;
                 window.history.replaceState({}, '', newUrl);
 
-                console.log('Request URL:', API_BASE_URL + url);
+                console.log('Request URL:', url);
                 const results = await api.get(url);
                 console.log('Results:', results);
 
@@ -797,11 +430,11 @@ function renderClientCard(client) {
 
     const clientId = escapeHTML(client.id);
     const clientName = escapeHTML(client.name);
-    const clientCompany = escapeHTML(client.company || ''); // Handle null/undefined company
-    const clientEmail = escapeHTML(client.email || ''); // Handle null/undefined email
-    const clientPhone = escapeHTML(client.phone || ''); // Handle null/undefined phone
-    const bookingsCount = escapeHTML(client.bookings_count !== undefined ? client.bookings_count : '0'); // Handle undefined counts
-    const createdAt = client.created_at ? formatDate(client.created_at) : 'N/A'; // Use existing formatDate
+    const clientCompany = escapeHTML(client.company || '');
+    const clientEmail = escapeHTML(client.email || '');
+    const clientPhone = escapeHTML(client.phone || '');
+    const bookingsCount = escapeHTML(client.bookings_count !== undefined ? client.bookings_count : '0');
+    const createdAt = client.created_at ? formatDate(client.created_at) : 'N/A';
 
     return `
         <div class="col-md-6 col-lg-4">
@@ -865,9 +498,9 @@ function renderClientCard(client) {
 // Function to update the client list display
 function updateClientDisplay(clients) {
     const clientsGrid = document.getElementById('clientsGrid');
-    if (!clientsGrid) return; // Exit if grid element not found
+    if (!clientsGrid) return;
 
-    clientsGrid.innerHTML = ''; // Clear current clients
+    clientsGrid.innerHTML = '';
 
     if (clients && clients.length > 0) {
         clients.forEach(client => {
@@ -903,8 +536,8 @@ async function fetchAndUpdateClients() {
             params.query = query;
         }
         if (sortBy) {
-            params.sort_by = sortBy; // Parameter name expected by backend
-            params.sort_order = sortOrder; // Parameter name expected by backend
+            params.sort_by = sortBy;
+            params.sort_order = sortOrder;
         }
         // Add pagination params if needed: params.skip = ..., params.limit = ...
 
@@ -913,8 +546,8 @@ async function fetchAndUpdateClients() {
         if (Array.isArray(clients)) {
             updateClientDisplay(clients);
         } else {
-             console.error('Invalid response format from API:', clients);
-             updateClientDisplay([]);
+            console.error('Invalid response format from API:', clients);
+            updateClientDisplay([]);
         }
     } catch (error) {
         console.error('Error fetching clients:', error);
@@ -938,16 +571,15 @@ function initClientControls() {
 
     if (!searchInput || !sortOrderSelect || !clientsGrid) {
         console.log('Client search/sort controls or grid not found on this page.');
-        return; // Exit if elements aren't present
+        return;
     }
 
     console.log('Initializing client controls (search & sort)...');
 
-    // Use debounce for fetching/updating
     const debouncedFetch = debounce(fetchAndUpdateClients, 300);
 
     searchInput.addEventListener('input', debouncedFetch);
-    sortOrderSelect.addEventListener('change', fetchAndUpdateClients); // No debounce needed on change
+    sortOrderSelect.addEventListener('change', fetchAndUpdateClients);
 
     // Initial load (optional, if you want to load based on initial state)
      fetchAndUpdateClients(); // Load based on initial input/select values

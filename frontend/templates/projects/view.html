@@ -14,7 +14,7 @@
     </div>
 </div>
 
-<!-- Скрытые поля для данных проекта -->
+<!-- Hidden fields for project data -->
 <input type="hidden" id="project-id" value="{{ project_data.id }}">
 <input type="hidden" id="project-name" value="{{ project_data.name|e }}">
 <input type="hidden" id="project-client-id" value="{{ project_data.client_id }}">
@@ -77,11 +77,143 @@
             </div>
         </div>
 
+<!-- Equipment Add Zone -->
+<div class="card mb-4" id="equipmentAddZone" style="display: none;">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="card-title mb-0">Добавление оборудования</h5>
+        <button class="btn-close" id="closeAddZoneBtn"></button>
+    </div>
+    <div class="card-body">
+            <!-- Tabs for choosing a method -->
+        <ul class="nav nav-pills nav-justified mb-3" id="addEquipmentTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="scanner-tab" data-bs-toggle="pill" data-bs-target="#scanner-content" type="button" role="tab">
+                    <i class="fas fa-barcode"></i> Сканер
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="catalog-tab" data-bs-toggle="pill" data-bs-target="#catalog-content" type="button" role="tab">
+                    <i class="fas fa-list"></i> Из каталога
+                </button>
+            </li>
+        </ul>
+
+        <!-- Tab content -->
+        <div class="tab-content" id="addEquipmentTabsContent">
+            <!-- Scanner tab -->
+            <div class="tab-pane fade show active" id="scanner-content" role="tabpanel">
+                <div class="row mb-3">
+                    <div class="col-md-8">
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="barcodeInput" placeholder="Введите или отсканируйте штрих-код">
+                            <button class="btn btn-primary" id="searchBarcodeBtn">
+                                <i class="fas fa-search"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <button class="btn btn-secondary w-100" id="toggleScannerBtn">
+                            <i class="fas fa-camera"></i> Камера
+                        </button>
+                    </div>
+                </div>
+
+                <div id="scannerContainer" class="d-none mb-3">
+                    <div class="video-container">
+                        <div id="scannerVideo"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Catalog tab -->
+            <div class="tab-pane fade" id="catalog-content" role="tabpanel">
+                <div class="row mb-3">
+                    <div class="col-md-8">
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="catalogSearchInput" placeholder="Поиск по названию">
+                            <button class="btn btn-primary" id="searchCatalogBtn">
+                                <i class="fas fa-search"></i>
+                            </button>
+                            <div id="search-spinner" class="d-none">
+                                <div class="spinner-border spinner-border-sm text-primary" role="status">
+                                    <span class="visually-hidden">Загрузка...</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <select class="form-select" id="categoryFilter">
+                            <option value="">Все категории</option>
+                            <!-- Will be filled through JavaScript -->
+                        </select>
+                    </div>
+                </div>
+
+                <div id="catalogResults" class="mb-3">
+                    <!-- Here will be search results -->
+                </div>
+
+                <!-- Pagination -->
+                <nav id="catalogPagination" class="d-none">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div class="text-muted">
+                            Показано <span id="catalogPageStart">1</span>-<span id="catalogPageEnd">20</span> из <span id="catalogTotalItems">0</span>
+                        </div>
+                        <ul class="pagination mb-0">
+                            <li class="page-item">
+                                <a class="page-link" href="#" id="catalogPrevPage">
+                                    <i class="fas fa-chevron-left"></i>
+                                </a>
+                            </li>
+                            <li class="page-item">
+                                <a class="page-link" href="#" id="catalogNextPage">
+                                    <i class="fas fa-chevron-right"></i>
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                </nav>
+            </div>
+        </div>
+
+        <!-- Common elements (dates, quantity, search results) -->
+        <div class="card mb-3">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-5">
+                        <label>Период бронирования:</label>
+                        <input type="text" class="form-control" id="newBookingPeriod" placeholder="Выберите период">
+                    </div>
+                    <div class="col-md-3">
+                        <label>Количество:</label>
+                        <input type="number" class="form-control" id="newBookingQuantity" value="1" min="1">
+                    </div>
+                    <div class="col-md-4">
+                        <label>&nbsp;</label>
+                        <button class="btn btn-success form-control" id="addToProjectBtn" disabled>
+                            <i class="fas fa-plus"></i> Добавить в проект
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="searchResults" class="mb-3">
+            <!-- Equipment search results -->
+        </div>
+    </div>
+</div>
+
         <!-- Equipment List -->
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h5 class="card-title mb-0">Оборудование в проекте</h5>
-                <div class="text-muted" id="equipmentCount">{{ project_data.bookings|length }} позиций</div>
+                <div class="d-flex align-items-center">
+                    <div class="text-muted me-3" id="equipmentCount">{{ project_data.bookings|length }} позиций</div>
+                    <button id="addEquipmentBtn" class="btn btn-sm btn-success">
+                        <i class="fas fa-plus"></i> Добавить позицию
+                    </button>
+                </div>
             </div>
             <div class="card-body">
                 <div class="table-responsive">
@@ -163,6 +295,47 @@
             </div>
         </div>
 
+        <!-- Equipment Details Card -->
+        <div class="card mb-4" id="equipmentDetailsCard" style="display: none;">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">Детали оборудования</h5>
+                <button class="btn-close" id="closeEquipmentDetailsBtn"></button>
+            </div>
+            <div class="card-body">
+                <div id="equipmentDetails">
+                    <div class="mb-3">
+                        <h5 id="selectedEquipmentName"></h5>
+                        <span class="badge bg-secondary" id="selectedEquipmentCategory"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <strong>Штрих-код:</strong>
+                            <span id="selectedEquipmentBarcode"></span>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center mb-1" id="selectedEquipmentSerialContainer">
+                            <strong>Серийный номер:</strong>
+                            <span id="selectedEquipmentSerial"></span>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <strong>Статус доступности:</strong>
+                            <span id="selectedEquipmentAvailability"></span>
+                        </div>
+                    </div>
+
+                    <div id="conflictsContainer" style="display: none;">
+                        <h6>Конфликты бронирования:</h6>
+                        <div id="conflictsList" class="list-group small">
+                            <!-- Conflicts list will be filled through JavaScript -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Notes -->
         <div class="card">
             <div class="card-header">
@@ -181,34 +354,36 @@
 </div>
 
 <!-- Edit Project Modal -->
-<div class="modal fade" id="editProjectModal" tabindex="-1">
+<div class="modal fade" id="editProjectModal" tabindex="-1" aria-labelledby="editProjectModalLabel">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Редактировать проект</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <h5 class="modal-title" id="editProjectModalLabel">Редактировать проект</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрыть"></button>
             </div>
             <div class="modal-body">
                 <form id="editProjectForm">
                     <div class="mb-3">
-                        <label class="form-label">Название</label>
-                        <input type="text" class="form-control" name="name" value="{{ project_data.name }}" required>
+                        <label class="form-label" for="edit-project-name">Название</label>
+                        <input type="text" class="form-control" id="edit-project-name" name="name" value="{{ project_data.name }}" required>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Клиент</label>
-                        <select name="client_id" class="form-control" data-client-id="{{ project_data.client_id }}">
+                        <label class="form-label" for="edit-project-client">Клиент</label>
+                        <select id="edit-project-client" name="client_id" class="form-control" data-client-id="{{ project_data.client_id }}">
                             <option value="">Выберите клиента</option>
                         </select>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Период проекта</label>
-                        <input type="text" class="form-control" name="project_dates"
+                        <label class="form-label" for="edit-project-dates">Период проекта</label>
+                        <input type="text" class="form-control" id="edit-project-dates" name="project_dates"
                                data-start-date="{{ project_data.start_date }}"
-                               data-end-date="{{ project_data.end_date }}" required>
+                               data-end-date="{{ project_data.end_date }}"
+                               value="{{ project_data.start_date|format_date }} - {{ project_data.end_date|format_date }}"
+                               required>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Описание</label>
-                        <textarea class="form-control" name="description" rows="3">{{ project_data.description or '' }}</textarea>
+                        <label class="form-label" for="edit-project-description">Описание</label>
+                        <textarea class="form-control" id="edit-project-description" name="description" rows="3">{{ project_data.description or '' }}</textarea>
                     </div>
                 </form>
             </div>
@@ -271,5 +446,6 @@
 
 {% block scripts %}
 <script src="{{ url_for('static', path='js/projects-common.js') }}"></script>
-<script src="{{ url_for('static', path='js/projects-view.js') }}"></script>
+<script src="{{ url_for('static', path='js/modules/print.js') }}"></script>
+<script src="{{ url_for('static', path='js/projects-view.js') }}" type="module"></script>
 {% endblock %}

@@ -4,6 +4,9 @@
     data-barcode="{{ equipment.barcode }}"
 > */}
 
+import { api } from './utils/api.js';
+import { showToast, formatDate, formatDateRange } from './utils/common.js';
+
 // Initialize equipment data from data attributes
 const scriptTag = document.getElementById('equipment-data'); // Get the dedicated script tag
 const EQUIPMENT_DATA = {
@@ -82,11 +85,14 @@ async function loadBookingHistory() {
                 ${bookings.map(booking => `
                     <a href="/bookings/${booking.id}" class="list-group-item list-group-item-action">
                         <div class="d-flex w-100 justify-content-between">
-                            <h6 class="mb-1">${booking.client.name}</h6>
+                            <h6 class="mb-1">${booking.client_name || 'Клиент не указан'}</h6>
                             <small class="text-muted">${formatDate(booking.start_date)}</small>
                         </div>
                         <p class="mb-1">${formatDateRange(booking.start_date, booking.end_date)}</p>
-                        <small class="text-${getStatusColor(booking.status)}">${booking.status}</small>
+                        <div class="d-flex justify-content-between">
+                            <small class="text-${getStatusColor(booking.booking_status)}">${booking.booking_status}</small>
+                            <small class="text-muted">${booking.project_name || 'Без проекта'}</small>
+                        </div>
                     </a>
                 `).join('')}
             </div>
@@ -247,9 +253,16 @@ document.getElementById('notesForm').addEventListener('submit', async (e) => {
 // Helper function for status colors
 function getStatusColor(status) {
     const colors = {
+        // Equipment statuses
         'AVAILABLE': 'success',
         'RENTED': 'warning',
-        'MAINTENANCE': 'danger'
+        'MAINTENANCE': 'danger',
+
+        // Booking statuses
+        'ACTIVE': 'primary',
+        'COMPLETED': 'success',
+        'CANCELLED': 'danger',
+        'PENDING': 'warning'
     };
     return colors[status] || 'secondary';
 }
@@ -378,3 +391,6 @@ function copyBarcode(barcode) {
         showToast('Ошибка при копировании', 'danger');
     });
 }
+
+// Export functions to global scope for onclick handlers
+window.copyBarcode = copyBarcode;

@@ -171,14 +171,18 @@ class CategoryRepository(BaseRepository[Category]):
         )
 
         # Get categories with equipment count
-        stmt = select(
-            Category,
-            func.coalesce(equipment_count.c.equipment_count, 0).label(
-                'equipment_count'
-            ),
-        ).outerjoin(
-            equipment_count,
-            Category.id == equipment_count.c.category_id,
+        stmt = (
+            select(
+                Category,
+                func.coalesce(equipment_count.c.equipment_count, 0).label(
+                    'equipment_count'
+                ),
+            )
+            .outerjoin(
+                equipment_count,
+                Category.id == equipment_count.c.category_id,
+            )
+            .where(Category.deleted_at.is_(None))
         )
 
         result = await self.session.execute(stmt)

@@ -220,5 +220,7 @@
         data-category-id="{{ equipment.category_id or '' }}" {# Handle potential None category #}
     data-barcode="{{ equipment.barcode }}"
     ></script>
-    <script src="{{ url_for('static', path='js/equipment-detail.js') }}"></script>
+    <script src="{{ url_for('static', path='js/utils/api.js') }}" type="module"></script>
+    <script src="{{ url_for('static', path='js/utils/common.js') }}" type="module"></script>
+    <script src="{{ url_for('static', path='js/equipment-detail.js') }}" type="module"></script>
 {% endblock %}

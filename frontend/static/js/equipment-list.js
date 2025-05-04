@@ -1,3 +1,6 @@
+// Import API client
+import { api } from './utils/api.js';
+
 // Load categories for add form
 async function loadCategories() {
     const formSelect = document.querySelector('select[name="category_id"]');
@@ -675,6 +678,21 @@ function addEquipmentToSession(sessionId) {
     }
 }
 
-// Initial setup moved inside DOMContentLoaded
-// Global function definitions (printBarcode, doPrintBarcode, addToScanSession, etc.) remain outside
-// to be accessible via onclick attributes.
+// Export functions to global scope for onclick handlers
+window.printBarcode = printBarcode;
+window.doPrintBarcode = doPrintBarcode;
+window.addToScanSession = addToScanSession;
+window.createSessionAndAddEquipment = createSessionAndAddEquipment;
+window.addEquipmentToActiveSession = addEquipmentToActiveSession;
+
+// Initialize equipment list when DOM is loaded
+document.addEventListener('DOMContentLoaded', () => {
+    // Setup event listeners
+    setupEventListeners();
+
+    // Load equipment data
+    loadEquipment();
+
+    // Load categories for the add form
+    loadCategories();
+});

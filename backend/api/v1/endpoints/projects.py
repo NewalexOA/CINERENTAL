@@ -122,15 +122,16 @@ async def get_project(
     """
     service = ProjectService(db)
     try:
-        project = await service.get_project(project_id, with_bookings=True)
+        project_dict = await service.get_project_as_dict(project_id)
 
-        # Ensure client data is loaded
-        await db.refresh(project, ['client'])
+        for booking in project_dict.get('bookings', []):
+            logger.debug(
+                f"API response booking: {booking.get('id')} "
+                f"equipment: {booking.get('equipment_name')} "
+                f"serial: {booking.get('serial_number')}"
+            )
 
-        # Create response with client data
-        response_data = {**project.__dict__, 'client_name': project.client.name}
-
-        return ProjectWithBookings.model_validate(response_data)
+        return ProjectWithBookings.model_validate(project_dict)
     except NotFoundError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
 

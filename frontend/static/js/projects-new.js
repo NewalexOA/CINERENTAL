@@ -8,6 +8,10 @@
  * - Form validation and submission
  */
 
+// Import API client
+import { api } from './utils/api.js';
+import { DATERANGEPICKER_LOCALE } from './utils/common.js';
+
 // State variables
 let selectedEquipment = [];
 let equipmentCatalog = [];
