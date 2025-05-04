@@ -109,10 +109,12 @@ class BookingInProject(BaseModel):
     id: int
     equipment_id: int
     equipment_name: str
+    serial_number: Optional[str] = None
     start_date: datetime
     end_date: datetime
     booking_status: str
     payment_status: str
+    quantity: int = 1
 
     model_config = ConfigDict(
         from_attributes=True,
