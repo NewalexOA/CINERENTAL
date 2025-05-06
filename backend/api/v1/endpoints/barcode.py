@@ -194,13 +194,6 @@ async def get_barcode_image(
     """
     service = BarcodeService(db)
 
-    # Validate barcode format
-    if not service.validate_barcode_format(barcode):
-        raise ValidationError(
-            'Invalid barcode format',
-            details={'barcode': barcode},
-        )
-
     # Generate barcode image
     image_data, content_type = service.generate_barcode_image(barcode, barcode_type)
     return Response(content=image_data, media_type=content_type)
