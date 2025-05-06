@@ -194,7 +194,7 @@ class BarcodeScanner {
      * @returns {boolean} True if valid
      */
     isValidBarcode(barcode) {
-        return barcode && barcode.length >= 3 && /^[A-Za-z0-9\-]+$/.test(barcode);
+        return barcode && barcode.length > 0;
     }
 
     /**

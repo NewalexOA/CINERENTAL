@@ -108,16 +108,6 @@ class EquipmentService:
 
         # Handle barcode generation or validation
         if custom_barcode:
-            # Validate provided barcode if validation is enabled
-            if (
-                validate_barcode_format
-                and not self.barcode_service.validate_barcode_format(custom_barcode)
-            ):
-                raise ValidationError(
-                    'Invalid barcode format',
-                    details={'barcode': custom_barcode},
-                )
-
             # Check for duplicate barcode
             existing = await self.repository.get_by_barcode(custom_barcode)
             if existing:
