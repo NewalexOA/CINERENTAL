@@ -1,23 +1,55 @@
 // Import API client
 import { api } from './utils/api.js';
+import { buildCategoryTree, renderCategoriesRecursive } from './utils/ui-helpers.js';
 
 // Load categories for add form
 async function loadCategories() {
     const formSelect = document.querySelector('select[name="category_id"]');
-    formSelect.innerHTML = '<option value="">Загрузка категорий...</option>';
-    formSelect.disabled = true;
+    const filterSelect = document.getElementById('categoryFilter');
+
+    if (formSelect) {
+        formSelect.innerHTML = '<option value="">Выберите категорию...</option>';
+        formSelect.disabled = true;
+    }
+    if (filterSelect) {
+        filterSelect.innerHTML = '<option value="">Загрузка категорий...</option>';
+        filterSelect.disabled = true;
+    }
 
     try {
-        const categories = await api.get('/categories'); // Assuming 'api' object is globally available
-        formSelect.innerHTML = categories.map(category =>
-            `<option value="${category.id}">${category.name}</option>`
-        ).join('');
+        const categories = await api.get('/categories');
+
+        // Build tree structure
+        const categoryTree = buildCategoryTree(categories);
+
+        // Populate "Add Equipment" modal select
+        if (formSelect) {
+            formSelect.innerHTML = '<option value="">Выберите категорию...</option>';
+            renderCategoriesRecursive(categoryTree, formSelect, 0);
+        }
+
+        // Populate filter select with tree structure
+        if (filterSelect) {
+            filterSelect.innerHTML = '<option value="">Все категории</option>';
+            renderCategoriesRecursive(categoryTree, filterSelect, 0);
+        }
+
     } catch (error) {
         console.error('Error loading categories:', error);
-        showToast('Ошибка при загрузке категорий', 'danger'); // Assuming 'showToast' is globally available
-        formSelect.innerHTML = '<option value="">Ошибка загрузки</option>';
+        if (typeof showToast === 'function') showToast('Ошибка при загрузке категорий', 'danger');
+        if (formSelect) {
+            formSelect.innerHTML = '<option value="">Ошибка загрузки</option>';
+        }
+        if (filterSelect) {
+            filterSelect.innerHTML = '<option value="">Ошибка загрузки</option>';
+        }
     } finally {
-        formSelect.disabled = false;
+        if (formSelect) {
+            formSelect.disabled = false;
+        }
+        if (filterSelect) {
+            filterSelect.disabled = false;
+        }
     }
 }
 
