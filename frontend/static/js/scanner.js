@@ -116,6 +116,8 @@ function updateSessionUI(session) {
     const sessionName = document.getElementById('sessionName');
     const itemCount = document.getElementById('itemCount');
     const itemsList = document.getElementById('sessionItemsList');
+    const noSessionItems = document.getElementById('noSessionItems');
+    const sessionEquipmentTable = document.getElementById('sessionEquipmentTable');
 
     if (!noActiveSessionMessage || !activeSessionInfo || !sessionName || !itemCount || !itemsList) {
         console.error('Required session UI elements not found');
@@ -133,19 +135,26 @@ function updateSessionUI(session) {
         itemsList.innerHTML = '';
 
         if (session.items.length === 0) {
-            itemsList.innerHTML = '<div class="text-center text-muted py-2">Нет отсканированного оборудования</div>';
+            if (noSessionItems) {
+                noSessionItems.classList.remove('d-none');
+            }
+            if (sessionEquipmentTable && sessionEquipmentTable.querySelector('table')) {
+                sessionEquipmentTable.querySelector('table').classList.add('d-none');
+            }
         } else {
             console.log('Updating session UI with items:', session.items);
 
-            // Render each item in the list
-            session.items.forEach(item => {
-                const itemElement = document.createElement('div');
-                itemElement.className = 'list-group-item list-group-item-action d-flex justify-content-between align-items-center';
+            if (noSessionItems) {
+                noSessionItems.classList.add('d-none');
+            }
+            if (sessionEquipmentTable && sessionEquipmentTable.querySelector('table')) {
+                sessionEquipmentTable.querySelector('table').classList.remove('d-none');
+            }
 
-                // Determine if the item has a serial number
+            // Render each item in the table
+            session.items.forEach(item => {
                 const hasSerialNumber = !!item.serial_number;
                 const quantity = item.quantity || 1;
-                const quantityDisplay = !hasSerialNumber && quantity > 1 ? ` (x${quantity})` : '';
 
                 // Define buttons based on whether the item has a serial number
                 let buttonsHtml;
@@ -189,17 +198,23 @@ function updateSessionUI(session) {
                     `;
                 }
 
-                itemElement.innerHTML = `
-                    <div style="flex-grow: 1; margin-right: 10px;">
-                        <h6 class="mb-0">${item.name}${quantityDisplay}</h6>
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>
+                        <div>${item.name}</div>
                         ${hasSerialNumber ? `<small class="text-muted d-block">S/N: ${item.serial_number}</small>` : ''}
-                    </div>
-                    ${buttonsHtml}
+                    </td>
+                    <td class="text-center">
+                        ${quantity}
+                    </td>
+                    <td class="text-center">
+                        ${buttonsHtml}
+                    </td>
                 `;
-                itemsList.appendChild(itemElement);
+                itemsList.appendChild(row);
             });
 
-            // Add event listeners AFTER updating innerHTML
+            // Add event listeners AFTER updating the items
             attachItemButtonListeners(session.id);
         }
     } else {
@@ -311,13 +326,14 @@ function showLoadSessionModal() {
         localSessionsList.innerHTML = '';
         localSessions.forEach(session => {
             const lastUpdate = new Date(session.updatedAt).toLocaleString();
+            const totalItems = session.items.reduce((sum, item) => sum + (item.quantity || 1), 0);
             const sessionElement = document.createElement('a');
             sessionElement.href = '#';
             sessionElement.className = 'list-group-item list-group-item-action';
             sessionElement.innerHTML = `
                 <div class="d-flex w-100 justify-content-between">
                     <h6 class="mb-1">${session.name}</h6>
-                    <small>${session.items.length} позиций</small>
+                    <small>${totalItems} шт. (${session.items.length} поз.)</small>
                 </div>
                 <small class="text-muted">Обновлено: ${lastUpdate}</small>
             `;
@@ -442,13 +458,15 @@ async function loadServerSessions() {
             serverSessionsList.innerHTML = '';
             serverSessions.forEach(session => {
                 const lastUpdate = new Date(session.updated_at).toLocaleString();
+                const totalItems = session.items.reduce((sum, item) => sum + (item.quantity || 1), 0);
+
                 const sessionElement = document.createElement('a');
                 sessionElement.href = '#';
                 sessionElement.className = 'list-group-item list-group-item-action';
                 sessionElement.innerHTML = `
                     <div class="d-flex w-100 justify-content-between">
                         <h6 class="mb-1">${session.name}</h6>
-                        <small>${session.items.length} позиций</small>
+                        <small>${totalItems} шт. (${session.items.length} поз.)</small>
                     </div>
                     <small class="text-muted">Обновлено: ${lastUpdate}</small>
                 `;
@@ -816,6 +834,8 @@ function refreshSessionsList() {
         const updatedDate = new Date(session.updatedAt).toLocaleString();
         const isSynced = session.serverSessionId ? 'Да' : 'Нет';
         const isActive = scanStorage.getActiveSession()?.id === session.id;
+        const totalItems = session.items.reduce((sum, item) => sum + (item.quantity || 1), 0);
+        const itemsDisplay = `${totalItems} шт. (${session.items.length} поз.)`;
 
         const row = document.createElement('tr');
         row.className = isActive ? 'table-primary' : '';
@@ -824,7 +844,7 @@ function refreshSessionsList() {
             <td>${session.name} ${isActive ? '<span class="badge bg-primary">Активная</span>' : ''}</td>
             <td>${createdDate}</td>
             <td>${updatedDate}</td>
-            <td>${session.items.length}</td>
+            <td>${itemsDisplay}</td>
             <td>${isSynced}</td>
             <td>
                 <div class="btn-group btn-group-sm">

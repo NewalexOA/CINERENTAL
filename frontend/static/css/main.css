@@ -321,3 +321,17 @@ body {
   color: var(--text-secondary);
   margin-top: 1rem;
 }
+
+/* Scanner session table styling */
+#sessionEquipmentTable .table {
+    margin-bottom: 0;
+}
+
+#sessionEquipmentTable th,
+#sessionEquipmentTable td {
+    vertical-align: middle;
+}
+
+#sessionEquipmentTable .btn-group {
+    white-space: nowrap;
+}

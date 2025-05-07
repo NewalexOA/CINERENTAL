@@ -106,8 +106,20 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="list-group" id="sessionItemsList">
-                            <!-- List of scanned positions will be here -->
+                        <div id="sessionEquipmentTable">
+                            <div id="noSessionItems" class="text-center text-muted py-2 d-none">Нет отсканированного оборудования</div>
+                            <table class="table table-sm table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Оборудование</th>
+                                        <th class="text-center">Кол-во</th>
+                                        <th class="text-center">Действия</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="sessionItemsList">
+                                    <!-- List of scanned positions will be here -->
+                                </tbody>
+                            </table>
                         </div>
                         <div class="d-grid gap-2 mt-3">
                             <button class="btn btn-success" id="syncSessionBtn">
