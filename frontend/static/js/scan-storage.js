@@ -4,6 +4,8 @@
  * and synchronize with the server.
  */
 
+import { api } from './utils/api.js';
+
 // Storage key for localStorage
 const STORAGE_KEY = 'equipment_scan_sessions';
 

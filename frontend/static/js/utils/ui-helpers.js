@@ -103,3 +103,53 @@ export function showTableEmpty(tableBody, colSpan, message = 'Нет данны�
         </tr>
     `;
 }
+
+/**
+ * Builds a tree structure from a flat list of categories.
+ * Each category in the flat list should have an `id` and an optional `parent_id`.
+ * @param {Array<Object>} categoriesArray - Flat array of category objects.
+ * @returns {Array<Object>} Array of root category objects, each with a `children` array.
+ */
+export function buildCategoryTree(categoriesArray) {
+    const categoryMap = {};
+    const categoryTree = [];
+
+    categoriesArray.forEach(category => {
+        categoryMap[category.id] = { ...category, children: [] };
+    });
+
+    categoriesArray.forEach(category => {
+        if (category.parent_id && categoryMap[category.parent_id]) {
+            categoryMap[category.parent_id].children.push(categoryMap[category.id]);
+        } else {
+            categoryTree.push(categoryMap[category.id]);
+        }
+    });
+
+    return categoryTree;
+}
+
+/**
+ * Recursively renders category options for a select element, creating a tree-like structure.
+ * @param {Array<Object>} categories - Array of category objects (potentially with children).
+ * @param {HTMLSelectElement} parentElement - The select element to append options to.
+ * @param {number} level - Current depth level for indentation.
+ * @param {?number} [selectedCategoryId=null] - Optional ID of the category to be pre-selected.
+ */
+export function renderCategoriesRecursive(categories, parentElement, level, selectedCategoryId = null) {
+    const indent = '&nbsp;&nbsp;'.repeat(level * 2); // Indentation for hierarchy
+
+    categories.forEach(category => {
+        const option = document.createElement('option');
+        option.value = category.id;
+        option.innerHTML = `${indent}${category.name}`;
+        if (selectedCategoryId !== null && category.id === selectedCategoryId) {
+            option.selected = true;
+        }
+        parentElement.appendChild(option);
+
+        if (category.children && category.children.length > 0) {
+            renderCategoriesRecursive(category.children, parentElement, level + 1, selectedCategoryId);
+        }
+    });
+}
