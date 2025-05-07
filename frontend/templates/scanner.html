@@ -408,6 +408,7 @@
 
 
 {% block scripts %}
-<script src="{{ url_for('static', path='js/scan-storage.js') }}"></script>
-<script src="{{ url_for('static', path='js/scanner.js') }}"></script>
+<script src="{{ url_for('static', path='js/utils/api.js') }}" type="module"></script>
+<script src="{{ url_for('static', path='js/scan-storage.js') }}" type="module"></script>
+<script src="{{ url_for('static', path='js/scanner.js') }}" type="module"></script>
 {% endblock %}
