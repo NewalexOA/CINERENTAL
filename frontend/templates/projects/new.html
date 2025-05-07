@@ -181,7 +181,8 @@
 
 {% block scripts %}
 <!-- Connect the script for working with scanning sessions -->
-<script src="{{ url_for('static', path='js/scan-storage.js') }}"></script>
-<script src="{{ url_for('static', path='js/projects-common.js') }}"></script>
-<script src="{{ url_for('static', path='js/projects-new.js') }}"></script>
+<script src="{{ url_for('static', path='js/utils/api.js') }}" type="module"></script>
+<script src="{{ url_for('static', path='js/scan-storage.js') }}" type="module"></script>
+<script src="{{ url_for('static', path='js/projects-common.js') }}" type="module"></script>
+<script src="{{ url_for('static', path='js/projects-new.js') }}" type="module"></script>
 {% endblock %}
