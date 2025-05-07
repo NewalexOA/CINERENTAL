@@ -180,7 +180,6 @@ function updateEquipmentTable() {
 
         const hasSerialNumber = !!item.serial_number;
         const quantity = item.quantity || 1;
-        const quantityDisplay = !hasSerialNumber && quantity > 1 ? ` (x${quantity})` : '';
 
         row.setAttribute('data-has-serial-number', hasSerialNumber ? 'true' : 'false');
         row.setAttribute('data-equipment-id', item.id);
@@ -214,9 +213,8 @@ function updateEquipmentTable() {
 
         row.innerHTML = `
             <td>
-                <div>${displayName}${quantityDisplay}</div>
+                <div>${displayName}</div>
                 <small class="text-muted">${item.category || ''}</small>
-                <span class="quantity d-none">${quantity}</span>
             </td>
             <td>
                 <input type="text" class="form-control form-control-sm equipment-period-input"
@@ -224,6 +222,9 @@ function updateEquipmentTable() {
                        placeholder="ДД.ММ.ГГГГ - ДД.ММ.ГГГГ"
                        value="${item.booking_start && item.booking_end ?
                                  moment(item.booking_start).format('DD.MM.YYYY') + ' - ' + moment(item.booking_end).format('DD.MM.YYYY') : ''}">
+            </td>
+            <td class="text-center">
+                <span class="quantity">${quantity}</span>
             </td>
             <td class="text-center align-middle">
                 <div class="btn-group" role="group">
