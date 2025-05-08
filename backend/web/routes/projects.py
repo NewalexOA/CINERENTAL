@@ -195,6 +195,15 @@ async def print_project(
             # Ensure equipment data is loaded
             await db.refresh(booking, ['equipment'])
             equipment = booking.equipment
+            # Skip if equipment somehow missing
+            if not equipment:
+                logger.warning(
+                    f'Booking ID {booking.id} has no associated equipment. '
+                    'Skipping in print.'
+                )
+                continue
+
+            await db.refresh(equipment, ['category'])
 
             # Get equipment serial number and replacement cost
             serial_number = getattr(equipment, 'serial_number', None) or ''
@@ -206,6 +215,14 @@ async def print_project(
             # Calculate total liability amount for this booking (unit price * quantity)
             booking_liability = replacement_cost * quantity
 
+            # Get category info
+            category_id = getattr(equipment, 'category_id', None)
+            category_name = (
+                getattr(equipment.category, 'name', 'Без категории')
+                if getattr(equipment, 'category', None)
+                else 'Без категории'
+            )
+
             # Create equipment item
             equipment_item = EquipmentPrintItem(
                 id=equipment.id,
@@ -213,10 +230,17 @@ async def print_project(
                 serial_number=serial_number,
                 liability_amount=replacement_cost,
                 quantity=quantity,
+                category_id=category_id,
+                category_name=category_name,
             )
 
             equipment_items.append(equipment_item)
             total_liability += booking_liability
+
+        # Sort equipment items by category name, then by equipment name
+        equipment_items.sort(
+            key=lambda item: (item.category_name or '', item.name or '')
+        )
 
         # Create print form data
         print_data = {

@@ -133,7 +133,8 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="{{ url_for('static', path='js/projects-common.js') }}"></script>
+<script src="{{ url_for('static', path='js/utils/api.js') }}" type="module"></script>
+<script src="{{ url_for('static', path='js/projects-common.js') }}" type="module"></script>
 
 {% if request.path == '/projects' or request.path == '/projects/' %}
 <script src="{{ url_for('static', path='js/projects-list.js') }}" type="module"></script>

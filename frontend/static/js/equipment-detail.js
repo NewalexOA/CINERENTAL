@@ -6,6 +6,7 @@
 
 import { api } from './utils/api.js';
 import { showToast, formatDate, formatDateRange } from './utils/common.js';
+import { buildCategoryTree, renderCategoriesRecursive } from './utils/ui-helpers.js';
 
 // Initialize equipment data from data attributes
 const scriptTag = document.getElementById('equipment-data'); // Get the dedicated script tag
@@ -44,22 +45,12 @@ async function loadCategories() {
     try {
         const categories = await api.get('/categories');
 
-        // First add empty option for "no category" selection
-        let options = `<option value="">Без категории</option>`;
+        // Build tree structure
+        const categoryTree = buildCategoryTree(categories);
 
-        // Then add all available categories
-        options += categories.map(category => {
-            // Ensure both values are numbers for comparison
-            const categoryId = parseInt(category.id, 10);
-            // Use strict comparison to avoid false positives
-            const isSelected = categoryId === EQUIPMENT_DATA.categoryId;
+        formSelect.innerHTML = '<option value="">Без категории</option>';
+        renderCategoriesRecursive(categoryTree, formSelect, 0, EQUIPMENT_DATA.categoryId);
 
-            return `<option value="${categoryId}" ${isSelected ? 'selected' : ''}>
-                ${category.name}
-            </option>`;
-        }).join('');
-
-        formSelect.innerHTML = options;
     } catch (error) {
         console.error('Error loading categories:', error);
         showToast('Ошибка при загрузке категорий', 'danger');

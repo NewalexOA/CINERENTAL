@@ -218,6 +218,19 @@ body {
     text-align: right;
 }
 
+/* Category separator row */
+.category-separator td {
+    padding-top: 0.4em !important; /* Add space above separator */
+    padding-bottom: 0.1em !important;
+    border-bottom: 1px solid #999 !important; /* Make separator line slightly darker */
+    background-color: #f8f8f8 !important; /* Light background for separator */
+    font-weight: bold;
+    color: #333;
+    page-break-before: auto; /* Allow break before if needed */
+    page-break-after: avoid; /* Try to keep with first item */
+    break-inside: avoid;
+}
+
 /* Footer styles */
 .print-footer {
     margin-top: 0.3cm;
