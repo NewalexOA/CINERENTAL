@@ -56,13 +56,20 @@
                 </thead>
                 <tbody>
                     {% for item in equipment %}
-                    <tr>
-                        <td class="col-num">{{ loop.index }}</td>
-                        <td class="col-name">{{ item.name }}</td>
-                        <td class="col-serial">{{ item.serial_number or "—" }}</td>
-                        <td class="col-qty">{{ item.quantity or 1 }}</td>
-                        <td class="col-amount">{{ (item.liability_amount * item.quantity) | format_currency }}</td>
-                    </tr>
+                        {# Print category separator if category changes or it's the first item #}
+                        {% if loop.first or item.category_name != loop.previtem.category_name %}
+                        <tr class="category-separator">
+                            <td colspan="5"><strong>{{ item.category_name or 'Без категории' }}</strong></td>
+                        </tr>
+                        {% endif %}
+                        {# Original item row #}
+                        <tr>
+                            <td class="col-num">{{ loop.index }}</td>
+                            <td class="col-name">{{ item.name }}</td>
+                            <td class="col-serial">{{ item.serial_number or "—" }}</td>
+                            <td class="col-qty">{{ item.quantity or 1 }}</td>
+                            <td class="col-amount">{{ (item.liability_amount * item.quantity) | format_currency }}</td>
+                        </tr>
                     {% endfor %}
                 </tbody>
                 <tfoot>
