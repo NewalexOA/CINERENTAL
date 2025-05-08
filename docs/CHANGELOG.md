@@ -2,6 +2,31 @@
 
 This document lists notable changes to the ACT-Rental application.
 
+## [0.6.0-beta.1] - 2025-05-09
+
+### Added
+
+- **Hierarchical Category Display:** Implemented tree-like display for categories in equipment list filter, add modal, and edit modal. (`feat: implement hierarchical category display in select dropdowns`)
+- **Project Print Form Category Grouping:** Equipment items are now grouped by category in the project print form, improving readability. (`feat: group equipment by category in project print form`)
+- **Scanner UI Table Layout:** Replaced list view with a table for scanned items in the scanner UI, including a quantity column. (`feat: improve scanner UI with table layout`)
+- **Project UI Quantity Column:** Added a dedicated quantity column to the equipment table in the "New Project" view. (`feat: improve projects UI with separate quantity column`)
+- **Shared UI Utilities:** Created `buildCategoryTree` and `renderCategoriesRecursive` in `ui-helpers.js`.
+
+### Changed
+
+- **Scanner Session Summary:** Session summaries now display total item count (units) and unique positions. (`feat: improve scanner UI with table layout`)
+- **Project UI Equipment Display:** Removed quantity display from equipment names in the new project view, relying on the new dedicated column. (`feat: improve projects UI with separate quantity column`)
+
+### Fixed
+
+- **Script Loading (`type="module"`):** Ensured correct loading of JavaScript as ES6 modules in `projects/index.html`, `projects/new.html`, and `scanner.html`. (`fix: add type module to script tags in projects/index.html`, `refactor(scripts): update script loading to use ES6 modules`, `feat(scan-storage): integrate API module and update script loading`)
+
+### Refactored
+
+- **ES6 Module Migration:** Continued migrating frontend JavaScript files (`scan-storage.js`, `scanner.js`, `projects-new.js`, `projects-common.js`, etc.) to use ES6 modules. (`refactor(scripts): update script loading to use ES6 modules`, `feat(scan-storage): integrate API module and update script loading`, `fix: add type module to script tags in projects/index.html`)
+- **Category UI Logic:** Centralized category tree building and rendering logic into `ui-helpers.js`. (`feat: implement hierarchical category display in select dropdowns`)
+- **Scan Storage:** Integrated API module into `scan-storage.js`. (`feat(scan-storage): integrate API module and update script loading`)
+
 ## v0.6.0-alpha.1
 
 ### B2B Booking Model
