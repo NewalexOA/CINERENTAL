@@ -1,9 +1,8 @@
+import { scanStorage } from './scan-storage.js';
+
 /**
  * Scanner page logic
  */
-
-// Use global objects from main.js
-const { scanStorage } = window;
 
 // Global variables
 let scanner = null;
@@ -62,13 +61,13 @@ function initModalScanner() {
 async function initScanner() {
     try {
         // Wait for scanStorage to be available
-        if (!window.scanStorage) {
+        if (!scanStorage) {
             console.error('scanStorage is not available');
             return;
         }
 
         // Get active session ID before initializing scanner
-        const activeSession = window.scanStorage.getActiveSession();
+        const activeSession = scanStorage.getActiveSession();
         const activeSessionId = activeSession?.id;
 
         // Initialize scanner with active session ID
@@ -1023,7 +1022,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Make sure scanStorage is available before initializing
-    if (!window.scanStorage) {
+    if (!scanStorage) {
         console.error('scanStorage is not available');
         showToast('Ошибка инициализации: хранилище сессий недоступно', 'danger');
         return;
