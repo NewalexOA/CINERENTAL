@@ -30,7 +30,7 @@ const STORAGE_KEY = 'equipment_scan_sessions';
  */
 
 // Main object for working with scan session storage
-window.scanStorage = {
+const scanStorage = {
     /**
      * Get all sessions from localStorage
      * @returns {ScanSession[]} - Array of scan sessions
@@ -579,6 +579,8 @@ window.scanStorage = {
         }
     }
 };
+
+export { scanStorage };
 
 /**
  * Helper function to get current user ID
