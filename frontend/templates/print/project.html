@@ -55,9 +55,9 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {% for item in equipment %}
+                    {% for item in equipment | sort(attribute='category_id') %}
                         {# Print category separator if category changes or it's the first item #}
-                        {% if loop.first or item.category_name != loop.previtem.category_name %}
+                        {% if loop.first or item.category_id != loop.previtem.category_id %}
                         <tr class="category-separator">
                             <td colspan="5"><strong>{{ item.category_name or 'Без категории' }}</strong></td>
                         </tr>
