@@ -3,7 +3,8 @@
 ## Проблема
 
 При использовании декораторов FastAPI, mypy может выдавать предупреждение:
-```
+
+```text
 error: Untyped decorator makes function "health_check" untyped [misc]
 ```
 

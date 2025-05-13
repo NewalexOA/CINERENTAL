@@ -540,7 +540,7 @@ class ProjectService:
                 )
 
             # Cascade completion and soft deletion of bookings if project is completed
-            if status == ProjectStatus.COMPLETED:
+            if status in [ProjectStatus.COMPLETED, ProjectStatus.CANCELLED]:
                 project_with_bookings = await self.repository.get_by_id_with_bookings(
                     project_id
                 )

@@ -2,6 +2,17 @@
 
 This document lists notable changes to the ACT-Rental application.
 
+## [0.6.0-beta.2] - 2025-05-13
+
+### Fixed
+
+- **Project Cancellation Logic:** Ensured that bookings associated with a 'Cancelled' project are now correctly transitioned to 'Completed' and soft-deleted, mirroring the behavior for 'Completed' projects. (PR #63, PR #64)
+- **Print View Sorting:** Changed equipment category sorting in the project print view from alphabetical by name to numerical by `category_id` for consistent ordering. (PR #65)
+
+### Refactored
+
+- **Scanner JavaScript Modularity:** Migrated `scan-storage.js` and its consumers (`equipment-list.js`, `scanner.js`) to use standard ES6 modules, improving code organization and resolving script loading issues. HTML templates updated to load scripts with `type="module"`. (PR #64)
+
 ## [0.6.0-beta.1] - 2025-05-09
 
 ### Added

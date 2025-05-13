@@ -1,6 +1,7 @@
 // Import API client
 import { api } from './utils/api.js';
 import { buildCategoryTree, renderCategoriesRecursive } from './utils/ui-helpers.js';
+import { scanStorage } from './scan-storage.js';
 
 // Load categories for add form
 async function loadCategories() {

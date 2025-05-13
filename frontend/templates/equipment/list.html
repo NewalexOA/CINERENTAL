@@ -268,6 +268,6 @@
 {% block scripts %}
 {{ super() }}
 <script src="{{ url_for('static', path='js/utils/api.js') }}" type="module"></script>
-<script src="{{ url_for('static', path='js/scan-storage.js') }}"></script>
+<script src="{{ url_for('static', path='js/scan-storage.js') }}" type="module"></script>
 <script src="{{ url_for('static', path='js/equipment-list.js') }}" type="module"></script>
 {% endblock %}
