@@ -29,7 +29,7 @@ from backend.schemas import (
     ProjectUpdate,
     ProjectWithBookings,
 )
-from backend.services import ProjectService
+from backend.services import CategoryService, ProjectService
 
 projects_router: APIRouter = APIRouter()
 
@@ -440,6 +440,7 @@ async def get_project_print_data(
     log.debug('Getting project print data')
 
     service = ProjectService(db)
+    category_service = CategoryService(db)
     try:
         # Get project with bookings
         project = await service.get_project(project_id, with_bookings=True)
@@ -468,6 +469,15 @@ async def get_project_print_data(
             # Get equipment serial number and liability amount
             serial_number = getattr(equipment, 'serial_number', None) or ''
             liability_amount = getattr(equipment, 'liability_amount', 0.0) or 0.0
+            quantity = getattr(booking, 'quantity', 1) or 1
+
+            # Get category hierarchy info
+            original_direct_category_id = getattr(equipment, 'category_id', None)
+            _, printable_categories = (
+                await category_service.get_print_hierarchy_and_sort_path(
+                    original_direct_category_id
+                )
+            )
 
             # Create equipment item
             equipment_item = EquipmentPrintItem(
@@ -475,6 +485,8 @@ async def get_project_print_data(
                 name=equipment.name,
                 serial_number=serial_number,
                 liability_amount=float(liability_amount),
+                quantity=quantity,
+                printable_categories=printable_categories,
             )
 
             equipment_items.append(equipment_item)

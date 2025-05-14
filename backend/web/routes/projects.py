@@ -5,7 +5,8 @@ This module contains routes for project management web pages.
 
 import json
 import traceback
-from typing import Union
+from datetime import datetime
+from typing import Optional, Tuple, Union
 
 from fastapi import APIRouter, Depends
 from fastapi.responses import HTMLResponse
@@ -16,9 +17,12 @@ from starlette.templating import _TemplateResponse
 
 from backend.core.database import get_db
 from backend.core.templates import templates
-from backend.services import ProjectService
+from backend.schemas import ClientInfo, EquipmentPrintItem, ProjectResponse
+from backend.services.category import CategoryService
+from backend.services.project import ProjectService
 
 router = APIRouter()
+logger = logger.bind(name=__name__)
 
 
 @router.get('/', response_class=HTMLResponse)
@@ -162,24 +166,14 @@ async def print_project(
         Rendered template for project print form
     """
     logger.debug(f'Request to print project: ID={project_id}')
-
     try:
-        # Use service directly instead of API request
-        service = ProjectService(db)
+        project_service = ProjectService(db)
+        category_service = CategoryService(db)
 
-        # Get project with bookings
-        project = await service.get_project(project_id, with_bookings=True)
+        project = await project_service.get_project(project_id, with_bookings=True)
         await db.refresh(project, ['client'])
 
-        # Create project response
-        from datetime import datetime
-
-        from backend.schemas import ClientInfo, EquipmentPrintItem, ProjectResponse
-
-        # Create project response
         project_response = ProjectResponse.model_validate(project, from_attributes=True)
-
-        # Create client info
         client_info = ClientInfo(
             id=project.client.id,
             name=project.client.name,
@@ -187,93 +181,78 @@ async def print_project(
             phone=project.client.phone or '',
         )
 
-        # Get equipment items
-        equipment_items = []
+        equipment_items_data = []
         total_liability = 0.0
 
         for booking in project.bookings:
-            # Ensure equipment data is loaded
             await db.refresh(booking, ['equipment'])
             equipment = booking.equipment
-            # Skip if equipment somehow missing
             if not equipment:
-                logger.warning(
-                    f'Booking ID {booking.id} has no associated equipment. '
-                    'Skipping in print.'
-                )
+                logger.warning(f'Booking ID {booking.id} has no equipment. Skipping.')
                 continue
 
-            await db.refresh(equipment, ['category'])
-
-            # Get equipment serial number and replacement cost
             serial_number = getattr(equipment, 'serial_number', None) or ''
-            replacement_cost = getattr(equipment, 'replacement_cost', 0) or 0
-
-            # Get booking quantity (default to 1 for backward compatibility)
+            replacement_cost = getattr(equipment, 'replacement_cost', 0) or 0.0
             quantity = getattr(booking, 'quantity', 1) or 1
-
-            # Calculate total liability amount for this booking (unit price * quantity)
             booking_liability = replacement_cost * quantity
 
-            # Get category info
-            category_id = getattr(equipment, 'category_id', None)
-            category_name = (
-                getattr(equipment.category, 'name', 'Без категории')
-                if getattr(equipment, 'category', None)
-                else 'Без категории'
+            original_direct_category_id = getattr(equipment, 'category_id', None)
+
+            # Correctly call get_print_hierarchy_and_sort_path
+            sort_path, printable_categories = (
+                await category_service.get_print_hierarchy_and_sort_path(
+                    original_direct_category_id
+                )
             )
 
-            # Create equipment item
-            equipment_item = EquipmentPrintItem(
+            # Correctly initialize EquipmentPrintItem with printable_categories
+            equipment_item_schema = EquipmentPrintItem(
                 id=equipment.id,
                 name=equipment.name,
                 serial_number=serial_number,
                 liability_amount=replacement_cost,
                 quantity=quantity,
-                category_id=category_id,
-                category_name=category_name,
+                printable_categories=printable_categories,
             )
 
-            equipment_items.append(equipment_item)
+            # Add sort_path to the dict for sorting
+            item_dict_for_sorting = equipment_item_schema.model_dump()
+            item_dict_for_sorting['sort_path'] = sort_path
+            equipment_items_data.append(item_dict_for_sorting)
+
             total_liability += booking_liability
 
-        # Sort equipment items by category name, then by equipment name
-        equipment_items.sort(
-            key=lambda item: (item.category_name or '', item.name or '')
+        equipment_items_data.sort(key=lambda item: item.get('name', '').lower())
+
+        def serial_sort_key_desc(serial_value: Optional[str]) -> Tuple[int, str]:
+            if serial_value is None or serial_value == '':
+                return (1, ' ')
+            return (0, serial_value.lower())
+
+        equipment_items_data.sort(
+            key=lambda item: serial_sort_key_desc(item.get('serial_number')),
+            reverse=True,
         )
 
-        # Create print form data
+        equipment_items_data.sort(key=lambda item: item.get('sort_path', []))
+
         print_data = {
             'project': project_response.model_dump(),
             'client': client_info.model_dump(),
-            'equipment': [item.model_dump() for item in equipment_items],
-            'total_items': len(equipment_items),
+            'equipment': equipment_items_data,
+            'total_items': len(equipment_items_data),
             'total_liability': total_liability,
             'generated_at': datetime.now(),
         }
 
-        # Render template with data
         return templates.TemplateResponse(
             'print/project.html',
-            {
-                'request': request,
-                'project': print_data['project'],
-                'client': print_data['client'],
-                'equipment': print_data['equipment'],
-                'total_items': print_data['total_items'],
-                'total_liability': print_data['total_liability'],
-                'generated_at': print_data['generated_at'],
-            },
+            {'request': request, **print_data},
         )
     except Exception as e:
         logger.error(f'Error printing project {project_id}: {str(e)}')
         logger.error(f'Error traceback: {traceback.format_exc()}')
-
-        # Return error page
         return templates.TemplateResponse(
             'print/error.html',
-            {
-                'request': request,
-                'error': str(e),
-            },
+            {'request': request, 'error': str(e)},
         )

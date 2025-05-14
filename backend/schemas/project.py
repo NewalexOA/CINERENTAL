@@ -150,20 +150,27 @@ class ClientInfo(BaseModel):
     )
 
 
+class PrintableCategoryInfo(BaseModel):
+    """Schema for printable category information."""
+
+    id: int
+    name: str
+    level: int
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class EquipmentPrintItem(BaseModel):
     """Equipment item for project print form."""
 
     id: int
     name: str
     serial_number: Optional[str] = None
-    liability_amount: float = 0.0
-    quantity: int = 1
-    category_id: Optional[int] = None
-    category_name: Optional[str] = None
+    liability_amount: float
+    quantity: int
+    printable_categories: List[PrintableCategoryInfo]
 
-    model_config = ConfigDict(
-        from_attributes=True,
-    )
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ProjectPrint(BaseModel):
