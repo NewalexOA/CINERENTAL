@@ -204,6 +204,7 @@ function updateSessionUI(session) {
                         <div>${item.name}</div>
                         ${hasSerialNumber ? `<small class="text-muted d-block">S/N: ${item.serial_number}</small>` : ''}
                     </td>
+                    <td>${item.category_name || item.category?.name || 'Без категории'}</td>
                     <td class="text-center">
                         ${quantity}
                     </td>
