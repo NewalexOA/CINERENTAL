@@ -16,12 +16,13 @@ class CategoryBase(BaseModel):
     name: str
     description: Optional[str] = None
     parent_id: Optional[int] = None
+    show_in_print_overview: bool
 
 
 class CategoryCreate(CategoryBase):
     """Category create schema."""
 
-    pass
+    show_in_print_overview: bool = True
 
 
 class CategoryUpdate(BaseModel):
@@ -30,6 +31,7 @@ class CategoryUpdate(BaseModel):
     name: Optional[str] = None
     description: Optional[str] = None
     parent_id: Optional[int] = None
+    show_in_print_overview: Optional[bool] = None
 
 
 class CategoryResponse(CategoryBase):

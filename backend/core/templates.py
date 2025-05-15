@@ -13,6 +13,7 @@ from backend.core.config import settings
 
 # Initialize templates
 templates = Jinja2Templates(directory='frontend/templates')
+templates.env.add_extension('jinja2.ext.do')
 
 # Add global context to templates
 templates.env.globals.update(

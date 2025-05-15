@@ -221,8 +221,10 @@
                         <thead>
                             <tr>
                                 <th>Оборудование</th>
+                                <th>Категория</th>
                                 <th>Период</th>
-                                <th class="text-center">Действия</th>
+                                <th class="text-center" style="width: 70px;">Кол-во</th>
+                                <th class="text-center" style="width: 120px;">Действия</th>
                             </tr>
                         </thead>
                         <tbody id="equipmentList">
@@ -234,6 +236,9 @@
                                     <div>{{ booking.equipment_name }}{% if booking.quantity > 1 %} (x{{ booking.quantity }}){% endif %}</div>
                                     <small class="text-muted">{{ booking.equipment_barcode }}</small>
                                     <span class="quantity d-none">{{ booking.quantity }}</span>
+                                </td>
+                                <td>
+                                    <div>{{ booking.equipment.category_name or 'Без категории' }}</div>
                                 </td>
                                 <td>
                                     <input type="text" class="form-control form-control-sm booking-period-input"

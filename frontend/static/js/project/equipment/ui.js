@@ -292,30 +292,13 @@ export function renderEquipmentSection(project) {
         // Detailed logging of booking structure
         console.log('Booking data structure:', JSON.stringify(booking, null, 2));
 
-        // Check for equipment data
-        const equipment = booking.equipment || {};
-        const equipmentName = equipment.name || booking.equipment_name || 'Неизвестное оборудование';
-        const barcode = equipment.barcode || booking.equipment_barcode || '';
+        const equipmentName = booking.equipment_name || 'Неизвестное оборудование';
+        const barcode = booking.barcode || '';
+        const category_name = booking.category_name || 'Без категории';
+        const serialNumber = booking.serial_number || '';
 
-        // Check if we have real equipment data
-        console.log('Equipment object:', equipment);
-
-        // Determine if it has a serial number - check multiple possible locations in the data structure
-        const serialNumber = booking.serial_number || equipment.serial_number || '';
-
-        // Convert the value to a string and check that it is not empty
         const serialNumberStr = String(serialNumber || '');
         const hasSerialNumber = serialNumberStr.trim().length > 0;
-
-        // For debugging - show how JSON conversion is going
-        console.log(`Serial number raw value type: ${typeof booking.serial_number}, value: ${booking.serial_number}`);
-        console.log(`Equipment serial number value type: ${typeof equipment.serial_number}, value: ${equipment.serial_number}`);
-        console.log('Final serialNumber variable:', serialNumber);
-        console.log('SerialNumber as string:', serialNumberStr);
-        console.log('Equipment:', equipmentName, 'Serial Number:', serialNumber, 'Has Serial:', hasSerialNumber);
-
-        // For this position, check the HTML template value and see if it matches our logic
-        console.log('Would the template say this has a serial number?:', hasSerialNumber);
 
         const quantity = booking.quantity || 1;
 
@@ -323,12 +306,16 @@ export function renderEquipmentSection(project) {
         row.dataset.bookingId = booking.id;
         row.dataset.hasSerialNumber = hasSerialNumber;
 
-        // Get equipment name
         const nameCell = document.createElement('td');
         nameCell.innerHTML = `
             <div>${equipmentName}</div>
             <small class="text-muted">${barcode}</small>
             ${serialNumber ? `<small class="text-muted d-block">S/N: ${serialNumber}</small>` : ''}
+        `;
+
+        const categoryCell = document.createElement('td');
+        categoryCell.innerHTML = `
+            <div>${category_name}</div>
         `;
 
         const periodCell = document.createElement('td');
@@ -339,11 +326,10 @@ export function renderEquipmentSection(project) {
                    placeholder="ДД.ММ.ГГГГ - ДД.ММ.ГГГГ">
         `;
 
-        // Add separate quantity column
         const quantityCell = document.createElement('td');
-        quantityCell.className = 'text-center';
+        quantityCell.className = 'text-center quantity';
         quantityCell.style.width = '70px';
-        quantityCell.innerHTML = `<span class="quantity">${quantity}</span>`;
+        quantityCell.innerHTML = `${quantity}`;
 
         const actionsCell = document.createElement('td');
         actionsCell.className = 'text-center';
@@ -393,6 +379,7 @@ export function renderEquipmentSection(project) {
         }
 
         row.appendChild(nameCell);
+        row.appendChild(categoryCell);
         row.appendChild(periodCell);
         row.appendChild(quantityCell);
         row.appendChild(actionsCell);
