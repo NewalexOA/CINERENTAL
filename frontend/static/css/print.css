@@ -223,12 +223,14 @@ body {
     padding-top: 0.4em !important; /* Add space above separator */
     padding-bottom: 0.1em !important;
     border-bottom: 1px solid #999 !important; /* Make separator line slightly darker */
-    background-color: #f8f8f8 !important; /* Light background for separator */
+    background-color: #f0f0f0 !important; /* Slightly darker background for separator */
     font-weight: bold;
     color: #333;
     page-break-before: auto; /* Allow break before if needed */
     page-break-after: avoid; /* Try to keep with first item */
     break-inside: avoid;
+    -webkit-print-color-adjust: exact; /* Ensure background color is printed in WebKit browsers */
+    print-color-adjust: exact; /* Ensure background color is printed in Firefox */
 }
 
 /* Footer styles */
@@ -393,3 +395,27 @@ body {
 .project-summary-col2 {
     width: 35%;
 }
+
+/* Helper classes for dynamic padding */
+.equipment-table td.category-header-cell.padding-level-0 { padding-left: 0px; }
+.equipment-table td.category-header-cell.padding-level-1 { padding-left: 15px; }
+.equipment-table td.category-header-cell.padding-level-2 { padding-left: 30px; }
+.equipment-table td.category-header-cell.padding-level-3 { padding-left: 45px; }
+.equipment-table td.category-header-cell.padding-level-4 { padding-left: 60px; }
+.equipment-table td.category-header-cell.padding-level-5 { padding-left: 75px; }
+.equipment-table td.category-header-cell.padding-level-6 { padding-left: 90px; }
+.equipment-table td.category-header-cell.padding-level-7 { padding-left: 105px; }
+.equipment-table td.category-header-cell.padding-level-8 { padding-left: 120px; }
+.equipment-table td.category-header-cell.padding-level-9 { padding-left: 135px; }
+
+/* Ensure item number column also respects padding levels for alignment */
+.equipment-table td.col-num.padding-level-0 { padding-left: 0px; text-align: center; }
+.equipment-table td.col-num.padding-level-1 { padding-left: 15px; text-align: center; }
+.equipment-table td.col-num.padding-level-2 { padding-left: 30px; text-align: center; }
+.equipment-table td.col-num.padding-level-3 { padding-left: 45px; text-align: center; }
+.equipment-table td.col-num.padding-level-4 { padding-left: 60px; text-align: center; }
+.equipment-table td.col-num.padding-level-5 { padding-left: 75px; text-align: center; }
+.equipment-table td.col-num.padding-level-6 { padding-left: 90px; text-align: center; }
+.equipment-table td.col-num.padding-level-7 { padding-left: 105px; text-align: center; }
+.equipment-table td.col-num.padding-level-8 { padding-left: 120px; text-align: center; }
+.equipment-table td.col-num.padding-level-9 { padding-left: 135px; text-align: center; }

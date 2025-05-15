@@ -2,20 +2,57 @@
 
 This document lists notable changes to the ACT-Rental application.
 
+## [0.7.0-beta.1] - 2024-05-16
+
+### Print System & Category Management
+
+- **Dynamic Multi-Level Category Hierarchy for Print Forms:**
+  - Implemented a flexible system to display nested categories in project print forms.
+  - Categories can now be marked with `show_in_print_overview` to control their visibility in printed documents.
+  - `EquipmentPrintItem` schema updated for dynamic category depth using `PrintableCategoryInfo`.
+  - `CategoryService` enhanced with `get_print_hierarchy_and_sort_path` for determining sort order and displayable categories based on visibility flags.
+  - `print/project.html` template revamped for dynamic rendering of category headers and consistent item indentation.
+  - Sorting in print forms now prioritizes category hierarchy, then serial number.
+  - Added database migration for the new `show_in_print_overview` column in `categories`.
+- **UI for Category Print Visibility:**
+  - Added "Show in print overview" checkbox in category management UI.
+  - JavaScript updated to handle this new field for API requests.
+- **Print Form Appearance:**
+  - Improved CSS for category indentation and background color display in print.
+
+### API & Data Handling
+
+- **Booking Data Enrichment:**
+  - `BookingInProject` Pydantic schema now includes `barcode` and `category_name`.
+  - `ProjectService.get_project_bookings` updated to provide these fields directly in the API response, simplifying frontend data access.
+
+### Frontend UI (Scanner & Project View)
+
+- **Scanner Page Enhancements:**
+  - Resolved `formatCurrency` JavaScript error.
+  - Added a "Category" column to the scanned items table, with data populated from `item.category_name`.
+- **Project View Page Improvements:**
+  - Added "Category" and "Quantity" columns to the equipment table.
+  - JavaScript logic in `project/equipment/ui.js` updated to:
+    - Populate new category and quantity cells.
+    - Consistently hide table headers.
+    - Remove redundant quantity display `(xN)` from the equipment name.
+    - Ensure quantity update buttons remain functional by adding `quantity` class to the new cell.
+
 ## [0.6.0-beta.2] - 2025-05-13
 
-### Fixed
+### Fixed (0.6.0-beta.2)
 
 - **Project Cancellation Logic:** Ensured that bookings associated with a 'Cancelled' project are now correctly transitioned to 'Completed' and soft-deleted, mirroring the behavior for 'Completed' projects. (PR #63, PR #64)
 - **Print View Sorting:** Changed equipment category sorting in the project print view from alphabetical by name to numerical by `category_id` for consistent ordering. (PR #65)
 
-### Refactored
+### Refactored (0.6.0-beta.2)
 
 - **Scanner JavaScript Modularity:** Migrated `scan-storage.js` and its consumers (`equipment-list.js`, `scanner.js`) to use standard ES6 modules, improving code organization and resolving script loading issues. HTML templates updated to load scripts with `type="module"`. (PR #64)
 
 ## [0.6.0-beta.1] - 2025-05-09
 
-### Added
+### Added (0.6.0-beta.1)
 
 - **Hierarchical Category Display:** Implemented tree-like display for categories in equipment list filter, add modal, and edit modal. (`feat: implement hierarchical category display in select dropdowns`)
 - **Project Print Form Category Grouping:** Equipment items are now grouped by category in the project print form, improving readability. (`feat: group equipment by category in project print form`)
@@ -23,16 +60,16 @@ This document lists notable changes to the ACT-Rental application.
 - **Project UI Quantity Column:** Added a dedicated quantity column to the equipment table in the "New Project" view. (`feat: improve projects UI with separate quantity column`)
 - **Shared UI Utilities:** Created `buildCategoryTree` and `renderCategoriesRecursive` in `ui-helpers.js`.
 
-### Changed
+### Changed (0.6.0-beta.1)
 
 - **Scanner Session Summary:** Session summaries now display total item count (units) and unique positions. (`feat: improve scanner UI with table layout`)
 - **Project UI Equipment Display:** Removed quantity display from equipment names in the new project view, relying on the new dedicated column. (`feat: improve projects UI with separate quantity column`)
 
-### Fixed
+### Fixed (0.6.0-beta.1)
 
 - **Script Loading (`type="module"`):** Ensured correct loading of JavaScript as ES6 modules in `projects/index.html`, `projects/new.html`, and `scanner.html`. (`fix: add type module to script tags in projects/index.html`, `refactor(scripts): update script loading to use ES6 modules`, `feat(scan-storage): integrate API module and update script loading`)
 
-### Refactored
+### Refactored (0.6.0-beta.1)
 
 - **ES6 Module Migration:** Continued migrating frontend JavaScript files (`scan-storage.js`, `scanner.js`, `projects-new.js`, `projects-common.js`, etc.) to use ES6 modules. (`refactor(scripts): update script loading to use ES6 modules`, `feat(scan-storage): integrate API module and update script loading`, `fix: add type module to script tags in projects/index.html`)
 - **Category UI Logic:** Centralized category tree building and rendering logic into `ui-helpers.js`. (`feat: implement hierarchical category display in select dropdowns`)
@@ -74,7 +111,7 @@ This document lists notable changes to the ACT-Rental application.
 - Added equipment searching and barcode scanning capabilities to project view.
 - Implemented real-time equipment availability checking with date selection.
 
-### Other Improvements
+### Other Improvements (v0.6.0-alpha.1)
 
 - Updated all tests to reflect the new B2B booking model and status transition logic.
 - Commented out verbose booking creation logs in seed data for cleaner development.
@@ -118,7 +155,7 @@ This document lists notable changes to the ACT-Rental application.
 - Fixed error handling and session management in `scan-storage.js`.
 - Enhanced `scanner.js` with improved error recovery.
 
-### Other Improvements
+### Other Improvements (v0.5.1-alpha.1)
 
 - All changes tested and verified for compatibility with existing database instances.
 - No database migration required for this update.
@@ -173,7 +210,7 @@ This document lists notable changes to the ACT-Rental application.
 - **Changelog Enhancement**: Expanded `CHANGELOG.md` with detailed descriptions of new features
 - **Repository Hygiene**: Removed `implementation_plan.md` from the repository to comply with `.gitignore`
 
-### Other Improvements
+### Other Improvements (v0.5.0-alpha.3)
 
 - **User Experience**: Enhanced client selection with searchable dropdowns that match the app's design
 - **Reliability**: Critical frontend libraries now served locally for consistent behavior regardless of network conditions
@@ -182,7 +219,7 @@ This document lists notable changes to the ACT-Rental application.
 
 ## v0.5.0-alpha.2
 
-### Equipment Management Improvements
+### Equipment Management Improvements (v0.5.0-alpha.2)
 
 - **New Feature**: Added "+" and "-" buttons for managing non-serialized equipment quantities
 - **Improved Display**: Equipment categories now shown in the equipment list
@@ -194,14 +231,14 @@ This document lists notable changes to the ACT-Rental application.
 - **Safety Feature**: Added confirmation dialog when removing equipment
 - **Better Feedback**: Added toast notifications for equipment removal
 
-### Booking Conflict Management
+### Booking Conflict Management (v0.5.0-alpha.2)
 
 - **Enhanced Conflict Display**: Added detailed conflict information section with affected projects
 - **Single-day Bookings**: Added support for single-day equipment bookings
 - **Improved Feedback**: Show clear conflict details with project names and dates
 - **API Compatibility**: Fixed API compatibility issues for single-day booking availability checks
 
-### Booking Quantity Management
+### Booking Quantity Management (v0.5.0-alpha.2)
 
 - **Database Enhancement**: Added quantity field to Booking model and database table
 - **API Support**: Updated booking endpoints to handle quantity parameter
@@ -214,7 +251,7 @@ This document lists notable changes to the ACT-Rental application.
 - **Project Creation**: Added quantity support when creating projects with multiple items
 - **Backward Compatibility**: Default quantity of 1 for backward compatibility
 
-### Scanner Interface Improvements
+### Scanner Interface Improvements (v0.5.0-alpha.2)
 
 - **Bug Fix**: Fixed barcode scanning session handling and modal dialogs
 - **Session Management**: Improved scanner session persistence across page navigations
@@ -222,24 +259,25 @@ This document lists notable changes to the ACT-Rental application.
 - **Toast Notifications**: Enhanced toast notification system for scanner feedback
 - **Error Handling**: Better error handling for scanner connectivity issues
 
-### Print System Enhancements
+### Print System Enhancements (v0.5.0-alpha.2)
 
 - **Quantity Support**: Updated print forms to properly display equipment quantities
 - **Cost Calculation**: Fixed liability amount calculation to consider equipment quantities
 - **Currency Formatting**: Improved currency display to use whole numbers without decimal places
 - **Form Layout**: Enhanced printable project form layout for better readability
 
-### Other Improvements
+### Other Improvements (v0.5.0-alpha.2)
 
 - **Documentation**: Updated CHANGELOG.md with detailed feature descriptions
 - **Type Checking**: Enhanced mypy configuration for FastAPI and migrations
 - **Testing**: Improved test coverage with additional test cases for new features
 - **Performance**: Optimized database queries for equipment with quantities
 - **API Consistency**: Standardized API response formats for equipment operations
+- **Form Layout**: Enhanced printable project form layout for better readability
 
 ## v0.5.0-alpha.1
 
-### Equipment Management Improvements
+### Equipment Management Improvements (v0.5.0-alpha.1)
 
 - **New Feature**: Added "+" and "-" buttons for managing non-serialized equipment quantities
 - **Improved Display**: Equipment categories now shown in the equipment list
@@ -251,14 +289,14 @@ This document lists notable changes to the ACT-Rental application.
 - **Safety Feature**: Added confirmation dialog when removing equipment
 - **Better Feedback**: Added toast notifications for equipment removal
 
-### Booking Conflict Management
+### Booking Conflict Management (v0.5.0-alpha.1)
 
 - **Enhanced Conflict Display**: Added detailed conflict information section with affected projects
 - **Single-day Bookings**: Added support for single-day equipment bookings
 - **Improved Feedback**: Show clear conflict details with project names and dates
 - **API Compatibility**: Fixed API compatibility issues for single-day booking availability checks
 
-### Booking Quantity Management
+### Booking Quantity Management (v0.5.0-alpha.1)
 
 - **Database Enhancement**: Added quantity field to Booking model and database table
 - **API Support**: Updated booking endpoints to handle quantity parameter
@@ -271,7 +309,7 @@ This document lists notable changes to the ACT-Rental application.
 - **Project Creation**: Added quantity support when creating projects with multiple items
 - **Backward Compatibility**: Default quantity of 1 for backward compatibility
 
-### Scanner Interface Improvements
+### Scanner Interface Improvements (v0.5.0-alpha.1)
 
 - **Bug Fix**: Fixed barcode scanning session handling and modal dialogs
 - **Session Management**: Improved scanner session persistence across page navigations
@@ -279,14 +317,14 @@ This document lists notable changes to the ACT-Rental application.
 - **Toast Notifications**: Enhanced toast notification system for scanner feedback
 - **Error Handling**: Better error handling for scanner connectivity issues
 
-### Print System Enhancements
+### Print System Enhancements (v0.5.0-alpha.1)
 
 - **Quantity Support**: Updated print forms to properly display equipment quantities
 - **Cost Calculation**: Fixed liability amount calculation to consider equipment quantities
 - **Currency Formatting**: Improved currency display to use whole numbers without decimal places
 - **Form Layout**: Enhanced printable project form layout for better readability
 
-### Other Improvements
+### Other Improvements (v0.5.0-alpha.1)
 
 - **Documentation**: Updated CHANGELOG.md with detailed feature descriptions
 - **Type Checking**: Enhanced mypy configuration for FastAPI and migrations

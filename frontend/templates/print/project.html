@@ -55,16 +55,35 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {% for item in equipment | sort(attribute='category_id') %}
-                        {# Print category separator if category changes or it's the first item #}
-                        {% if loop.first or item.category_id != loop.previtem.category_id %}
-                        <tr class="category-separator">
-                            <td colspan="5"><strong>{{ item.category_name or 'Без категории' }}</strong></td>
+                    {% set last_printed_level_ids = {} %} {# {level: category_id} #}
+
+                    {% for item in equipment %}
+                        {% for cat_info in item.printable_categories %}
+                            {% set level = cat_info.level %}
+                            {% set current_id_at_level = cat_info.id %}
+                            {% set last_id_at_this_level = last_printed_level_ids.get(level) %}
+
+                            {% if current_id_at_level != last_id_at_this_level %}
+                                <tr class="category-separator L{{ level }}">
+                                    <td colspan="5" class="category-header-cell padding-level-{{ level - 1 if level > 0 else 0 }}">
+                                        {{ cat_info.name }}
+                                    </td>
                         </tr>
+                                {% do last_printed_level_ids.update({level: current_id_at_level}) %}
+                                {# Reset deeper levels #}
+                                {% for l_reset in range(level + 1, 6) %} {# Assuming max 5 levels for reset visibility #}
+                                    {% if l_reset in last_printed_level_ids %}
+                                        {% do last_printed_level_ids.pop(l_reset) %}
+                                    {% endif %}
+                                {% endfor %}
                         {% endif %}
-                        {# Original item row #}
+                        {% endfor %}
+
+                        {# Item row #}
                         <tr>
-                            <td class="col-num">{{ loop.index }}</td>
+                            {% set fixed_item_padding_level = 2 %} {# Fixed padding for item row to level 2 (0-indexed) #}
+                            {# The actual item data row, indented based on its fixed level #}
+                            <td class="col-num padding-level-{{ fixed_item_padding_level }}">{{ loop.index }}</td>
                             <td class="col-name">{{ item.name }}</td>
                             <td class="col-serial">{{ item.serial_number or "—" }}</td>
                             <td class="col-qty">{{ item.quantity or 1 }}</td>

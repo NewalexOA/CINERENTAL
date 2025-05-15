@@ -4,10 +4,11 @@ This module provides database operations for managing equipment categories,
 including creating, retrieving, updating, and organizing hierarchical relationships.
 """
 
-from typing import List, Optional
+from typing import Dict, List, Optional
 
-from sqlalchemy import select
+from sqlalchemy import bindparam, literal_column, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import aliased
 from sqlalchemy.sql import func
 from sqlalchemy.sql.expression import CTE, or_
 
@@ -192,3 +193,59 @@ class CategoryRepository(BaseRepository[Category]):
             category.equipment_count = row[1]
             categories.append(category)
         return categories
+
+    async def get_category_path_from_root(self, category_id: int) -> List[Dict]:
+        """Retrieves the full ancestry path for a given category_id.
+
+        Path is ordered from root, using SQLAlchemy ORM for the recursive CTE.
+        """
+        # Alias for the Category model for the recursive part of the CTE
+        category_alias = aliased(Category, name='c_alias')
+
+        # Base case of the CTE: select the starting category
+        cte_base = (
+            select(
+                Category.id,
+                Category.name,
+                Category.parent_id,
+                Category.show_in_print_overview,
+                literal_column('0').label('distance'),
+            )
+            .where(Category.id == bindparam('current_category_id'))
+            .where(Category.deleted_at.is_(None))
+            .cte(name='category_path_cte', recursive=True)
+        )
+
+        # Recursive part of the CTE: join with the CTE itself
+        cte_recursive_part = (
+            select(
+                category_alias.id,
+                category_alias.name,
+                category_alias.parent_id,
+                category_alias.show_in_print_overview,
+                (cte_base.c.distance + 1).label('distance'),
+            )
+            .join(cte_base, category_alias.id == cte_base.c.parent_id)
+            .where(category_alias.deleted_at.is_(None))
+        )
+
+        # Combine base and recursive parts
+        category_path_cte = cte_base.union_all(cte_recursive_part)
+
+        # Final query to select from the CTE and order the results
+        final_query = (
+            select(
+                category_path_cte.c.id,
+                category_path_cte.c.name,
+                category_path_cte.c.show_in_print_overview,
+                category_path_cte.c.parent_id,
+            )
+            .select_from(category_path_cte)
+            .order_by(category_path_cte.c.distance.desc())
+        )
+
+        result = await self.session.execute(
+            final_query, {'current_category_id': category_id}
+        )
+        rows = result.mappings().all()
+        return [dict(row) for row in rows]

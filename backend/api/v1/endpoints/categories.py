@@ -52,6 +52,7 @@ async def create_category(
             name=category.name,
             description=category.description or '',
             parent_id=category.parent_id,
+            show_in_print_overview=category.show_in_print_overview,
         )
         return CategoryResponse.model_validate(db_category)
     except BusinessError as e:
@@ -170,6 +171,7 @@ async def update_category(
             name=category.name,
             description=category.description,
             parent_id=category.parent_id,
+            show_in_print_overview=category.show_in_print_overview,
         )
         return CategoryResponse.model_validate(db_category)
     except ValueError as e:

@@ -222,7 +222,8 @@ async function addCategory() {
     const form = document.getElementById('addCategoryForm');
     const data = {
         name: form.elements.name.value,
-        description: form.elements.description.value
+        description: form.elements.description.value,
+        show_in_print_overview: form.elements.show_in_print_overview.checked
     };
 
     // Validation
@@ -271,6 +272,7 @@ async function openEditCategoryModal(categoryId) {
         form.elements.id.value = category.id;
         form.elements.name.value = category.name;
         form.elements.description.value = category.description || '';
+        form.elements.show_in_print_overview.checked = category.show_in_print_overview;
 
         const modal = new bootstrap.Modal(document.getElementById('editCategoryModal'));
         modal.show();
@@ -289,7 +291,8 @@ async function updateCategory() {
     const categoryId = form.elements.id.value;
     const data = {
         name: form.elements.name.value,
-        description: form.elements.description.value
+        description: form.elements.description.value,
+        show_in_print_overview: form.elements.show_in_print_overview.checked
     };
 
     // Validation

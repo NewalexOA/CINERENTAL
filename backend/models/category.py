@@ -8,7 +8,8 @@ to organize equipment items into logical groups.
 from datetime import datetime
 from typing import Optional
 
-from sqlalchemy import DateTime, ForeignKey, Integer, String
+from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String
+from sqlalchemy import text as sql_text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from backend.models.core import Base
@@ -28,6 +29,7 @@ class Category(TimestampMixin, Base):
         equipment: Equipment items in this category.
         equipment_count: Virtual attribute for equipment count.
         deleted_at: Deletion timestamp
+        show_in_print_overview: Whether to show this category as a header in print forms
     """
 
     __tablename__ = 'categories'
@@ -39,6 +41,13 @@ class Category(TimestampMixin, Base):
         Integer,
         ForeignKey('categories.id', ondelete='RESTRICT'),
         nullable=True,
+    )
+    show_in_print_overview: Mapped[bool] = mapped_column(
+        Boolean,
+        default=True,
+        server_default=sql_text('true'),
+        nullable=False,
+        comment='Whether to show this category as a header in print forms',
     )
     deleted_at: Mapped[Optional[datetime]] = mapped_column(
         DateTime(timezone=True),
