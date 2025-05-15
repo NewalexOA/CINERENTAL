@@ -827,6 +827,7 @@ class ProjectService:
             if equipment:
                 equipment_name = equipment.name
                 serial_number = equipment.serial_number
+                barcode = equipment.barcode
 
                 # Get category information
                 category_name = 'Не указана'
@@ -849,6 +850,9 @@ class ProjectService:
                     'replacement_cost': replacement_cost_value,
                     'serial_number': equipment.serial_number,
                 }
+            else:
+                barcode = None
+                category_name = 'Не указана'
 
             # Get booking status
             booking_status = None
@@ -881,6 +885,8 @@ class ProjectService:
                 'equipment_name': equipment_name,
                 'equipment_id': booking.equipment_id,
                 'serial_number': serial_number,
+                'barcode': barcode,
+                'category_name': category_name,
                 'quantity': quantity,
                 'payment_status': payment_status,
             }

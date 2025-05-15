@@ -110,6 +110,8 @@ class BookingInProject(BaseModel):
     equipment_id: int
     equipment_name: str
     serial_number: Optional[str] = None
+    barcode: Optional[str] = None
+    category_name: Optional[str] = None
     start_date: datetime
     end_date: datetime
     booking_status: str
