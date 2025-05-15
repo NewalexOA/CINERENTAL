@@ -1,4 +1,5 @@
 import { scanStorage } from './scan-storage.js';
+import { formatCurrency } from './project/project-utils.js';
 
 /**
  * Scanner page logic
