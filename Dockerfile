@@ -42,10 +42,14 @@ RUN curl -LsSf https://astral.sh/uv/install.sh | sh && \
 # Install dependencies based on environment type
 RUN export PATH="/root/.local/bin:$PATH" && \
     uv pip install --system . && \
-    uv pip install --system psycopg2-binary faker treepoem && \
+    uv pip install --system psycopg2-binary && \
+    if [ "$ENV_TYPE" = "dev" ]; then \
+        echo "Installing development-specific dependencies (e.g., faker for seeding)..." && \
+        uv pip install --system faker; \
+    fi && \
     if [ "$ENV_TYPE" = "test" ]; then \
-        echo "Installing test dependencies..." && \
-        uv pip install --system pytest pytest-cov pytest-asyncio pytest-mock httpx coverage requests; \
+        echo "Installing test-specific dependencies..." && \
+        uv pip install --system faker pytest pytest-cov pytest-asyncio pytest-mock httpx coverage requests; \
     fi
 
 # Install Playwright if needed
@@ -86,7 +90,7 @@ COPY --from=builder /usr/local/bin /usr/local/bin
 COPY --chown=appuser:appuser backend backend
 COPY --chown=appuser:appuser frontend frontend
 COPY --chown=appuser:appuser migrations migrations
-COPY --chown=appuser:appuser alembic.ini pyproject.toml README.md ./ 
+COPY --chown=appuser:appuser alembic.ini pyproject.toml README.md ./
 COPY --chown=appuser:appuser docker docker
 
 # Make scripts executable and set permissions
