@@ -154,19 +154,69 @@ function renderEquipment(items) {
         const actionsCell = row.insertCell();
         actionsCell.innerHTML = `
             <div class="btn-group">
-                <a href="/equipment/${item.id}" class="btn btn-sm btn-outline-primary" title="Details">
+                <a href="/equipment/${item.id}" class="btn btn-sm btn-outline-primary" title="Подробности">
                     <i class="fas fa-info-circle"></i>
                 </a>
-                <button type="button" class="btn btn-sm btn-outline-secondary" title="Print Barcode" onclick="printBarcode('${item.id}', '${item.barcode}')">
+                <button type="button" class="btn btn-sm btn-outline-secondary btn-print-barcode"
+                        title="Печать штрих-кода"
+                        data-equipment-id="${item.id}"
+                        data-barcode="${item.barcode}">
                     <i class="fas fa-print"></i>
                 </button>
-                <button type="button" class="btn btn-sm btn-outline-success btn-qrcode" title="Add to Scan Session" onclick="addToScanSession('${item.id}')">
+                <button type="button" class="btn btn-sm btn-outline-success btn-add-to-scan"
+                        title="Добавить в сессию сканирования"
+                        data-equipment-id="${item.id}">
                     <i class="fas fa-qrcode"></i>
                 </button>
             </div>
         `;
     });
     // formatAmounts(); // Re-enable if replacement_cost is shown in the list
+}
+
+// Setup table event delegation
+function setupTableEventListeners() {
+    if (document.documentElement.hasAttribute('data-global-handlers-initialized')) {
+        console.log('Using global event handlers, skipping table event setup');
+        return;
+    }
+
+    console.log('Setting up legacy table event handlers');
+    if (!equipmentTableBody) return;
+
+    // Remove existing handler if it exists (to prevent duplication)
+    equipmentTableBody.removeEventListener('click', handleTableClick);
+
+    // Add new handler
+    equipmentTableBody.addEventListener('click', handleTableClick);
+}
+
+// Table click handler
+function handleTableClick(event) {
+    // Find closest button
+    const button = event.target.closest('button');
+
+    // If click was not on a button, ignore
+    if (!button) return;
+
+    // Handle click on print barcode button
+    if (button.classList.contains('btn-print-barcode')) {
+        const equipmentId = button.dataset.equipmentId;
+        const barcode = button.dataset.barcode;
+        if (equipmentId && barcode) {
+            event.preventDefault();
+            printBarcode(equipmentId, barcode);
+        }
+    }
+
+    // Handle click on add to scan button
+    else if (button.classList.contains('btn-add-to-scan')) {
+        const equipmentId = button.dataset.equipmentId;
+        if (equipmentId) {
+            event.preventDefault();
+            addToScanSession(equipmentId);
+        }
+    }
 }
 
 // Function to update pagination UI
@@ -184,6 +234,23 @@ function updatePaginationUI() {
     } else {
         paginationElement.classList.add('d-none');
     }
+}
+
+// Setuo event listeners for barcode modal
+function setupBarcodeModalEventListeners() {
+    const modalElement = document.getElementById('barcodePrintModal');
+    if (!modalElement) return;
+
+    modalElement.addEventListener('click', function(event) {
+        const button = event.target.closest('button[data-barcode-type]');
+        if (!button) return;
+
+        const barcodeType = button.dataset.barcodeType;
+        if (barcodeType) {
+            event.preventDefault();
+            doPrintBarcode(barcodeType);
+        }
+    });
 }
 
 // Function to load equipment data
@@ -286,6 +353,9 @@ function setupEventListeners() {
 document.addEventListener('DOMContentLoaded', function() {
     // Reset any active loader first (assuming resetLoader is global)
     if (typeof resetLoader === 'function') resetLoader();
+
+    // Setup table event delegation
+    setupTableEventListeners();
 
     // Initial load of equipment
     loadEquipment();
@@ -479,18 +549,27 @@ document.addEventListener('DOMContentLoaded', function() {
 
     const confirmAddBtn = document.getElementById('confirmAddToSession');
     if (confirmAddBtn) confirmAddBtn.addEventListener('click', addEquipmentToActiveSession);
+
+    // Setup barcode modal event listeners
+    setupBarcodeModalEventListeners();
 });
 
-// Barcode print functions (need to be global scope for onclick)
+// Barcode print functions
 function printBarcode(equipmentId, barcode) {
     const barcodeModalElement = document.getElementById('barcodePrintModal');
     if (!barcodeModalElement) return console.error('Barcode print modal not found!');
-    const barcodeModal = new bootstrap.Modal(barcodeModalElement);
 
+    // Use existing modal instance or create new one
+    const barcodeModal = bootstrap.Modal.getInstance(barcodeModalElement) || new bootstrap.Modal(barcodeModalElement);
+
+    // Set values in hidden fields
     document.getElementById('print-barcode-equipment-id').value = equipmentId;
     document.getElementById('print-barcode-value').value = barcode;
 
+    // Load barcode previews
     loadBarcodePreviews(barcode);
+
+    // Show modal
     barcodeModal.show();
 }
 
@@ -507,136 +586,172 @@ function loadBarcodePreviews(barcode) {
     if(datamatrixText) datamatrixText.textContent = barcode;
 }
 
+// Function to print selected barcode type
 function doPrintBarcode(barcodeType) {
+    const barcodeModalEl = document.getElementById('barcodePrintModal');
+    if (!barcodeModalEl) return;
+
+    // Get values from hidden fields
     const equipmentId = document.getElementById('print-barcode-equipment-id').value;
     const barcode = document.getElementById('print-barcode-value').value;
 
-    const iframe = document.createElement('iframe');
-    iframe.style.position = 'absolute';
-    iframe.style.width = '0';
-    iframe.style.height = '0';
-    iframe.style.border = '0';
-    document.body.appendChild(iframe);
+    if (!equipmentId || !barcode) {
+        if (typeof showToast === 'function') showToast('Ошибка: данные для печати штрих-кода недоступны', 'danger');
+        return;
+    }
 
-    const containerStyleClass = barcodeType === 'datamatrix' ? 'barcode-container-datamatrix' : 'barcode-container-linear';
-    const printContent = `
-        <!DOCTYPE html><html><head><meta charset="UTF-8"><title>Печать</title><style>
-        @page { size: 30mm 10mm; margin: 0; }
-        body { font-family: Arial, sans-serif; text-align: center; padding: 0; margin: 0; width: 30mm; height: 10mm; overflow: hidden; }
-        .barcode-container-linear { width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; box-sizing: border-box; }
-        .barcode-container-datamatrix { width: 100%; height: 100%; display: flex; flex-direction: row; align-items: center; justify-content: flex-start; padding-left: 1mm; box-sizing: border-box; }
-        .barcode-image { max-width: ${barcodeType === 'datamatrix' ? '9mm' : '28mm'}; height: ${barcodeType === 'datamatrix' ? '9mm' : '7mm'}; object-fit: contain; display: block; }
-        .barcode-text { font-size: 6px; font-family: monospace; word-break: break-all; line-height: 1; ${barcodeType === 'datamatrix' ? 'margin-left: 1mm;' : 'margin-top: 0.5mm;'} }
-        </style></head><body><div class="${containerStyleClass}">
-        <img class="barcode-image" src="/api/v1/barcodes/${barcode}/image?barcode_type=${barcodeType}" alt="Штрих-код">
-        <div class="barcode-text">${barcode}</div></div></body></html>
-    `;
+    try {
+        // Create and submit form for printing
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '/print/barcode';
+        form.target = '_blank';
+        form.style.display = 'none';
 
-    const printWindow = iframe.contentWindow;
-    printWindow.document.open();
-    printWindow.document.write(printContent);
-    printWindow.document.close();
+        // Add equipment id
+        const equipmentIdInput = document.createElement('input');
+        equipmentIdInput.type = 'hidden';
+        equipmentIdInput.name = 'equipment_id';
+        equipmentIdInput.value = equipmentId;
+        form.appendChild(equipmentIdInput);
 
-    iframe.onload = () => {
-        try {
-            printWindow.focus();
-            printWindow.print();
-        } catch (e) {
-            console.error("Printing failed:", e);
-            showToast('Ошибка при отправке на печать', 'danger');
-        } finally {
-             setTimeout(() => { if(iframe.parentNode) iframe.parentNode.removeChild(iframe); }, 500);
+        // Add barcode
+        const barcodeInput = document.createElement('input');
+        barcodeInput.type = 'hidden';
+        barcodeInput.name = 'barcode';
+        barcodeInput.value = barcode;
+        form.appendChild(barcodeInput);
+
+        // Add barcode type
+        const typeInput = document.createElement('input');
+        typeInput.type = 'hidden';
+        typeInput.name = 'type';
+        typeInput.value = barcodeType;
+        form.appendChild(typeInput);
+
+        // Submit form for printing
+        document.body.appendChild(form);
+        form.submit();
+
+        // Clean up form
+        setTimeout(() => {
+            document.body.removeChild(form);
+        }, 100);
+
+        // Close modal and show success message
+        const modal = bootstrap.Modal.getInstance(barcodeModalEl);
+        if (modal) {
+            modal.hide();
+
+            // Give time for modal to close and backdrop to be removed
+            setTimeout(() => {
+                if (typeof showToast === 'function') {
+                    showToast('Штрих-код отправлен на печать', 'success');
+                }
+            }, 300);
         }
-    };
-
-    const barcodeModalEl = document.getElementById('barcodePrintModal');
-    const barcodeModal = bootstrap.Modal.getInstance(barcodeModalEl);
-    if (barcodeModal) barcodeModal.hide();
-
-    showToast('Штрих-код отправлен на печать', 'info');
+    } catch (error) {
+        console.error('Error printing barcode:', error);
+        if (typeof showToast === 'function') {
+            showToast('Ошибка при печати штрих-кода', 'danger');
+        }
+    }
 }
 
-// Scan session functions (need to be global scope for onclick)
-async function addToScanSession(equipmentId) {
-    console.log('addToScanSession called with ID:', equipmentId);
+// Function to add equipment to scan session
+async function addToScanSession(equipmentId, name, barcode, serialNumber, categoryId, categoryName) {
+    console.log('addToScanSession called with ID:', equipmentId, 'Serial:', serialNumber);
+
+    // Check if ID is provided
+    if (!equipmentId) {
+        if (typeof showToast === 'function') showToast('Ошибка: отсутствует ID оборудования', 'danger');
+        return;
+    }
 
     const modalElement = document.getElementById('addToScanSessionModal');
     if (!modalElement) return console.error('addToScanSessionModal not found!');
-    const modal = bootstrap.Modal.getOrCreateInstance(modalElement);
 
-    const loadingEl = document.getElementById('addToSessionLoading');
-    const contentEl = document.getElementById('addToSessionContent');
-    const confirmAddBtn = document.getElementById('confirmAddToSession');
-    const confirmNewBtn = document.getElementById('confirmNewSession');
+    // Get modal sections
+    const loadingSection = document.getElementById('addToSessionLoading');
+    const contentSection = document.getElementById('addToSessionContent');
+    const noSessionSection = document.getElementById('noActiveSessionMessage');
+    const activeSessionSection = document.getElementById('activeSessionMessage');
+    const newSessionBtn = document.getElementById('confirmNewSession');
+    const addToSessionBtn = document.getElementById('confirmAddToSession');
 
-    // Show loading, hide content, disable buttons
-    loadingEl.classList.remove('d-none');
-    contentEl.classList.add('d-none');
-    confirmAddBtn.disabled = true;
-    confirmNewBtn.disabled = true;
-    modal.show(); // Show modal with loading indicator
+    // Show loading, hide content
+    if (loadingSection) loadingSection.classList.remove('d-none');
+    if (contentSection) contentSection.classList.add('d-none');
 
-    let equipmentData;
+    let currentName = name;
+    let currentBarcode = barcode;
+    let currentSerialNumber = serialNumber;
+    let currentCategoryId = categoryId;
+    let currentCategoryName = categoryName;
+
     try {
-        // Fetch full equipment data from API
-        // Assuming 'api' object is globally available and configured
-        equipmentData = await api.get(`/equipment/${equipmentId}`);
-        console.log('Fetched equipment data:', equipmentData);
+        // If any crucial detail is missing (name, barcode), fetch full details from API
+        // We also fetch if serialNumber is explicitly undefined, to ensure we have it
+        if (!currentName || !currentBarcode || typeof currentSerialNumber === 'undefined') {
+            console.log('Fetching full equipment details for ID:', equipmentId);
+            const response = await api.get(`/equipment/${equipmentId}`);
 
-        if (!equipmentData || typeof equipmentData !== 'object') {
-            throw new Error('Invalid data received from API');
+            currentName = response.name;
+            currentBarcode = response.barcode;
+            currentSerialNumber = response.serial_number || null;
+            currentCategoryId = response.category_id;
+            currentCategoryName = response.category_name;
         }
 
-        // Populate modal hidden fields with fetched data
-        document.getElementById('equipmentIdToAdd').value = equipmentData.id;
-        // Decode name just in case it contains HTML entities from API (unlikely but safe)
-        const decodedNameEl = document.createElement('textarea');
-        decodedNameEl.innerHTML = equipmentData.name || '';
-        document.getElementById('equipmentNameToAdd').textContent = decodedNameEl.value;
-        document.getElementById('equipmentBarcodeToAdd').value = equipmentData.barcode || '';
-        document.getElementById('equipmentSerialNumberToAdd').value = equipmentData.serial_number || '';
-        document.getElementById('equipmentCategoryIdToAdd').value = equipmentData.category_id || '';
-        document.getElementById('equipmentCategoryNameToAdd').value = equipmentData.category_name || ''; // Use category_name from response
+        // Store values in hidden fields
+        document.getElementById('equipmentIdToAdd').value = equipmentId;
+        document.getElementById('equipmentNameToAdd').textContent = currentName;
+        document.getElementById('equipmentBarcodeToAdd').value = currentBarcode;
+        document.getElementById('equipmentSerialNumberToAdd').value = currentSerialNumber || '';
+        document.getElementById('equipmentCategoryIdToAdd').value = currentCategoryId || '';
+        document.getElementById('equipmentCategoryNameToAdd').value = currentCategoryName || '';
 
-        // Prepare modal content based on active session
-        if (typeof scanStorage === 'undefined') {
-            throw new Error('scanStorage is not available!');
-        }
-        const activeSession = scanStorage.getActiveSession();
-        const activeMsg = document.getElementById('activeSessionMessage');
-        const noActiveMsg = document.getElementById('noActiveSessionMessage');
-        const activeNameSpan = document.getElementById('activeSessionName');
+        // Check for active session
+        const sessionInfo = await scanStorage.getActiveSession();
 
-        if (activeSession) {
-            activeMsg.classList.remove('d-none');
-            noActiveMsg.classList.add('d-none');
-            activeNameSpan.textContent = activeSession.name;
-            confirmAddBtn.style.display = '';
-            confirmNewBtn.style.display = 'none';
-            confirmAddBtn.disabled = false; // Enable button
+        // Hide loading, show content
+        if (loadingSection) loadingSection.classList.add('d-none');
+        if (contentSection) contentSection.classList.remove('d-none');
+
+        if (sessionInfo) {
+            // We have an active session
+            console.log('Active session found:', sessionInfo);
+            if (noSessionSection) noSessionSection.classList.add('d-none');
+            if (activeSessionSection) activeSessionSection.classList.remove('d-none');
+
+            document.getElementById('activeSessionName').textContent = sessionInfo.name;
+
+            if (newSessionBtn) newSessionBtn.style.display = 'none';
+            if (addToSessionBtn) addToSessionBtn.style.display = '';
         } else {
-            activeMsg.classList.add('d-none');
-            noActiveMsg.classList.remove('d-none');
-            confirmAddBtn.style.display = 'none';
-            confirmNewBtn.style.display = '';
-            const newSessionNameInput = document.getElementById('newSessionName');
-            if (newSessionNameInput) newSessionNameInput.value = '';
-            confirmNewBtn.disabled = false; // Enable button
+            // No active session
+            console.log('No active session found');
+            if (noSessionSection) noSessionSection.classList.remove('d-none');
+            if (activeSessionSection) activeSessionSection.classList.add('d-none');
+
+            if (newSessionBtn) newSessionBtn.style.display = '';
+            if (addToSessionBtn) addToSessionBtn.style.display = 'none';
         }
 
-        // Show content, hide loading
-        contentEl.classList.remove('d-none');
-        loadingEl.classList.add('d-none');
+        const bsModal = bootstrap.Modal.getInstance(modalElement) || new bootstrap.Modal(modalElement);
+        bsModal.show();
 
     } catch (error) {
-        console.error('Error fetching equipment data or preparing modal:', error);
-        showToast('Ошибка получения данных об оборудовании', 'danger');
-        modal.hide(); // Hide modal on error
-        // Ensure loading is hidden and content shown if modal is reused
-        loadingEl.classList.add('d-none');
-        contentEl.classList.remove('d-none');
-        confirmAddBtn.disabled = false;
-        confirmNewBtn.disabled = false;
+        console.error('Error preparing scan session:', error);
+        if (typeof showToast === 'function') {
+            showToast('Ошибка при подготовке сессии сканирования', 'danger');
+        }
+
+        if (loadingSection) loadingSection.classList.add('d-none');
+        if (contentSection) contentSection.classList.remove('d-none');
+
+        const modal = bootstrap.Modal.getInstance(modalElement);
+        if (modal) modal.hide();
     }
 }
 
@@ -664,8 +779,11 @@ function addEquipmentToActiveSession() {
     const activeSession = scanStorage.getActiveSession();
     if (!activeSession) {
         showToast('Нет активной сессии', 'warning');
-        const modal = bootstrap.Modal.getInstance(document.getElementById('addToScanSessionModal'));
-        if (modal) modal.hide();
+        // Close modal with delay
+        setTimeout(() => {
+            const modal = bootstrap.Modal.getInstance(document.getElementById('addToScanSessionModal'));
+            if (modal) modal.hide();
+        }, 100);
         return;
     }
     addEquipmentToSession(activeSession.id);
@@ -677,38 +795,46 @@ function addEquipmentToSession(sessionId) {
     const equipmentId = parseInt(document.getElementById('equipmentIdToAdd').value);
     const equipmentName = document.getElementById('equipmentNameToAdd').textContent;
     const barcode = document.getElementById('equipmentBarcodeToAdd').value;
-    const serialNumber = document.getElementById('equipmentSerialNumberToAdd').value || null; // Retrieve serial number
+    const serialNumber = document.getElementById('equipmentSerialNumberToAdd')?.value || null;
     const categoryId = parseInt(document.getElementById('equipmentCategoryIdToAdd').value) || null;
     const categoryName = document.getElementById('equipmentCategoryNameToAdd').value || '';
 
     if (isNaN(equipmentId) || !equipmentName || !barcode) {
-        console.error('Invalid equipment data for session add:', { equipmentId, equipmentName, barcode });
+        console.error('Invalid equipment data for session add:', { equipmentId, equipmentName, barcode, serialNumber });
         return showToast('Ошибка: Некорректные данные об оборудовании.', 'danger');
     }
 
-    const equipment = {
+    const equipmentData = {
         equipment_id: equipmentId,
         name: equipmentName,
         barcode: barcode,
-        serial_number: serialNumber, // This now comes from API via hidden input
+        serial_number: serialNumber ? serialNumber : null,
         category_id: categoryId,
-        category_name: categoryName // This now comes from API via hidden input
+        category_name: categoryName
     };
 
-    // Call scanStorage.addEquipment and handle the result
-    const result = scanStorage.addEquipment(sessionId, equipment);
+    console.log('Data being sent to scanStorage.addEquipment:', sessionId, equipmentData);
+    const result = scanStorage.addEquipment(sessionId, equipmentData);
+    console.log('Result from scanStorage.addEquipment:', result);
 
-    const modal = bootstrap.Modal.getInstance(document.getElementById('addToScanSessionModal'));
-    if (modal) modal.hide();
+    setTimeout(() => {
+        const modal = bootstrap.Modal.getInstance(document.getElementById('addToScanSessionModal'));
+        if (modal) modal.hide();
 
-    if (result === 'duplicate') {
-        showToast(`Оборудование "${equipmentName}" (S/N: ${serialNumber}) уже есть в этой сессии.`, 'warning');
-    } else if (result) { // result is the updated session object
-        showToast(`Оборудование "${equipmentName}" добавлено в сессию "${result.name}"`, 'success');
-    } else {
-        // Handle potential undefined result from addEquipment on other errors
-        showToast('Не удалось добавить оборудование в сессию.', 'danger');
-    }
+        setTimeout(() => {
+            if (result === 'duplicate_serial_exists') {
+                showToast(`Оборудование "${equipmentName}" (S/N: ${serialNumber}) уже добавлено и не может быть продублировано.`, 'warning');
+            } else if (result === 'quantity_incremented') {
+                showToast(`Количество оборудования "${equipmentName}" увеличено в сессии "${scanStorage.getSession(sessionId)?.name}".`, 'success');
+            } else if (result === 'item_added') {
+                showToast(`Оборудование "${equipmentName}" добавлено в сессию "${scanStorage.getSession(sessionId)?.name}"`, 'success');
+            } else if (result === 'duplicate') {
+                showToast(`Оборудование "${equipmentName}" ${serialNumber ? `(S/N: ${serialNumber})` : ''} уже есть в этой сессии.`, 'warning');
+            } else {
+                showToast('Не удалось добавить оборудование в сессию.', 'danger');
+            }
+        }, 300);
+    }, 100);
 }
 
 // Export functions to global scope for onclick handlers
@@ -722,6 +848,9 @@ window.addEquipmentToActiveSession = addEquipmentToActiveSession;
 document.addEventListener('DOMContentLoaded', () => {
     // Setup event listeners
     setupEventListeners();
+
+    // Setup table event delegation
+    setupTableEventListeners();
 
     // Load equipment data
     loadEquipment();

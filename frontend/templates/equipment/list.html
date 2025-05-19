@@ -82,10 +82,13 @@
                                     <a href="/equipment/{{ item.id }}" class="btn btn-sm btn-outline-primary">
                                         <i class="fas fa-info-circle"></i>
                                     </a>
-                                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="printBarcode('{{ item.id }}', '{{ item.barcode }}')">
+                                    <button type="button" class="btn btn-sm btn-outline-secondary btn-print-barcode"
+                                           data-equipment-id="{{ item.id }}"
+                                           data-barcode="{{ item.barcode }}">
                                         <i class="fas fa-print"></i>
                                     </button>
-                                    <button type="button" class="btn btn-sm btn-outline-success btn-qrcode" onclick="addToScanSession('{{ item.id }}')">
+                                    <button type="button" class="btn btn-sm btn-outline-success btn-add-to-scan"
+                                           data-equipment-id="{{ item.id }}">
                                         <i class="fas fa-qrcode"></i>
                                     </button>
                                 </div>
@@ -191,7 +194,7 @@
                 <input type="hidden" id="print-barcode-value">
 
                 <div class="mb-3 d-flex align-items-center">
-                    <button type="button" class="btn btn-outline-primary flex-grow-1" onclick="doPrintBarcode('code128')">
+                    <button type="button" class="btn btn-outline-primary flex-grow-1" id="print-code128-btn" data-barcode-type="code128">
                         <i class="fas fa-barcode me-1"></i> Линейный штрих-код
                     </button>
                     <div class="ms-3 barcode-preview-container" id="code128-preview-container">
@@ -202,7 +205,7 @@
                     </div>
                 </div>
                 <div class="d-flex align-items-center">
-                    <button type="button" class="btn btn-outline-primary flex-grow-1" onclick="doPrintBarcode('datamatrix')">
+                    <button type="button" class="btn btn-outline-primary flex-grow-1" id="print-datamatrix-btn" data-barcode-type="datamatrix">
                         <i class="fas fa-qrcode me-1"></i> DataMatrix
                     </button>
                     <div class="ms-3 barcode-preview-container" id="datamatrix-preview-container">

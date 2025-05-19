@@ -52,7 +52,7 @@
                                 <div class="d-flex justify-content-between align-items-center mb-2">
                                     <p class="card-text mb-0" id="barcodeDisplay">{{ equipment.barcode }}</p>
                                     <div>
-                                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="copyBarcode('{{ equipment.barcode }}')">
+                                        <button type="button" class="btn btn-sm btn-outline-secondary btn-copy-barcode" data-barcode="{{ equipment.barcode }}">
                                             <i class="fas fa-copy"></i>
                                         </button>
                                         <button type="button" class="btn btn-sm btn-outline-primary" id="regenerateBarcodeBtn">
