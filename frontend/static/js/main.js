@@ -216,30 +216,47 @@ class BarcodeScanner {
 
             let addedToSession = false;
             let isDuplicate = false;
+            let currentSessionId = null; // Use a local variable for the current session ID
 
-            // Get current active session ID from storage if not set
-            if (!this.sessionId && window.scanStorage) {
+            // Always get the current active session ID from scanStorage
+            if (window.scanStorage) {
                 const activeSession = window.scanStorage.getActiveSession();
                 if (activeSession) {
-                    this.sessionId = activeSession.id;
+                    currentSessionId = activeSession.id;
                 }
             }
 
-            // Save to session storage if available and session ID exists
-            if (window.scanStorage && this.sessionId) {
-                const result = window.scanStorage.addEquipment(this.sessionId, equipment);
-                if (result === 'duplicate') {
+            // Save to session storage if available and currentSessionId is set
+            if (window.scanStorage && currentSessionId) {
+                const equipmentDataForSession = {
+                    equipment_id: equipment.id,
+                    name: equipment.name,
+                    barcode: equipment.barcode,
+                    serial_number: equipment.serial_number || null,
+                    category_id: equipment.category_id || equipment.category?.id || null,
+                    category_name: equipment.category_name || equipment.category?.name || 'Без категории'
+                };
+
+                // Use currentSessionId for adding equipment
+                const addResult = window.scanStorage.addEquipment(currentSessionId, equipmentDataForSession);
+
+                if (addResult === 'duplicate_serial_exists') {
                     isDuplicate = true;
-                    console.log(`Barcode ${barcode} corresponds to equipment ID ${equipment.id} which is already in session ${this.sessionId}.`);
-                } else if (typeof result === 'object' && result !== null) {
+                    addedToSession = false;
+                    console.log(`Equipment with ID ${equipment.id} and S/N ${equipment.serial_number || 'N/A'} already in session ${currentSessionId}.`);
+                } else if (addResult === 'item_added' || addResult === 'quantity_incremented') {
+                    isDuplicate = false;
                     addedToSession = true;
-                    console.log(`Added equipment ID ${equipment.id} to session ${this.sessionId}`);
+                    console.log(`Equipment ID ${equipment.id} successfully processed for session ${currentSessionId}. Result: ${addResult}`);
+                } else {
+                    isDuplicate = false;
+                    addedToSession = false;
+                    console.warn(`Failed to add equipment ID ${equipment.id} to session ${currentSessionId} or no specific result code. Result: ${addResult}`);
                 }
             } else {
-                console.log('No active session available for adding equipment');
+                console.log('No active session found in scanStorage when trying to add equipment.'); // Updated log message
             }
 
-            // Trigger onScan with additional info about duplication status
             this.onScan(equipment, { isDuplicate, addedToSession });
 
         } catch (error) {
