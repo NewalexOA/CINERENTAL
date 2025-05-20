@@ -1032,7 +1032,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     try {
         initScanner();
-        initEventListeners();
         initModalScanner();
         fixAllModals();
     } catch (error) {
@@ -1209,3 +1208,166 @@ const initEventListeners = () => {
 
 // Initialize page
 document.addEventListener('DOMContentLoaded', initEventListeners);
+
+// Create a new session
+export function newSession() {
+    const modalElement = document.getElementById('newSessionModal');
+    if (!modalElement) return;
+
+    const modal = bootstrap.Modal.getInstance(modalElement) || new bootstrap.Modal(modalElement);
+    modal.show();
+}
+
+// Handler for "Create" button in new session modal
+export function createNewSessionFromModal() {
+    const modalElement = document.getElementById('newSessionModal');
+    if (!modalElement) return;
+
+    const modal = bootstrap.Modal.getInstance(modalElement);
+    if (!modal) return;
+
+    const nameInput = document.getElementById('sessionName');
+    const name = nameInput?.value?.trim() || `New Session ${new Date().toLocaleString()}`;
+
+    const newSession = scanStorage.createSession(name);
+    scanStorage.setActiveSession(newSession.id);
+
+    // Close modal and reset input
+    modal.hide();
+    if (nameInput) nameInput.value = '';
+
+    // Refresh UI
+    renderActiveSessions();
+    applySessionFilter();
+}
+
+// Load existing session
+export function loadSessionFromModal() {
+    const modalElement = document.getElementById('loadSessionModal');
+    if (!modalElement) return;
+
+    // Get all sessions from storage
+    const sessions = scanStorage.getAllSessions();
+    if (!sessions || sessions.length === 0) {
+        showToast('Не найдено сохраненных сессий сканирования.', 'warning');
+        return;
+    }
+
+    // Fill the list in the modal
+    const sessionsList = document.getElementById('sessionsList');
+    if (!sessionsList) return;
+
+    sessionsList.innerHTML = sessions.map(session => {
+        const date = new Date(session.updatedAt).toLocaleString();
+        const itemsCount = session.items.length;
+        return `
+            <div class="list-group-item list-group-item-action session-item d-flex justify-content-between align-items-center"
+                 data-session-id="${session.id}">
+                <div>
+                    <h6 class="mb-1">${session.name}</h6>
+                    <small class="text-muted">Обновлено: ${date}</small>
+                </div>
+                <div>
+                    <span class="badge bg-primary">${itemsCount} поз.</span>
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    // Show the modal
+    const modal = bootstrap.Modal.getInstance(modalElement) || new bootstrap.Modal(modalElement);
+    modal.show();
+}
+
+// Handler for selecting a session in the load session modal
+export function selectSessionFromModal(event) {
+    const modalElement = document.getElementById('loadSessionModal');
+    if (!modalElement) return;
+
+    const sessionItem = event.target.closest('.session-item');
+    if (!sessionItem) return;
+
+    const sessionId = sessionItem.dataset.sessionId;
+    if (!sessionId) return;
+
+    scanStorage.setActiveSession(sessionId);
+
+    // Close modal
+    const modal = bootstrap.Modal.getInstance(modalElement);
+    if (modal) modal.hide();
+
+    // Refresh UI
+    renderActiveSessions();
+    applySessionFilter();
+
+    showToast('Сессия загружена', 'success');
+}
+
+/**
+ * Process scanned barcode.
+ * @param {string} barcode - Scanned barcode
+ */
+async function processBarcode(barcode) {
+    console.log('Processing barcode:', barcode);
+    try {
+        const response = await fetch(`/api/v1/equipment/barcode/${barcode}`);
+        if (!response.ok) {
+            if (response.status === 404) {
+                throw new Error(`Оборудование со штрих-кодом ${barcode} не найдено`);
+            } else {
+                throw new Error(`Ошибка при получении данных: ${response.status} ${response.statusText}`);
+            }
+        }
+        const equipment = await response.json(); // This is the raw equipment data from API
+
+        let addedToSession = false;
+        let isDuplicate = false;
+
+        // Get current active session ID from storage if not set
+        if (!this.sessionId && window.scanStorage) {
+            const activeSession = window.scanStorage.getActiveSession();
+            if (activeSession) {
+                this.sessionId = activeSession.id;
+            }
+        }
+
+        // Save to session storage if available and session ID exists
+        if (window.scanStorage && this.sessionId) {
+            // Prepare data for scanStorage.addEquipment, ensuring all necessary fields are present
+            const equipmentDataForSession = {
+                equipment_id: equipment.id, // Assuming API returns id for equipment_id
+                name: equipment.name,
+                barcode: equipment.barcode,
+                serial_number: equipment.serial_number || null,
+                category_id: equipment.category_id || equipment.category?.id || null,
+                category_name: equipment.category_name || equipment.category?.name || 'Без категории'
+                // quantity will be handled by addEquipment itself for new items
+            };
+
+            const addResult = window.scanStorage.addEquipment(this.sessionId, equipmentDataForSession);
+
+            if (addResult === 'duplicate_serial_exists') {
+                isDuplicate = true;
+                addedToSession = false;
+                console.log(`Equipment with ID ${equipment.id} and S/N ${equipment.serial_number || 'N/A'} already in session ${this.sessionId}.`);
+            } else if (addResult === 'item_added' || addResult === 'quantity_incremented') {
+                isDuplicate = false;
+                addedToSession = true;
+                console.log(`Equipment ID ${equipment.id} successfully processed for session ${this.sessionId}. Result: ${addResult}`);
+            } else {
+                isDuplicate = false;
+                addedToSession = false;
+                console.warn(`Failed to add equipment ID ${equipment.id} to session ${this.sessionId} or no specific result code. Result: ${addResult}`);
+            }
+        } else {
+            console.log('No active session or scanStorage not available for adding equipment');
+        }
+
+        // Trigger onScan with additional info about duplication status and the original equipment data from API
+        this.onScan(equipment, { isDuplicate, addedToSession });
+
+    } catch (error) {
+        console.error('Barcode scan error:', error);
+        this.onError(error);
+    }
+}

@@ -107,14 +107,17 @@ const scanStorage = {
      * Add equipment to a session
      * @param {string} sessionId - Session ID
      * @param {Equipment} equipment - Equipment to add
-     * @returns {ScanSession|undefined} - Updated session or undefined
+     * @returns {string|undefined}
      */
     addEquipment(sessionId, equipment) {
         const sessions = this.getSessions();
         const sessionIndex = sessions.findIndex(session => session.id === sessionId);
-        if (sessionIndex === -1) return undefined;
+        if (sessionIndex === -1) {
+            console.error(`Session with ID ${sessionId} not found.`);
+            return undefined;
+        }
 
-        const equipmentId = Number(equipment.id || equipment.equipment_id);
+        const equipmentId = Number(equipment.equipment_id || equipment.id);
         if (isNaN(equipmentId)) {
             console.error('Invalid equipment ID:', equipment);
             return undefined;
@@ -125,78 +128,74 @@ const scanStorage = {
             equipment_id: equipmentId,
             barcode: equipment.barcode || '',
             name: equipment.name || 'Unknown Equipment',
-            serial_number: equipment.serial_number || null, // Ensure serial_number exists, can be null
+            serial_number: equipment.serial_number || null,
             category_id: equipment.category_id || equipment.category?.id || null,
             category_name: equipment.category_name || equipment.category?.name || 'Без категории',
-            quantity: 1
+            quantity: 1 // Default quantity for a new item
         };
 
         console.group(`Adding equipment ID: ${equipmentId} to session ${sessionId}`);
-        console.log('Normalized equipment:', normalizedEquipment);
+        console.log('Normalized equipment for add operation:', normalizedEquipment);
 
         const sessionItems = sessions[sessionIndex].items;
-
-        // Find existing items by equipment_id
-        const existingItemIndices = sessionItems.reduce((indices, item, index) => {
-            if (Number(item.equipment_id) === equipmentId) {
-                indices.push({index, item});
-            }
-            return indices;
-        }, []);
-
-        console.log(`Found ${existingItemIndices.length} existing items with same equipment_id`);
+        let operationResult = undefined;
 
         // Check if the incoming item has a serial number
         const hasSerialNumber = !!normalizedEquipment.serial_number;
 
         if (hasSerialNumber) {
             console.log(`Equipment has serial number: ${normalizedEquipment.serial_number}`);
-
-            // Check if there is a duplicate with the same serial number
-            const duplicateIndex = existingItemIndices.findIndex(
-                ({item}) => item.serial_number === normalizedEquipment.serial_number
+            // Check for an existing item with the SAME equipment_id AND SAME serial_number
+            const duplicateItem = sessionItems.find(
+                item => Number(item.equipment_id) === equipmentId &&
+                        item.serial_number === normalizedEquipment.serial_number
             );
 
-            if (duplicateIndex !== -1) {
-                console.log(`Duplicate found with same serial number: ${normalizedEquipment.serial_number}`);
-                console.groupEnd();
-                return 'duplicate';
-            }
-
-            // Add as new item, even if there are items with same equipment_id but different serial numbers
-            sessionItems.push(normalizedEquipment);
-            console.log('Added new equipment with serial number');
-        } else {
-            console.log('Equipment does not have a serial number');
-
-            // For equipment without a serial number, find an item also without a serial number
-            const existingWithoutSerial = existingItemIndices.find(
-                ({item}) => !item.serial_number
-            );
-
-            if (existingWithoutSerial) {
-                // Increment quantity for existing item without serial number
-                const existingItem = existingWithoutSerial.item;
-                existingItem.quantity = (existingItem.quantity || 1) + 1;
-                console.log(`Incremented quantity for equipment without serial. New quantity: ${existingItem.quantity}`);
+            if (duplicateItem) {
+                console.log(`Duplicate found with same serial number: ${normalizedEquipment.serial_number}. No action taken.`);
+                operationResult = 'duplicate_serial_exists';
             } else {
-                // No existing item without serial number found, add the new one
+                // No exact duplicate (ID + S/N), add as a new item
                 sessionItems.push(normalizedEquipment);
-                console.log('Added new equipment without serial number');
+                console.log('Added new equipment with serial number.');
+                operationResult = 'item_added';
+            }
+        } else {
+            console.log('Equipment does not have a serial number (or it is null/empty).');
+            // For equipment without a serial number, find an item with the
+            // SAME equipment_id AND ALSO without a serial_number
+            const existingItemWithoutSerial = sessionItems.find(
+                item => Number(item.equipment_id) === equipmentId &&
+                        !item.serial_number
+            );
+
+            if (existingItemWithoutSerial) {
+                // Increment quantity for existing item without serial number
+                existingItemWithoutSerial.quantity = (existingItemWithoutSerial.quantity || 1) + 1;
+                console.log(`Incremented quantity for equipment without serial. New quantity: ${existingItemWithoutSerial.quantity}`);
+                operationResult = 'quantity_incremented';
+            } else {
+                // No existing item (by ID and lack of S/N) found, add the new one
+                sessionItems.push(normalizedEquipment);
+                console.log('Added new equipment (no serial number).');
+                operationResult = 'item_added';
             }
         }
 
-        // Update session metadata and save
-        sessions[sessionIndex].updatedAt = new Date().toISOString();
-        sessions[sessionIndex].syncedWithServer = false;
-        sessions[sessionIndex].dirty = true;
-        this._saveSessions(sessions);
+        // If an operation was successful, update session metadata
+        if (operationResult && operationResult !== 'duplicate_serial_exists') {
+            sessions[sessionIndex].updatedAt = new Date().toISOString();
+            sessions[sessionIndex].syncedWithServer = false;
+            sessions[sessionIndex].dirty = true;
+            this._saveSessions(sessions);
+            console.log('Session updated successfully.');
+        } else if (!operationResult) {
+            // This case should ideally not be reached if logic is correct, implies an error or unhandled path
+            console.error('addEquipment: No operation result was set. This indicates an issue.');
+        }
 
-        console.log('Session updated successfully');
         console.groupEnd();
-
-        // Return updated session
-        return sessions[sessionIndex];
+        return operationResult;
     },
 
     /**
