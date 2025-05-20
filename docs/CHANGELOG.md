@@ -2,7 +2,27 @@
 
 This document lists notable changes to the ACT-Rental application.
 
-## [0.7.0-beta.1] - 2024-05-16
+## [0.7.0-beta.2] - 2025-05-20
+
+### UI & Event Handling
+
+- **Modernized Event Handling:** Replaced all inline `onclick` JavaScript handlers across equipment management pages with a robust event delegation pattern using `data-*` attributes. This significantly improves UI reliability, maintainability, and handles special characters in data more effectively.
+- **Centralized Logic:** Global event listeners are now centralized in `main.js`, with specialized handlers in `equipment-detail.js` and `equipment-list.js` for better code organization.
+
+### Scanning System
+
+- **Refined Scan Storage Logic:** `scan-storage.js` now returns specific string codes (`item_added`, `quantity_incremented`, `duplicate_serial_exists`) to provide clear feedback on equipment addition operations.
+- **Improved Serialized Item Handling:** Prevents duplicate entries for equipment with identical serial numbers within the same scan session.
+- **Accurate Quantity Tracking:** Enabled correct quantity incrementation for non-serialized equipment when scanned multiple times.
+- **Enhanced User Feedback:** `scanner.js` updated to interpret new result codes from scan storage, improving feedback messages to the user during scanning.
+
+### Dependencies & Build Process
+
+- **Optimized Dependency Management:** The `Faker` library has been moved to development-specific dependencies.
+- **Efficient Docker Builds:** `Dockerfile` updated to conditionally install `Faker` only for `dev` and `test` environments, reducing production Docker image size.
+- **Configuration Cleanup:** `Faker` removed from the base dependencies list in `pyproject.toml`.
+
+## [0.7.0-beta.1] - 2025-05-16
 
 ### Print System & Category Management
 
