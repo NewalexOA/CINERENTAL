@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "act-rental"
-version = "0.7.0-beta.1"
+version = "0.7.0-beta.2"
 description = "Equipment rental management system"
 authors = ["Alexey Anashkin <dev.anashkin@gmail.com>"]
 license = "MIT"
@@ -24,7 +24,6 @@ python-multipart = "^0.0.18"
 jinja2 = "^3.1.2"
 aiofiles = "^23.2.1"
 loguru = "^0.7.2"
-faker = "^22.6.0"
 apscheduler = "^3.11.0"
 treepoem = "^3.24.1"
 fastapi-pagination = "^0.12.0"

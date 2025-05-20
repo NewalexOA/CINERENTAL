@@ -258,42 +258,51 @@ function getStatusColor(status) {
     return colors[status] || 'secondary';
 }
 
-// Barcode info loading
+// Handle copy barcode action
+function copyBarcode(barcode) {
+    if (!barcode) {
+        showToast('Штрих-код недоступен', 'warning');
+        return;
+    }
+
+    // Use the clipboard API
+    navigator.clipboard.writeText(barcode)
+        .then(() => {
+            showToast('Штрих-код скопирован в буфер обмена', 'success');
+        })
+        .catch(err => {
+            console.error('Ошибка при копировании: ', err);
+            showToast('Не удалось скопировать штрих-код', 'danger');
+        });
+}
+
+// Setup event delegation for the copy barcode button
+function setupButtonHandlers() {
+    document.addEventListener('click', function(event) {
+        // Handle Copy Barcode button
+        const copyButton = event.target.closest('.btn-copy-barcode');
+        if (copyButton) {
+            const barcode = copyButton.dataset.barcode;
+            if (barcode) {
+                copyBarcode(barcode);
+            }
+        }
+    });
+}
+
+// Function to load barcode info
 async function loadBarcodeInfo() {
-    const barcode = document.getElementById('barcodeDisplay').textContent.trim();
     if (!barcode) return;
 
+    const barcodeInfoElement = document.getElementById('barcodeInfo');
+    if (!barcodeInfoElement) return;
+
     try {
-        const response = await api.post('/barcodes/validate', { barcode });
-
-        if (response.is_valid) {
-            const details = response.details || {};
-
-            // Display barcode information based on available data
-            // For new format (global counter), we'll just show basic info
-            let infoContent = '';
-
-            if (details.category?.name) {
-                // Legacy format with category info
-                const category = details.category.name || 'Unknown';
-                infoContent += `<strong>Category:</strong> ${category} <br>`;
-            }
-
-            // Always show the barcode
-            infoContent += `<strong>Barcode:</strong> ${barcode} <br>`;
-
-            // Show sequence number if available
-            if (details.sequence_number) {
-                infoContent += `<strong>Sequence:</strong> ${details.sequence_number}`;
-            }
-
-            document.getElementById('barcodeInfo').innerHTML = infoContent || `<strong>Status:</strong> Valid`;
-        } else {
-            document.getElementById('barcodeInfo').innerHTML = '<span class="text-info">Custom barcode</span>';
-        }
+        const info = await api.get(`/barcodes/info/${barcode}`);
+        barcodeInfoElement.textContent = `${info.type} - ${info.generated_at}`;
     } catch (error) {
         console.error('Error loading barcode info:', error);
-        document.getElementById('barcodeInfo').innerHTML = '<span class="text-danger">Error loading barcode information</span>';
+        barcodeInfoElement.textContent = 'Информация недоступна';
     }
 }
 
@@ -353,11 +362,15 @@ async function regenerateBarcode() {
     }
 }
 
-// Initialization
-document.addEventListener('DOMContentLoaded', () => {
-    loadCategories();
+// Initialization after DOM is loaded
+document.addEventListener('DOMContentLoaded', function() {
+    // Setup button handlers through delegation
+    setupButtonHandlers();
+
+    // Load data
     loadBookingHistory();
     loadStatusTimeline();
+    loadCategories();
 
     // Check for notification stored from previous page load
     const notification = sessionStorage.getItem('equipmentNotification');
@@ -370,18 +383,33 @@ document.addEventListener('DOMContentLoaded', () => {
     // Loading barcode info
     loadBarcodeInfo();
 
-    // Barcode regeneration button handler
-    document.getElementById('regenerateBarcodeBtn').addEventListener('click', regenerateBarcode);
-});
+    // Handle notes form submission
+    const notesForm = document.getElementById('notesForm');
+    if (notesForm) {
+        notesForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            saveNotes();
+        });
+    }
 
-// Copy barcode to clipboard
-function copyBarcode(barcode) {
-    navigator.clipboard.writeText(barcode).then(() => {
-        showToast('Штрих-код скопирован', 'success');
-    }).catch(() => {
-        showToast('Ошибка при копировании', 'danger');
-    });
-}
+    // Handle barcode regeneration
+    const regenerateBtn = document.getElementById('regenerateBarcodeBtn');
+    if (regenerateBtn) {
+        regenerateBtn.addEventListener('click', regenerateBarcode);
+    }
+
+    // Handle equipment update
+    const updateBtn = document.getElementById('updateEquipment');
+    if (updateBtn) {
+        updateBtn.addEventListener('click', updateEquipment);
+    }
+
+    // Handle equipment deletion
+    const deleteBtn = document.getElementById('deleteEquipment');
+    if (deleteBtn) {
+        deleteBtn.addEventListener('click', deleteEquipment);
+    }
+});
 
 // Export functions to global scope for onclick handlers
 window.copyBarcode = copyBarcode;

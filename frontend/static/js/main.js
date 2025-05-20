@@ -397,16 +397,79 @@ function formatEquipmentRow(item) {
                     <a href="/equipment/${item.id}" class="btn btn-sm btn-outline-primary">
                         <i class="fas fa-info-circle"></i>
                     </a>
-                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="printBarcode('${item.id}', '${item.barcode}')">
+                    <button type="button" class="btn btn-sm btn-outline-secondary btn-print-barcode"
+                            data-equipment-id="${item.id}"
+                            data-barcode="${item.barcode}">
                         <i class="fas fa-print"></i>
                     </button>
-                    <button type="button" class="btn btn-sm btn-outline-success btn-qrcode" onclick="addToScanSession('${item.id}', '${item.name}', '${item.barcode}', '${item.category_id}', '${item.category_name}')">
+                    <button type="button" class="btn btn-sm btn-outline-success btn-add-to-scan"
+                            data-equipment-id="${item.id}"
+                            data-name="${item.name}"
+                            data-barcode="${item.barcode}"
+                            data-serial-number="${item.serial_number || ''}"
+                            data-category-id="${item.category_id}"
+                            data-category-name="${item.category_name}">
                         <i class="fas fa-qrcode"></i>
                     </button>
                 </div>
             </td>
         </tr>
     `;
+}
+
+// Setup global event delegation for equipment table actions
+function setupGlobalEventHandlers() {
+    // Check if handlers are already initialized
+    if (document.documentElement.hasAttribute('data-global-handlers-initialized')) {
+        console.log('Global event handlers already initialized, skipping');
+        return;
+    }
+
+    console.log('Initializing global event handlers');
+
+    // Equipment actions handler
+    document.addEventListener('click', function(event) {
+        const button = event.target.closest('button');
+        if (!button) return;
+
+        // Handle print barcode button
+        if (button.classList.contains('btn-print-barcode')) {
+            event.preventDefault();
+
+            const equipmentId = button.dataset.equipmentId;
+            const barcode = button.dataset.barcode;
+            if (equipmentId && barcode) {
+                if (window.printBarcode) {
+                    window.printBarcode(equipmentId, barcode);
+                } else {
+                    console.error('printBarcode function not found in global scope');
+                }
+            }
+        }
+
+        // Handle add to scan button
+        else if (button.classList.contains('btn-add-to-scan')) {
+            event.preventDefault();
+
+            const equipmentId = button.dataset.equipmentId;
+            const name = button.dataset.name;
+            const barcode = button.dataset.barcode;
+            const serialNumber = button.dataset.serialNumber;
+            const categoryId = button.dataset.categoryId;
+            const categoryName = button.dataset.categoryName;
+
+            if (equipmentId) {
+                if (window.addToScanSession) {
+                    window.addToScanSession(equipmentId, name, barcode, serialNumber, categoryId, categoryName);
+                } else {
+                    console.error('addToScanSession function not found in global scope');
+                }
+            }
+        }
+    });
+
+    // Set marker that handlers are initialized
+    document.documentElement.setAttribute('data-global-handlers-initialized', 'true');
 }
 
 // --- Client Search and Sort Functionality ---
@@ -598,6 +661,9 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initialize popovers
     const popoverTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="popover"]'));
     popoverTriggerList.map(popoverTriggerEl => new bootstrap.Popover(popoverTriggerEl));
+
+    // Setup global event handlers
+    setupGlobalEventHandlers();
 
     // Initialize equipment search
     if (document.getElementById('searchInput')) {
