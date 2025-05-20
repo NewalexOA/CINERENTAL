@@ -587,73 +587,102 @@ function loadBarcodePreviews(barcode) {
 }
 
 // Function to print selected barcode type
-function doPrintBarcode(barcodeType) {
+async function doPrintBarcode(barcodeType) {
     const barcodeModalEl = document.getElementById('barcodePrintModal');
-    if (!barcodeModalEl) return;
+    const barcodeValue = document.getElementById('print-barcode-value').value;
 
-    // Get values from hidden fields
-    const equipmentId = document.getElementById('print-barcode-equipment-id').value;
-    const barcode = document.getElementById('print-barcode-value').value;
-
-    if (!equipmentId || !barcode) {
-        if (typeof showToast === 'function') showToast('Ошибка: данные для печати штрих-кода недоступны', 'danger');
+    if (!barcodeValue) {
+        if (typeof showToast === 'function') showToast('Ошибка: значение штрих-кода недоступно', 'danger');
         return;
     }
 
+    // Direct URL to the barcode image endpoint
+    const imageUrl = `/api/v1/barcodes/${encodeURIComponent(barcodeValue)}/image?barcode_type=${encodeURIComponent(barcodeType)}`;
+    let iframe = null;
+
     try {
-        // Create and submit form for printing
-        const form = document.createElement('form');
-        form.method = 'POST';
-        form.action = '/print/barcode';
-        form.target = '_blank';
-        form.style.display = 'none';
+        if (typeof showToast === 'function') showToast('Подготовка штрих-кода к печати...', 'info');
 
-        // Add equipment id
-        const equipmentIdInput = document.createElement('input');
-        equipmentIdInput.type = 'hidden';
-        equipmentIdInput.name = 'equipment_id';
-        equipmentIdInput.value = equipmentId;
-        form.appendChild(equipmentIdInput);
+        iframe = document.createElement('iframe');
+        iframe.style.position = 'absolute';
+        iframe.style.width = '0px'; // Keep it non-visible
+        iframe.style.height = '0px';
+        iframe.style.border = '0';
+        iframe.style.visibility = 'hidden';
+        iframe.setAttribute('aria-hidden', 'true');
+        document.body.appendChild(iframe);
 
-        // Add barcode
-        const barcodeInput = document.createElement('input');
-        barcodeInput.type = 'hidden';
-        barcodeInput.name = 'barcode';
-        barcodeInput.value = barcode;
-        form.appendChild(barcodeInput);
+        // Determine styles based on barcode type, as in the old version
+        const containerStyleClass = barcodeType === 'datamatrix' ? 'barcode-container-datamatrix' : 'barcode-container-linear';
+        const imageMaxWidth = barcodeType === 'datamatrix' ? '9mm' : '28mm';
+        const imageHeight = barcodeType === 'datamatrix' ? '9mm' : '7mm';
+        const textStyle = barcodeType === 'datamatrix' ? 'margin-left: 1mm;' : 'margin-top: 0.5mm;';
 
-        // Add barcode type
-        const typeInput = document.createElement('input');
-        typeInput.type = 'hidden';
-        typeInput.name = 'type';
-        typeInput.value = barcodeType;
-        form.appendChild(typeInput);
+        const printContent = `
+            <!DOCTYPE html>
+            <html lang="ru">
+            <head>
+                <meta charset="UTF-8">
+                <title>Печать штрих-кода</title>
+                <style>
+                    @page { size: 30mm 10mm; margin: 0; } /* Critical for label printing */
+                    body { font-family: Arial, sans-serif; text-align: center; padding: 0; margin: 0; width: 30mm; height: 10mm; overflow: hidden; box-sizing: border-box; }
+                    .barcode-container-linear { width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; box-sizing: border-box; }
+                    .barcode-container-datamatrix { width: 100%; height: 100%; display: flex; flex-direction: row; align-items: center; justify-content: flex-start; padding-left: 1mm; box-sizing: border-box; }
+                    .barcode-image { max-width: ${imageMaxWidth}; height: ${imageHeight}; object-fit: contain; display: block; }
+                    .barcode-text { font-size: 6px; font-family: monospace; word-break: break-all; line-height: 1; ${textStyle} }
+                </style>
+            </head>
+            <body>
+                <div class="${containerStyleClass}">
+                    <img class="barcode-image" src="${imageUrl}" alt="Штрих-код ${barcodeValue}">
+                    <div class="barcode-text">${barcodeValue}</div>
+                </div>
+            </body>
+            </html>
+        `;
 
-        // Submit form for printing
-        document.body.appendChild(form);
-        form.submit();
+        const printWindow = iframe.contentWindow;
+        printWindow.document.open();
+        printWindow.document.write(printContent);
+        printWindow.document.close();
 
-        // Clean up form
-        setTimeout(() => {
-            document.body.removeChild(form);
-        }, 100);
+        iframe.onload = () => {
+            try {
+                // Optional: printWindow.focus(); // May be needed for some browsers, but can also cause focus issues.
+                printWindow.print();
+                if (typeof showToast === 'function') showToast('Документ отправлен на печать', 'success');
+            } catch (printError) {
+                console.error('Ошибка при вызове диалога печати:', printError);
+                if (typeof showToast === 'function') showToast('Ошибка при вызове диалога печати.', 'danger');
+            } finally {
+                // Cleanup iframe after a delay to allow print dialog to process
+                setTimeout(() => {
+                    if (iframe && iframe.parentNode === document.body) {
+                        console.log("Removing iframe post-print (reverted logic)...");
+                        document.body.removeChild(iframe);
+                        iframe = null; // Help GC
+                    }
+                }, 2000); // Increased timeout slightly
+            }
+        };
 
-        // Close modal and show success message
-        const modal = bootstrap.Modal.getInstance(barcodeModalEl);
-        if (modal) {
-            modal.hide();
-
-            // Give time for modal to close and backdrop to be removed
-            setTimeout(() => {
-                if (typeof showToast === 'function') {
-                    showToast('Штрих-код отправлен на печать', 'success');
-                }
-            }, 300);
+        // Hide the modal - this was done in old examples after iframe setup
+        if (barcodeModalEl) {
+            const modal = bootstrap.Modal.getInstance(barcodeModalEl);
+            if (modal && modal._isShown) { // Check if modal is currently shown before trying to hide
+                modal.hide();
+            }
         }
+
     } catch (error) {
-        console.error('Error printing barcode:', error);
+        console.error('Ошибка подготовки iframe для печати:', error);
         if (typeof showToast === 'function') {
-            showToast('Ошибка при печати штрих-кода', 'danger');
+            showToast(`${error.message || 'Не удалось подготовить штрих-код к печати.'}`, 'danger');
+        }
+        // Ensure iframe is removed on error if it was added
+        if (iframe && iframe.parentNode === document.body) {
+            document.body.removeChild(iframe);
         }
     }
 }
