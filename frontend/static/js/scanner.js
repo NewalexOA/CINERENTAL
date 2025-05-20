@@ -1,5 +1,5 @@
 import { scanStorage } from './scan-storage.js';
-import { formatCurrency } from './project/project-utils.js';
+import { formatCurrency, getStatusClass, getStatusText } from './project/project-utils.js';
 
 /**
  * Scanner page logic
@@ -709,10 +709,10 @@ function updateScanResult(equipment) {
     }
 
     if (statusEl) {
-        const statusText = equipment.status || 'UNKNOWN';
-        statusEl.textContent = statusText;
+        const statusKey = equipment.status || 'UNKNOWN';
+        statusEl.textContent = getStatusText(statusKey);
         statusEl.className = statusEl.className.replace(/bg-\S+/g, '');
-        statusEl.classList.add(`bg-${getStatusColor(statusText)}`);
+        statusEl.classList.add(`bg-${getStatusClass(statusKey)}`);
     }
 
     if (detailsLinkEl) {
