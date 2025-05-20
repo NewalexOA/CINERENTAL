@@ -2,7 +2,7 @@
  * Equipment UI functionality
  */
 
-import { formatDate } from '../../utils/common.js';
+import { formatDate, DATERANGEPICKER_LOCALE } from '../../utils/common.js';
 import { checkEquipmentAvailability, initializeBookingPeriodPickers } from './availability.js';
 import { handleQuantityIncrease, handleQuantityDecrease, handleBookingRemoval } from './booking.js';
 import { currentPage, totalPages, pageSize, totalCount } from './search.js';
@@ -198,6 +198,46 @@ export function resetEquipmentSelection() {
 
     const categoryFilter = document.getElementById('categoryFilter');
     if (categoryFilter) categoryFilter.value = '';
+
+    const dateRangeInput = document.getElementById('newBookingPeriod');
+    if (dateRangeInput) {
+        const projectStartDateValue = document.getElementById('project-start-date')?.value;
+        const projectEndDateValue = document.getElementById('project-end-date')?.value;
+
+        let startDate = moment(); // Default to today
+        let endDate = moment().add(1, 'days'); // Default to tomorrow
+
+        if (projectStartDateValue && projectEndDateValue) {
+            const parsedProjectStartDate = moment(projectStartDateValue);
+            const parsedProjectEndDate = moment(projectEndDateValue);
+
+            if (parsedProjectStartDate.isValid() && parsedProjectEndDate.isValid()) {
+                startDate = parsedProjectStartDate;
+                endDate = parsedProjectEndDate;
+            } else {
+                console.warn('Could not parse project dates for newBookingPeriod:', projectStartDateValue, projectEndDateValue);
+            }
+        }
+
+        $(dateRangeInput).val(startDate.format('DD.MM.YYYY') + ' - ' + endDate.format('DD.MM.YYYY'));
+
+        if ($(dateRangeInput).data('daterangepicker')) {
+            const picker = $(dateRangeInput).data('daterangepicker');
+            picker.setStartDate(startDate);
+            picker.setEndDate(endDate);
+        } else {
+            $(dateRangeInput).daterangepicker({
+                locale: DATERANGEPICKER_LOCALE,
+                startDate: startDate,
+                endDate: endDate,
+            });
+        }
+
+        // Remove potentially problematic auto-adjusting logic for this specific picker
+        $(dateRangeInput).off('apply.daterangepicker').on('apply.daterangepicker', function(ev, picker) {
+            $(this).val(picker.startDate.format('DD.MM.YYYY') + ' - ' + picker.endDate.format('DD.MM.YYYY'));
+        });
+    }
 
     hideEquipmentDetails();
 }
