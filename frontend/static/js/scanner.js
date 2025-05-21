@@ -1,6 +1,9 @@
 import { scanStorage } from './scan-storage.js';
 import { formatCurrency, getStatusClass, getStatusText } from './project/project-utils.js';
 
+// Make scanStorage globally available
+window.scanStorage = scanStorage;
+
 /**
  * Scanner page logic
  */
@@ -1023,11 +1026,16 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
     }
 
-    // Make sure scanStorage is available before initializing
-    if (!scanStorage) {
-        console.error('scanStorage is not available');
-        showToast('Ошибка инициализации: хранилище сессий недоступно', 'danger');
+    // Make sure scanStorage is available (already imported, this is a sanity check)
+    if (!scanStorage) { // This refers to the imported, module-scoped scanStorage
+        console.error('scanStorage (module) is not available, this should not happen.');
+        showToast('Критическая ошибка: хранилище сессий недоступно', 'danger');
         return;
+    }
+
+    if (!window.scanStorage) {
+        console.warn('window.scanStorage was not set by top-level assignment, setting it now.');
+        window.scanStorage = scanStorage;
     }
 
     try {
