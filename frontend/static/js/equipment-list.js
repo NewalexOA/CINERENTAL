@@ -657,7 +657,7 @@ async function doPrintBarcode(barcodeType) {
                 if (typeof showToast === 'function') showToast('Ошибка при вызове диалога печати.', 'danger');
             } finally {
                 // Cleanup iframe after a delay to allow print dialog to process
-                setTimeout(() => {
+        setTimeout(() => {
                     if (iframe && iframe.parentNode === document.body) {
                         console.log("Removing iframe post-print (reverted logic)...");
                         document.body.removeChild(iframe);
@@ -669,10 +669,10 @@ async function doPrintBarcode(barcodeType) {
 
         // Hide the modal - this was done in old examples after iframe setup
         if (barcodeModalEl) {
-            const modal = bootstrap.Modal.getInstance(barcodeModalEl);
+        const modal = bootstrap.Modal.getInstance(barcodeModalEl);
             if (modal && modal._isShown) { // Check if modal is currently shown before trying to hide
-                modal.hide();
-            }
+            modal.hide();
+                }
         }
 
     } catch (error) {
