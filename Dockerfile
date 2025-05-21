@@ -29,7 +29,8 @@ COPY backend backend/
 COPY docker docker/
 
 # Setup pip configuration for local mirrors if available
-RUN if [ -f "docker/pip.conf" ]; then mkdir -p /etc/pip && cp docker/pip.conf /etc/pip/pip.conf; fi
+COPY docker/use-local-devpi.sh /tmp/use-local-devpi.sh
+RUN chmod +x /tmp/use-local-devpi.sh && /tmp/use-local-devpi.sh devpi 3141
 
 # ARG to control environment type
 ARG ENV_TYPE=prod

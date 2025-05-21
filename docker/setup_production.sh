@@ -14,7 +14,7 @@ fi
 
 # Создание внешних томов (только если они не существуют)
 echo "Проверка и создание внешних именованных томов для хранения данных..."
-VOLUMES=("act_rental_postgres_data" "act_rental_redis_data" "act_rental_media")
+VOLUMES=("act_rental_postgres_data" "act_rental_redis_data" "act_rental_media" "act_rental_devpi_data")
 
 for VOLUME in "${VOLUMES[@]}"; do
     if docker volume inspect "$VOLUME" >/dev/null 2>&1; then

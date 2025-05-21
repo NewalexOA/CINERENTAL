@@ -1,22 +1,32 @@
 FROM python:3.12-slim
 
-# Install devpi
+LABEL maintainer="Aleksei Anaskin <dev.anaskin@gmail.com>"
+LABEL description="Devpi server for Python package caching"
+
+ENV PYTHONUNBUFFERED=1
+ENV DEVPI_SERVERDIR="/data/devpi"
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    curl \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN groupadd -r devpi && \
+    useradd -r -g devpi -d /home/devpi -m devpi
+
 RUN pip install --no-cache-dir devpi-server devpi-web
 
-# Create a non-root user
-RUN useradd -m devpi
+RUN mkdir -p /data/devpi && \
+    chown -R devpi:devpi /data
 
-# Create directories
-RUN mkdir -p /data/devpi && chown -R devpi:devpi /data/devpi
-
-# Switch to non-root user
 USER devpi
 
-# Initialize devpi
-RUN devpi-init --serverdir /data/devpi
+COPY --chown=devpi:devpi entrypoint.sh /home/devpi/entrypoint.sh
+RUN chmod +x /home/devpi/entrypoint.sh
 
-# Expose the port
 EXPOSE 3141
+VOLUME ["/data"]
 
-# Start devpi
-CMD ["devpi-server", "--host", "0.0.0.0", "--port", "3141", "--serverdir", "/data/devpi"]
+WORKDIR /home/devpi
+ENTRYPOINT ["./entrypoint.sh"]

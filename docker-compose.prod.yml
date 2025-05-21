@@ -10,6 +10,9 @@ services:
         ENV_TYPE: prod
         INSTALL_PLAYWRIGHT_DEPS: false
         INSTALL_PLAYWRIGHT: false
+        PIP_INDEX_URL: ${PIP_INDEX_URL:-http://devpi:3141/root/pypi/+simple/}
+        PIP_TRUSTED_HOST: ${PIP_TRUSTED_HOST:-devpi}
+        UV_INDEX_URL: ${UV_INDEX_URL:-http://devpi:3141/root/pypi/+simple/}
     command: ./docker/start.sh
     restart: unless-stopped
     ports:
@@ -51,6 +54,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      devpi:
+        condition: service_started
     networks:
       - act-rental_network
     logging:
@@ -113,6 +118,38 @@ services:
       timeout: 5s
       retries: 5
 
+  devpi:
+    image: ${DEVPI_IMAGE:-dev4anashkin/rental-devpi:1.0}
+    container_name: act_rental_devpi_server
+    restart: always
+    volumes:
+      - devpi_data:/data
+    networks:
+      - act-rental_network
+    expose:
+      - "3141"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "3"
+
+  # Сервис для предварительной загрузки пакетов в devpi (запускается вручную)
+  devpi-init:
+    build:
+      context: .
+      target: builder
+    volumes:
+      - .:/app
+    depends_on:
+      devpi:
+        condition: service_started
+    command: ["./docker/init-devpi-cache.sh"]
+    profiles:
+      - init
+    networks:
+      - act-rental_network
+
 volumes:
   postgres_data:
     name: act-rental_postgres_data
@@ -122,6 +159,9 @@ volumes:
     external: true
   media_volume:
     name: act-rental_media
+    external: true
+  devpi_data:
+    name: act-rental_devpi_data
     external: true
 
 networks:

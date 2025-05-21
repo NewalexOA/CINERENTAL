@@ -1,0 +1,105 @@
+name: act-rental
+
+services:
+  web:
+    build:
+      context: .
+      target: runtime
+      args:
+        BUILDKIT_INLINE_CACHE: 1
+        ENV_TYPE: dev
+        INSTALL_PLAYWRIGHT_DEPS: false
+        INSTALL_PLAYWRIGHT: false
+        PIP_INDEX_URL: ${PIP_INDEX_URL:-http://devpi:3141/root/pypi/+simple/}
+        PIP_TRUSTED_HOST: ${PIP_TRUSTED_HOST:-devpi}
+        UV_INDEX_URL: ${UV_INDEX_URL:-http://devpi:3141/root/pypi/+simple/}
+        APT_MIRROR: ${APT_MIRROR:-http://deb.debian.org/debian}
+    depends_on:
+      devpi:
+        condition: service_started
+    environment:
+      - ENVIRONMENT=development
+      - DEBUG=true
+      - LOG_LEVEL=debug
+      - WORKERS_COUNT=1
+      - ALLOWED_HOSTS=localhost,127.0.0.1
+      - CORS_ORIGINS=http://localhost:3000
+      - SECRET_KEY=dev-secret-key
+      - POSTGRES_HOST_AUTH_METHOD=trust
+    volumes:
+      - .:/app
+      - media_volume:/app/media
+    develop:
+      watch:
+        - action: sync
+          path: ./backend
+          target: /app/backend
+          ignore:
+            - "**/__pycache__/"
+            - "**/*.pyc"
+            - "**/*.pyo"
+            - "**/*.pyd"
+            - ".pytest_cache/"
+            - ".coverage"
+            - "htmlcov/"
+            - ".mypy_cache/"
+            - ".ruff_cache/"
+
+        - action: sync
+          path: ./frontend
+          target: /app/frontend
+          ignore:
+            - "**/*.pyc"
+            - "**/__pycache__/"
+
+        - action: rebuild
+          path: requirements.txt
+
+        - action: rebuild
+          path: pyproject.toml
+
+        - action: rebuild
+          path: Dockerfile
+
+        - action: sync+restart
+          path: ./docker
+          target: /app/docker
+          ignore:
+            - "*.pyc"
+            - "__pycache__/"
+
+  db:
+    environment:
+      - POSTGRES_HOST_AUTH_METHOD=trust
+    volumes:
+      - postgres_dev_data:/var/lib/postgresql/data
+
+  redis:
+    volumes:
+      - redis_dev_data:/data
+
+  devpi:
+    build:
+      context: ./docker/devpi
+    environment:
+      - DEVPI_IMAGE=local
+
+  devpi-init:
+    build:
+      context: .
+      target: builder
+    volumes:
+      - .:/app
+    depends_on:
+      devpi:
+        condition: service_started
+    command: ["./docker/init-devpi-cache.sh"]
+    profiles:
+      - init
+    networks:
+      - act-rental_network
+
+volumes:
+  postgres_dev_data:
+  redis_dev_data:
+  media_volume:

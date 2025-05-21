@@ -6,8 +6,8 @@ services:
       context: .
       dockerfile: Dockerfile.test # Reuse the same build context/image as tests
       args:
-        - PIP_INDEX_URL=${PIP_INDEX_URL:-https://pypi.org/simple/}
-        - PIP_TRUSTED_HOST=${PIP_TRUSTED_HOST:-pypi.org}
+        - PIP_INDEX_URL=${PIP_INDEX_URL:-http://devpi:3141/root/pypi/+simple/}
+        - PIP_TRUSTED_HOST=${PIP_TRUSTED_HOST:-devpi}
         - APT_MIRROR=${APT_MIRROR:-http://deb.debian.org/debian}
     volumes:
       - ./backend:/app/backend
@@ -44,6 +44,8 @@ services:
         condition: service_healthy
       test-redis:
         condition: service_healthy
+      devpi:
+        condition: service_started
     networks:
       - test-network
     command: >
@@ -63,8 +65,8 @@ services:
       context: .
       dockerfile: Dockerfile.test
       args:
-        - PIP_INDEX_URL=${PIP_INDEX_URL:-https://pypi.org/simple/}
-        - PIP_TRUSTED_HOST=${PIP_TRUSTED_HOST:-pypi.org}
+        - PIP_INDEX_URL=${PIP_INDEX_URL:-http://devpi:3141/root/pypi/+simple/}
+        - PIP_TRUSTED_HOST=${PIP_TRUSTED_HOST:-devpi}
         - APT_MIRROR=${APT_MIRROR:-http://deb.debian.org/debian}
     volumes:
       - ./backend:/app/backend
@@ -105,6 +107,8 @@ services:
         condition: service_healthy
       web-test: # Wait for the web server to be healthy
         condition: service_healthy
+      devpi:
+        condition: service_started
     networks:
       - test-network
     # Command should just keep the container running, tests are run via 'docker compose run'
@@ -144,6 +148,21 @@ services:
       retries: 5
     networks:
       - test-network
+
+  # Добавляем devpi для тестирования
+  devpi:
+    build:
+      context: ./docker/devpi
+    ports:
+      - "3142:3141"  # Другой порт, чтобы не конфликтовал с основным devpi
+    volumes:
+      - devpi_test_data:/data
+    networks:
+      - test-network
+
+volumes:
+  devpi_test_data:
+    driver: local
 
 networks:
   test-network:
