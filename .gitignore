@@ -233,6 +233,10 @@ cython_debug/
 .cursorrules
 .cursorignore
 .cursor/
+/memory-bank
+/memory-bank/*
+/custom_modes
+/custom_modes/*
 
 # HTMLHint
 .htmlhintrc
