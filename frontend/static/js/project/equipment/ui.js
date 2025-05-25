@@ -336,6 +336,8 @@ export function renderEquipmentSection(project) {
         const barcode = booking.barcode || '';
         const category_name = booking.category_name || 'Без категории';
         const serialNumber = booking.serial_number || '';
+        // Get equipment_id from different possible places in the booking object
+        const equipmentId = booking.equipment_id || (booking.equipment && booking.equipment.id) || '';
 
         const serialNumberStr = String(serialNumber || '');
         const hasSerialNumber = serialNumberStr.trim().length > 0;
@@ -345,11 +347,12 @@ export function renderEquipmentSection(project) {
         const row = document.createElement('tr');
         row.dataset.bookingId = booking.id;
         row.dataset.hasSerialNumber = hasSerialNumber;
+        row.dataset.equipmentId = equipmentId;
 
         const nameCell = document.createElement('td');
         nameCell.innerHTML = `
-            <div>${equipmentName}</div>
-            <small class="text-muted">${barcode}</small>
+            <div>${equipmentId ? `<a href="/equipment/${equipmentId}">${equipmentName}</a>` : equipmentName}${quantity > 1 ? ` (x${quantity})` : ''}</div>
+            <small class="text-muted"><i class="fas fa-barcode me-1"></i>${barcode}</small>
             ${serialNumber ? `<small class="text-muted d-block">S/N: ${serialNumber}</small>` : ''}
         `;
 
