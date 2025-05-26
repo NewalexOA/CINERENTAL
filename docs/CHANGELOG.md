@@ -2,6 +2,27 @@
 
 This document lists notable changes to the ACT-Rental application.
 
+## [0.8.0-beta.1] - 2025-05-26
+
+### UI & Equipment Management
+
+- **Enhanced Project Equipment Table:** Added clickable equipment name links to detailed equipment pages and barcode icons before barcode text for improved visual hierarchy and navigation. Equipment names now serve as primary navigation points while barcodes remain informational only.
+- **Robust Booking Object Handling:** Improved code resilience for different booking object structures with fallback to `equipment_id` when direct `equipment` object is unavailable, ensuring stable functionality across various data scenarios.
+
+### Equipment Availability System
+
+- **Smart Availability for Non-Serialized Equipment:** Implemented logic to skip availability checks for equipment without serial numbers, enabling unlimited concurrent bookings for consumables like cables, adapters, and other non-tracked items. This maintains existing availability validation for serialized equipment while allowing flexible handling of bulk rental items.
+
+### Date Management & Bug Fixes
+
+- **Fixed Date Display Inconsistency:** Resolved critical issue where equipment booking end dates appeared one day later than project end dates due to DateRangePicker's 23:59:59 time setting causing next-day display.
+- **Standardized Date Validation:** Updated backend date validation logic from `start_date >= end_date` to `start_date > end_date` across all services (booking, equipment, project) and API endpoints to properly support same-day projects and bookings.
+- **Frontend Date Normalization:** Implemented consistent date handling using `startOf('day')` for start dates (00:00:00) and `startOf('day').add(1, 'second')` for end dates (00:00:01) to ensure proper validation while avoiding display issues.
+
+### Code Maintenance
+
+- **Documentation Cleanup:** Removed obsolete and redundant project documentation files from `.cursor/ai-docs/` and `docs/` directories, including outdated architecture, business logic, code style, database schema, migrations, deployment guides, and API examples to reduce maintenance overhead and prevent confusion.
+
 ## [0.7.0-beta.2] - 2025-05-20
 
 ### UI & Event Handling

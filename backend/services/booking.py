@@ -265,12 +265,10 @@ class BookingService:
                 booking.quantity = quantity
 
             if start_date and end_date:
-                # Validate dates
-                if start_date >= end_date:
-                    raise DateError(
-                        'End date must be after start date',
-                        start_date=start_date,
-                        end_date=end_date,
+                # Validate input dates
+                if start_date > end_date:
+                    raise ValidationError(
+                        'Start date must be earlier or equal to end date'
                     )
 
                 # Special case for same-day bookings
@@ -423,9 +421,9 @@ class BookingService:
         Raises:
             DateError: If dates are invalid
         """
-        if start_date >= end_date:
+        if start_date > end_date:
             raise DateError(
-                'End date must be after start date',
+                'Start date must be earlier or equal to end date',
                 start_date=start_date,
                 end_date=end_date,
             )
