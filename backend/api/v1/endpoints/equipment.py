@@ -801,7 +801,7 @@ async def check_equipment_availability(
         )
 
     # Validate date range
-    if start_date_dt >= end_date_dt:
+    if start_date_dt > end_date_dt:
         raise HTTPException(
             status_code=http_status.HTTP_400_BAD_REQUEST,
             detail='Start date must be before end date',

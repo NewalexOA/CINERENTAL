@@ -260,7 +260,12 @@ class EquipmentRepository(BaseRepository[Equipment]):
         if equipment.status not in valid_equipment_statuses:
             return False
 
-        # Then check for overlapping bookings
+        # Equipment without serial number (consumables) is always available
+        # as we assume unlimited quantity in stock
+        if not equipment.serial_number or equipment.serial_number.strip() == '':
+            return True
+
+        # For equipment with serial number, check for overlapping bookings
         booking_statuses = [BookingStatus.CONFIRMED, BookingStatus.ACTIVE]
         query = select(Booking).where(
             and_(

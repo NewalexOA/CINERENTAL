@@ -1,5 +1,8 @@
 import { scanStorage } from './scan-storage.js';
-import { formatCurrency } from './project/project-utils.js';
+import { formatCurrency, getStatusClass, getStatusText } from './project/project-utils.js';
+
+// Make scanStorage globally available
+window.scanStorage = scanStorage;
 
 /**
  * Scanner page logic
@@ -709,10 +712,10 @@ function updateScanResult(equipment) {
     }
 
     if (statusEl) {
-        const statusText = equipment.status || 'UNKNOWN';
-        statusEl.textContent = statusText;
+        const statusKey = equipment.status || 'UNKNOWN';
+        statusEl.textContent = getStatusText(statusKey);
         statusEl.className = statusEl.className.replace(/bg-\S+/g, '');
-        statusEl.classList.add(`bg-${getStatusColor(statusText)}`);
+        statusEl.classList.add(`bg-${getStatusClass(statusKey)}`);
     }
 
     if (detailsLinkEl) {
@@ -1023,11 +1026,16 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
     }
 
-    // Make sure scanStorage is available before initializing
-    if (!scanStorage) {
-        console.error('scanStorage is not available');
-        showToast('Ошибка инициализации: хранилище сессий недоступно', 'danger');
+    // Make sure scanStorage is available (already imported, this is a sanity check)
+    if (!scanStorage) { // This refers to the imported, module-scoped scanStorage
+        console.error('scanStorage (module) is not available, this should not happen.');
+        showToast('Критическая ошибка: хранилище сессий недоступно', 'danger');
         return;
+    }
+
+    if (!window.scanStorage) {
+        console.warn('window.scanStorage was not set by top-level assignment, setting it now.');
+        window.scanStorage = scanStorage;
     }
 
     try {

@@ -260,7 +260,7 @@ class ProjectService:
 
         try:
             # Validate dates
-            if start_date >= end_date:
+            if start_date > end_date:
                 raise DateError(
                     DateErrorMessages.INVALID_DATES,
                     start_date=start_date,
@@ -507,21 +507,21 @@ class ProjectService:
 
             # Check dates if both provided
             if start_date is not None and end_date is not None:
-                if start_date >= end_date:
+                if start_date > end_date:
                     raise DateError(
                         DateErrorMessages.INVALID_DATES,
                         start_date=start_date,
                         end_date=end_date,
                     )
             elif start_date is not None and project.end_date:
-                if start_date >= project.end_date:
+                if start_date > project.end_date:
                     raise DateError(
                         DateErrorMessages.INVALID_DATES,
                         start_date=start_date,
                         end_date=project.end_date,
                     )
             elif end_date is not None and project.start_date:
-                if project.start_date >= end_date:
+                if project.start_date > end_date:
                     raise DateError(
                         DateErrorMessages.INVALID_DATES,
                         start_date=project.start_date,

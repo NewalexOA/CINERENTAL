@@ -218,6 +218,7 @@ docker compose -f docker-compose.prod.yml ps
 ```bash
 curl -s -o /dev/null -w "%{http_code}\n" http://localhost:8000
 ```
+
 Проверяем логи:
 
 ```bash

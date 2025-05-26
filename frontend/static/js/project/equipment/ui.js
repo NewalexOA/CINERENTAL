@@ -2,7 +2,7 @@
  * Equipment UI functionality
  */
 
-import { formatDate } from '../../utils/common.js';
+import { formatDate, DATERANGEPICKER_LOCALE } from '../../utils/common.js';
 import { checkEquipmentAvailability, initializeBookingPeriodPickers } from './availability.js';
 import { handleQuantityIncrease, handleQuantityDecrease, handleBookingRemoval } from './booking.js';
 import { currentPage, totalPages, pageSize, totalCount } from './search.js';
@@ -199,6 +199,46 @@ export function resetEquipmentSelection() {
     const categoryFilter = document.getElementById('categoryFilter');
     if (categoryFilter) categoryFilter.value = '';
 
+    const dateRangeInput = document.getElementById('newBookingPeriod');
+    if (dateRangeInput) {
+        const projectStartDateValue = document.getElementById('project-start-date')?.value;
+        const projectEndDateValue = document.getElementById('project-end-date')?.value;
+
+        let startDate = moment(); // Default to today
+        let endDate = moment().add(1, 'days'); // Default to tomorrow
+
+        if (projectStartDateValue && projectEndDateValue) {
+            const parsedProjectStartDate = moment(projectStartDateValue);
+            const parsedProjectEndDate = moment(projectEndDateValue);
+
+            if (parsedProjectStartDate.isValid() && parsedProjectEndDate.isValid()) {
+                startDate = parsedProjectStartDate;
+                endDate = parsedProjectEndDate;
+            } else {
+                console.warn('Could not parse project dates for newBookingPeriod:', projectStartDateValue, projectEndDateValue);
+            }
+        }
+
+        $(dateRangeInput).val(startDate.format('DD.MM.YYYY') + ' - ' + endDate.format('DD.MM.YYYY'));
+
+        if ($(dateRangeInput).data('daterangepicker')) {
+            const picker = $(dateRangeInput).data('daterangepicker');
+            picker.setStartDate(startDate);
+            picker.setEndDate(endDate);
+        } else {
+            $(dateRangeInput).daterangepicker({
+                locale: DATERANGEPICKER_LOCALE,
+                startDate: startDate,
+                endDate: endDate,
+            });
+        }
+
+        // Remove potentially problematic auto-adjusting logic for this specific picker
+        $(dateRangeInput).off('apply.daterangepicker').on('apply.daterangepicker', function(ev, picker) {
+            $(this).val(picker.startDate.format('DD.MM.YYYY') + ' - ' + picker.endDate.format('DD.MM.YYYY'));
+        });
+    }
+
     hideEquipmentDetails();
 }
 
@@ -296,6 +336,8 @@ export function renderEquipmentSection(project) {
         const barcode = booking.barcode || '';
         const category_name = booking.category_name || 'Без категории';
         const serialNumber = booking.serial_number || '';
+        // Get equipment_id from different possible places in the booking object
+        const equipmentId = booking.equipment_id || (booking.equipment && booking.equipment.id) || '';
 
         const serialNumberStr = String(serialNumber || '');
         const hasSerialNumber = serialNumberStr.trim().length > 0;
@@ -305,11 +347,12 @@ export function renderEquipmentSection(project) {
         const row = document.createElement('tr');
         row.dataset.bookingId = booking.id;
         row.dataset.hasSerialNumber = hasSerialNumber;
+        row.dataset.equipmentId = equipmentId;
 
         const nameCell = document.createElement('td');
         nameCell.innerHTML = `
-            <div>${equipmentName}</div>
-            <small class="text-muted">${barcode}</small>
+            <div>${equipmentId ? `<a href="/equipment/${equipmentId}">${equipmentName}</a>` : equipmentName}${quantity > 1 ? ` (x${quantity})` : ''}</div>
+            <small class="text-muted"><i class="fas fa-barcode me-1"></i>${barcode}</small>
             ${serialNumber ? `<small class="text-muted d-block">S/N: ${serialNumber}</small>` : ''}
         `;
 
