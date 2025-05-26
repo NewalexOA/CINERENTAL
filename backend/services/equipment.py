@@ -661,7 +661,7 @@ class EquipmentService:
             end_date = end_date.replace(tzinfo=timezone.utc)
 
         # Validate dates
-        if start_date >= end_date:
+        if start_date > end_date:
             raise ValidationError(
                 'Start date must be before end date',
                 details={

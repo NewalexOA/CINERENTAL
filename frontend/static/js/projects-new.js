@@ -478,34 +478,29 @@ function createProjectPayload(status) {
     const formData = new FormData(form);
     const dateRange = $('#projectDates').data('daterangepicker');
 
-    console.log('[createProjectPayload] Creating payload with selectedEquipment:', selectedEquipment);
-    console.log('[createProjectPayload] Project date range picker:', dateRange);
-    console.log('[createProjectPayload] Project start date:', dateRange?.startDate?.format());
-    console.log('[createProjectPayload] Project end date:', dateRange?.endDate?.format());
-
     const payload = {
         name: formData.get('name'),
         client_id: parseInt(formData.get('client_id')),
         description: formData.get('description') || null,
         notes: formData.get('notes') || null,
         status: status,
-        start_date: dateRange?.startDate?.isValid() ? dateRange.startDate.format('YYYY-MM-DDTHH:mm:ss') : null,
-        end_date: dateRange?.endDate?.isValid() ? dateRange.endDate.format('YYYY-MM-DDTHH:mm:ss') : null,
+        start_date: dateRange?.startDate?.isValid() ? dateRange.startDate.startOf('day').format('YYYY-MM-DDTHH:mm:ss') : null,
+        end_date: dateRange?.endDate?.isValid() ? dateRange.endDate.startOf('day').add(1, 'second').format('YYYY-MM-DDTHH:mm:ss') : null,
         bookings: []
     };
 
     selectedEquipment.forEach(item => {
-        console.log(`[createProjectPayload] Processing item:`, item);
-        const bookingStartDate = item.booking_start || (dateRange?.startDate?.isValid() ? dateRange.startDate.format('YYYY-MM-DDTHH:mm:ss') : null);
-        const bookingEndDate = item.booking_end || (dateRange?.endDate?.isValid() ? dateRange.endDate.format('YYYY-MM-DDTHH:mm:ss') : null);
-        console.log(`[createProjectPayload] Item Booking Dates: Start=${bookingStartDate}, End=${bookingEndDate}`);
+        const bookingStartDate = item.booking_start || (dateRange?.startDate?.isValid() ? dateRange.startDate.startOf('day').format('YYYY-MM-DDTHH:mm:ss') : null);
+        const bookingEndDate = item.booking_end || (dateRange?.endDate?.isValid() ? dateRange.endDate.startOf('day').add(1, 'second').format('YYYY-MM-DDTHH:mm:ss') : null);
 
-        payload.bookings.push({
+        const booking = {
             equipment_id: parseInt(item.id),
             start_date: bookingStartDate,
             end_date: bookingEndDate,
             quantity: item.quantity || 1
-        });
+        };
+
+        payload.bookings.push(booking);
     });
 
     // Validate that all bookings have dates
@@ -516,7 +511,6 @@ function createProjectPayload(status) {
         return null;
     }
 
-    console.log('[createProjectPayload] Final payload:', payload);
     return payload;
 }
 
@@ -654,8 +648,8 @@ function addEquipmentItemEventListeners() {
     $('.equipment-period-input').on('apply.daterangepicker', function(ev, picker) {
         const index = parseInt($(this).data('index'));
         if (!isNaN(index) && index >= 0 && index < selectedEquipment.length) {
-            selectedEquipment[index].booking_start = picker.startDate.format('YYYY-MM-DDTHH:mm:ss');
-            selectedEquipment[index].booking_end = picker.endDate.format('YYYY-MM-DDTHH:mm:ss');
+            selectedEquipment[index].booking_start = picker.startDate.startOf('day').format('YYYY-MM-DDTHH:mm:ss');
+            selectedEquipment[index].booking_end = picker.endDate.startOf('day').add(1, 'second').format('YYYY-MM-DDTHH:mm:ss');
             $(this).val(picker.startDate.format('DD.MM.YYYY') + ' - ' + picker.endDate.format('DD.MM.YYYY'));
             saveSessionData();
         }
@@ -687,8 +681,10 @@ async function applyProjectDatesToAllItems() {
         return;
     }
 
-    const projectStartDate = projectDateRangePicker.startDate.format('YYYY-MM-DDTHH:mm:ss');
-    const projectEndDate = projectDateRangePicker.endDate.format('YYYY-MM-DDTHH:mm:ss');
+    // Fix: Use startOf('day') for start and add 1 second to end to avoid display issues
+    const projectStartDate = projectDateRangePicker.startDate.startOf('day').format('YYYY-MM-DDTHH:mm:ss');
+    const projectEndDate = projectDateRangePicker.endDate.startOf('day').add(1, 'second').format('YYYY-MM-DDTHH:mm:ss');
+
     const equipmentItemsToCheck = [...selectedEquipment]; // Clone array
 
     if (equipmentItemsToCheck.length === 0) {
@@ -706,13 +702,13 @@ async function applyProjectDatesToAllItems() {
             const equipmentId = parseInt(item.id);
             if (isNaN(equipmentId)) continue; // Skip invalid items
 
-            console.log(`Checking availability for ID: ${equipmentId} from ${projectStartDate} to ${projectEndDate}`);
             try {
                 // Dates need to be in YYYY-MM-DD format for this GET endpoint params
                 const startDateParam = projectDateRangePicker.startDate.format('YYYY-MM-DD');
                 let endDateParam = projectDateRangePicker.endDate.format('YYYY-MM-DD');
 
                 const isOneDay = startDateParam === endDateParam;
+
                 if (isOneDay) {
                     const nextDay = moment(endDateParam).add(1, 'days').format('YYYY-MM-DD');
                     endDateParam = nextDay;
@@ -722,7 +718,6 @@ async function applyProjectDatesToAllItems() {
                     start_date: startDateParam,
                     end_date: endDateParam
                 });
-                console.log(`Availability for ID ${equipmentId}:`, availabilityResult);
                 checkedCount++;
 
                 if (availabilityResult && !availabilityResult.is_available) {
@@ -751,7 +746,7 @@ async function applyProjectDatesToAllItems() {
             displayConflictsInfo(conflictsFound, projectStartDate, projectEndDate);
         } else {
             // No conflicts, apply dates
-            selectedEquipment.forEach(item => {
+            selectedEquipment.forEach((item, index) => {
                 item.booking_start = projectStartDate; // Use full datetime format for saving
                 item.booking_end = projectEndDate;
             });
@@ -895,8 +890,8 @@ function openEquipmentPeriodModal(index) {
     newSaveBtn.addEventListener('click', () => {
         const picker = periodInput.data('daterangepicker');
         if (picker && picker.startDate && picker.endDate) {
-            selectedEquipment[index].booking_start = picker.startDate.format('YYYY-MM-DDTHH:mm:ss');
-            selectedEquipment[index].booking_end = picker.endDate.format('YYYY-MM-DDTHH:mm:ss');
+            selectedEquipment[index].booking_start = picker.startDate.startOf('day').format('YYYY-MM-DDTHH:mm:ss');
+            selectedEquipment[index].booking_end = picker.endDate.startOf('day').add(1, 'second').format('YYYY-MM-DDTHH:mm:ss');
             updateEquipmentTable();
             saveSessionData();
             modal.hide();
