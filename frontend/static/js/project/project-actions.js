@@ -28,13 +28,23 @@ export async function updateProjectStatus(projectId, status) {
  * @param {string} projectId - Project ID
  */
 export async function deleteProject(projectId) {
-    if (!confirm('Вы уверены, что хотите удалить этот проект?')) {
-        return;
-    }
-
     try {
         await api.delete(`/projects/${projectId}`);
-        window.location.href = '/projects';
+
+        // Close the modal first
+        const deleteModal = document.getElementById('deleteProjectModal');
+        if (deleteModal) {
+            const modal = bootstrap.Modal.getInstance(deleteModal);
+            if (modal) {
+                modal.hide();
+            }
+        }
+
+        // Show success message and redirect
+        showToast('Проект успешно удален', 'success');
+        setTimeout(() => {
+            window.location.href = '/projects';
+        }, 1500);
     } catch (error) {
         console.error('Error deleting project:', error);
         showToast('Ошибка при удалении проекта', 'danger');
