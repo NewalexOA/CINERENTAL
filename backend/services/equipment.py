@@ -650,6 +650,10 @@ class EquipmentService:
         """
         equipment = await self.get_equipment(equipment_id)
 
+        # Equipment without serial number (consumables/cables) is always available
+        if not equipment.serial_number or equipment.serial_number.strip() == '':
+            return True
+
         # Ensure dates are timezone-aware
         if start_date.tzinfo is None:
             start_date = start_date.replace(tzinfo=timezone.utc)
