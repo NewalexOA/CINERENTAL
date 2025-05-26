@@ -131,7 +131,10 @@ function renderEquipment(items) {
         const row = equipmentTableBody.insertRow();
         const statusBadgeBg = item.status === 'AVAILABLE' ? 'bg-success' :
                             item.status === 'RENTED' ? 'bg-warning' :
-                            'bg-danger'; // Or map other statuses
+                            item.status === 'MAINTENANCE' ? 'bg-danger' :
+                            item.status === 'BROKEN' ? 'bg-danger' :
+                            item.status === 'RETIRED' ? 'bg-secondary' :
+                            'bg-secondary'; // Default for unknown statuses
 
         // Cell for Name and Description
         const nameCell = row.insertCell();
