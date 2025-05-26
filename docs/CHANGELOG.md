@@ -2,6 +2,36 @@
 
 This document lists notable changes to the ACT-Rental application.
 
+## [0.9.0-beta.1] - 2025-01-26
+
+### Equipment Management & Status System
+
+- **Enhanced Equipment Status Management:** Removed RENTED status from manual selection in edit forms, keeping it as system-managed only. Added BROKEN and RETIRED status options for manual assignment while maintaining RENTED availability in filter options for viewing.
+- **Flexible Status Transitions:** Completely removed equipment status transition restrictions, allowing any status changes between all equipment statuses including transitions from RETIRED back to service. This improves equipment lifecycle management flexibility and simplifies status management logic.
+- **Equipment Status UI Consistency:** Updated status badge color mapping across all JavaScript modules to include BROKEN (danger) and RETIRED (secondary) statuses. Fixed MAINTENANCE status color from info to danger for visual consistency throughout the application.
+
+### Equipment Booking & Duplication Fixes
+
+- **Smart Equipment Addition Logic:** Fixed critical issue where equipment without serial numbers (cables, consumables) created duplicate entries instead of incrementing quantity when added to projects. Modified `addSelectedEquipmentToProject` function to check for existing bookings and update quantity via PATCH API.
+- **Improved User Workflow:** Removed auto-close behavior from equipment addition interface to keep it open after adding items, allowing users to add multiple equipment pieces without repetitive modal opening.
+
+### Soft Delete System Implementation
+
+- **Comprehensive Soft Delete Architecture:** Implemented system-wide soft delete functionality by adding `SoftDeleteMixin` to `Booking` and `Project` models with `deleted_at` timestamps. Updated all repository methods to automatically exclude soft-deleted records using `deleted_at.is_(None)` checks.
+- **Data Integrity & Recovery:** Modified services to use soft delete instead of physical deletion, preserving data for potential recovery while maintaining clean user interfaces. All related queries and services updated to respect soft delete status.
+
+### HID Barcode Scanner Integration
+
+- **Advanced Scanner Management:** Implemented comprehensive HID-keyboard barcode scanner support with automatic activation/deactivation based on tab switching between Scanner and Catalog views. Created specialized functions: `initializeHIDScanner()`, `startHIDScanner()`, and `stopHIDScanner()` in dedicated `scanner.js`.
+- **Seamless User Experience:** Integrated scanner with existing `BarcodeScanner` class from `main.js` for consistent keypress event handling. Auto-starts scanner if Scanner tab is active on page load, providing immediate functionality without manual activation.
+- **Clean Interface Design:** Removed misleading camera button with `id="toggleScannerBtn"` from scanner tab and expanded input field to full width, eliminating confusion about actual device connectivity detection.
+
+### Technical Improvements & Bug Fixes
+
+- **Project Management:** Fixed project deletion button functionality by correcting ID mismatch between JavaScript selector (`deleteProjectBtn`) and HTML element (`deleteProject`). Replaced browser `confirm()` with Bootstrap modal workflow for consistent UI experience.
+- **Code Optimization:** Removed unused imports (Dict, Set) from typing module in equipment service after simplifying status transition logic. Cleaned up complex validation methods that are no longer needed.
+- **Event Handling Enhancement:** Improved tab switching event listeners to properly manage scanner state transitions, ensuring scanner is only active when the appropriate interface tab is selected.
+
 ## [0.8.0-beta.1] - 2025-05-26
 
 ### UI & Equipment Management
