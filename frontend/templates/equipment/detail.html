@@ -177,8 +177,9 @@
                         <label class="form-label">Статус</label>
                         <select class="form-select" name="status" required>
                             <option value="AVAILABLE" {% if equipment.status == 'AVAILABLE' %}selected{% endif %}>Доступно</option>
-                            <option value="RENTED" {% if equipment.status == 'RENTED' %}selected{% endif %}>В аренде</option>
                             <option value="MAINTENANCE" {% if equipment.status == 'MAINTENANCE' %}selected{% endif %}>В ремонте</option>
+                            <option value="BROKEN" {% if equipment.status == 'BROKEN' %}selected{% endif %}>Неисправно</option>
+                            <option value="RETIRED" {% if equipment.status == 'RETIRED' %}selected{% endif %}>Списано</option>
                         </select>
                     </div>
                 </form>

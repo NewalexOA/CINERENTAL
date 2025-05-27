@@ -157,7 +157,7 @@ function initializeEventListeners(projectId) {
     document.getElementById('saveProjectBtn')?.addEventListener('click', () => saveProjectChanges(projectId, projectData));
 
     // Delete project button
-    document.getElementById('deleteProjectBtn')?.addEventListener('click', () => deleteProject(projectId));
+    document.getElementById('deleteProject')?.addEventListener('click', () => deleteProject(projectId));
 
     // Status form submit
     const statusForm = document.getElementById('statusForm');

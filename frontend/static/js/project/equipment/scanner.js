@@ -6,6 +6,79 @@ import { showToast } from '../../utils/common.js';
 import { searchEquipmentByBarcode } from './search.js';
 
 let scannerActive = false;
+let hidScanner = null;
+
+/**
+ * Initialize HID barcode scanner for equipment search
+ */
+export function initializeHIDScanner() {
+    if (!hidScanner) {
+        hidScanner = new window.BarcodeScanner(
+            handleHIDScanResult,
+            handleHIDScanError
+        );
+    }
+}
+
+/**
+ * Start HID barcode scanner
+ */
+export function startHIDScanner() {
+    if (!hidScanner) {
+        initializeHIDScanner();
+    }
+
+    if (hidScanner && !hidScanner.isListening) {
+        hidScanner.start();
+        console.log('HID Barcode scanner started for equipment search');
+    }
+}
+
+/**
+ * Stop HID barcode scanner
+ */
+export function stopHIDScanner() {
+    if (hidScanner && hidScanner.isListening) {
+        hidScanner.stop();
+        console.log('HID Barcode scanner stopped');
+    }
+}
+
+/**
+ * Handle HID scanner result
+ * @param {Object} equipment - Equipment data from API
+ * @param {Object} scanInfo - Additional scan information
+ */
+function handleHIDScanResult(equipment, scanInfo) {
+    console.log('HID Scanner detected equipment:', equipment);
+
+    // Заполняем поле ввода штрих-кода
+    const barcodeInput = document.getElementById('barcodeInput');
+    if (barcodeInput) {
+        barcodeInput.value = equipment.barcode;
+        // Add visual feedback to the input
+        barcodeInput.classList.add('is-valid');
+        setTimeout(() => {
+            barcodeInput.classList.remove('is-valid');
+        }, 2000);
+    }
+
+    // Автоматически выполняем поиск
+    searchEquipmentByBarcode();
+
+    showToast(`Отсканирован штрих-код: ${equipment.barcode}`, 'success');
+}
+
+/**
+ * Handle HID scanner error
+ * @param {Error} error - Error object
+ */
+function handleHIDScanError(error) {
+    console.error('HID Scanner error:', error);
+    showToast(`Ошибка сканирования: ${error.message}`, 'danger');
+}
+
+
 
 /**
  * Toggle barcode scanner
@@ -92,4 +165,4 @@ function handleScanResult(result) {
     }
 }
 
-export { scannerActive };
+export { scannerActive, hidScanner };

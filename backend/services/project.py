@@ -583,7 +583,7 @@ class ProjectService:
             raise
 
     async def delete_project(self, project_id: int) -> bool:
-        """Delete project.
+        """Soft delete project.
 
         Args:
             project_id: Project ID
@@ -609,24 +609,26 @@ class ProjectService:
             if project.bookings:
                 bookings_count = len(project.bookings)
                 log.info(
-                    'Deleting {} bookings for project {}', bookings_count, project_id
+                    'Soft deleting {} bookings for project {}',
+                    bookings_count,
+                    project_id,
                 )
 
-                booking_ids = [booking.id for booking in project.bookings]
-
-                for booking_id in booking_ids:
-                    log.debug('Deleting booking {}', booking_id)
-                    await self.booking_repository.delete(booking_id)
+                # Use soft delete for bookings instead of physical deletion
+                for booking in project.bookings:
+                    log.debug('Soft deleting booking {}', booking.id)
+                    await self.booking_repository.soft_delete(booking.id)
 
                 await self.db_session.flush()
 
+            # Soft delete the project
             result = await self.repository.delete(project_id)
             await self.db_session.commit()
 
             if result:
                 log.info(ProjectLogMessages.PROJECT_DELETED, project_id)
                 if bookings_count > 0:
-                    log.info('Successfully deleted {} bookings', bookings_count)
+                    log.info('Successfully soft deleted {} bookings', bookings_count)
 
             return result
 

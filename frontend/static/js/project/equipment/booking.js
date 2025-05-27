@@ -166,7 +166,7 @@ export async function addSelectedEquipmentToProject() {
             return;
         }
 
-        const equipmentId = selectedItem.dataset.equipmentId;
+        const equipmentId = parseInt(selectedItem.dataset.equipmentId);
         const projectId = getProjectIdFromUrl();
 
         if (!projectId) {
@@ -181,6 +181,41 @@ export async function addSelectedEquipmentToProject() {
         const quantity = parseInt(document.getElementById('newBookingQuantity').value) || 1;
 
         const equipment = await api.get(`/equipment/${equipmentId}`);
+
+        // Check if equipment has serial number
+        const hasSerialNumber = equipment.serial_number && equipment.serial_number.trim().length > 0;
+
+        // If equipment doesn't have serial number, check for existing booking with same equipment_id
+        if (!hasSerialNumber && projectData.bookings && Array.isArray(projectData.bookings)) {
+            const existingBooking = projectData.bookings.find(booking => {
+                const bookingEquipmentId = booking.equipment_id || (booking.equipment && booking.equipment.id);
+                return bookingEquipmentId === equipmentId &&
+                       (!booking.serial_number || booking.serial_number.trim().length === 0);
+            });
+
+            if (existingBooking) {
+                // Update existing booking quantity instead of creating new one
+                const currentQuantity = existingBooking.quantity || 1;
+                const newQuantity = currentQuantity + quantity;
+
+                try {
+                    await api.patch(`/bookings/${existingBooking.id}`, {
+                        quantity: newQuantity
+                    });
+
+                    await refreshProjectData(updateProjectData);
+
+                    showToast(`Количество "${equipment.name}" увеличено с ${currentQuantity} до ${newQuantity}`, 'success');
+                    return;
+                } catch (error) {
+                    console.error('Error updating existing booking quantity:', error);
+                    showToast('Ошибка при обновлении количества', 'danger');
+                    return;
+                }
+            }
+        }
+
+        // Create new booking if no existing booking found or equipment has serial number
         const days = Math.ceil((new Date(endDate) - new Date(startDate)) / (1000 * 60 * 60 * 24));
         const total_amount = equipment.replacement_cost * 0.01 * days * quantity;
 

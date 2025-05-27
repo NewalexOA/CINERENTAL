@@ -380,7 +380,7 @@ function getStatusColor(status) {
         case 'RENTED':
             return 'warning';
         case 'MAINTENANCE':
-            return 'info';
+            return 'danger';
         case 'BROKEN':
             return 'danger';
         case 'RETIRED':

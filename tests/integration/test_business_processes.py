@@ -13,7 +13,6 @@ from backend.exceptions import (
     AvailabilityError,
     BusinessError,
     ConflictError,
-    StateError,
     StatusTransitionError,
 )
 from backend.models import (
@@ -582,18 +581,17 @@ class TestEquipmentBusinessRules:
         # Cancel booking
         await booking_service.change_status(booking.id, BookingStatus.CANCELLED)
 
-        # Now can retire equipmen
+        # Now can retire equipment
         equipment = await equipment_service.change_status(
             equipment.id, EquipmentStatus.RETIRED
         )
         assert equipment.status == EquipmentStatus.RETIRED
 
-        # Cannot change status of retired equipmen
-        error_msg = 'Cannot change status from RETIRED to AVAILABLE'
-        with pytest.raises(StateError, match=error_msg):
-            await equipment_service.change_status(
-                equipment.id, EquipmentStatus.AVAILABLE
-            )
+        # Can change status of retired equipment (status transitions are flexible)
+        equipment = await equipment_service.change_status(
+            equipment.id, EquipmentStatus.AVAILABLE
+        )
+        assert equipment.status == EquipmentStatus.AVAILABLE
 
     @async_test
     async def test_equipment_availability_rules(

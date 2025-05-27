@@ -3,7 +3,7 @@
 This module provides repository functionality for Project model.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Optional, Tuple, Union, cast
 from uuid import UUID
 
@@ -52,9 +52,11 @@ class ProjectRepository(BaseRepository[Project]):
             project_id: Project ID
 
         Returns:
-            Project if found, None otherwise
+            Project if found, None otherwise (excluding soft deleted)
         """
-        query = select(Project).where(Project.id == project_id)
+        query = select(Project).where(
+            Project.id == project_id, Project.deleted_at.is_(None)
+        )
         result = await self.session.execute(query)
         return result.scalars().first()
 
@@ -67,11 +69,11 @@ class ProjectRepository(BaseRepository[Project]):
             project_id: Project ID
 
         Returns:
-            Project with bookings if found, None otherwise
+            Project with bookings if found, None otherwise (excluding soft deleted)
         """
         query = (
             select(Project)
-            .where(Project.id == project_id)
+            .where(Project.id == project_id, Project.deleted_at.is_(None))
             .options(
                 selectinload(Project.bookings)
                 .selectinload(Booking.equipment)
@@ -103,8 +105,8 @@ class ProjectRepository(BaseRepository[Project]):
         Returns:
             Tuple of list of projects and total count
         """
-        query = select(Project)
-        count_query = select(func.count(Project.id))
+        query = select(Project).where(Project.deleted_at.is_(None))
+        count_query = select(func.count(Project.id)).where(Project.deleted_at.is_(None))
 
         # Apply filters
         if client_id is not None:
@@ -171,7 +173,7 @@ class ProjectRepository(BaseRepository[Project]):
         return project
 
     async def delete(self, project_id: Union[int, UUID]) -> bool:
-        """Delete project.
+        """Soft delete project.
 
         Args:
             project_id: Project ID
@@ -183,6 +185,7 @@ class ProjectRepository(BaseRepository[Project]):
         if project is None:
             return False
 
-        await self.session.delete(project)
+        # Use soft delete instead of physical deletion
+        project.deleted_at = datetime.now(timezone.utc)
         await self.session.flush()
         return True
