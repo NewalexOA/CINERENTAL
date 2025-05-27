@@ -248,6 +248,8 @@ function getStatusColor(status) {
         'AVAILABLE': 'success',
         'RENTED': 'warning',
         'MAINTENANCE': 'danger',
+        'BROKEN': 'danger',
+        'RETIRED': 'secondary',
 
         // Booking statuses
         'ACTIVE': 'primary',

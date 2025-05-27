@@ -9,7 +9,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.exceptions import ConflictError
 from backend.exceptions.exceptions_base import BusinessError
-from backend.exceptions.state_exceptions import StateError
 from backend.exceptions.validation_exceptions import ValidationError
 from backend.models import (
     Booking,
@@ -585,25 +584,32 @@ class TestEquipmentService:
         assert equipment.status == EquipmentStatus.AVAILABLE
 
     @async_test
-    async def test_status_transition_invalid(
+    async def test_status_transition_flexible(
         self,
         service: EquipmentService,
         test_equipment: Equipment,
     ) -> None:
-        """Test invalid equipment status transition."""
+        """Test flexible equipment status transitions (all transitions allowed)."""
         # First set to RETIRED
         await service.change_status(test_equipment.id, EquipmentStatus.RETIRED)
 
-        # Try to change from RETIRED (not allowed)
-        with pytest.raises(StateError, match='Cannot change status from'):
-            await service.change_status(test_equipment.id, EquipmentStatus.AVAILABLE)
+        # Can change from RETIRED to any status (transitions are flexible)
+        equipment = await service.change_status(
+            test_equipment.id, EquipmentStatus.AVAILABLE
+        )
+        assert equipment.status == EquipmentStatus.AVAILABLE
 
-        # Try invalid transition from AVAILABLE to BROKEN
-        test_equipment.status = EquipmentStatus.AVAILABLE
-        await service.repository.update(test_equipment)
+        # Can transition from AVAILABLE to BROKEN (all transitions allowed)
+        equipment = await service.change_status(
+            test_equipment.id, EquipmentStatus.BROKEN
+        )
+        assert equipment.status == EquipmentStatus.BROKEN
 
-        with pytest.raises(StateError, match='Cannot change status from'):
-            await service.change_status(test_equipment.id, EquipmentStatus.BROKEN)
+        # Can transition back to AVAILABLE
+        equipment = await service.change_status(
+            test_equipment.id, EquipmentStatus.AVAILABLE
+        )
+        assert equipment.status == EquipmentStatus.AVAILABLE
 
     @async_test
     async def test_status_transition_with_bookings(

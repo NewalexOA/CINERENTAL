@@ -92,7 +92,7 @@ class BookingRepository(BaseRepository[Booking]):
         """
         query = (
             select(self.model)
-            .where(self.model.client_id == client_id)
+            .where(self.model.client_id == client_id, self.model.deleted_at.is_(None))
             .options(
                 joinedload(self.model.equipment).joinedload(Equipment.category),
                 joinedload(self.model.project),
@@ -186,6 +186,7 @@ class BookingRepository(BaseRepository[Booking]):
             .where(
                 self.model.client_id == client_id,
                 self.model.booking_status.in_(active_statuses),
+                self.model.deleted_at.is_(None),
             )
             .options(
                 joinedload(self.model.equipment),
@@ -196,7 +197,7 @@ class BookingRepository(BaseRepository[Booking]):
         return list(result.unique().scalars().all())
 
     async def get_by_equipment(self, equipment_id: int) -> List[Booking]:
-        """Get all bookings for equipment.
+        """Get all bookings for equipment (excluding soft-deleted).
 
         Args:
             equipment_id: Equipment ID
@@ -206,7 +207,9 @@ class BookingRepository(BaseRepository[Booking]):
         """
         stmt = (
             select(self.model)
-            .where(self.model.equipment_id == equipment_id)
+            .where(
+                self.model.equipment_id == equipment_id, self.model.deleted_at.is_(None)
+            )
             .options(
                 joinedload(self.model.client),
                 joinedload(self.model.project),
@@ -217,7 +220,7 @@ class BookingRepository(BaseRepository[Booking]):
         return list(result.unique().scalars().all())
 
     async def get_active_by_equipment(self, equipment_id: int) -> List[Booking]:
-        """Get active bookings for equipment.
+        """Get active bookings for equipment (excluding soft-deleted).
 
         Active means bookings that are PENDING, CONFIRMED, ACTIVE, or OVERDUE.
 
@@ -238,6 +241,7 @@ class BookingRepository(BaseRepository[Booking]):
             .where(
                 self.model.equipment_id == equipment_id,
                 self.model.booking_status.in_(active_statuses),
+                self.model.deleted_at.is_(None),
             )
             .options(
                 joinedload(self.model.client),
@@ -280,6 +284,7 @@ class BookingRepository(BaseRepository[Booking]):
             self.model.booking_status.in_(conflicting_statuses),
             self.model.start_date <= end_date,
             self.model.end_date >= start_date,
+            self.model.deleted_at.is_(None),
         )
 
         if exclude_booking_id:
@@ -314,6 +319,7 @@ class BookingRepository(BaseRepository[Booking]):
                 Booking.booking_status == BookingStatus.ACTIVE,
                 Booking.start_date <= end_date,
                 Booking.end_date >= start_date,
+                Booking.deleted_at.is_(None),
             )
             .options(
                 joinedload(Booking.client),
@@ -335,7 +341,7 @@ class BookingRepository(BaseRepository[Booking]):
         """
         stmt = (
             select(Booking)
-            .where(Booking.booking_status == status)
+            .where(Booking.booking_status == status, Booking.deleted_at.is_(None))
             .options(
                 joinedload(Booking.client),
                 joinedload(Booking.equipment),
@@ -356,7 +362,7 @@ class BookingRepository(BaseRepository[Booking]):
         """
         stmt = (
             select(Booking)
-            .where(Booking.payment_status == status)
+            .where(Booking.payment_status == status, Booking.deleted_at.is_(None))
             .options(
                 joinedload(Booking.client),
                 joinedload(Booking.equipment),
@@ -383,6 +389,7 @@ class BookingRepository(BaseRepository[Booking]):
             .where(
                 Booking.booking_status.in_(potential_overdue_statuses),
                 Booking.end_date < now,
+                Booking.deleted_at.is_(None),
             )
             .options(
                 joinedload(Booking.client),
@@ -403,12 +410,16 @@ class BookingRepository(BaseRepository[Booking]):
             end_date: Range end date.
 
         Returns:
-            List of bookings within the range.
+            List of bookings within the range (excluding soft-deleted).
         """
         # Overlap condition: (ExistingStart <= RangeEnd) AND (ExistingEnd >= RangeStart)
         stmt = (
             select(Booking)
-            .where(Booking.start_date <= end_date, Booking.end_date >= start_date)
+            .where(
+                Booking.start_date <= end_date,
+                Booking.end_date >= start_date,
+                Booking.deleted_at.is_(None),
+            )
             .options(
                 joinedload(Booking.client),
                 joinedload(Booking.equipment),
@@ -456,11 +467,12 @@ class BookingRepository(BaseRepository[Booking]):
             booking_id: Booking ID
 
         Returns:
-            Booking instance with relations loaded, or None if not found.
+            Booking instance with relations loaded, or None if not found
+            (excluding soft-deleted).
         """
         stmt = (
             select(self.model)
-            .where(self.model.id == booking_id)
+            .where(self.model.id == booking_id, self.model.deleted_at.is_(None))
             .options(
                 joinedload(self.model.client),
                 joinedload(self.model.equipment),
@@ -527,6 +539,7 @@ class BookingRepository(BaseRepository[Booking]):
 
             stmt = (
                 select(Booking)
+                .where(Booking.deleted_at.is_(None))
                 .options(
                     joinedload(Booking.client),
                     joinedload(Booking.equipment).joinedload(Equipment.category),
