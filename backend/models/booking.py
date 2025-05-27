@@ -14,7 +14,7 @@ from sqlalchemy.dialects.postgresql import ENUM
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from backend.models.core import Base
-from backend.models.mixins import TimestampMixin
+from backend.models.mixins import SoftDeleteMixin, TimestampMixin
 
 if TYPE_CHECKING:
     from backend.models.client import Client
@@ -62,7 +62,7 @@ payment_status_enum = ENUM(
 )
 
 
-class Booking(TimestampMixin, Base):
+class Booking(TimestampMixin, SoftDeleteMixin, Base):
     """Booking model.
 
     Attributes:

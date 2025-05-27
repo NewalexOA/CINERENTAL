@@ -5,7 +5,7 @@ including inventory management, availability tracking, and equipment status upda
 """
 
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional, Set
+from typing import Any, List, Optional
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -414,34 +414,8 @@ class EquipmentService:
         Returns:
             True if transition is valid, False otherwise
         """
-        # Allow transition to the same status
-        if current_status.value == new_status.value:
-            return True
-
-        allowed_transitions: Dict[str, Set[str]] = {
-            EquipmentStatus.AVAILABLE.value: {
-                EquipmentStatus.RENTED.value,
-                EquipmentStatus.MAINTENANCE.value,
-                EquipmentStatus.RETIRED.value,
-            },
-            EquipmentStatus.RENTED.value: {
-                EquipmentStatus.AVAILABLE.value,
-                EquipmentStatus.BROKEN.value,
-                EquipmentStatus.MAINTENANCE.value,
-                EquipmentStatus.RETIRED.value,
-            },
-            EquipmentStatus.MAINTENANCE.value: {
-                EquipmentStatus.AVAILABLE.value,
-                EquipmentStatus.BROKEN.value,
-                EquipmentStatus.RETIRED.value,
-            },
-            EquipmentStatus.BROKEN.value: {
-                EquipmentStatus.MAINTENANCE.value,
-                EquipmentStatus.RETIRED.value,
-            },
-            EquipmentStatus.RETIRED.value: set(),  # No transitions allowed from RETIRED
-        }
-        return new_status.value in allowed_transitions[current_status.value]
+        # Allow any status transitions - all transitions are now valid
+        return True
 
     async def delete_equipment(self, equipment_id: int) -> bool:
         """Delete equipment.

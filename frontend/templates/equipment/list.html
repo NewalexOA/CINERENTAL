@@ -44,7 +44,7 @@
                 <option value="AVAILABLE" {% if current_status == 'AVAILABLE' %}selected{% endif %}>Доступно</option>
                 <option value="RENTED" {% if current_status == 'RENTED' %}selected{% endif %}>В аренде</option>
                 <option value="MAINTENANCE" {% if current_status == 'MAINTENANCE' %}selected{% endif %}>В ремонте</option>
-                <option value="BROKEN" {% if current_status == 'BROKEN' %}selected{% endif %}>Сломано</option>
+                <option value="BROKEN" {% if current_status == 'BROKEN' %}selected{% endif %}>Неисправно</option>
                 <option value="RETIRED" {% if current_status == 'RETIRED' %}selected{% endif %}>Списано</option>
             </select>
         </div>
@@ -73,7 +73,7 @@
                             <td>{{ item.category_name }}</td>
                             <td>{{ item.serial_number or '' }}</td>
                             <td>
-                                <span class="badge bg-{{ 'success' if item.status == 'AVAILABLE' else 'warning' if item.status == 'RENTED' else 'danger' }}">
+                                <span class="badge bg-{{ 'success' if item.status == 'AVAILABLE' else 'warning' if item.status == 'RENTED' else 'danger' if item.status in ['MAINTENANCE', 'BROKEN'] else 'secondary' if item.status == 'RETIRED' else 'secondary' }}">
                                     {{ item.status }}
                                 </span>
                             </td>

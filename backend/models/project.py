@@ -13,7 +13,7 @@ from sqlalchemy.dialects.postgresql import ENUM
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from backend.models.core import Base
-from backend.models.mixins import TimestampMixin
+from backend.models.mixins import SoftDeleteMixin, TimestampMixin
 
 if TYPE_CHECKING:
     from backend.models.booking import Booking
@@ -39,7 +39,7 @@ project_status_enum = ENUM(
 )
 
 
-class Project(TimestampMixin, Base):
+class Project(TimestampMixin, SoftDeleteMixin, Base):
     """Project model.
 
     Attributes:
