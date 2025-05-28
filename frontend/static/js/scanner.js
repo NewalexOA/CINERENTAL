@@ -128,6 +128,11 @@ function updateSessionUI(session) {
     }
 
     if (session) {
+        if (!session.items || !Array.isArray(session.items)) {
+            console.error('Session items are invalid or not an array:', session.items);
+            session.items = [];
+        }
+
         noActiveSessionMessage.classList.add('d-none');
         activeSessionInfo.classList.remove('d-none');
         sessionName.textContent = session.name;
@@ -270,13 +275,21 @@ function handleDecrementItem(sessionId, equipmentId) {
 
 function handleIncrementItem(sessionId, equipmentId) {
     console.log(`Incrementing item ${equipmentId} in session ${sessionId}`);
-    const session = scanStorage.getSession(sessionId);
-    const item = session?.items.find(i => i.equipment_id === equipmentId);
-    if (item) {
-        const updatedSession = scanStorage.addEquipment(sessionId, item);
+    const currentSession = scanStorage.getSession(sessionId);
+    if (!currentSession) {
+        console.error(`Session with ID ${sessionId} not found for increment operation.`);
+        return;
+    }
+
+    const itemToIncrement = currentSession.items.find(i => i.equipment_id === equipmentId && !i.serial_number);
+
+    if (itemToIncrement) {
+        scanStorage.addEquipment(sessionId, itemToIncrement);
+        const updatedSession = scanStorage.getSession(sessionId);
         updateSessionUI(updatedSession);
     } else {
-        console.error(`Could not find item with ID ${equipmentId} to increment.`);
+        console.error(`Could not find item with ID ${equipmentId} (without serial number) in session ${sessionId} to increment.`);
+        updateSessionUI(currentSession);
     }
 }
 
