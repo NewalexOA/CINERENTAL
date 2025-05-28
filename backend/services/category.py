@@ -311,6 +311,35 @@ class CategoryService:
 
         return await self.repository.get_children(category.id)
 
+    async def get_all_subcategory_ids(self, category_id: int) -> List[int]:
+        """Get all subcategory IDs recursively for a given category.
+
+        Args:
+            category_id: ID of the parent category
+
+        Returns:
+            List of all subcategory IDs including the parent category ID
+
+        Raises:
+            ValueError: If category not found
+        """
+        category = await self.get_category(category_id)
+        if not category:
+            raise ValueError(f'Category with ID {category_id} not found')
+
+        # Include the current category itself
+        category_ids = [category_id]
+
+        # Get direct subcategories
+        subcategories = await self.repository.get_children(category_id)
+
+        # Recursively get all subcategories
+        for subcategory in subcategories:
+            subcategory_ids = await self.get_all_subcategory_ids(subcategory.id)
+            category_ids.extend(subcategory_ids)
+
+        return category_ids
+
     async def get_categories_with_equipment_count(
         self,
     ) -> list[CategoryWithEquipmentCount]:

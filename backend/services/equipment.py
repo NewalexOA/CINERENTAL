@@ -185,7 +185,7 @@ class EquipmentService:
 
         Args:
             status: Filter by equipment status
-            category_id: Filter by category ID
+            category_id: Filter by category ID (includes subcategories)
             query: Search query
             available_from: Filter by availability start date
             available_to: Filter by availability end date
@@ -214,10 +214,21 @@ class EquipmentService:
         if available_to and available_to.tzinfo is None:
             available_to = available_to.replace(tzinfo=timezone.utc)
 
+        # Get all category IDs including subcategories if category_id is provided
+        category_ids = None
+        if category_id is not None:
+            try:
+                category_ids = await self.category_service.get_all_subcategory_ids(
+                    category_id
+                )
+            except ValueError:
+                raise NotFoundError(f'Category with ID {category_id} not found')
+
         # Get the base query from the repository
         return self.repository.get_paginatable_query(
             status=status,
             category_id=category_id,
+            category_ids=category_ids,
             query=query,
             available_from=available_from,
             available_to=available_to,
@@ -241,7 +252,7 @@ class EquipmentService:
             skip: Number of items to skip
             limit: Maximum number of items to return
             status: Filter by equipment status
-            category_id: Filter by category ID
+            category_id: Filter by category ID (includes subcategories)
             query: Search query
             available_from: Filter by availability start date
             available_to: Filter by availability end date
@@ -264,9 +275,15 @@ class EquipmentService:
                 },
             )
 
-        # Check if category exists if provided
+        # Get all category IDs including subcategories if category_id is provided
+        category_ids = None
         if category_id is not None:
-            await self.category_service.get_category(category_id)
+            try:
+                category_ids = await self.category_service.get_all_subcategory_ids(
+                    category_id
+                )
+            except ValueError:
+                raise NotFoundError(f'Category with ID {category_id} not found')
 
         # Ensure dates are timezone-aware
         if available_from and available_from.tzinfo is None:
@@ -280,6 +297,7 @@ class EquipmentService:
             limit=limit,
             status=status,
             category_id=category_id,
+            category_ids=category_ids,
             query=query,
             available_from=available_from,
             available_to=available_to,
