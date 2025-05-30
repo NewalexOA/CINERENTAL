@@ -31,6 +31,22 @@ export const DATERANGEPICKER_LOCALE = {
     firstDay: 1
 };
 
+// Date range picker locale settings with time support
+export const DATERANGEPICKER_LOCALE_WITH_TIME = {
+    format: 'DD.MM.YYYY HH:mm',
+    applyLabel: 'Применить',
+    cancelLabel: 'Отмена',
+    fromLabel: 'С',
+    toLabel: 'По',
+    customRangeLabel: 'Произвольный период',
+    daysOfWeek: ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'],
+    monthNames: [
+        'Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
+        'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'
+    ],
+    firstDay: 1
+};
+
 /**
  * Format date for display
  * @param {string} dateString - ISO date string
@@ -48,7 +64,10 @@ export function formatDate(dateString) {
  */
 export function formatDateTime(dateString) {
     if (!dateString) return '-';
-    return new Date(dateString).toLocaleString('ru-RU', DATETIME_FORMAT);
+    const date = new Date(dateString);
+    const datePart = date.toLocaleDateString('ru-RU', DATE_FORMAT);
+    const timePart = date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+    return `${datePart} ${timePart}`;
 }
 
 /**
