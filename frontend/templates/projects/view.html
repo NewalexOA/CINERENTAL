@@ -20,6 +20,8 @@
 <input type="hidden" id="project-client-id" value="{{ project_data.client_id }}">
 <input type="hidden" id="project-start-date" value="{{ project_data.start_date }}">
 <input type="hidden" id="project-end-date" value="{{ project_data.end_date }}">
+<input type="hidden" id="project-start-date-formatted" value="{{ project_data.start_date | format_date }}">
+<input type="hidden" id="project-end-date-formatted" value="{{ project_data.end_date | format_date }}">
 <input type="hidden" id="project-description" value="{{ project_data.description|default('')|e }}">
 <input type="hidden" id="project-notes" value="{{ project_data.notes|default('')|e }}">
 <input type="hidden" id="project-status" value="{{ project_data.status }}">
@@ -31,8 +33,8 @@
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-start mb-3">
                     <div>
-                        <h1 class="card-title mb-1">{{ project_data.name }}</h1>
-                        <h6 class="card-subtitle text-muted">{{ project_data.client_name }}</h6>
+                        <h1 class="card-title mb-1" id="project-name-display">{{ project_data.name }}</h1>
+                        <h6 class="card-subtitle text-muted" id="project-client-display">{{ project_data.client_name }}</h6>
                     </div>
                     <div>
                         <span id="project-status-badge" class="badge bg-{{ project_data.status | lower }} fs-6">
@@ -41,14 +43,14 @@
                     </div>
                 </div>
 
-                <p class="card-text">{{ project_data.description or '' }}</p>
+                <p class="card-text" id="project-description-display">{{ project_data.description or '' }}</p>
 
                 <div class="row g-3">
                     <div class="col-sm-6">
                         <div class="card bg-light">
                             <div class="card-body">
                                 <h6 class="card-title">Период проекта</h6>
-                                <p class="card-text">{{ project_data.start_date | format_date }} - {{ project_data.end_date | format_date }}</p>
+                                <p class="card-text" id="project-dates-display">{{ project_data.start_date | format_datetime }} - {{ project_data.end_date | format_datetime }}</p>
                             </div>
                         </div>
                     </div>
@@ -177,7 +179,7 @@
                 <div class="row">
                     <div class="col-md-5">
                         <label>Период бронирования:</label>
-                        <input type="text" class="form-control" id="newBookingPeriod" placeholder="Выберите период">
+                        <input type="text" class="form-control" id="newBookingPeriod" placeholder="ДД.ММ.ГГГГ ЧЧ:ММ - ДД.ММ.ГГГГ ЧЧ:ММ">
                     </div>
                     <div class="col-md-3">
                         <label>Количество:</label>
@@ -238,8 +240,8 @@
                                 <td>
                                     <input type="text" class="form-control form-control-sm booking-period-input"
                                            data-booking-id="{{ booking.id }}"
-                                           value="{{ booking.start_date | format_date }} - {{ booking.end_date | format_date }}"
-                                           placeholder="ДД.ММ.ГГГГ - ДД.ММ.ГГГГ">
+                                           value="{{ booking.start_date | format_datetime }} - {{ booking.end_date | format_datetime }}"
+                                           placeholder="ДД.ММ.ГГГГ ЧЧ:ММ - ДД.ММ.ГГГГ ЧЧ:ММ">
                                 </td>
                                 <td class="text-center">
                                     <div class="btn-group" role="group">
@@ -378,7 +380,7 @@
                         <input type="text" class="form-control" id="edit-project-dates" name="project_dates"
                                data-start-date="{{ project_data.start_date }}"
                                data-end-date="{{ project_data.end_date }}"
-                               value="{{ project_data.start_date|format_date }} - {{ project_data.end_date|format_date }}"
+                               value="{{ project_data.start_date|format_datetime }} - {{ project_data.end_date|format_datetime }}"
                                required>
                     </div>
                     <div class="mb-3">
