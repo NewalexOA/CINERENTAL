@@ -2,6 +2,26 @@
 
 This document lists notable changes to the ACT-Rental application.
 
+## [0.10.0-beta.1] - 2025-05-30
+
+### Scanner Enhancements
+
+- **Real-Time Session Search:** Implemented search functionality within scanner sessions with debouncing, multi-field filtering (name, category, serial, barcode), and search term highlighting
+- **Enhanced Session Validation:** Added validation for session items and improved error handling in increment/decrement operations
+- **Modular Architecture:** Extracted search functionality to dedicated `session-search.js` module with ES6+ patterns
+
+### Equipment Management
+
+- **Recursive Category Filtering:** Enhanced equipment filtering to automatically include all subcategories when filtering by parent categories
+- **Category Service Enhancement:** Added `get_all_subcategory_ids()` method for complete hierarchy traversal with backward compatibility
+- **Improved Error Handling:** Better validation for invalid category IDs with graceful fallbacks
+
+### Testing & Development
+
+- **Comprehensive Testing:** Added 9 unit tests with 100% coverage for category subcategory functionality using real database fixtures
+- **Development Tools:** Added `dev` target to Makefile for quick environment setup with automated docker compose workflows
+- **Documentation:** Created comprehensive module documentation and planned architecture for future scalability
+
 ## [0.9.0-beta.1] - 2025-01-26
 
 ### Equipment Management & Status System
