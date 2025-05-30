@@ -1,0 +1,131 @@
+/* Scanner page styles */
+
+/* Style for timeline and equipment history */
+.timeline {
+    position: relative;
+    padding: 1em 0;
+}
+
+.timeline::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 18px;
+    height: 100%;
+    width: 2px;
+    background: #e9ecef;
+}
+
+.timeline-item {
+    position: relative;
+    margin-bottom: 1.5em;
+    padding-left: 45px;
+}
+
+.timeline-badge {
+    position: absolute;
+    left: 0;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+}
+
+.timeline-content {
+    padding: 1em;
+    border-radius: 0.375rem;
+    background: #f8f9fa;
+}
+
+/* Search highlighting */
+.search-highlight {
+    background-color: #fff3cd;
+    color: #856404;
+    padding: 0.1em 0.2em;
+    border-radius: 0.2em;
+    font-weight: 500;
+}
+
+/* Session search improvements */
+.session-search-row {
+    background-color: #f8f9fa;
+    border-radius: 0.5rem;
+    padding: 0.75rem;
+    margin-bottom: 1rem;
+    border: 1px solid #e9ecef;
+}
+
+#sessionSearchInput {
+    border-right: none;
+    box-shadow: none;
+}
+
+#sessionSearchInput:focus {
+    border-color: #86b7fe;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+    border-right: none;
+    z-index: 3;
+}
+
+#clearSessionSearch {
+    border-left: none;
+    border-color: #ced4da;
+    background-color: #fff;
+    transition: all 0.2s ease;
+    padding: 0.375rem 0.75rem;
+}
+
+#clearSessionSearch:hover {
+    background-color: #e9ecef;
+    border-color: #86b7fe;
+}
+
+#clearSessionSearch:focus {
+    border-color: #86b7fe;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+    z-index: 3;
+}
+
+.input-group-text {
+    background-color: #fff;
+    border-right: none;
+    border-color: #ced4da;
+    color: #6c757d;
+}
+
+#searchResults {
+    font-size: 0.875rem;
+    color: #6c757d;
+    white-space: nowrap;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    min-height: 38px;
+}
+
+.no-search-results {
+    color: #dc3545;
+    font-style: italic;
+}
+
+/* Make search input group more cohesive */
+.input-group > :not(:first-child):not(.dropdown-menu):not(.valid-tooltip):not(.valid-feedback):not(.invalid-tooltip):not(.invalid-feedback) {
+    margin-left: -1px;
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+}
+
+/* Ensure consistent borders for all input group elements */
+.session-search-row .input-group > * {
+    border-color: #ced4da;
+}
+
+.session-search-row .input-group:focus-within .input-group-text,
+.session-search-row .input-group:focus-within #clearSessionSearch {
+    border-color: #86b7fe;
+}

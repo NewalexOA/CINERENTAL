@@ -370,6 +370,7 @@ class EquipmentRepository(BaseRepository[Equipment]):
         limit: int = 100,
         status: Optional[EquipmentStatus] = None,
         category_id: Optional[int] = None,
+        category_ids: Optional[List[int]] = None,
         query: Optional[str] = None,
         available_from: Optional[datetime] = None,
         available_to: Optional[datetime] = None,
@@ -385,8 +386,13 @@ class EquipmentRepository(BaseRepository[Equipment]):
 
             if status:
                 stmt = stmt.where(Equipment.status == status)
-            if category_id:
+
+            # Use category_ids if provided, otherwise fall back to category_id
+            if category_ids:
+                stmt = stmt.where(Equipment.category_id.in_(category_ids))
+            elif category_id:
                 stmt = stmt.where(Equipment.category_id == category_id)
+
             if query:
                 search_pattern = f'%{query}%'
                 stmt = stmt.where(
@@ -434,6 +440,7 @@ class EquipmentRepository(BaseRepository[Equipment]):
         self,
         status: Optional[EquipmentStatus] = None,
         category_id: Optional[int] = None,
+        category_ids: Optional[List[int]] = None,
         query: Optional[str] = None,
         available_from: Optional[datetime] = None,
         available_to: Optional[datetime] = None,
@@ -443,7 +450,8 @@ class EquipmentRepository(BaseRepository[Equipment]):
 
         Args:
             status: Filter by equipment status
-            category_id: Filter by category ID
+            category_id: Filter by category ID (deprecated, use category_ids)
+            category_ids: Filter by list of category IDs (includes subcategories)
             query: Search query
             available_from: Filter by availability start date
             available_to: Filter by availability end date
@@ -460,8 +468,13 @@ class EquipmentRepository(BaseRepository[Equipment]):
 
         if status:
             stmt = stmt.where(Equipment.status == status)
-        if category_id:
+
+        # Use category_ids if provided, otherwise fall back to category_id
+        if category_ids:
+            stmt = stmt.where(Equipment.category_id.in_(category_ids))
+        elif category_id:
             stmt = stmt.where(Equipment.category_id == category_id)
+
         if query:
             search_pattern = f'%{query}%'
             stmt = stmt.where(

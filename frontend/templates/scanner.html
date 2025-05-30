@@ -3,47 +3,7 @@
 {% block title %}Сканер - {{ APP_NAME }}{% endblock %}
 
 {% block extra_css %}
-<style>
-    /* Style for timeline and equipment history */
-    .timeline {
-        position: relative;
-        padding: 1em 0;
-    }
-
-    .timeline::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 18px;
-        height: 100%;
-        width: 2px;
-        background: #e9ecef;
-    }
-
-    .timeline-item {
-        position: relative;
-        margin-bottom: 1.5em;
-        padding-left: 45px;
-    }
-
-    .timeline-badge {
-        position: absolute;
-        left: 0;
-        width: 36px;
-        height: 36px;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: white;
-    }
-
-    .timeline-content {
-        padding: 1em;
-        border-radius: 0.375rem;
-        background: #f8f9fa;
-    }
-</style>
+<link rel="stylesheet" href="{{ url_for('static', path='css/scanner.css') }}">
 {% endblock %}
 
 {% block content %}
@@ -106,6 +66,38 @@
                                 </div>
                             </div>
                         </div>
+
+                        <!-- Search input for session items -->
+                        <div class="mb-3">
+                            <div class="row g-2 align-items-center session-search-row">
+                                <div class="col-md-9">
+                                    <div class="input-group">
+                                        <span class="input-group-text">
+                                            <i class="fas fa-search"></i>
+                                        </span>
+                                        <input type="text"
+                                               class="form-control"
+                                               id="sessionSearchInput"
+                                               placeholder="Поиск оборудования..."
+                                               autocomplete="off">
+                                        <button class="btn btn-outline-secondary"
+                                                type="button"
+                                                id="clearSessionSearch"
+                                                title="Очистить поиск">
+                                            <i class="fas fa-times"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="text-muted small text-center">
+                                        <span id="searchResults">
+                                            <span id="foundCount">0</span>&nbsp;из&nbsp;<span id="totalCount">0</span>
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
                         <div id="sessionEquipmentTable">
                             <div id="noSessionItems" class="text-center text-muted py-2 d-none">Нет отсканированного оборудования</div>
                             <table class="table table-sm table-hover">
@@ -424,5 +416,12 @@
 {% block scripts %}
 <script src="{{ url_for('static', path='js/utils/api.js') }}" type="module"></script>
 <script src="{{ url_for('static', path='js/scan-storage.js') }}" type="module"></script>
-<script src="{{ url_for('static', path='js/scanner.js') }}" type="module"></script>
+<script type="module" src="{{ url_for('static', path='js/scanner/session-search.js') }}"></script>
+<script type="module" src="{{ url_for('static', path='js/scanner.js') }}"></script>
+<script>
+    // Initialize scanner when page loads
+    document.addEventListener('DOMContentLoaded', function() {
+        // Scanner initialization is handled in scanner.js module
+    });
+</script>
 {% endblock %}

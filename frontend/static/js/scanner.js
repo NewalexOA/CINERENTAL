@@ -1,5 +1,14 @@
 import { scanStorage } from './scan-storage.js';
 import { formatCurrency, getStatusClass, getStatusText } from './project/project-utils.js';
+import {
+    filterSessionItems,
+    updateSearchCounters,
+    renderSessionItems,
+    initSessionSearch,
+    performSessionSearch,
+    getCurrentSearchQuery,
+    resetSearchState
+} from './scanner/session-search.js';
 
 // Make scanStorage globally available
 window.scanStorage = scanStorage;
@@ -108,6 +117,13 @@ function initSessionManagement() {
     const activeSession = scanStorage.getActiveSession();
     updateSessionUI(activeSession);
 
+    // Initialize session search functionality with callback
+    initSessionSearch((query) => {
+        performSessionSearch(query, scanStorage, (session, filteredItems) => {
+            renderSessionItems(session, filteredItems, attachItemButtonListeners);
+        });
+    });
+
     // Event listeners for session management
     initEventListeners();
 }
@@ -118,112 +134,63 @@ function updateSessionUI(session) {
     const activeSessionInfo = document.getElementById('activeSessionInfo');
     const sessionName = document.getElementById('sessionName');
     const itemCount = document.getElementById('itemCount');
-    const itemsList = document.getElementById('sessionItemsList');
-    const noSessionItems = document.getElementById('noSessionItems');
-    const sessionEquipmentTable = document.getElementById('sessionEquipmentTable');
+    const searchContainer = document.querySelector('.session-search-row')?.parentElement;
 
-    if (!noActiveSessionMessage || !activeSessionInfo || !sessionName || !itemCount || !itemsList) {
+    if (!noActiveSessionMessage || !activeSessionInfo || !sessionName || !itemCount) {
         console.error('Required session UI elements not found');
         return;
     }
 
     if (session) {
+        if (!session.items || !Array.isArray(session.items)) {
+            console.error('Session items are invalid or not an array:', session.items);
+            session.items = [];
+        }
+
         noActiveSessionMessage.classList.add('d-none');
         activeSessionInfo.classList.remove('d-none');
         sessionName.textContent = session.name;
         const totalItems = session.items.reduce((sum, item) => sum + (item.quantity || 1), 0);
         itemCount.textContent = `${totalItems} шт. (${session.items.length} поз.)`;
 
-        // Clear the list before updating to avoid duplicates
-        itemsList.innerHTML = '';
-
-        if (session.items.length === 0) {
-            if (noSessionItems) {
-                noSessionItems.classList.remove('d-none');
+        // Show/hide search container based on items count
+        if (searchContainer) {
+            if (session.items.length > 0) {
+                searchContainer.style.display = '';
+            } else {
+                searchContainer.style.display = 'none';
             }
-            if (sessionEquipmentTable && sessionEquipmentTable.querySelector('table')) {
-                sessionEquipmentTable.querySelector('table').classList.add('d-none');
-            }
-        } else {
-            console.log('Updating session UI with items:', session.items);
-
-            if (noSessionItems) {
-                noSessionItems.classList.add('d-none');
-            }
-            if (sessionEquipmentTable && sessionEquipmentTable.querySelector('table')) {
-                sessionEquipmentTable.querySelector('table').classList.remove('d-none');
-            }
-
-            // Render each item in the table
-            session.items.forEach(item => {
-                const hasSerialNumber = !!item.serial_number;
-                const quantity = item.quantity || 1;
-
-                // Define buttons based on whether the item has a serial number
-                let buttonsHtml;
-                if (hasSerialNumber) {
-                    // Item WITH serial number: Show remove button
-                    buttonsHtml = `
-                        <button class="btn btn-sm btn-outline-danger remove-item-btn" data-equipment-id="${item.equipment_id}" title="Удалить">
-                            <i class="fas fa-times"></i>
-                        </button>
-                    `;
-                } else {
-                    // Item WITHOUT serial number: Show increment and decrement/remove buttons
-                    let firstButtonHtml;
-                    if (quantity > 1) {
-                        // Quantity > 1: Show decrement button
-                        firstButtonHtml = `
-                            <button class="btn btn-outline-secondary decrement-item-btn" data-equipment-id="${item.equipment_id}" title="Уменьшить кол-во">
-                                <i class="fas fa-minus"></i>
-                            </button>
-                        `;
-                    } else {
-                        // Quantity === 1: Show remove button instead of decrement
-                        firstButtonHtml = `
-                            <button class="btn btn-sm btn-outline-danger remove-item-btn" data-equipment-id="${item.equipment_id}" title="Удалить">
-                                <i class="fas fa-times"></i>
-                            </button>
-                        `;
-                    }
-                    // Always show increment button
-                    const incrementButtonHtml = `
-                        <button class="btn btn-outline-secondary increment-item-btn" data-equipment-id="${item.equipment_id}" title="Увеличить кол-во">
-                            <i class="fas fa-plus"></i>
-                        </button>
-                    `;
-                    // Combine buttons in desired order (+ first, then -/X)
-                    buttonsHtml = `
-                        <div class="btn-group btn-group-sm" role="group">
-                            ${incrementButtonHtml}
-                            ${firstButtonHtml}
-                        </div>
-                    `;
-                }
-
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>
-                        <div>${item.name}</div>
-                        ${hasSerialNumber ? `<small class="text-muted d-block">S/N: ${item.serial_number}</small>` : ''}
-                    </td>
-                    <td>${item.category_name || item.category?.name || 'Без категории'}</td>
-                    <td class="text-center">
-                        ${quantity}
-                    </td>
-                    <td class="text-center">
-                        ${buttonsHtml}
-                    </td>
-                `;
-                itemsList.appendChild(row);
-            });
-
-            // Add event listeners AFTER updating the items
-            attachItemButtonListeners(session.id);
         }
+
+        // Render session items with search filtering
+        const itemsToRender = getCurrentSearchQuery().trim()
+            ? filterSessionItems(session.items, getCurrentSearchQuery())
+            : session.items;
+
+        renderSessionItems(session, itemsToRender, attachItemButtonListeners);
+
+        // Update counters
+        updateSearchCounters(itemsToRender.length, session.items.length);
+
+        console.log('Session UI updated successfully:', {
+            sessionId: session.id,
+            sessionName: session.name,
+            totalItems: session.items.length,
+            filteredItems: itemsToRender.length,
+            searchQuery: getCurrentSearchQuery()
+        });
     } else {
         noActiveSessionMessage.classList.remove('d-none');
         activeSessionInfo.classList.add('d-none');
+
+        // Hide search container when no session
+        if (searchContainer) {
+            searchContainer.style.display = 'none';
+        }
+
+        // Reset search state when no session
+        resetSearchState();
+        updateSearchCounters(0, 0);
     }
 }
 
@@ -270,13 +237,21 @@ function handleDecrementItem(sessionId, equipmentId) {
 
 function handleIncrementItem(sessionId, equipmentId) {
     console.log(`Incrementing item ${equipmentId} in session ${sessionId}`);
-    const session = scanStorage.getSession(sessionId);
-    const item = session?.items.find(i => i.equipment_id === equipmentId);
-    if (item) {
-        const updatedSession = scanStorage.addEquipment(sessionId, item);
+    const currentSession = scanStorage.getSession(sessionId);
+    if (!currentSession) {
+        console.error(`Session with ID ${sessionId} not found for increment operation.`);
+        return;
+    }
+
+    const itemToIncrement = currentSession.items.find(i => i.equipment_id === equipmentId && !i.serial_number);
+
+    if (itemToIncrement) {
+        scanStorage.addEquipment(sessionId, itemToIncrement);
+        const updatedSession = scanStorage.getSession(sessionId);
         updateSessionUI(updatedSession);
     } else {
-        console.error(`Could not find item with ID ${equipmentId} to increment.`);
+        console.error(`Could not find item with ID ${equipmentId} (without serial number) in session ${sessionId} to increment.`);
+        updateSessionUI(currentSession);
     }
 }
 
