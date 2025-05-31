@@ -5,7 +5,6 @@ from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 from typing import Dict
 
-from faker import Faker
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
@@ -22,9 +21,6 @@ from backend.repositories.client import ClientRepository
 from backend.repositories.equipment import EquipmentRepository
 from backend.schemas import PaymentStatus
 from backend.services.barcode import BarcodeService
-
-# Initialize Faker with Russian locale
-fake = Faker('ru_RU')
 
 
 async def create_categories(session: AsyncSession) -> Dict[str, int]:
