@@ -479,31 +479,24 @@ class ProjectService:
                         details={'client_id': client_id},
                     )
 
-            # Prepare update data
-            update_data = {}
-            params = {
-                'name': name,
-                'client_id': client_id,
-                'start_date': start_date,
-                'end_date': end_date,
-                'status': status,
-                'description': description,
-                'notes': notes,
-            }
+            # Prepare update data - only include non-None values
+            update_data: Dict[str, Any] = {}
 
-            for key, value in params.items():
-                if key in locals():
-                    # Check required fields
-                    if value is None and key in [
-                        'name',
-                        'client_id',
-                        'status',
-                        'start_date',
-                        'end_date',
-                    ]:
-                        log.warning('Attempt to set required field {} to None', key)
-                        continue
-                    update_data[key] = value
+            # Only add fields that are explicitly provided (not None)
+            if name is not None:
+                update_data['name'] = name
+            if client_id is not None:
+                update_data['client_id'] = client_id
+            if start_date is not None:
+                update_data['start_date'] = start_date
+            if end_date is not None:
+                update_data['end_date'] = end_date
+            if status is not None:
+                update_data['status'] = status
+            if description is not None:
+                update_data['description'] = description
+            if notes is not None:
+                update_data['notes'] = notes
 
             # Check dates if both provided
             if start_date is not None and end_date is not None:
@@ -927,6 +920,16 @@ class ProjectService:
         client = await self.client_repository.get(project.client_id)
         client_name = client.name if client else 'Unknown Client'
 
+        # Prepare client object for response
+        client_data = None
+        if client:
+            client_data = {
+                'id': client.id,
+                'name': client.name,
+                'email': client.email if hasattr(client, 'email') else None,
+                'phone': client.phone if hasattr(client, 'phone') else None,
+            }
+
         log.debug('Found client for project: {}', client_name)
 
         # Convert to dictionary with basic project data
@@ -935,6 +938,7 @@ class ProjectService:
             'name': project.name,
             'client_id': project.client_id,
             'client_name': client_name,
+            'client': client_data,  # Add client object
             'start_date': (
                 project.start_date.isoformat() if project.start_date else None
             ),
