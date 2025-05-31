@@ -255,8 +255,8 @@ function saveSessionData() {
         client_id: formData.get('client_id') || '',
         description: formData.get('description') || '',
         notes: formData.get('notes') || '',
-        start_date: dateRange?.startDate?.format('YYYY-MM-DD') || null,
-        end_date: dateRange?.endDate?.format('YYYY-MM-DD') || null,
+        start_date: dateRange?.startDate?.isValid() ? dateRange.startDate.hour(0).minute(0).format('YYYY-MM-DDTHH:mm:ss') : null,
+        end_date: dateRange?.endDate?.isValid() ? dateRange.endDate.hour(23).minute(59).format('YYYY-MM-DDTHH:mm:ss') : null,
         bookings: selectedEquipment.map(item => ({
             equipment_id: item.id,
             equipment_name: item.name,
@@ -297,7 +297,7 @@ function loadSessionData() {
             const scanSession = scanStorage.getSession(sessionId);
 
             if (scanSession && scanSession.items && scanSession.items.length) {
-                console.log('Loading data from scan session:', scanSession);
+                console.log('Loading data from scan session:', scanSession.items.length, 'items');
 
                 // Convert scanning session items to equipment format for selection
                 selectedEquipment = scanSession.items.map(item => ({
@@ -340,11 +340,10 @@ function loadSessionData() {
 function loadProjectDataFromSessionStorage() {
     try {
         const data = sessionStorage.getItem('newProjectData');
-        console.log('[loadProjectDataFromSessionStorage] Raw data from sessionStorage:', data);
 
         if (data) {
             sessionData = JSON.parse(data);
-            console.log('[loadProjectDataFromSessionStorage] Parsed sessionData:', sessionData);
+            console.log('Loaded project data from sessionStorage');
 
             // Restore form values
             if (sessionData.name) {
@@ -377,16 +376,14 @@ function loadProjectDataFromSessionStorage() {
                     booking_end: booking.end_date
                 }));
 
-                console.log('[loadProjectDataFromSessionStorage] Mapped selectedEquipment from bookings:', selectedEquipment);
+                console.log('Restored equipment from sessionStorage bookings:', selectedEquipment.length, 'items');
                 updateEquipmentTable();
             } else if (selectedEquipment.length === 0 && sessionData.equipment && Array.isArray(sessionData.equipment)) {
                 // Support old format for backward compatibility
                 selectedEquipment = sessionData.equipment;
-                console.log('[loadProjectDataFromSessionStorage] Mapped selectedEquipment from equipment (legacy):', selectedEquipment);
+                console.log('Restored equipment from sessionStorage (legacy format):', selectedEquipment.length, 'items');
                 updateEquipmentTable();
             }
-        } else {
-            console.log('[loadProjectDataFromSessionStorage] No data found in sessionStorage for newProjectData.');
         }
     } catch (e) {
         console.error('[loadProjectDataFromSessionStorage] Error loading session data:', e);
@@ -484,14 +481,14 @@ function createProjectPayload(status) {
         description: formData.get('description') || null,
         notes: formData.get('notes') || null,
         status: status,
-        start_date: dateRange?.startDate?.isValid() ? dateRange.startDate.startOf('day').format('YYYY-MM-DDTHH:mm:ss') : null,
-        end_date: dateRange?.endDate?.isValid() ? dateRange.endDate.startOf('day').add(1, 'second').format('YYYY-MM-DDTHH:mm:ss') : null,
+        start_date: dateRange?.startDate?.isValid() ? dateRange.startDate.hour(0).minute(0).format('YYYY-MM-DDTHH:mm:ss') : null,
+        end_date: dateRange?.endDate?.isValid() ? dateRange.endDate.hour(23).minute(59).format('YYYY-MM-DDTHH:mm:ss') : null,
         bookings: []
     };
 
     selectedEquipment.forEach(item => {
-        const bookingStartDate = item.booking_start || (dateRange?.startDate?.isValid() ? dateRange.startDate.startOf('day').format('YYYY-MM-DDTHH:mm:ss') : null);
-        const bookingEndDate = item.booking_end || (dateRange?.endDate?.isValid() ? dateRange.endDate.startOf('day').add(1, 'second').format('YYYY-MM-DDTHH:mm:ss') : null);
+        const bookingStartDate = item.booking_start || (dateRange?.startDate?.isValid() ? dateRange.startDate.hour(0).minute(0).format('YYYY-MM-DDTHH:mm:ss') : null);
+        const bookingEndDate = item.booking_end || (dateRange?.endDate?.isValid() ? dateRange.endDate.hour(23).minute(59).format('YYYY-MM-DDTHH:mm:ss') : null);
 
         const booking = {
             equipment_id: parseInt(item.id),
@@ -506,7 +503,7 @@ function createProjectPayload(status) {
     // Validate that all bookings have dates
     const bookingsWithoutDates = payload.bookings.filter(b => !b.start_date || !b.end_date);
     if (bookingsWithoutDates.length > 0) {
-        console.error('[createProjectPayload] Error: Some bookings are missing dates!', bookingsWithoutDates);
+        console.error('Some bookings are missing dates:', bookingsWithoutDates.length, 'items');
         toast('Ошибка: Не все позиции оборудования имеют установленные даты бронирования.', 'danger');
         return null;
     }
@@ -648,8 +645,8 @@ function addEquipmentItemEventListeners() {
     $('.equipment-period-input').on('apply.daterangepicker', function(ev, picker) {
         const index = parseInt($(this).data('index'));
         if (!isNaN(index) && index >= 0 && index < selectedEquipment.length) {
-            selectedEquipment[index].booking_start = picker.startDate.startOf('day').format('YYYY-MM-DDTHH:mm:ss');
-            selectedEquipment[index].booking_end = picker.endDate.startOf('day').add(1, 'second').format('YYYY-MM-DDTHH:mm:ss');
+            selectedEquipment[index].booking_start = picker.startDate.hour(0).minute(0).format('YYYY-MM-DDTHH:mm:ss');
+            selectedEquipment[index].booking_end = picker.endDate.hour(23).minute(59).format('YYYY-MM-DDTHH:mm:ss');
             $(this).val(picker.startDate.format('DD.MM.YYYY') + ' - ' + picker.endDate.format('DD.MM.YYYY'));
             saveSessionData();
         }
@@ -681,9 +678,9 @@ async function applyProjectDatesToAllItems() {
         return;
     }
 
-    // Fix: Use startOf('day') for start and add 1 second to end to avoid display issues
-    const projectStartDate = projectDateRangePicker.startDate.startOf('day').format('YYYY-MM-DDTHH:mm:ss');
-    const projectEndDate = projectDateRangePicker.endDate.startOf('day').add(1, 'second').format('YYYY-MM-DDTHH:mm:ss');
+    // Use full day hours 00:00-23:59 for bookings
+    const projectStartDate = projectDateRangePicker.startDate.hour(0).minute(0).format('YYYY-MM-DDTHH:mm:ss');
+    const projectEndDate = projectDateRangePicker.endDate.hour(23).minute(59).format('YYYY-MM-DDTHH:mm:ss');
 
     const equipmentItemsToCheck = [...selectedEquipment]; // Clone array
 
@@ -890,8 +887,8 @@ function openEquipmentPeriodModal(index) {
     newSaveBtn.addEventListener('click', () => {
         const picker = periodInput.data('daterangepicker');
         if (picker && picker.startDate && picker.endDate) {
-            selectedEquipment[index].booking_start = picker.startDate.startOf('day').format('YYYY-MM-DDTHH:mm:ss');
-            selectedEquipment[index].booking_end = picker.endDate.startOf('day').add(1, 'second').format('YYYY-MM-DDTHH:mm:ss');
+            selectedEquipment[index].booking_start = picker.startDate.hour(0).minute(0).format('YYYY-MM-DDTHH:mm:ss');
+            selectedEquipment[index].booking_end = picker.endDate.hour(23).minute(59).format('YYYY-MM-DDTHH:mm:ss');
             updateEquipmentTable();
             saveSessionData();
             modal.hide();

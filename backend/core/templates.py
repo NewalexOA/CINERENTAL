@@ -1,7 +1,7 @@
 """Templates configuration module."""
 
 import json
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 from typing import Any, Optional, Union
 
@@ -10,6 +10,9 @@ from fastapi.templating import Jinja2Templates
 from jinja2 import Environment
 
 from backend.core.config import settings
+
+# Moscow timezone (UTC+3)
+MOSCOW_TZ = timezone(timedelta(hours=3))
 
 # Initialize templates
 templates = Jinja2Templates(directory='frontend/templates')
@@ -48,6 +51,10 @@ def format_date(date_value: Optional[Union[datetime, str]]) -> str:
         except ValueError:
             return str(date_value)
 
+    # Convert to Moscow timezone if datetime is timezone-aware
+    if date_value.tzinfo is not None:
+        date_value = date_value.astimezone(MOSCOW_TZ)
+
     return date_value.strftime('%d.%m.%Y')
 
 
@@ -69,6 +76,11 @@ def format_datetime(date_value: Optional[Union[datetime, str]]) -> str:
         except ValueError:
             return str(date_value)
 
+    # Convert to Moscow timezone if datetime is timezone-aware
+    if date_value.tzinfo is not None:
+        date_value = date_value.astimezone(MOSCOW_TZ)
+
+    # Always show time, even if it's 00:00
     return date_value.strftime('%d.%m.%Y %H:%M')
 
 

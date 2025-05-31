@@ -128,24 +128,7 @@ function initializeEventListeners(projectId) {
     document.getElementById('editProjectBtn')?.addEventListener('click', () => {
         const editModal = document.getElementById('editProjectModal');
         if (editModal) {
-            console.log("Opening edit modal with project data:", projectData);
-
-            // Check if date input exists and pre-fill it
-            const datesInput = document.querySelector('#editProjectModal input[name="project_dates"]');
-            if (datesInput && projectData.start_date && projectData.end_date) {
-                try {
-                    // Format dates
-                    const startDate = moment(projectData.start_date.split('T')[0]);
-                    const endDate = moment(projectData.end_date.split('T')[0]);
-
-                    console.log("Setting dates directly:", startDate.format('DD.MM.YYYY'), endDate.format('DD.MM.YYYY'));
-
-                    // Set value manually before showing modal
-                    datesInput.value = startDate.format('DD.MM.YYYY') + ' - ' + endDate.format('DD.MM.YYYY');
-                } catch (error) {
-                    console.error('Error pre-filling dates:', error);
-                }
-            }
+            console.log("Opening edit modal with project data");
 
             // Fill form and then show modal
             fillEditProjectForm(projectData);
@@ -203,11 +186,25 @@ export function renderProjectDetails(project) {
     const projectName = document.getElementById('projectName');
     if (projectName) projectName.textContent = project.name;
 
+    // Update main project display elements
+    const projectNameDisplay = document.getElementById('project-name-display');
+    if (projectNameDisplay) projectNameDisplay.textContent = project.name;
+
+    const projectClientDisplay = document.getElementById('project-client-display');
+    if (projectClientDisplay) projectClientDisplay.textContent = project.client?.name || 'Не указан';
+
+    const projectDescriptionDisplay = document.getElementById('project-description-display');
+    if (projectDescriptionDisplay) projectDescriptionDisplay.textContent = project.description || '';
+
     const projectClient = document.getElementById('projectClient');
     if (projectClient) projectClient.textContent = project.client?.name || 'Не указан';
 
     const projectDates = document.getElementById('projectDates');
-    if (projectDates) projectDates.textContent = `${formatDate(project.start_date)} - ${formatDate(project.end_date)}`;
+    if (projectDates) projectDates.textContent = `${formatDateTime(project.start_date)} - ${formatDateTime(project.end_date)}`;
+
+    // Update project dates display in the main project card
+    const projectDatesDisplay = document.getElementById('project-dates-display');
+    if (projectDatesDisplay) projectDatesDisplay.textContent = `${formatDateTime(project.start_date)} - ${formatDateTime(project.end_date)}`;
 
     const projectStatus = document.getElementById('projectStatus');
     if (projectStatus) {
@@ -232,16 +229,16 @@ export function renderProjectDetails(project) {
     const projectUpdated = document.getElementById('projectUpdated');
     if (projectUpdated) projectUpdated.textContent = formatDateTime(project.updated_at);
 
-    // Update hidden fields with project dates
+    // Update hidden fields with project dates (keep ISO format for JavaScript processing)
     const projectStartDateField = document.getElementById('project-start-date');
     const projectEndDateField = document.getElementById('project-end-date');
 
     if (projectStartDateField && project.start_date) {
-        projectStartDateField.value = formatDate(project.start_date);
+        projectStartDateField.value = project.start_date; // Keep ISO format
     }
 
     if (projectEndDateField && project.end_date) {
-        projectEndDateField.value = formatDate(project.end_date);
+        projectEndDateField.value = project.end_date; // Keep ISO format
     }
 
     // Update status buttons
