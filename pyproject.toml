@@ -9,7 +9,7 @@ readme = "README.md"
 
 [tool.poetry.dependencies]
 python = ">=3.12,<4.0"
-fastapi = "^0.109.0"
+fastapi = "^0.115.6"
 uvicorn = {extras = ["standard"], version = "^0.27.0"}
 websockets = "^12.0"
 sqlalchemy = "2.0.25"
@@ -26,7 +26,7 @@ aiofiles = "^23.2.1"
 loguru = "^0.7.2"
 apscheduler = "^3.11.0"
 treepoem = "^3.24.1"
-fastapi-pagination = "^0.12.0"
+fastapi-pagination = "^0.12.34"
 
 [tool.poetry.group.dev.dependencies]
 black = "^24.1.0"
@@ -37,11 +37,6 @@ pre-commit = "^3.6.0"
 types-redis = "^4.6.0.20240106"
 types-passlib = "^1.7.7.20240106"
 types-python-jose = "^3.3.4.20240106"
-pytest = "^8.0.0"
-pytest-cov = "^4.1.0"
-pytest-asyncio = "^0.23.5"
-httpx = "^0.25.1"
-faker = "^22.6.0"
 
 [tool.poetry.group.test.dependencies]
 pytest = "^8.0.0"
@@ -49,6 +44,7 @@ pytest-cov = "^4.1.0"
 pytest-asyncio = "^0.23.5"
 httpx = "^0.25.1"
 faker = "^22.6.0"
+factory-boy = "^3.3.0"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
