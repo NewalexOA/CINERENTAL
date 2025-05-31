@@ -80,6 +80,7 @@ RUN export PATH="/root/.local/bin:$PATH" && \
     requests \
     psycopg2-binary \
     faker \
+    factory-boy \
     treepoem \
     playwright
 
