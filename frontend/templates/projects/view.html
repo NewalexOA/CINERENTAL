@@ -221,6 +221,7 @@
                                 <th>Категория</th>
                                 <th>Период</th>
                                 <th class="text-center" style="width: 70px;">Кол-во</th>
+                                <th class="equipment-dates-column" style="display: none; width: 180px;">Даты оборудования</th>
                                 <th class="text-center" style="width: 120px;">Действия</th>
                             </tr>
                         </thead>
@@ -266,6 +267,14 @@
                                         </button>
                                         {% endif %}
                                     </div>
+                                </td>
+                                <td class="equipment-dates-cell" style="display: none;">
+                                    {% if booking.has_different_dates %}
+                                        <small class="text-info">
+                                            {{ booking.start_date | format_datetime }} -
+                                            {{ booking.end_date | format_datetime }}
+                                        </small>
+                                    {% endif %}
                                 </td>
                             </tr>
                             {% endfor %}

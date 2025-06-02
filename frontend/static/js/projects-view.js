@@ -13,6 +13,24 @@ import { initializeEquipmentManagement } from './project/equipment/index.js';
 import { getProjectIdFromUrl } from './project/project-utils.js';
 import { showToast } from './utils/common.js';
 
+/**
+ * Show or hide equipment dates column based on whether any equipment has different dates
+ */
+function toggleEquipmentDatesColumn() {
+    // Check if any booking has different dates from project dates
+    const hasAnyDifferentDates = window.projectData &&
+        window.projectData.bookings &&
+        window.projectData.bookings.some(booking => booking.has_different_dates);
+
+    // Show/hide column and cells
+    const columnsAndCells = document.querySelectorAll('.equipment-dates-column, .equipment-dates-cell');
+    columnsAndCells.forEach(element => {
+        element.style.display = hasAnyDifferentDates ? '' : 'none';
+    });
+
+    console.log(`Equipment dates column ${hasAnyDifferentDates ? 'shown' : 'hidden'}`);
+}
+
 // Initialize page
 document.addEventListener('DOMContentLoaded', () => {
     // Get project ID from URL
@@ -28,4 +46,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Initialize equipment management
     initializeEquipmentManagement();
+
+    // Initialize equipment dates column visibility
+    toggleEquipmentDatesColumn();
 });
+
+// Make function available globally for dynamic updates
+window.toggleEquipmentDatesColumn = toggleEquipmentDatesColumn;

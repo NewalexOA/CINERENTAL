@@ -460,6 +460,7 @@ async def get_project_print_data(
         # Get equipment items
         equipment_items = []
         total_liability = 0.0
+        show_dates_column = False
 
         for booking in project.bookings:
             # Ensure equipment data is loaded
@@ -470,6 +471,22 @@ async def get_project_print_data(
             serial_number = getattr(equipment, 'serial_number', None) or ''
             liability_amount = getattr(equipment, 'liability_amount', 0.0) or 0.0
             quantity = getattr(booking, 'quantity', 1) or 1
+
+            # Check if booking dates differ from project dates
+            # (compare only dates, not time)
+            booking_start_date = booking.start_date.date()
+            booking_end_date = booking.end_date.date()
+            project_start_date = project.start_date.date()
+            project_end_date = project.end_date.date()
+
+            has_different_dates = (
+                booking_start_date != project_start_date
+                or booking_end_date != project_end_date
+            )
+
+            # If any equipment has different dates, we need to show the dates column
+            if has_different_dates:
+                show_dates_column = True
 
             # Get category hierarchy info
             original_direct_category_id = getattr(equipment, 'category_id', None)
@@ -487,6 +504,9 @@ async def get_project_print_data(
                 liability_amount=float(liability_amount),
                 quantity=quantity,
                 printable_categories=printable_categories,
+                start_date=booking.start_date,
+                end_date=booking.end_date,
+                has_different_dates=has_different_dates,
             )
 
             equipment_items.append(equipment_item)
@@ -500,6 +520,7 @@ async def get_project_print_data(
             total_items=len(equipment_items),
             total_liability=total_liability,
             generated_at=datetime.now(),
+            show_dates_column=show_dates_column,
         )
 
         return print_data

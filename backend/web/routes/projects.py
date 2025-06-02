@@ -183,6 +183,7 @@ async def print_project(
 
         equipment_items_data = []
         total_liability = 0.0
+        show_dates_column = False
 
         for booking in project.bookings:
             await db.refresh(booking, ['equipment'])
@@ -195,6 +196,22 @@ async def print_project(
             replacement_cost = getattr(equipment, 'replacement_cost', 0) or 0.0
             quantity = getattr(booking, 'quantity', 1) or 1
             booking_liability = replacement_cost * quantity
+
+            # Check if booking dates differ from project dates
+            # (compare only dates, not time)
+            booking_start_date = booking.start_date.date()
+            booking_end_date = booking.end_date.date()
+            project_start_date = project.start_date.date()
+            project_end_date = project.end_date.date()
+
+            has_different_dates = (
+                booking_start_date != project_start_date
+                or booking_end_date != project_end_date
+            )
+
+            # If any equipment has different dates, we need to show the dates column
+            if has_different_dates:
+                show_dates_column = True
 
             original_direct_category_id = getattr(equipment, 'category_id', None)
 
@@ -214,6 +231,9 @@ async def print_project(
                 liability_amount=replacement_cost,
                 quantity=quantity,
                 printable_categories=printable_categories,
+                start_date=booking.start_date,
+                end_date=booking.end_date,
+                has_different_dates=has_different_dates,
             )
 
             # Add sort_path to the dict for sorting
@@ -244,6 +264,7 @@ async def print_project(
             'total_items': len(equipment_items_data),
             'total_liability': total_liability,
             'generated_at': datetime.now(),
+            'show_dates_column': show_dates_column,
         }
 
         return templates.TemplateResponse(

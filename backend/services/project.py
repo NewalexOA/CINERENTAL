@@ -869,6 +869,24 @@ class ProjectService:
             if hasattr(booking, 'payment_status') and booking.payment_status:
                 payment_status = booking.payment_status.value
 
+            # Compare booking dates with project dates (ignoring time)
+            has_different_dates = False
+            if (
+                booking.start_date
+                and booking.end_date
+                and project.start_date
+                and project.end_date
+            ):
+                booking_start_date = booking.start_date.date()
+                booking_end_date = booking.end_date.date()
+                project_start_date = project.start_date.date()
+                project_end_date = project.end_date.date()
+
+                has_different_dates = (
+                    booking_start_date != project_start_date
+                    or booking_end_date != project_end_date
+                )
+
             # Create booking dictionary with all required data
             booking_dict = {
                 'id': booking.id,
@@ -884,6 +902,7 @@ class ProjectService:
                 'category_name': category_name,
                 'quantity': quantity,
                 'payment_status': payment_status,
+                'has_different_dates': has_different_dates,
             }
             result.append(booking_dict)
 
