@@ -12,6 +12,20 @@ from pydantic import BaseModel, ConfigDict, Field
 from backend.models import ProjectStatus
 
 
+class DateRange(BaseModel):
+    """Date range schema for future multi-period support."""
+
+    start_date: datetime = Field(..., title='Start Date')
+    end_date: datetime = Field(..., title='End Date')
+
+    model_config = ConfigDict(
+        from_attributes=True,
+        ser_json_bytes='utf8',
+        ser_json_timedelta='iso8601',
+        validate_default=True,
+    )
+
+
 class ProjectBase(BaseModel):
     """Base project schema."""
 
@@ -117,12 +131,27 @@ class BookingInProject(BaseModel):
     booking_status: str
     payment_status: str
     quantity: int = 1
+    has_different_dates: Optional[bool] = Field(
+        default=False,
+        title='Has Different Dates',
+        description='True if booking dates (ignoring time) differ from project dates',
+    )
 
     model_config = ConfigDict(
         from_attributes=True,
         ser_json_bytes='utf8',
         ser_json_timedelta='iso8601',
         validate_default=True,
+    )
+
+
+class BookingInProjectFuture(BookingInProject):
+    """Extended booking schema for future multi-period support."""
+
+    date_ranges: List[DateRange] = Field(
+        default_factory=list,
+        title='Date Ranges',
+        description='List of date ranges for multi-period bookings (future feature)',
     )
 
 
@@ -172,6 +201,17 @@ class EquipmentPrintItem(BaseModel):
     liability_amount: float
     quantity: int
     printable_categories: List[PrintableCategoryInfo]
+    start_date: Optional[datetime] = Field(
+        None, title='Booking Start Date', description='Start date of equipment booking'
+    )
+    end_date: Optional[datetime] = Field(
+        None, title='Booking End Date', description='End date of equipment booking'
+    )
+    has_different_dates: Optional[bool] = Field(
+        default=False,
+        title='Has Different Dates',
+        description='True if booking dates differ from project dates',
+    )
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -185,6 +225,11 @@ class ProjectPrint(BaseModel):
     total_items: int
     total_liability: float
     generated_at: datetime = Field(default_factory=datetime.now)
+    show_dates_column: bool = Field(
+        default=False,
+        title='Show Dates Column',
+        description='True if any equipment has different dates from project',
+    )
 
     model_config = ConfigDict(
         from_attributes=True,
