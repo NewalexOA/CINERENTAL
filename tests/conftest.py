@@ -41,6 +41,7 @@ from backend.models import (
     Client,
     Document,
     Equipment,
+    Project,
     ScanSession,
     User,
 )
@@ -51,6 +52,7 @@ from backend.repositories import (
     ScanSessionRepository,
 )
 from backend.repositories.global_barcode import GlobalBarcodeSequenceRepository
+from backend.repositories.project import ProjectRepository
 from backend.schemas import (
     BookingStatus,
     DocumentStatus,
@@ -67,6 +69,8 @@ from backend.services import (
     EquipmentService,
     ScanSessionService,
 )
+from backend.services.project import ProjectService
+from tests.factories.project import ProjectFactory
 
 
 # Set logging for tests
@@ -649,3 +653,65 @@ async def test_scan_session(
     # Cleanup
     await db_session.delete(scan_session)
     await db_session.commit()
+
+
+# Project-related fixtures
+
+
+@pytest_asyncio.fixture
+async def test_project(
+    db_session: AsyncSession, test_client: Client
+) -> AsyncGenerator[Project, None]:
+    """Create a test project."""
+    from datetime import datetime, timedelta, timezone
+
+    start_date = datetime.now(timezone.utc) + timedelta(days=1)
+    end_date = start_date + timedelta(days=7)
+
+    project = Project(
+        name='Test Project',
+        description='Test project description',
+        client_id=test_client.id,
+        start_date=start_date,
+        end_date=end_date,
+        notes='Test project notes',
+    )
+    db_session.add(project)
+    await db_session.commit()
+    await db_session.refresh(project)
+
+    yield project
+
+
+@pytest_asyncio.fixture
+async def project_repository(db_session: AsyncSession) -> ProjectRepository:
+    """Create project repository instance for testing."""
+    return ProjectRepository(db_session)
+
+
+@pytest_asyncio.fixture
+async def project_service(db_session: AsyncSession) -> ProjectService:
+    """Create project service instance for testing."""
+    return ProjectService(db_session)
+
+
+@pytest_asyncio.fixture
+async def project_factory_instance() -> ProjectFactory:
+    """Create ProjectFactory instance for testing."""
+    return ProjectFactory
+
+
+@pytest.fixture
+def project_test_data() -> Dict[str, Any]:
+    """Generate test data for projects."""
+    from datetime import datetime, timedelta, timezone
+
+    base_date = datetime.now(timezone.utc) + timedelta(days=1)
+    return {
+        'name': 'Test Project',
+        'description': 'Test project for unit testing',
+        'start_date': base_date,
+        'end_date': base_date + timedelta(days=7),
+        'notes': 'Test project notes',
+        'status': 'DRAFT',
+    }

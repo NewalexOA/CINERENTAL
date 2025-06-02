@@ -250,3 +250,4 @@ docs/Current_task/*
 !frontend/static/manifest/*
 !frontend/static/js/lib
 !frontend/static/css/lib
+/.supercode

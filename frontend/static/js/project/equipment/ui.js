@@ -2,7 +2,7 @@
  * Equipment UI functionality
  */
 
-import { formatDate, DATERANGEPICKER_LOCALE } from '../../utils/common.js';
+import { formatDateTime, DATERANGEPICKER_LOCALE } from '../../utils/common.js';
 import { checkEquipmentAvailability, initializeBookingPeriodPickers } from './availability.js';
 import { handleQuantityIncrease, handleQuantityDecrease, handleBookingRemoval } from './booking.js';
 import { currentPage, totalPages, pageSize, totalCount } from './search.js';
@@ -365,8 +365,10 @@ export function renderEquipmentSection(project) {
         periodCell.innerHTML = `
             <input type="text" class="form-control form-control-sm booking-period-input"
                    data-booking-id="${booking.id}"
-                   value="${formatDate(booking.start_date)} - ${formatDate(booking.end_date)}"
-                   placeholder="ДД.ММ.ГГГГ - ДД.ММ.ГГГГ">
+                   data-start-date="${booking.start_date}"
+                   data-end-date="${booking.end_date}"
+                   value="${formatDateTime(booking.start_date)} - ${formatDateTime(booking.end_date)}"
+                   placeholder="ДД.ММ.ГГГГ ЧЧ:ММ - ДД.ММ.ГГГГ ЧЧ:ММ">
         `;
 
         const quantityCell = document.createElement('td');

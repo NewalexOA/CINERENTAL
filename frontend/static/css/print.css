@@ -148,6 +148,17 @@ body {
     border-bottom: 1px solid #000;
 }
 
+/* Equipment description styles */
+.equipment-description {
+    color: #666;
+    font-size: 0.9em;
+    font-style: italic;
+    padding-left: 15px;
+    margin-top: 2px;
+    line-height: 1.2;
+    display: block;
+}
+
 .equipment-table {
     width: 100%;
     border-collapse: collapse;
@@ -180,11 +191,18 @@ body {
     background-color: #fff;
 }
 
+.equipment-table tbody tr:last-child td {
+    padding-bottom: 8px;
+}
+
 .equipment-table tfoot td {
-    border-top: 1px solid #000;
+    border-top: 2px solid #000;
+    border-bottom: none !important;
+    border-left: none;
+    border-right: none;
     font-weight: bold;
     color: #000;
-    padding: 2px 1px;
+    padding: 4px 1px;
 }
 
 .col-num {
@@ -193,21 +211,27 @@ body {
 }
 
 .col-name {
-    width: 45%;
+    width: 42%;
 }
 
 .col-serial {
-    width: 20%;
+    width: 16%;
 }
 
 .col-qty {
-    width: 10%;
+    width: 8%;
     text-align: center;
 }
 
 .col-amount {
     width: 12%;
     text-align: right;
+}
+
+.col-dates {
+    width: 17%;
+    text-align: center;
+    font-size: 0.9em;
 }
 
 .total-label {
@@ -237,7 +261,7 @@ body {
 .print-footer {
     margin-top: 0.3cm;
     padding: 0.15cm 0;
-    border-top: 1px solid #ccc;
+    border-top: none;
     background: none;
     position: relative;
     page-break-inside: avoid;
@@ -347,7 +371,7 @@ body {
         margin-top: auto;
         width: auto;
         background: transparent;
-        border-top: 1px solid #ccc;
+        border-top: none;
         padding-top: 0.15cm;
         padding-bottom: 0;
         page-break-inside: avoid;
