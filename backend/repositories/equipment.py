@@ -271,6 +271,7 @@ class EquipmentRepository(BaseRepository[Equipment]):
             and_(
                 Booking.equipment_id == equipment_id,
                 Booking.booking_status.in_(booking_statuses),
+                Booking.deleted_at.is_(None),
                 or_(
                     # Existing booking overlaps with requested period
                     and_(
@@ -420,6 +421,7 @@ class EquipmentRepository(BaseRepository[Equipment]):
                                     BookingStatus.ACTIVE,
                                 ]
                             ),
+                            Booking.deleted_at.is_(None),
                         )
                     )
                     .distinct()
@@ -502,6 +504,7 @@ class EquipmentRepository(BaseRepository[Equipment]):
                                 BookingStatus.ACTIVE,
                             ]
                         ),
+                        Booking.deleted_at.is_(None),
                     )
                 )
                 .distinct()
