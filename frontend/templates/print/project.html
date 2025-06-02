@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Проект: {{ project.name }}</title>
+    <title id="document-title">{{ project.name }}_{{ client.name }}_{{ project.start_date | format_date }}-{{ project.end_date | format_date }}</title>
     <link rel="stylesheet" href="{{ url_for('static', path='css/print.css') }}">
 </head>
-<body>
+<body data-project-name="{{ project.name }}" data-client-name="{{ client.name }}" data-start-date="{{ project.start_date }}" data-end-date="{{ project.end_date }}">
     <div class="print-container">
         <!-- Header -->
         <header class="print-header">
