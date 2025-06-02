@@ -209,6 +209,7 @@ async def print_project(
             equipment_item_schema = EquipmentPrintItem(
                 id=equipment.id,
                 name=equipment.name,
+                description=getattr(equipment, 'description', None),
                 serial_number=serial_number,
                 liability_amount=replacement_cost,
                 quantity=quantity,

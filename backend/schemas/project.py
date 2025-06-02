@@ -167,6 +167,7 @@ class EquipmentPrintItem(BaseModel):
 
     id: int
     name: str
+    description: Optional[str] = None
     serial_number: Optional[str] = None
     liability_amount: float
     quantity: int
