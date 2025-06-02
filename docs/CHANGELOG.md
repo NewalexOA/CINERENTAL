@@ -2,6 +2,38 @@
 
 This document lists notable changes to the ACT-Rental application.
 
+## [0.11.0-beta.1] - 2025-06-03
+
+### DateTime System & Timezone Management
+
+- **Moscow Timezone Integration:** Added MOSCOW_TZ (UTC+3) constant with automatic timezone conversion in `format_date` and `format_datetime` functions for proper local time display
+- **Advanced Time Picker Support:** Implemented `DATERANGEPICKER_LOCALE_WITH_TIME` with custom minute validation (00, 15, 30, 45, 59) using MutationObserver and full 24-hour time selection
+- **Smart Booking Synchronization:** Automatic booking date updates when project dates change with timezone-aware comparison using moment.js isSame and comprehensive project → bookings → UI update workflow
+
+### Testing Infrastructure & Quality Assurance
+
+- **Production-Grade Testing Suite:** Added 64 new tests bringing total to 325 tests with 67% backend coverage including 19 repository unit tests (100% coverage), 23 service unit tests (55% coverage), and 22 API integration tests
+- **Factory Pattern Implementation:** Created `ProjectFactory`, `ClientFactory`, `EquipmentFactory`, and `BookingFactory` with proper relationship handling and database constraint compliance for robust test data generation
+- **Docker Test Environment:** Integrated factory-boy dependency with proper async/await testing patterns and comprehensive CRUD, filtering, pagination, and error handling validation
+
+### PDF Generation & Print System Enhancement
+
+- **Smart PDF Filename Generation:** Automatic filename creation in format `ProjectName_ClientName_StartDate-EndDate.pdf` with date formatting, character sanitization, and dynamic `document.title` updates
+- **Equipment Description Integration:** Added optional description field to `EquipmentPrintItem` schema with conditional display in print templates using muted styling (gray, italic, indented)
+- **Enhanced Print Layout:** Professional styling with proper column spacing, borders, and typography improvements
+
+### Equipment Date Management & Visibility
+
+- **Dynamic Date Column System:** Equipment dates column with intelligent visibility control that appears only when booking dates differ from project dates using `has_different_dates` flag
+- **Future-Ready Architecture:** `DateRange` and `BookingInProjectFuture` schemas prepared for multi-period equipment rentals with gaps and date-only comparison logic ignoring time components
+- **Responsive UI Updates:** JavaScript `toggleEquipmentDatesColumn()` function with automatic visibility control and backward compatibility through optional fields with default values
+
+### System Fixes & Optimizations
+
+- **Soft-Delete Booking Fix:** Added `deleted_at.is_(None)` filters preventing soft-deleted bookings from blocking equipment availability in `check_availability` and `get_list` methods
+- **FastAPI Framework Upgrade:** Updated from 0.109.0 to 0.115.6 with fastapi-pagination upgrade to 0.12.34 for Starlette compatibility and separated test dependencies into dedicated groups in `pyproject.toml`
+- **Type Safety & Code Cleanup:** Fixed mypy errors in `ProjectService` with proper `Dict[str, Any]` type annotations and removed unused Faker imports following clean code practices
+
 ## [0.10.0-beta.1] - 2025-05-30
 
 ### Scanner Enhancements
