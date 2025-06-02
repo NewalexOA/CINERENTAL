@@ -26,7 +26,14 @@ export let projectData = {};
  */
 export function updateProjectData(newData) {
     projectData = newData;
+    // Make project data globally available
+    window.projectData = projectData;
     renderProjectDetails(projectData);
+
+    // Trigger equipment dates column visibility update
+    if (window.toggleEquipmentDatesColumn) {
+        window.toggleEquipmentDatesColumn();
+    }
 }
 
 /**
@@ -107,6 +114,9 @@ async function loadProjectData(projectId) {
 
             // Render project details
             renderProjectDetails(projectData);
+
+            // Make project data globally available
+            window.projectData = projectData;
         });
     } catch (error) {
         console.error('Error loading project data:', error);
