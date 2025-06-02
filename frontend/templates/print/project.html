@@ -52,6 +52,9 @@
                         <th class="col-serial">Серийный номер</th>
                         <th class="col-qty">Кол-во</th>
                         <th class="col-amount">Сумма ответственности</th>
+                        {% if show_dates_column %}
+                        <th class="col-dates">Даты оборудования</th>
+                        {% endif %}
                     </tr>
                 </thead>
                 <tbody>
@@ -65,7 +68,7 @@
 
                             {% if current_id_at_level != last_id_at_this_level %}
                                 <tr class="category-separator L{{ level }}">
-                                    <td colspan="5" class="category-header-cell padding-level-{{ level - 1 if level > 0 else 0 }}">
+                                    <td colspan="{% if show_dates_column %}6{% else %}5{% endif %}" class="category-header-cell padding-level-{{ level - 1 if level > 0 else 0 }}">
                                         {{ cat_info.name }}
                                     </td>
                         </tr>
@@ -93,6 +96,13 @@
                             <td class="col-serial">{{ item.serial_number or "—" }}</td>
                             <td class="col-qty">{{ item.quantity or 1 }}</td>
                             <td class="col-amount">{{ (item.liability_amount * item.quantity) | format_currency }}</td>
+                            {% if show_dates_column %}
+                            <td class="col-dates">
+                                {% if item.has_different_dates %}
+                                    {{ item.start_date | format_date }} - {{ item.end_date | format_date }}
+                                {% endif %}
+                            </td>
+                            {% endif %}
                         </tr>
                     {% endfor %}
                 </tbody>
@@ -100,6 +110,9 @@
                     <tr>
                         <td colspan="4" class="total-label">Итого:</td>
                         <td class="total-amount">{{ total_liability | format_currency }}</td>
+                        {% if show_dates_column %}
+                        <td></td>
+                        {% endif %}
                     </tr>
                 </tfoot>
             </table>
