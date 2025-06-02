@@ -99,7 +99,7 @@ docker compose -f docker-compose.test.yml run --rm test pytest tests/
 docker compose -f docker-compose.test.yml run --rm test pytest tests/e2e/ -v
 
 # Запуск с дополнительными опциями pytest
-docker compose -f docker-compose.test.yml run --rm test pytest tests/ -v --cov --cov-report=html --cov-report=term-missing
+docker compose -f docker-compose.test.yml run --rm test pytest tests/ -v --cov=backend --cov-report=html --cov-report=term-missing
 
 # Запуск тестов с определенной меткой
 docker compose -f docker-compose.test.yml run --rm test pytest -m "integration"

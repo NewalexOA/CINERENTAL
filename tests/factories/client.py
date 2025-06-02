@@ -16,17 +16,25 @@ class ClientFactory(factory.Factory):
 
         model = Client
 
-    name = factory.LazyFunction(lambda: fake.name())
+    name = factory.LazyFunction(lambda: fake.name()[:50])
     email = factory.LazyFunction(lambda: fake.email())
     phone = factory.LazyFunction(
-        lambda: fake.phone_number() if fake.boolean(chance_of_getting_true=80) else None
+        lambda: (
+            fake.numerify(text='+1-###-###-####')
+            if fake.boolean(chance_of_getting_true=80)
+            else None
+        )
     )
     company = factory.LazyFunction(
-        lambda: fake.company() if fake.boolean(chance_of_getting_true=60) else None
+        lambda: (
+            fake.company()[:200] if fake.boolean(chance_of_getting_true=60) else None
+        )
     )
     status = ClientStatus.ACTIVE
     notes = factory.LazyFunction(
-        lambda: fake.sentence() if fake.boolean(chance_of_getting_true=30) else None
+        lambda: (
+            fake.sentence()[:100] if fake.boolean(chance_of_getting_true=30) else None
+        )
     )
 
 
