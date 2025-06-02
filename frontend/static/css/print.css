@@ -148,6 +148,17 @@ body {
     border-bottom: 1px solid #000;
 }
 
+/* Equipment description styles */
+.equipment-description {
+    color: #666;
+    font-size: 0.9em;
+    font-style: italic;
+    padding-left: 15px;
+    margin-top: 2px;
+    line-height: 1.2;
+    display: block;
+}
+
 .equipment-table {
     width: 100%;
     border-collapse: collapse;

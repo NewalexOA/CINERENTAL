@@ -84,7 +84,12 @@
                             {% set fixed_item_padding_level = 2 %} {# Fixed padding for item row to level 2 (0-indexed) #}
                             {# The actual item data row, indented based on its fixed level #}
                             <td class="col-num padding-level-{{ fixed_item_padding_level }}">{{ loop.index }}</td>
-                            <td class="col-name">{{ item.name }}</td>
+                            <td class="col-name">
+                                {{ item.name }}
+                                {% if item.description %}
+                                    <div class="equipment-description">{{ item.description }}</div>
+                                {% endif %}
+                            </td>
                             <td class="col-serial">{{ item.serial_number or "—" }}</td>
                             <td class="col-qty">{{ item.quantity or 1 }}</td>
                             <td class="col-amount">{{ (item.liability_amount * item.quantity) | format_currency }}</td>
