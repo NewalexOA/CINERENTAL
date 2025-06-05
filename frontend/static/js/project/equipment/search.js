@@ -14,6 +14,51 @@ let totalCount = 0;
 let searchDebounceTimer;
 
 /**
+ * Safely get booking dates from daterangepicker or use fallback values
+ * @returns {Object} Object with startDate and endDate in YYYY-MM-DD format
+ */
+function getBookingDates() {
+    try {
+        const dateRange = document.getElementById('newBookingPeriod');
+
+        // Check if element exists and daterangepicker is initialized
+        if (dateRange && typeof $ !== 'undefined') {
+            const daterangepicker = $(dateRange).data('daterangepicker');
+
+            if (daterangepicker && daterangepicker.startDate && daterangepicker.endDate) {
+                return {
+                    startDate: daterangepicker.startDate.format('YYYY-MM-DD'),
+                    endDate: daterangepicker.endDate.format('YYYY-MM-DD')
+                };
+            }
+        }
+
+        // Fallback: use today and tomorrow
+        console.warn('DateRangePicker not available, using fallback dates');
+        const today = new Date();
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+
+        return {
+            startDate: today.toISOString().split('T')[0],
+            endDate: tomorrow.toISOString().split('T')[0]
+        };
+    } catch (error) {
+        console.error('Error getting booking dates:', error);
+
+        // Emergency fallback
+        const today = new Date();
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+
+        return {
+            startDate: today.toISOString().split('T')[0],
+            endDate: tomorrow.toISOString().split('T')[0]
+        };
+    }
+}
+
+/**
  * Initialize category filter
  */
 export async function initializeCategoryFilter() {
@@ -122,10 +167,7 @@ export async function searchEquipmentByBarcode() {
     try {
         const equipment = await api.get(`/equipment/barcode/${barcode}`);
 
-        const dateRange = document.getElementById('newBookingPeriod');
-        const dates = $(dateRange).data('daterangepicker');
-        const startDate = dates.startDate.format('YYYY-MM-DD');
-        const endDate = dates.endDate.format('YYYY-MM-DD');
+        const { startDate, endDate } = getBookingDates();
 
         const availability = await api.get(`/equipment/${equipment.id}/availability`, {
             start_date: startDate,
@@ -174,10 +216,7 @@ export async function searchEquipmentInCatalog() {
         pageSize = response.size;
 
         // Check availability for each equipment item
-        const dateRange = document.getElementById('newBookingPeriod');
-        const dates = $(dateRange).data('daterangepicker');
-        const startDate = dates.startDate.format('YYYY-MM-DD');
-        const endDate = dates.endDate.format('YYYY-MM-DD');
+        const { startDate, endDate } = getBookingDates();
 
         // Show loading state while checking availability
         if (searchSpinner) {
