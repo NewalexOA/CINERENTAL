@@ -10,13 +10,25 @@ alembic upgrade head
 # Debug output
 echo "Current environment: $ENVIRONMENT"
 
-# Seed test data if environment is development
+# Seed data based on environment
 if [ "$ENVIRONMENT" = "development" ]; then
-    echo "Seeding test data..."
-    python -m backend.scripts.seed_data || {
-        echo "Error seeding data"
-        exit 1
-    }
+    # Check if extended data file exists
+    if [ -f "backend/scripts/extended_data.json" ]; then
+        echo "Found extended data file, seeding extended dataset..."
+        python -m backend.scripts.seed_data --extended-data || {
+            echo "Error seeding extended dataset, falling back to basic data..."
+            python -m backend.scripts.seed_data || {
+                echo "Error seeding basic data"
+                exit 1
+            }
+        }
+    else
+        echo "No extended data found, seeding basic dataset..."
+        python -m backend.scripts.seed_data || {
+            echo "Error seeding basic data"
+            exit 1
+        }
+    fi
 fi
 
 # Start the application
