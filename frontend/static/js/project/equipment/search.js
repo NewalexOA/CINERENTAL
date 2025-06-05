@@ -46,11 +46,12 @@ export async function initializeCategoryFilter() {
 }
 
 /**
- * Setup search input with debounce
+ * Setup search input with debounce (unified search field)
  */
 export function setupSearchInput() {
-    const searchInput = document.getElementById('catalogSearchInput');
+    const searchInput = document.getElementById('barcodeInput');
     if (searchInput) {
+        // Debounced search on input
         searchInput.addEventListener('input', () => {
             clearTimeout(searchDebounceTimer);
             const query = searchInput.value.trim();
@@ -59,6 +60,20 @@ export function setupSearchInput() {
                     currentPage = 1;
                     searchEquipmentInCatalog();
                 }, 500);
+            }
+        });
+
+        // Immediate search on Enter
+        searchInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                const query = searchInput.value.trim();
+                if (query) {
+                    // Try barcode search first, fallback to catalog search
+                    searchEquipmentByBarcode().catch(() => {
+                        searchEquipmentInCatalog();
+                    });
+                }
             }
         });
     }
@@ -128,10 +143,10 @@ export async function searchEquipmentByBarcode() {
 }
 
 /**
- * Search equipment in catalog
+ * Search equipment in catalog (unified search field)
  */
 export async function searchEquipmentInCatalog() {
-    const searchInput = document.getElementById('catalogSearchInput');
+    const searchInput = document.getElementById('barcodeInput');
     const categoryFilter = document.getElementById('categoryFilter');
     const searchSpinner = document.getElementById('search-spinner');
 
@@ -158,7 +173,41 @@ export async function searchEquipmentInCatalog() {
         currentPage = response.page;
         pageSize = response.size;
 
-        displaySearchResults(response.items);
+        // Check availability for each equipment item
+        const dateRange = document.getElementById('newBookingPeriod');
+        const dates = $(dateRange).data('daterangepicker');
+        const startDate = dates.startDate.format('YYYY-MM-DD');
+        const endDate = dates.endDate.format('YYYY-MM-DD');
+
+        // Show loading state while checking availability
+        if (searchSpinner) {
+            searchSpinner.innerHTML = '<div class="spinner-border spinner-border-sm text-primary" role="status"><span class="visually-hidden">Проверка доступности...</span></div>';
+        }
+
+        // Check availability for all items in parallel
+        const equipmentWithAvailability = await Promise.all(
+            response.items.map(async (equipment) => {
+                try {
+                    const availability = await api.get(`/equipment/${equipment.id}/availability`, {
+                        start_date: startDate,
+                        end_date: endDate
+                    });
+                    return {
+                        ...equipment,
+                        availability: availability
+                    };
+                } catch (error) {
+                    console.error(`Error checking availability for equipment ${equipment.id}:`, error);
+                    // If availability check fails, assume available
+                    return {
+                        ...equipment,
+                        availability: { is_available: true }
+                    };
+                }
+            })
+        );
+
+        displaySearchResults(equipmentWithAvailability);
         updatePaginationUI();
     } catch (error) {
         console.error('Error searching equipment:', error);

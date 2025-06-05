@@ -72,7 +72,8 @@ export function updatePaginationUI() {
 
     if (!paginationElement) return;
 
-    if (totalCount > 0) {
+    // Show pagination only if there are more results than page size
+    if (totalCount > pageSize) {
         paginationElement.classList.remove('d-none');
         const startItem = (currentPage - 1) * pageSize + 1;
         const endItem = Math.min(currentPage * pageSize, totalCount);
