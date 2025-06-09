@@ -9,7 +9,8 @@ from uuid import UUID
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import joinedload, selectinload
+from sqlalchemy.sql import Select
 
 from backend.models import Booking, Client, Equipment, Project, ProjectStatus
 from backend.repositories.base import BaseRepository
@@ -171,6 +172,51 @@ class ProjectRepository(BaseRepository[Project]):
         await self.session.flush()
         await self.session.refresh(project)
         return project
+
+    def get_paginatable_query(
+        self,
+        client_id: Optional[int] = None,
+        status: Optional[ProjectStatus] = None,
+        start_date: Optional[datetime] = None,
+        end_date: Optional[datetime] = None,
+        include_deleted: bool = False,
+    ) -> Select:
+        """Get a paginatable query for projects with optional filtering.
+
+        Args:
+            client_id: Filter by client ID
+            status: Filter by project status
+            start_date: Filter by start date
+            end_date: Filter by end date
+            include_deleted: Whether to include deleted projects
+
+        Returns:
+            SQLAlchemy Select query object
+        """
+        # Start with base query that includes client relationship
+        query = select(Project).join(Client).options(joinedload(Project.client))
+
+        # Filter deleted items if include_deleted=False
+        if not include_deleted:
+            query = query.where(Project.deleted_at.is_(None))
+
+        # Apply filters
+        if client_id is not None:
+            query = query.where(Project.client_id == client_id)
+
+        if status is not None:
+            query = query.where(Project.status == status)
+
+        if start_date is not None:
+            query = query.where(Project.start_date >= start_date)
+
+        if end_date is not None:
+            query = query.where(Project.end_date <= end_date)
+
+        # Order by created_at descending by default for consistent pagination
+        query = query.order_by(Project.created_at.desc())
+
+        return query
 
     async def delete(self, project_id: Union[int, UUID]) -> bool:
         """Soft delete project.

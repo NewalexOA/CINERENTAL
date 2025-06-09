@@ -7,6 +7,8 @@ from datetime import datetime
 from typing import Annotated, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi_pagination import Page, Params
+from fastapi_pagination.ext.sqlalchemy import paginate
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -98,6 +100,98 @@ async def get_projects(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e),
             headers={'X-Error-Details': str(getattr(e, 'details', {}))},
+        )
+
+
+@typed_get(
+    projects_router,
+    '/paginated',
+    response_model=Page[ProjectResponse],
+    summary='Get projects with pagination',
+)
+async def get_projects_paginated(
+    db: Annotated[AsyncSession, Depends(get_db)],
+    params: Params = Depends(),
+    client_id: Optional[int] = None,
+    project_status: Optional[ProjectStatus] = None,
+    start_date: Optional[datetime] = None,
+    end_date: Optional[datetime] = None,
+) -> Page[ProjectResponse]:
+    """Get projects with pagination.
+
+    Args:
+        db: Database session
+        params: Pagination parameters
+        client_id: Filter by client ID
+        project_status: Filter by project status
+        start_date: Filter by start date
+        end_date: Filter by end date
+
+    Returns:
+        Paginated list of projects
+    """
+    log = logger.bind(
+        client_id=client_id,
+        status=project_status.value if project_status else None,
+        start_date=start_date,
+        end_date=end_date,
+    )
+
+    try:
+        service = ProjectService(db)
+
+        # Get query for pagination
+        projects_query = await service.get_projects_list_query(
+            client_id=client_id,
+            status=project_status,
+            start_date=start_date,
+            end_date=end_date,
+        )
+
+        # Use fastapi-pagination to paginate the query with transformer
+        result: Page[ProjectResponse] = await paginate(
+            db,
+            projects_query,
+            params,
+            transformer=lambda projects: [
+                ProjectResponse(
+                    id=project.id,
+                    name=project.name,
+                    description=project.description,
+                    client_id=project.client_id,
+                    start_date=project.start_date,
+                    end_date=project.end_date,
+                    status=project.status,
+                    notes=project.notes,
+                    created_at=project.created_at,
+                    updated_at=project.updated_at,
+                    client_name=project.client.name if project.client else '',
+                )
+                for project in projects
+            ],
+        )
+
+        log.debug('Retrieved {} projects', len(result.items))
+        return result
+    except NotFoundError as e:
+        log.error('Not found error: {}', str(e))
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e),
+            headers={'X-Error-Details': str(getattr(e, 'details', {}))},
+        )
+    except ValidationError as e:
+        log.error('Validation error: {}', str(e))
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+            headers={'X-Error-Details': str(getattr(e, 'details', {}))},
+        )
+    except Exception as e:
+        log.error('Unexpected error: {}', str(e))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f'An unexpected error occurred: {e}',
         )
 
 

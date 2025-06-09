@@ -247,26 +247,31 @@ async function loadProjects() {
     document.getElementById('emptyOtherMessage').classList.add('d-none');
 
     try {
-        // Build query parameters
+        // Build query parameters for paginated endpoint
         const params = new URLSearchParams();
-        params.append('limit', pageSize);
-        params.append('offset', (currentPage - 1) * pageSize);
+        params.append('page', currentPage);
+        params.append('size', pageSize);
 
         if (filters.client_id) params.append('client_id', filters.client_id);
         if (filters.status) params.append('project_status', filters.status);
         if (filters.start_date) params.append('start_date', filters.start_date);
         if (filters.end_date) params.append('end_date', filters.end_date);
 
-        // Make API request
-        const response = await api.get(`/projects?${params.toString()}`);
+        // Make API request to paginated endpoint
+        const response = await api.get(`/projects/paginated?${params.toString()}`);
 
-        // Save data for possible view switching
-        projectsData = response;
+        console.log('Paginated API response:', response);
 
-        // Update UI
-        renderProjects(response);
+        // Extract pagination data from response
+        projectsData = response.items || [];
+        totalCount = response.total || 0;
+        totalPages = response.pages || 1;
+        currentPage = response.page || 1;
 
-        // Update pagination
+        // Update UI with project items
+        renderProjects(projectsData);
+
+        // Update pagination controls
         updatePagination();
     } catch (error) {
         console.error('Error loading projects:', error);
