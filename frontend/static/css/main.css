@@ -367,3 +367,16 @@ body {
 .card-header .btn-link:focus {
     box-shadow: none;
 }
+
+/* Client link styling */
+.client-link {
+    transition: color 0.2s ease-in-out;
+    cursor: pointer !important;
+    color: var(--bs-link-color, #0d6efd) !important;
+    text-decoration: none !important;
+}
+
+.client-link:hover {
+    color: var(--bs-link-hover-color, #0a58ca) !important;
+    text-decoration: underline !important;
+}

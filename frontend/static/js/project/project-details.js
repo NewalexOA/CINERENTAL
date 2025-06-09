@@ -201,7 +201,13 @@ export function renderProjectDetails(project) {
     if (projectNameDisplay) projectNameDisplay.textContent = project.name;
 
     const projectClientDisplay = document.getElementById('project-client-display');
-    if (projectClientDisplay) projectClientDisplay.textContent = project.client_name || 'Не указан';
+    if (projectClientDisplay) {
+        if (project.client_id && project.client_name) {
+            projectClientDisplay.innerHTML = `<a href="/clients/${project.client_id}" class="text-decoration-none text-muted client-link">${project.client_name}</a>`;
+        } else {
+            projectClientDisplay.textContent = 'Не указан';
+        }
+    }
 
     const projectDescriptionDisplay = document.getElementById('project-description-display');
     if (projectDescriptionDisplay) projectDescriptionDisplay.textContent = project.description || '';
