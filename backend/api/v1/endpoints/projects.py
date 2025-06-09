@@ -636,14 +636,14 @@ async def get_project_print_data(
 @typed_patch(
     projects_router,
     '/{project_id}',
-    response_model=ProjectResponse,
+    response_model=ProjectWithBookings,
     summary='Partially update project',
 )
 async def patch_project(
     project_id: int,
     project: ProjectUpdate,
     db: Annotated[AsyncSession, Depends(get_db)],
-) -> ProjectResponse:
+) -> ProjectWithBookings:
     """Partially update project.
 
     Args:
@@ -661,18 +661,12 @@ async def patch_project(
     try:
         update_data = project.model_dump(exclude_unset=True)
 
-        updated_project = await service.update_project(
-            project_id=project_id, **update_data
-        )
+        # Update the project
+        await service.update_project(project_id=project_id, **update_data)
 
-        # Ensure client data is loaded for response
-        await db.refresh(updated_project, ['client'])
-        response_data = {
-            **updated_project.__dict__,
-            'client_name': updated_project.client.name,
-        }
-
-        return ProjectResponse.model_validate(response_data)
+        # Return full project data including bookings (same as GET endpoint)
+        project_dict = await service.get_project_as_dict(project_id)
+        return ProjectWithBookings.model_validate(project_dict)
     except NotFoundError as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
