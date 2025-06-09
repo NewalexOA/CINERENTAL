@@ -330,8 +330,8 @@ export function renderEquipmentSection(project) {
             return;
         }
 
-        // Detailed logging of booking structure
-        console.log('Booking data structure:', JSON.stringify(booking, null, 2));
+        // Basic booking validation log
+        console.debug('Processing booking:', booking.id, 'equipment:', booking.equipment_name);
 
         const equipmentName = booking.equipment_name || 'Неизвестное оборудование';
         const barcode = booking.barcode || '';
