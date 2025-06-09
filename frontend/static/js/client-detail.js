@@ -68,13 +68,14 @@ function groupBookingsByProject(bookings) {
  * @returns {string} HTML string
  */
 function createProjectRow(project) {
-    const statusColors = {
+        const statusColors = {
         'PENDING': 'warning',
-        'CONFIRMED': 'info',
-        'ACTIVE': 'success',
-        'COMPLETED': 'secondary',
+        'CONFIRMED': 'primary',
+        'IN_PROGRESS': 'info',
+        'COMPLETED': 'success',
         'CANCELLED': 'danger',
-        'DRAFT': 'light'
+        'DRAFT': 'secondary',
+        'ACTIVE': 'success'
     };
 
     const startDate = project.start_date.toLocaleDateString();
@@ -118,11 +119,6 @@ function createProjectRow(project) {
                     ${statusText}
                 </span>
             </td>
-            <td>
-                <a href="/projects/${project.id}" class="btn btn-sm btn-outline-primary">
-                    <i class="fas fa-eye"></i>
-                </a>
-            </td>
         </tr>
     `;
 }
@@ -150,7 +146,7 @@ async function loadActiveBookings(clientId) {
         }
 
         if (projects.length === 0) {
-            container.innerHTML = '<tr><td colspan="5" class="text-center">Нет активных проектов</td></tr>';
+            container.innerHTML = '<tr><td colspan="4" class="text-center">Нет активных проектов</td></tr>';
             if (countBadge) countBadge.textContent = '0';
             if (statusElement) statusElement.textContent = 'Нет активных проектов';
             return;
@@ -186,6 +182,9 @@ async function loadActiveBookings(clientId) {
             }
         }));
 
+        // Sort projects by start date (newest first)
+        projectsWithEquipment.sort((a, b) => b.start_date - a.start_date);
+
         container.innerHTML = projectsWithEquipment.map(project => createProjectRow(project)).join('');
 
         // Update UI indicators
@@ -200,7 +199,7 @@ async function loadActiveBookings(clientId) {
         const statusElement = document.getElementById('activeStatus');
 
         if (container) {
-            container.innerHTML = '<tr><td colspan="5" class="text-center text-danger">Ошибка при загрузке активных проектов</td></tr>';
+            container.innerHTML = '<tr><td colspan="4" class="text-center text-danger">Ошибка при загрузке активных проектов</td></tr>';
         }
         if (countBadge) countBadge.textContent = '!';
         if (statusElement) statusElement.textContent = 'Ошибка загрузки';
@@ -230,7 +229,7 @@ async function loadBookingHistory(clientId) {
         }
 
         if (projects.length === 0) {
-            container.innerHTML = '<tr><td colspan="5" class="text-center">История проектов пуста</td></tr>';
+            container.innerHTML = '<tr><td colspan="4" class="text-center">История проектов пуста</td></tr>';
             if (countBadge) countBadge.textContent = '0';
             if (statusElement) statusElement.textContent = 'История пуста';
             return;
@@ -266,6 +265,9 @@ async function loadBookingHistory(clientId) {
             }
         }));
 
+        // Sort projects by start date (newest first)
+        projectsWithEquipment.sort((a, b) => b.start_date - a.start_date);
+
         container.innerHTML = projectsWithEquipment.map(project => createProjectRow(project)).join('');
 
         // Update UI indicators
@@ -283,7 +285,7 @@ async function loadBookingHistory(clientId) {
         const statusElement = document.getElementById('historyStatus');
 
         if (container) {
-            container.innerHTML = '<tr><td colspan="5" class="text-center text-danger">Ошибка при загрузке истории проектов</td></tr>';
+            container.innerHTML = '<tr><td colspan="4" class="text-center text-danger">Ошибка при загрузке истории проектов</td></tr>';
         }
         if (countBadge) {
             countBadge.textContent = '!';
