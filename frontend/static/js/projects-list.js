@@ -30,6 +30,26 @@ let filters = {
 let currentView = 'table'; // 'table' or 'card'
 let projectsData = []; // Cached projects data
 
+// Initialize collapse icons animation
+function initCollapseAnimations() {
+    const collapseElements = document.querySelectorAll('[data-bs-toggle="collapse"]');
+
+    collapseElements.forEach(button => {
+        const targetId = button.getAttribute('data-bs-target');
+        const target = document.querySelector(targetId);
+
+        if (target) {
+            target.addEventListener('show.bs.collapse', () => {
+                button.classList.remove('collapsed');
+            });
+
+            target.addEventListener('hide.bs.collapse', () => {
+                button.classList.add('collapsed');
+            });
+        }
+    });
+}
+
 // Initialize page
 document.addEventListener('DOMContentLoaded', () => {
     // Load clients for dropdown
@@ -40,6 +60,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Initialize view toggle
     initViewToggle();
+
+    // Initialize collapse animations
+    initCollapseAnimations();
 
     // Load projects
     loadProjects();
@@ -239,12 +262,14 @@ async function loadProjects() {
     // Clear card view containers
     document.getElementById('draftProjectsList').innerHTML = '';
     document.getElementById('activeProjectsList').innerHTML = '';
-    document.getElementById('otherProjectsList').innerHTML = '';
+    document.getElementById('completedProjectsList').innerHTML = '';
+    document.getElementById('cancelledProjectsList').innerHTML = '';
 
     // Hide empty group messages
     document.getElementById('emptyDraftMessage').classList.add('d-none');
     document.getElementById('emptyActiveMessage').classList.add('d-none');
-    document.getElementById('emptyOtherMessage').classList.add('d-none');
+    document.getElementById('emptyCompletedMessage').classList.add('d-none');
+    document.getElementById('emptyCancelledMessage').classList.add('d-none');
 
     try {
         // Build query parameters for paginated endpoint
@@ -299,7 +324,8 @@ async function loadProjects() {
         `;
         document.getElementById('draftProjectsList').innerHTML = errorMessage;
         document.getElementById('activeProjectsList').innerHTML = errorMessage;
-        document.getElementById('otherProjectsList').innerHTML = errorMessage;
+        document.getElementById('completedProjectsList').innerHTML = errorMessage;
+        document.getElementById('cancelledProjectsList').innerHTML = errorMessage;
     }
 }
 
@@ -329,12 +355,33 @@ function renderTableView(projects) {
         return;
     }
 
+    // Sort projects by status first, then by start date
+    const sortedProjects = [...projects].sort((a, b) => {
+        // Status priority: DRAFT > ACTIVE > COMPLETED > CANCELLED
+        const statusPriority = {
+            'DRAFT': 1,
+            'ACTIVE': 2,
+            'COMPLETED': 3,
+            'CANCELLED': 4
+        };
+
+        const statusA = statusPriority[a.status] || 5;
+        const statusB = statusPriority[b.status] || 5;
+
+        if (statusA !== statusB) {
+            return statusA - statusB;
+        }
+
+        // Within same status, sort by start date (chronological order)
+        return new Date(a.start_date) - new Date(b.start_date);
+    });
+
     // Formatting functions
     const formatDate = typeof formatProjectDate === 'function' ? formatProjectDate :
                        (typeof window.formatDate === 'function' ? window.formatDate :
                         d => new Date(d).toLocaleDateString());
 
-    projects.forEach(project => {
+    sortedProjects.forEach(project => {
         const statusColor = typeof getStatusColor === 'function' ? getStatusColor(project.status) :
                            (project.status === 'ACTIVE' ? 'success' :
                             project.status === 'COMPLETED' ? 'info' :
@@ -376,22 +423,30 @@ function renderTableView(projects) {
     });
 }
 
-// Render card view with grouping
+// Render card view with accordion grouping
 function renderCardView(projects) {
     // Get group containers
     const draftProjectsList = document.getElementById('draftProjectsList');
     const activeProjectsList = document.getElementById('activeProjectsList');
-    const otherProjectsList = document.getElementById('otherProjectsList');
+    const completedProjectsList = document.getElementById('completedProjectsList');
+    const cancelledProjectsList = document.getElementById('cancelledProjectsList');
+
+    if (!draftProjectsList || !activeProjectsList || !completedProjectsList || !cancelledProjectsList) {
+        console.error('One or more project list containers not found');
+        return;
+    }
 
     // Clear containers
     draftProjectsList.innerHTML = '';
     activeProjectsList.innerHTML = '';
-    otherProjectsList.innerHTML = '';
+    completedProjectsList.innerHTML = '';
+    cancelledProjectsList.innerHTML = '';
 
-    // Group projects by status
-    const draftProjects = projects.filter(p => p.status === 'DRAFT');
-    const activeProjects = projects.filter(p => p.status === 'ACTIVE');
-    const otherProjects = projects.filter(p => p.status !== 'DRAFT' && p.status !== 'ACTIVE');
+    // Group and sort projects by status, then by date
+    const draftProjects = projects.filter(p => p.status === 'DRAFT').sort((a, b) => new Date(a.start_date) - new Date(b.start_date));
+    const activeProjects = projects.filter(p => p.status === 'ACTIVE').sort((a, b) => new Date(a.start_date) - new Date(b.start_date));
+    const completedProjects = projects.filter(p => p.status === 'COMPLETED').sort((a, b) => new Date(a.start_date) - new Date(b.start_date));
+    const cancelledProjects = projects.filter(p => p.status === 'CANCELLED').sort((a, b) => new Date(a.start_date) - new Date(b.start_date));
 
     // Date formatting
     const formatDate = typeof formatProjectDate === 'function' ? formatProjectDate :
@@ -401,7 +456,8 @@ function renderCardView(projects) {
     // Display empty group messages
     document.getElementById('emptyDraftMessage').classList.toggle('d-none', draftProjects.length > 0);
     document.getElementById('emptyActiveMessage').classList.toggle('d-none', activeProjects.length > 0);
-    document.getElementById('emptyOtherMessage').classList.toggle('d-none', otherProjects.length > 0);
+    document.getElementById('emptyCompletedMessage').classList.toggle('d-none', completedProjects.length > 0);
+    document.getElementById('emptyCancelledMessage').classList.toggle('d-none', cancelledProjects.length > 0);
 
     // Project card creation function
     function createProjectCard(project) {
@@ -449,14 +505,19 @@ function renderCardView(projects) {
         activeProjectsList.appendChild(createProjectCard(project));
     });
 
-    otherProjects.forEach(project => {
-        otherProjectsList.appendChild(createProjectCard(project));
+    completedProjects.forEach(project => {
+        completedProjectsList.appendChild(createProjectCard(project));
     });
 
-    // Hide empty groups
-    document.getElementById('draftProjects').classList.toggle('d-none', draftProjects.length === 0 && projects.length > 0);
-    document.getElementById('activeProjects').classList.toggle('d-none', activeProjects.length === 0 && projects.length > 0);
-    document.getElementById('otherProjects').classList.toggle('d-none', otherProjects.length === 0 && projects.length > 0);
+    cancelledProjects.forEach(project => {
+        cancelledProjectsList.appendChild(createProjectCard(project));
+    });
+
+    // Hide empty accordion sections
+    document.getElementById('draftProjects').classList.toggle('d-none', draftProjects.length === 0);
+    document.getElementById('activeProjects').classList.toggle('d-none', activeProjects.length === 0);
+    document.getElementById('completedProjects').classList.toggle('d-none', completedProjects.length === 0);
+    document.getElementById('cancelledProjects').classList.toggle('d-none', cancelledProjects.length === 0);
 
     // Show "No projects" message if all groups are empty
     if (projects.length === 0) {
@@ -468,11 +529,14 @@ function renderCardView(projects) {
         `;
         draftProjectsList.innerHTML = noProjectsMessage;
 
-        // Display only drafts group, hide others
-        document.getElementById('draftProjects').classList.remove('d-none');
+        // Hide all accordion sections when no projects
+        document.getElementById('draftProjects').classList.add('d-none');
         document.getElementById('activeProjects').classList.add('d-none');
-        document.getElementById('otherProjects').classList.add('d-none');
-        document.getElementById('emptyDraftMessage').classList.add('d-none');
+        document.getElementById('completedProjects').classList.add('d-none');
+        document.getElementById('cancelledProjects').classList.add('d-none');
+
+        // Show a general message instead
+        document.getElementById('cardView').innerHTML = `<div class="text-center py-5">${noProjectsMessage}</div>`;
     }
 }
 
