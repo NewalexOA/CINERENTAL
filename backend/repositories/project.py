@@ -118,13 +118,18 @@ class ProjectRepository(BaseRepository[Project]):
             query = query.where(Project.status == status)
             count_query = count_query.where(Project.status == status)
 
-        if start_date is not None:
-            query = query.where(Project.start_date >= start_date)
-            count_query = count_query.where(Project.start_date >= start_date)
-
-        if end_date is not None:
-            query = query.where(Project.end_date <= end_date)
-            count_query = count_query.where(Project.end_date <= end_date)
+        if start_date is not None and end_date is not None:
+            date_filter = (Project.start_date <= end_date) & (
+                Project.end_date >= start_date
+            )
+            query = query.where(date_filter)
+            count_query = count_query.where(date_filter)
+        elif start_date is not None:
+            query = query.where(Project.end_date >= start_date)
+            count_query = count_query.where(Project.end_date >= start_date)
+        elif end_date is not None:
+            query = query.where(Project.start_date <= end_date)
+            count_query = count_query.where(Project.start_date <= end_date)
 
         # Add client relationship for response
         query = query.join(Client).add_columns(Client.name.label('client_name'))
@@ -193,27 +198,26 @@ class ProjectRepository(BaseRepository[Project]):
         Returns:
             SQLAlchemy Select query object
         """
-        # Start with base query that includes client relationship
         query = select(Project).join(Client).options(joinedload(Project.client))
 
-        # Filter deleted items if include_deleted=False
         if not include_deleted:
             query = query.where(Project.deleted_at.is_(None))
 
-        # Apply filters
         if client_id is not None:
             query = query.where(Project.client_id == client_id)
 
         if status is not None:
             query = query.where(Project.status == status)
 
-        if start_date is not None:
-            query = query.where(Project.start_date >= start_date)
+        if start_date is not None and end_date is not None:
+            query = query.where(
+                (Project.start_date <= end_date) & (Project.end_date >= start_date)
+            )
+        elif start_date is not None:
+            query = query.where(Project.end_date >= start_date)
+        elif end_date is not None:
+            query = query.where(Project.start_date <= end_date)
 
-        if end_date is not None:
-            query = query.where(Project.end_date <= end_date)
-
-        # Order by created_at descending by default for consistent pagination
         query = query.order_by(Project.created_at.desc())
 
         return query
