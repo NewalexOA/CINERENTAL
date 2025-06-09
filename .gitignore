@@ -237,6 +237,7 @@ cython_debug/
 /memory-bank/*
 /custom_modes
 /custom_modes/*
+/ai-docs/*
 
 # HTMLHint
 .htmlhintrc

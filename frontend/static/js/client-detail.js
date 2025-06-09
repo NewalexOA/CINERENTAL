@@ -37,7 +37,7 @@ function groupBookingsByProject(bookings) {
                 equipment: [],
                 start_date: new Date(booking.start_date),
                 end_date: new Date(booking.end_date),
-                status: booking.status
+                status: booking.booking_status
             };
         }
 
@@ -68,11 +68,14 @@ function groupBookingsByProject(bookings) {
  * @returns {string} HTML string
  */
 function createProjectRow(project) {
-    const statusColors = {
-        'ACTIVE': 'success',
-        'COMPLETED': 'info',
+        const statusColors = {
+        'PENDING': 'warning',
+        'CONFIRMED': 'primary',
+        'IN_PROGRESS': 'info',
+        'COMPLETED': 'success',
         'CANCELLED': 'danger',
-        'DRAFT': 'secondary'
+        'DRAFT': 'secondary',
+        'ACTIVE': 'success'
     };
 
     const startDate = project.start_date.toLocaleDateString();
@@ -84,6 +87,10 @@ function createProjectRow(project) {
     ).join('<br>');
 
     const totalItems = project.equipment.reduce((sum, eq) => sum + (eq.quantity || 1), 0);
+
+    // Get status color with fallback
+    const statusColor = statusColors[project.status] || 'secondary';
+    const statusText = project.status || 'UNKNOWN';
 
     return `
         <tr>
@@ -108,74 +115,183 @@ function createProjectRow(project) {
             </td>
             <td>${startDate} - ${endDate}</td>
             <td>
-                <span class="badge bg-${statusColors[project.status]}">
-                    ${project.status}
+                <span class="badge bg-${statusColor}">
+                    ${statusText}
                 </span>
-            </td>
-            <td>
-                <a href="/projects/${project.id}" class="btn btn-sm btn-outline-primary">
-                    <i class="fas fa-eye"></i>
-                </a>
             </td>
         </tr>
     `;
 }
 
 /**
- * Load and display active bookings for a client
+ * Load and display active projects for a client
  * @param {string} clientId - Client ID
  */
 async function loadActiveBookings(clientId) {
     try {
-        const bookings = await api.get(`/clients/${clientId}/bookings/?status=PENDING,CONFIRMED,ACTIVE`);
+        // Load active and draft projects
+        const [activeProjects, draftProjects] = await Promise.all([
+            api.get(`/projects/?client_id=${clientId}&project_status=ACTIVE`),
+            api.get(`/projects/?client_id=${clientId}&project_status=DRAFT`)
+        ]);
+
+        const projects = [...activeProjects, ...draftProjects];
         const container = document.getElementById('activeBookings');
+        const countBadge = document.getElementById('activeProjectsCount');
+        const statusElement = document.getElementById('activeStatus');
+
         if (!container) {
             console.error('Active bookings container not found');
             return;
         }
 
-        if (bookings.length === 0) {
-            container.innerHTML = '<tr><td colspan="5" class="text-center">Нет активных бронирований</td></tr>';
+        if (projects.length === 0) {
+            container.innerHTML = '<tr><td colspan="4" class="text-center">Нет активных проектов</td></tr>';
+            if (countBadge) countBadge.textContent = '0';
+            if (statusElement) statusElement.textContent = 'Нет активных проектов';
             return;
         }
 
-        const projects = groupBookingsByProject(bookings);
-        container.innerHTML = projects.map(project => createProjectRow(project)).join('');
-    } catch (error) {
-        console.error('Error loading active bookings:', error);
-        const container = document.getElementById('activeBookings');
-        if (container) {
-            container.innerHTML = '<tr><td colspan="5" class="text-center text-danger">Ошибка при загрузке активных бронирований</td></tr>';
+        // Convert projects to the format expected by createProjectRow
+        const projectsWithEquipment = await Promise.all(projects.map(async (project) => {
+            try {
+                // Get project bookings to extract equipment
+                const bookings = await api.get(`/projects/${project.id}/bookings`);
+                return {
+                    id: project.id,
+                    name: project.name,
+                    status: project.status,
+                    start_date: new Date(project.start_date),
+                    end_date: new Date(project.end_date),
+                    equipment: bookings.map(booking => ({
+                        id: booking.equipment_id,
+                        name: booking.equipment_name,
+                        quantity: booking.quantity || 1
+                    }))
+                };
+            } catch (error) {
+                console.error(`Error loading equipment for project ${project.id}:`, error);
+                return {
+                    id: project.id,
+                    name: project.name,
+                    status: project.status,
+                    start_date: new Date(project.start_date),
+                    end_date: new Date(project.end_date),
+                    equipment: []
+                };
+            }
+        }));
+
+        // Sort projects by start date (newest first)
+        projectsWithEquipment.sort((a, b) => b.start_date - a.start_date);
+
+        container.innerHTML = projectsWithEquipment.map(project => createProjectRow(project)).join('');
+
+        // Update UI indicators
+        if (countBadge) countBadge.textContent = projects.length;
+        if (statusElement) {
+            statusElement.textContent = `${projects.length} ${projects.length === 1 ? 'проект' : projects.length < 5 ? 'проекта' : 'проектов'}`;
         }
+    } catch (error) {
+        console.error('Error loading active projects:', error);
+        const container = document.getElementById('activeBookings');
+        const countBadge = document.getElementById('activeProjectsCount');
+        const statusElement = document.getElementById('activeStatus');
+
+        if (container) {
+            container.innerHTML = '<tr><td colspan="4" class="text-center text-danger">Ошибка при загрузке активных проектов</td></tr>';
+        }
+        if (countBadge) countBadge.textContent = '!';
+        if (statusElement) statusElement.textContent = 'Ошибка загрузки';
     }
 }
 
 /**
- * Load and display booking history for a client
+ * Load and display project history for a client
  * @param {string} clientId - Client ID
  */
 async function loadBookingHistory(clientId) {
     try {
-        const bookings = await api.get(`/clients/${clientId}/bookings/?status=COMPLETED,CANCELLED`);
+        // Load completed and cancelled projects
+        const [completedProjects, cancelledProjects] = await Promise.all([
+            api.get(`/projects/?client_id=${clientId}&project_status=COMPLETED`),
+            api.get(`/projects/?client_id=${clientId}&project_status=CANCELLED`)
+        ]);
+
+        const projects = [...completedProjects, ...cancelledProjects];
         const container = document.getElementById('bookingHistory');
+        const countBadge = document.getElementById('historyProjectsCount');
+        const statusElement = document.getElementById('historyStatus');
+
         if (!container) {
             console.error('Booking history container not found');
             return;
         }
 
-        if (bookings.length === 0) {
-            container.innerHTML = '<tr><td colspan="5" class="text-center">История бронирований пуста</td></tr>';
+        if (projects.length === 0) {
+            container.innerHTML = '<tr><td colspan="4" class="text-center">История проектов пуста</td></tr>';
+            if (countBadge) countBadge.textContent = '0';
+            if (statusElement) statusElement.textContent = 'История пуста';
             return;
         }
 
-        const projects = groupBookingsByProject(bookings);
-        container.innerHTML = projects.map(project => createProjectRow(project)).join('');
-    } catch (error) {
-        console.error('Error loading booking history:', error);
-        const container = document.getElementById('bookingHistory');
-        if (container) {
-            container.innerHTML = '<tr><td colspan="5" class="text-center text-danger">Ошибка при загрузке истории бронирований</td></tr>';
+        // Convert projects to the format expected by createProjectRow
+        const projectsWithEquipment = await Promise.all(projects.map(async (project) => {
+            try {
+                // Get project bookings to extract equipment
+                const bookings = await api.get(`/projects/${project.id}/bookings`);
+                return {
+                    id: project.id,
+                    name: project.name,
+                    status: project.status,
+                    start_date: new Date(project.start_date),
+                    end_date: new Date(project.end_date),
+                    equipment: bookings.map(booking => ({
+                        id: booking.equipment_id,
+                        name: booking.equipment_name,
+                        quantity: booking.quantity || 1
+                    }))
+                };
+            } catch (error) {
+                console.error(`Error loading equipment for project ${project.id}:`, error);
+                return {
+                    id: project.id,
+                    name: project.name,
+                    status: project.status,
+                    start_date: new Date(project.start_date),
+                    end_date: new Date(project.end_date),
+                    equipment: []
+                };
+            }
+        }));
+
+        // Sort projects by start date (newest first)
+        projectsWithEquipment.sort((a, b) => b.start_date - a.start_date);
+
+        container.innerHTML = projectsWithEquipment.map(project => createProjectRow(project)).join('');
+
+        // Update UI indicators
+        if (countBadge) {
+            countBadge.textContent = projects.length;
+            countBadge.className = 'badge bg-info ms-2'; // Change color to indicate data loaded
         }
+        if (statusElement) {
+            statusElement.textContent = `${projects.length} ${projects.length === 1 ? 'завершенный проект' : projects.length < 5 ? 'завершенных проекта' : 'завершенных проектов'}`;
+        }
+    } catch (error) {
+        console.error('Error loading project history:', error);
+        const container = document.getElementById('bookingHistory');
+        const countBadge = document.getElementById('historyProjectsCount');
+        const statusElement = document.getElementById('historyStatus');
+
+        if (container) {
+            container.innerHTML = '<tr><td colspan="4" class="text-center text-danger">Ошибка при загрузке истории проектов</td></tr>';
+        }
+        if (countBadge) {
+            countBadge.textContent = '!';
+            countBadge.className = 'badge bg-danger ms-2';
+        }
+        if (statusElement) statusElement.textContent = 'Ошибка загрузки';
     }
 }
 

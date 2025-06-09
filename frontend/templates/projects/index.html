@@ -79,38 +79,78 @@
 <!-- Card view -->
 <div id="cardView" class="view-container d-none">
     <!-- Draft projects group -->
-    <div id="draftProjects" class="project-group mb-4">
-        <div class="group-header bg-secondary bg-opacity-10 p-3 mb-3">
-            <h4 class="m-0"><i class="fas fa-file-alt me-2"></i>Черновики</h4>
+    <div class="card mb-3" id="draftProjects">
+        <div class="card-header bg-secondary text-white">
+            <button class="btn btn-link text-decoration-none p-0 w-100 text-start text-white" type="button" data-bs-toggle="collapse" data-bs-target="#collapseDraft" aria-expanded="true" aria-controls="collapseDraft">
+                <i class="fas fa-file-alt me-2"></i>Черновики
+                <i class="fas fa-chevron-down ms-2 float-end collapse-icon"></i>
+            </button>
         </div>
-        <div class="row g-3" id="draftProjectsList"></div>
-        <div class="empty-message d-none" id="emptyDraftMessage">
-            <i class="fas fa-file-alt fa-2x mb-3"></i>
-            <p>Нет черновиков проектов</p>
+        <div id="collapseDraft" class="collapse show">
+            <div class="card-body">
+                <div class="row g-3" id="draftProjectsList"></div>
+                <div class="empty-message d-none text-center text-muted py-3" id="emptyDraftMessage">
+                    <i class="fas fa-file-alt fa-2x mb-3"></i>
+                    <p>Нет черновиков проектов</p>
+                </div>
+            </div>
         </div>
     </div>
 
     <!-- Active projects group -->
-    <div id="activeProjects" class="project-group mb-4">
-        <div class="group-header bg-success bg-opacity-10 p-3 mb-3">
-            <h4 class="m-0"><i class="fas fa-play me-2"></i>Активные проекты</h4>
+    <div class="card mb-3" id="activeProjects">
+        <div class="card-header bg-success text-white">
+            <button class="btn btn-link text-decoration-none p-0 w-100 text-start text-white" type="button" data-bs-toggle="collapse" data-bs-target="#collapseActive" aria-expanded="true" aria-controls="collapseActive">
+                <i class="fas fa-play me-2"></i>Активные проекты
+                <i class="fas fa-chevron-down ms-2 float-end collapse-icon"></i>
+            </button>
         </div>
-        <div class="row g-3" id="activeProjectsList"></div>
-        <div class="empty-message d-none" id="emptyActiveMessage">
-            <i class="fas fa-play fa-2x mb-3"></i>
-            <p>Нет активных проектов</p>
+        <div id="collapseActive" class="collapse show">
+            <div class="card-body">
+                <div class="row g-3" id="activeProjectsList"></div>
+                <div class="empty-message d-none text-center text-muted py-3" id="emptyActiveMessage">
+                    <i class="fas fa-play fa-2x mb-3"></i>
+                    <p>Нет активных проектов</p>
+                </div>
+            </div>
         </div>
     </div>
 
-    <!-- Other projects group -->
-    <div id="otherProjects" class="project-group mb-4">
-        <div class="group-header bg-info bg-opacity-10 p-3 mb-3">
-            <h4 class="m-0"><i class="fas fa-archive me-2"></i>Прочие проекты</h4>
+    <!-- Completed projects group -->
+    <div class="card mb-3" id="completedProjects">
+        <div class="card-header bg-info text-white">
+            <button class="btn btn-link text-decoration-none p-0 w-100 text-start text-white" type="button" data-bs-toggle="collapse" data-bs-target="#collapseCompleted" aria-expanded="true" aria-controls="collapseCompleted">
+                <i class="fas fa-check-circle me-2"></i>Завершенные проекты
+                <i class="fas fa-chevron-down ms-2 float-end collapse-icon"></i>
+            </button>
         </div>
-        <div class="row g-3" id="otherProjectsList"></div>
-        <div class="empty-message d-none" id="emptyOtherMessage">
-            <i class="fas fa-archive fa-2x mb-3"></i>
-            <p>Нет прочих проектов</p>
+        <div id="collapseCompleted" class="collapse show">
+            <div class="card-body">
+                <div class="row g-3" id="completedProjectsList"></div>
+                <div class="empty-message d-none text-center text-muted py-3" id="emptyCompletedMessage">
+                    <i class="fas fa-check-circle fa-2x mb-3"></i>
+                    <p>Нет завершенных проектов</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cancelled projects group -->
+    <div class="card mb-3" id="cancelledProjects">
+        <div class="card-header bg-danger text-white">
+            <button class="btn btn-link text-decoration-none p-0 w-100 text-start text-white" type="button" data-bs-toggle="collapse" data-bs-target="#collapseCancelled" aria-expanded="true" aria-controls="collapseCancelled">
+                <i class="fas fa-times-circle me-2"></i>Отмененные проекты
+                <i class="fas fa-chevron-down ms-2 float-end collapse-icon"></i>
+            </button>
+        </div>
+        <div id="collapseCancelled" class="collapse show">
+            <div class="card-body">
+                <div class="row g-3" id="cancelledProjectsList"></div>
+                <div class="empty-message d-none text-center text-muted py-3" id="emptyCancelledMessage">
+                    <i class="fas fa-times-circle fa-2x mb-3"></i>
+                    <p>Нет отмененных проектов</p>
+                </div>
+            </div>
         </div>
     </div>
 </div>

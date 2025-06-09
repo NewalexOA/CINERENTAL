@@ -66,16 +66,20 @@
         </div>
     </div>
 
-    <!-- Active bookings -->
+    <!-- Active projects -->
     <div class="col-md-8">
         <div class="card mb-4">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h5 class="card-title mb-0">
-                    <i class="fas fa-box me-2"></i>Активные бронирования
+                    <i class="fas fa-box me-2"></i>Активные проекты
+                    <span id="activeProjectsCount" class="badge bg-primary ms-2">0</span>
                 </h5>
-                <a href="/projects/new?client_id={{ client.id }}" class="btn btn-primary btn-sm">
-                    <i class="fas fa-plus"></i> Новый проект
-                </a>
+                <div class="d-flex align-items-center gap-2">
+                    <small class="text-muted" id="activeStatus">Загрузка...</small>
+                    <a href="/projects/new?client_id={{ client.id }}" class="btn btn-primary btn-sm">
+                        <i class="fas fa-plus"></i> Новый проект
+                    </a>
+                </div>
             </div>
             <div class="card-body">
                 <div class="table-responsive">
@@ -86,12 +90,11 @@
                                 <th>Оборудование</th>
                                 <th>Период</th>
                                 <th>Статус</th>
-                                <th>Действия</th>
                             </tr>
                         </thead>
                         <tbody id="activeBookings">
                             <tr>
-                                <td colspan="5" class="text-center py-4">
+                                <td colspan="4" class="text-center py-4">
                                     <div class="spinner-border text-primary" role="status">
                                         <span class="visually-hidden">Загрузка...</span>
                                     </div>
@@ -103,12 +106,14 @@
             </div>
         </div>
 
-        <!-- Booking History -->
+        <!-- Project History -->
         <div class="card">
-            <div class="card-header">
+            <div class="card-header d-flex justify-content-between align-items-center">
                 <h5 class="card-title mb-0">
-                    <i class="fas fa-history me-2"></i>История бронирований
+                    <i class="fas fa-history me-2"></i>История проектов
+                    <span id="historyProjectsCount" class="badge bg-secondary ms-2">0</span>
                 </h5>
+                <small class="text-muted" id="historyStatus">Загрузка...</small>
             </div>
             <div class="card-body">
                 <div class="table-responsive">
@@ -119,12 +124,11 @@
                                 <th>Оборудование</th>
                                 <th>Период</th>
                                 <th>Статус</th>
-                                <th>Действия</th>
                             </tr>
                         </thead>
                         <tbody id="bookingHistory">
                             <tr>
-                                <td colspan="5" class="text-center py-4">
+                                <td colspan="4" class="text-center py-4">
                                     <div class="spinner-border text-primary" role="status">
                                         <span class="visually-hidden">Загрузка...</span>
                                     </div>
