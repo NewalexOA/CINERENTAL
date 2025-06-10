@@ -299,16 +299,9 @@ function initPeriodPicker() {
 function applyFilters() {
     const form = document.getElementById('searchForm');
     const formData = new FormData(form);
-    const searchInput = document.getElementById('searchQuery');
 
     filters.client_id = formData.get('client_id') || null;
     filters.status = formData.get('status') || null;
-
-    // Get query from search input
-    if (searchInput) {
-        const query = searchInput.value.trim();
-        filters.query = query.length >= 3 ? query : null;
-    }
 
     currentPage = 1;
     loadProjects();
@@ -317,6 +310,8 @@ function applyFilters() {
 // Load projects with pagination and filters
 async function loadProjects() {
     const projectsList = document.getElementById('projectsList');
+    const spinner = document.getElementById('search-spinner');
+
     projectsList.innerHTML = `
         <tr>
             <td colspan="6" class="text-center py-4">
@@ -367,6 +362,11 @@ async function loadProjects() {
 
         // Update pagination controls
         updatePagination();
+
+        // Hide search spinner after successful API response
+        if (spinner) {
+            spinner.classList.add('d-none');
+        }
     } catch (error) {
         console.error('Error loading projects:', error);
         if (typeof showToast === 'function') {
@@ -395,6 +395,11 @@ async function loadProjects() {
         document.getElementById('activeProjectsList').innerHTML = errorMessage;
         document.getElementById('completedProjectsList').innerHTML = errorMessage;
         document.getElementById('cancelledProjectsList').innerHTML = errorMessage;
+
+        // Hide search spinner even on error
+        if (spinner) {
+            spinner.classList.add('d-none');
+        }
     }
 }
 
@@ -590,22 +595,11 @@ function renderCardView(projects) {
 
     // Show "No projects" message if all groups are empty
     if (projects.length === 0) {
-        const noProjectsMessage = `
-            <div class="col-12 py-5 text-center text-muted">
-                <i class="fas fa-folder-open fa-3x mb-3"></i>
-                <p>Нет проектов, соответствующих условиям поиска</p>
-            </div>
-        `;
-        draftProjectsList.innerHTML = noProjectsMessage;
-
         // Hide all accordion sections when no projects
         document.getElementById('draftProjects').classList.add('d-none');
         document.getElementById('activeProjects').classList.add('d-none');
         document.getElementById('completedProjects').classList.add('d-none');
         document.getElementById('cancelledProjects').classList.add('d-none');
-
-        // Show a general message instead
-        document.getElementById('cardView').innerHTML = `<div class="text-center py-5">${noProjectsMessage}</div>`;
     }
 }
 
