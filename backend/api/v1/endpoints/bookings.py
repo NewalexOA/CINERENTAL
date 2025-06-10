@@ -33,6 +33,32 @@ from backend.services import BookingService, ClientService
 bookings_router: APIRouter = APIRouter()
 
 
+def _extract_safe_name(
+    obj: Any, name_attr: str, fallback_id: int, fallback_prefix: str
+) -> str:
+    """Extract name safely with fallback logic.
+
+    Args:
+        obj: Object to extract name from (can be None)
+        name_attr: Name of the attribute to extract (e.g., 'name')
+        fallback_id: ID to use in fallback name
+        fallback_prefix: Prefix for fallback name (e.g., 'Client', 'Equipment')
+
+    Returns:
+        Safe name string with fallback logic
+    """
+    if obj is None:
+        return f'{fallback_prefix} {fallback_id}'
+
+    if hasattr(obj, name_attr):
+        name_value = getattr(obj, name_attr)
+        if name_value:  # Check if name is not None and not empty
+            return str(name_value)
+
+    # Fallback to ID-based name
+    return f'{fallback_prefix} {fallback_id}'
+
+
 async def _booking_to_response(
     booking_obj: Any, db: Optional[AsyncSession] = None
 ) -> BookingResponse:
@@ -261,9 +287,19 @@ async def get_bookings(
                     payment_status=booking.payment_status,
                     created_at=booking.created_at,
                     updated_at=booking.updated_at,
-                    equipment_name=booking.equipment.name if booking.equipment else '',
-                    client_name=booking.client.name if booking.client else '',
-                    project_name=booking.project.name if booking.project else None,
+                    equipment_name=_extract_safe_name(
+                        booking.equipment, 'name', booking.equipment_id, 'Equipment'
+                    ),
+                    client_name=_extract_safe_name(
+                        booking.client, 'name', booking.client_id, 'Client'
+                    ),
+                    project_name=(
+                        _extract_safe_name(
+                            booking.project, 'name', booking.project_id, 'Project'
+                        )
+                        if booking.project_id
+                        else None
+                    ),
                     quantity=booking.quantity,
                 )
                 for booking in bookings
