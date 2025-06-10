@@ -370,6 +370,7 @@ class ProjectService:
         status: Optional[ProjectStatus] = None,
         start_date: Optional[datetime] = None,
         end_date: Optional[datetime] = None,
+        query: Optional[str] = None,
     ) -> Tuple[List[Project], int]:
         """Get projects with pagination and filtering.
 
@@ -380,6 +381,7 @@ class ProjectService:
             status: Filter by project status
             start_date: Filter by start date
             end_date: Filter by end date
+            query: Search by project name (case-insensitive)
 
         Returns:
             Tuple of list of projects and total count
@@ -394,6 +396,7 @@ class ProjectService:
             status=status.value if status else None,
             start_date=start_date,
             end_date=end_date,
+            query=query,
         )
 
         # Validate client_id if provided
@@ -414,6 +417,7 @@ class ProjectService:
             status=status,
             start_date=start_date,
             end_date=end_date,
+            query=query,
         )
 
         log.debug(ProjectLogMessages.PROJECT_LISTING, len(result[0]))
@@ -426,6 +430,7 @@ class ProjectService:
         start_date: Optional[datetime] = None,
         end_date: Optional[datetime] = None,
         include_deleted: bool = False,
+        query: Optional[str] = None,
     ) -> Any:
         """Get projects list query for pagination.
 
@@ -435,6 +440,7 @@ class ProjectService:
             start_date: Filter by start date
             end_date: Filter by end date
             include_deleted: Whether to include deleted projects
+            query: Search by project name (case-insensitive)
 
         Returns:
             SQLAlchemy query object
@@ -458,6 +464,7 @@ class ProjectService:
             start_date=start_date,
             end_date=end_date,
             include_deleted=include_deleted,
+            query=query,
         )
 
     async def update_project(

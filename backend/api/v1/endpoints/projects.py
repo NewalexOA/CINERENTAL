@@ -50,6 +50,7 @@ async def get_projects(
     project_status: Optional[ProjectStatus] = None,
     start_date: Optional[datetime] = None,
     end_date: Optional[datetime] = None,
+    query: Optional[str] = None,
 ) -> List[ProjectResponse]:
     """Get all projects with pagination and filtering.
 
@@ -61,6 +62,7 @@ async def get_projects(
         project_status: Filter by project status
         start_date: Filter by start date
         end_date: Filter by end date
+        query: Search by project name (case-insensitive)
 
     Returns:
         List of projects
@@ -72,6 +74,7 @@ async def get_projects(
         status=project_status.value if project_status else None,
         start_date=start_date,
         end_date=end_date,
+        query=query,
     )
 
     service = ProjectService(db)
@@ -83,6 +86,7 @@ async def get_projects(
             status=project_status,
             start_date=start_date,
             end_date=end_date,
+            query=query,
         )
 
         log.debug('Retrieved {} projects', len(projects))
@@ -116,6 +120,7 @@ async def get_projects_paginated(
     project_status: Optional[ProjectStatus] = None,
     start_date: Optional[datetime] = None,
     end_date: Optional[datetime] = None,
+    query: Optional[str] = None,
 ) -> Page[ProjectResponse]:
     """Get projects with pagination.
 
@@ -126,6 +131,7 @@ async def get_projects_paginated(
         project_status: Filter by project status
         start_date: Filter by start date
         end_date: Filter by end date
+        query: Search by project name (case-insensitive)
 
     Returns:
         Paginated list of projects
@@ -135,6 +141,7 @@ async def get_projects_paginated(
         status=project_status.value if project_status else None,
         start_date=start_date,
         end_date=end_date,
+        query=query,
     )
 
     try:
@@ -146,6 +153,7 @@ async def get_projects_paginated(
             status=project_status,
             start_date=start_date,
             end_date=end_date,
+            query=query,
         )
 
         # Use fastapi-pagination to paginate the query with transformer
