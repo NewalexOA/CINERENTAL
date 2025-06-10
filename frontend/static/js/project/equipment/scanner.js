@@ -45,14 +45,30 @@ export function stopHIDScanner() {
 }
 
 /**
+ * Auto-start HID scanner for unified equipment search interface
+ */
+export function autoStartHIDScanner() {
+    console.log('Auto-starting HID scanner for equipment search');
+    startHIDScanner();
+}
+
+/**
+ * Auto-stop HID scanner for unified equipment search interface
+ */
+export function autoStopHIDScanner() {
+    console.log('Auto-stopping HID scanner');
+    stopHIDScanner();
+}
+
+/**
  * Handle HID scanner result
  * @param {Object} equipment - Equipment data from API
  * @param {Object} scanInfo - Additional scan information
  */
-function handleHIDScanResult(equipment, scanInfo) {
+async function handleHIDScanResult(equipment, scanInfo) {
     console.log('HID Scanner detected equipment:', equipment);
 
-    // Заполняем поле ввода штрих-кода
+    // Fill the barcode input field
     const barcodeInput = document.getElementById('barcodeInput');
     if (barcodeInput) {
         barcodeInput.value = equipment.barcode;
@@ -63,8 +79,13 @@ function handleHIDScanResult(equipment, scanInfo) {
         }, 2000);
     }
 
-    // Автоматически выполняем поиск
-    searchEquipmentByBarcode();
+    try {
+        await searchEquipmentByBarcode();
+    } catch (error) {
+        // If barcode search failed, try catalog search
+        const { searchEquipmentInCatalog } = await import('./search.js');
+        searchEquipmentInCatalog();
+    }
 
     showToast(`Отсканирован штрих-код: ${equipment.barcode}`, 'success');
 }

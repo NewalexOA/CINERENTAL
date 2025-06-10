@@ -72,7 +72,8 @@ export function updatePaginationUI() {
 
     if (!paginationElement) return;
 
-    if (totalCount > 0) {
+    // Show pagination only if there are more results than page size
+    if (totalCount > pageSize) {
         paginationElement.classList.remove('d-none');
         const startItem = (currentPage - 1) * pageSize + 1;
         const endItem = Math.min(currentPage * pageSize, totalCount);
@@ -329,8 +330,8 @@ export function renderEquipmentSection(project) {
             return;
         }
 
-        // Detailed logging of booking structure
-        console.log('Booking data structure:', JSON.stringify(booking, null, 2));
+        // Basic booking validation log
+        console.debug('Processing booking:', booking.id, 'equipment:', booking.equipment_name);
 
         const equipmentName = booking.equipment_name || 'Неизвестное оборудование';
         const barcode = booking.barcode || '';

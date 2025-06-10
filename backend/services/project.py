@@ -419,6 +419,47 @@ class ProjectService:
         log.debug(ProjectLogMessages.PROJECT_LISTING, len(result[0]))
         return result
 
+    async def get_projects_list_query(
+        self,
+        client_id: Optional[int] = None,
+        status: Optional[ProjectStatus] = None,
+        start_date: Optional[datetime] = None,
+        end_date: Optional[datetime] = None,
+        include_deleted: bool = False,
+    ) -> Any:
+        """Get projects list query for pagination.
+
+        Args:
+            client_id: Filter by client ID
+            status: Filter by project status
+            start_date: Filter by start date
+            end_date: Filter by end date
+            include_deleted: Whether to include deleted projects
+
+        Returns:
+            SQLAlchemy query object
+
+        Raises:
+            NotFoundError: If client not found
+        """
+        # Validate client_id if provided
+        if client_id is not None:
+            client = await self.client_repository.get(client_id)
+            if client is None:
+                raise NotFoundError(
+                    ProjectErrorMessages.CLIENT_NOT_FOUND.format(client_id),
+                    details={'client_id': client_id},
+                )
+
+        # Get paginatable query
+        return self.repository.get_paginatable_query(
+            client_id=client_id,
+            status=status,
+            start_date=start_date,
+            end_date=end_date,
+            include_deleted=include_deleted,
+        )
+
     async def update_project(
         self,
         project_id: int,

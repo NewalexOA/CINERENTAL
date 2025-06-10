@@ -4,7 +4,7 @@
 
 import { checkEquipmentAvailability, initializeBookingPeriodPickers, initializeNewBookingPeriodPicker } from './availability.js';
 import { handleQuantityIncrease, handleQuantityDecrease, handleBookingRemoval, addSelectedEquipmentToProject } from './booking.js';
-import { initializeHIDScanner, startHIDScanner, stopHIDScanner } from './scanner.js';
+import { initializeHIDScanner, startHIDScanner, stopHIDScanner, autoStartHIDScanner, autoStopHIDScanner } from './scanner.js';
 import { initializeCategoryFilter, setupSearchInput, setupPaginationButtons, searchEquipmentByBarcode, searchEquipmentInCatalog } from './search.js';
 import { displaySearchResults, updatePaginationUI, selectEquipment, showEquipmentDetails, hideEquipmentDetails, resetEquipmentSelection, showAddEquipmentZone, hideAddEquipmentZone, renderEquipmentSection } from './ui.js';
 
@@ -12,7 +12,7 @@ import { displaySearchResults, updatePaginationUI, selectEquipment, showEquipmen
 export {
     checkEquipmentAvailability, initializeBookingPeriodPickers, initializeNewBookingPeriodPicker,
     handleQuantityIncrease, handleQuantityDecrease, handleBookingRemoval, addSelectedEquipmentToProject,
-    initializeHIDScanner, startHIDScanner, stopHIDScanner,
+    initializeHIDScanner, startHIDScanner, stopHIDScanner, autoStartHIDScanner, autoStopHIDScanner,
     initializeCategoryFilter, setupSearchInput, setupPaginationButtons, searchEquipmentByBarcode, searchEquipmentInCatalog,
     displaySearchResults, updatePaginationUI, selectEquipment, showEquipmentDetails, hideEquipmentDetails, resetEquipmentSelection, showAddEquipmentZone, hideAddEquipmentZone, renderEquipmentSection
 };
@@ -51,59 +51,23 @@ export function initializeEquipmentManagement() {
         btn.addEventListener('click', handleBookingRemoval);
     });
 
-    // Add equipment zone functionality
+    // Add equipment zone functionality with auto HID scanner management
     document.getElementById('addEquipmentBtn')?.addEventListener('click', () => {
         showAddEquipmentZone();
         initializeNewBookingPeriodPicker();
+        autoStartHIDScanner(); // Auto-start HID scanner when opening modal
     });
-    document.getElementById('closeAddZoneBtn')?.addEventListener('click', hideAddEquipmentZone);
+    document.getElementById('closeAddZoneBtn')?.addEventListener('click', () => {
+        hideAddEquipmentZone();
+        autoStopHIDScanner(); // Auto-stop HID scanner when closing modal
+    });
     document.getElementById('closeEquipmentDetailsBtn')?.addEventListener('click', hideEquipmentDetails);
 
-    // Search functionality
-    document.getElementById('searchBarcodeBtn')?.addEventListener('click', searchEquipmentByBarcode);
-    document.getElementById('searchCatalogBtn')?.addEventListener('click', searchEquipmentInCatalog);
+    // Search functionality handled by input events and debounce in search.js
 
     // Add to project button
     document.getElementById('addToProjectBtn')?.addEventListener('click', addSelectedEquipmentToProject);
 
-    // Initialize HID scanner and setup tab switching
+    // Initialize HID scanner (without auto-starting - will be managed by modal open/close)
     initializeHIDScanner();
-    setupTabSwitching();
-
-    // Auto-start HID scanner if scanner tab is active by default
-    const scannerTab = document.getElementById('scanner-tab');
-    if (scannerTab && scannerTab.classList.contains('active')) {
-        console.log('Scanner tab is active on page load, starting HID scanner');
-        // Small delay to ensure DOM is fully ready
-        setTimeout(() => {
-            startHIDScanner();
-        }, 100);
-    }
-}
-
-/**
- * Setup tab switching for scanner functionality
- */
-function setupTabSwitching() {
-    const scannerTab = document.getElementById('scanner-tab');
-    const catalogTab = document.getElementById('catalog-tab');
-
-    if (scannerTab) {
-        scannerTab.addEventListener('shown.bs.tab', function() {
-            console.log('Scanner tab activated');
-            startHIDScanner();
-        });
-
-        scannerTab.addEventListener('hidden.bs.tab', function() {
-            console.log('Scanner tab deactivated');
-            stopHIDScanner();
-        });
-    }
-
-    if (catalogTab) {
-        catalogTab.addEventListener('shown.bs.tab', function() {
-            console.log('Catalog tab activated');
-            stopHIDScanner();
-        });
-    }
 }

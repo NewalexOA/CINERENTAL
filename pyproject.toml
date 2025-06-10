@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "act-rental"
-version = "v0.10.0-beta.1"
+version = "v0.12.0-beta.1"
 description = "Equipment rental management system"
 authors = ["Alexey Anashkin <dev.anashkin@gmail.com>"]
 license = "MIT"
@@ -34,6 +34,7 @@ isort = "^6.0.0"
 flake8 = "^7.0.0"
 mypy = "^1.8.0"
 pre-commit = "^3.6.0"
+psycopg2-binary = "^2.9.9"
 types-redis = "^4.6.0.20240106"
 types-passlib = "^1.7.7.20240106"
 types-python-jose = "^3.3.4.20240106"

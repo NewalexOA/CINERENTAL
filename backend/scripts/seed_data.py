@@ -1,9 +1,12 @@
 """Script to seed database with test data."""
 
+import argparse
 import asyncio
+import json
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
-from typing import Dict
+from pathlib import Path
+from typing import Any, Dict, List
 
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
@@ -15,12 +18,359 @@ from backend.models.category import Category
 from backend.models.client import Client, ClientStatus
 from backend.models.core import Base
 from backend.models.equipment import Equipment, EquipmentStatus
+from backend.models.project import Project, ProjectStatus
 from backend.repositories.booking import BookingRepository
 from backend.repositories.category import CategoryRepository
 from backend.repositories.client import ClientRepository
 from backend.repositories.equipment import EquipmentRepository
+from backend.repositories.project import ProjectRepository
 from backend.schemas import PaymentStatus
 from backend.services.barcode import BarcodeService
+
+
+async def load_extended_data_from_json(
+    session: AsyncSession,
+    json_file: Path,
+) -> None:
+    """Load production data from JSON file.
+
+    Args:
+        session: Database session
+        json_file: Path to JSON file with production data
+    """
+    if not json_file.exists():
+        logger.error('Production data file not found: {}', json_file)
+        raise FileNotFoundError(f'Production data file not found: {json_file}')
+
+    logger.info('Loading production data from {}', json_file)
+
+    with open(json_file, 'r', encoding='utf-8') as f:
+        data = json.load(f)
+
+    # Load categories first and get ID mapping
+    category_id_mapping = await load_categories_from_json(session, data['categories'])
+
+    # Load clients and get ID mapping
+    client_id_mapping = await load_clients_from_json(session, data['clients'])
+
+    # Update equipment data with new category IDs
+    updated_equipment_data = []
+    for equipment in data['equipment']:
+        old_category_id = equipment['category_id']
+        if old_category_id in category_id_mapping:
+            equipment['category_id'] = category_id_mapping[old_category_id]
+            updated_equipment_data.append(equipment)
+        else:
+            logger.warning(
+                'Equipment "{}" references unknown category_id: {}. Skipping.',
+                equipment.get('name', 'Unknown'),
+                old_category_id,
+            )
+
+    # Load equipment with updated category IDs and get ID mapping
+    equipment_id_mapping = await load_equipment_from_json(
+        session, updated_equipment_data
+    )
+
+    # Update projects data with new client IDs and load projects
+    project_id_mapping = await load_projects_from_json(
+        session, data['projects'], client_id_mapping
+    )
+
+    # Update bookings data with new client, equipment, and project IDs
+    await load_bookings_from_json(
+        session,
+        data['bookings'],
+        client_id_mapping,
+        project_id_mapping,
+        equipment_id_mapping,
+    )
+
+    logger.info('Production data loaded successfully')
+
+
+async def load_categories_from_json(
+    session: AsyncSession,
+    categories_data: List[Dict[str, Any]],
+) -> Dict[int, int]:
+    """Load categories from JSON data with proper hierarchical ordering.
+
+    Returns:
+        Dict mapping old category IDs to new category IDs
+    """
+    repository = CategoryRepository(session)
+
+    # Create mapping for old IDs to new IDs
+    id_mapping = {}
+
+    # Phase 1: Create root categories (parent_id is None)
+    root_categories = [cat for cat in categories_data if cat.get('parent_id') is None]
+
+    for cat_data in root_categories:
+        # Check if category already exists
+        existing = await repository.get_by_name(cat_data['name'])
+        if existing:
+            logger.info('Category already exists: {}', cat_data['name'])
+            id_mapping[cat_data['id']] = existing.id
+            continue
+
+        category = Category(
+            name=cat_data['name'],
+            description=cat_data['description'],
+            parent_id=None,
+            show_in_print_overview=cat_data.get('show_in_print_overview', True),
+        )
+        created_category = await repository.create(category)
+        id_mapping[cat_data['id']] = created_category.id
+        logger.info('Created root category: {}', category.name)
+
+    # Phase 2: Create child categories in multiple passes
+    child_categories = [
+        cat for cat in categories_data if cat.get('parent_id') is not None
+    ]
+    remaining_categories = child_categories.copy()
+    max_iterations = len(child_categories) + 1  # Prevent infinite loops
+    iteration = 0
+
+    while remaining_categories and iteration < max_iterations:
+        iteration += 1
+        categories_created_this_iteration = []
+
+        for cat_data in remaining_categories:
+            old_parent_id = cat_data['parent_id']
+
+            # Check if parent category has been created (exists in mapping)
+            if old_parent_id in id_mapping:
+                # Check if category already exists
+                existing = await repository.get_by_name(cat_data['name'])
+                if existing:
+                    logger.info('Category already exists: {}', cat_data['name'])
+                    id_mapping[cat_data['id']] = existing.id
+                    categories_created_this_iteration.append(cat_data)
+                    continue
+
+                category = Category(
+                    name=cat_data['name'],
+                    description=cat_data['description'],
+                    parent_id=id_mapping[old_parent_id],
+                    show_in_print_overview=cat_data.get('show_in_print_overview', True),
+                )
+                created_category = await repository.create(category)
+                id_mapping[cat_data['id']] = created_category.id
+                categories_created_this_iteration.append(cat_data)
+                logger.info(
+                    'Created child category: {} (parent: {})',
+                    category.name,
+                    old_parent_id,
+                )
+
+        # Remove successfully created categories from remaining list
+        for created_cat in categories_created_this_iteration:
+            remaining_categories.remove(created_cat)
+
+        # If no categories were created in this iteration,
+        # log remaining problematic ones
+        if not categories_created_this_iteration and remaining_categories:
+            logger.warning(
+                'Could not create {} categories due to missing parents:',
+                len(remaining_categories),
+            )
+            for cat_data in remaining_categories:
+                logger.warning(
+                    '  - "{}" (parent_id: {})', cat_data['name'], cat_data['parent_id']
+                )
+            break
+
+    logger.info(
+        'Category loading completed. Created mapping for {} categories', len(id_mapping)
+    )
+    return id_mapping
+
+
+async def load_clients_from_json(
+    session: AsyncSession,
+    clients_data: List[Dict[str, Any]],
+) -> Dict[int, int]:
+    """Load clients from JSON data."""
+    repository = ClientRepository(session)
+
+    id_mapping = {}
+
+    for client_data in clients_data:
+        # Check if client already exists by email
+        existing = await repository.get_by_email(client_data['email'])
+        if existing:
+            logger.info('Client already exists: {}', client_data['name'])
+            id_mapping[client_data['id']] = existing.id
+            continue
+
+        client = Client(
+            name=client_data['name'],
+            email=client_data['email'],
+            phone=client_data['phone'],
+            company=client_data.get('company'),
+            status=getattr(ClientStatus, client_data['status']),
+            notes=client_data.get('notes'),
+        )
+        await repository.create(client)
+        logger.info('Created client: {}', client.name)
+        id_mapping[client_data['id']] = client.id
+
+    return id_mapping
+
+
+async def load_equipment_from_json(
+    session: AsyncSession,
+    equipment_data: List[Dict[str, Any]],
+) -> Dict[int, int]:
+    """Load equipment from JSON data."""
+    repository = EquipmentRepository(session)
+
+    id_mapping = {}
+
+    for eq_data in equipment_data:
+        # Check if equipment already exists by barcode
+        existing = await repository.get_by_barcode(eq_data['barcode'])
+        if existing:
+            logger.info('Equipment already exists: {}', eq_data['name'])
+            id_mapping[eq_data['id']] = existing.id
+            continue
+
+        equipment = Equipment(
+            name=eq_data['name'],
+            description=eq_data.get('description'),
+            serial_number=eq_data.get('serial_number'),
+            barcode=eq_data['barcode'],
+            category_id=eq_data['category_id'],
+            status=getattr(EquipmentStatus, eq_data['status']),
+            replacement_cost=eq_data.get('replacement_cost', 0),
+            notes=eq_data.get('notes'),
+        )
+        await repository.create(equipment)
+        id_mapping[eq_data['id']] = equipment.id
+        logger.info('Created equipment: {}', equipment.name)
+
+    return id_mapping
+
+
+async def load_projects_from_json(
+    session: AsyncSession,
+    projects_data: List[Dict[str, Any]],
+    client_id_mapping: Dict[int, int],
+) -> Dict[int, int]:
+    """Load projects from JSON data."""
+    repository = ProjectRepository(session)
+
+    id_mapping = {}
+
+    for proj_data in projects_data:
+        # Skip projects with missing client references
+        if proj_data['client_id'] not in client_id_mapping:
+            logger.warning(
+                'Project "{}" references unknown client_id: {}. Skipping.',
+                proj_data.get('name', 'Unknown'),
+                proj_data['client_id'],
+            )
+            continue
+
+        existing_projects = await repository.get_all()
+        if any(p.name == proj_data['name'] for p in existing_projects):
+            logger.info('Project already exists: {}', proj_data['name'])
+            # Find the existing project with matching name
+            existing_project = next(
+                p for p in existing_projects if p.name == proj_data['name']
+            )
+            id_mapping[proj_data['id']] = existing_project.id
+            continue
+
+        project = Project(
+            name=proj_data['name'],
+            client_id=client_id_mapping[proj_data['client_id']],
+            start_date=(
+                datetime.fromisoformat(proj_data['start_date'])
+                if proj_data['start_date']
+                else None
+            ),
+            end_date=(
+                datetime.fromisoformat(proj_data['end_date'])
+                if proj_data['end_date']
+                else None
+            ),
+            status=getattr(ProjectStatus, proj_data['status']),
+            description=proj_data.get('description'),
+            notes=proj_data.get('notes'),
+        )
+        await repository.create(project)
+        logger.info('Created project: {}', project.name)
+        id_mapping[proj_data['id']] = project.id
+
+    logger.info(
+        'Project loading completed. Created mapping for {} projects', len(id_mapping)
+    )
+    return id_mapping
+
+
+async def load_bookings_from_json(
+    session: AsyncSession,
+    bookings_data: List[Dict[str, Any]],
+    client_id_mapping: Dict[int, int],
+    project_id_mapping: Dict[int, int],
+    equipment_id_mapping: Dict[int, int],
+) -> None:
+    """Load bookings from JSON data."""
+    repository = BookingRepository(session)
+
+    for booking_data in bookings_data:
+        # Skip bookings with missing references
+        if (
+            booking_data['client_id'] not in client_id_mapping
+            or booking_data['equipment_id'] not in equipment_id_mapping
+        ):
+            logger.warning(
+                'Booking references unknown client_id: {} or equipment_id: {}. '
+                'Skipping.',
+                booking_data['client_id'],
+                booking_data['equipment_id'],
+            )
+            continue
+
+        # Simple check to avoid duplicates (you may want to improve this)
+        existing_bookings = await repository.get_all()
+        mapped_client_id = client_id_mapping[booking_data['client_id']]
+        mapped_equipment_id = equipment_id_mapping[booking_data['equipment_id']]
+
+        if any(
+            b.equipment_id == mapped_equipment_id and b.client_id == mapped_client_id
+            for b in existing_bookings
+        ):
+            continue
+
+        # Get project_id with proper mapping
+        project_id = booking_data.get('project_id')
+        mapped_project_id = project_id_mapping.get(project_id) if project_id else None
+
+        booking = Booking(
+            client_id=client_id_mapping[booking_data['client_id']],
+            equipment_id=equipment_id_mapping[booking_data['equipment_id']],
+            project_id=mapped_project_id,
+            booking_status=getattr(BookingStatus, booking_data['booking_status']),
+            payment_status=getattr(PaymentStatus, booking_data['payment_status']),
+            start_date=(
+                datetime.fromisoformat(booking_data['start_date'])
+                if booking_data['start_date']
+                else None
+            ),
+            end_date=(
+                datetime.fromisoformat(booking_data['end_date'])
+                if booking_data['end_date']
+                else None
+            ),
+            total_amount=Decimal(str(booking_data.get('total_amount', 0))),
+            deposit_amount=Decimal(str(booking_data.get('deposit_amount', 0))),
+            notes=booking_data.get('notes'),
+        )
+        await repository.create(booking)
+        logger.info('Created booking for equipment {}', booking.equipment_id)
 
 
 async def create_categories(session: AsyncSession) -> Dict[str, int]:
@@ -356,8 +706,11 @@ async def create_bookings(session: AsyncSession) -> None:
     )
 
 
-async def seed_data() -> None:
+async def seed_data(use_extended_data: bool = False) -> None:
     """Seed database with test data.
+
+    Args:
+        use_extended_data: If True, load extended data from JSON file
 
     This function creates all necessary test data for development:
     - Categories
@@ -384,38 +737,41 @@ async def seed_data() -> None:
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
 
-        # Create test data
+        # Load data
         async with async_session() as session:
             try:
-                # Create categories
-                logger.info('Creating categories...')
-                category_ids = await create_categories(session)
-                logger.info('Successfully created all categories')
+                if use_extended_data:
+                    # Load extended data from JSON
+                    logger.info('Loading extended data...')
+                    json_file = Path(__file__).parent / 'extended_data.json'
+                    await load_extended_data_from_json(session, json_file)
+                    logger.info('Extended data loaded successfully')
+                else:
+                    # Create test data (original logic)
+                    logger.info('Creating test data...')
 
-                # Create subcategories
-                logger.info('Creating subcategories...')
-                await create_subcategories(session, category_ids)
-                logger.info('Successfully created all subcategories')
+                    # Create categories
+                    logger.info('Creating categories...')
+                    category_ids = await create_categories(session)
+                    logger.info('Successfully created all categories')
 
-                # Create equipment using category IDs
-                logger.info('Creating equipment...')
-                await seed_equipment(
-                    session,
-                    category_ids,
-                )
-                logger.info('Successfully created all equipment')
+                    # Create subcategories
+                    logger.info('Creating subcategories...')
+                    await create_subcategories(session, category_ids)
+                    logger.info('Successfully created all subcategories')
 
-                # Create clients
-                logger.info('Creating clients...')
-                await create_clients(session)
-                logger.info('Successfully created all clients')
+                    # Create equipment using category IDs
+                    logger.info('Creating equipment...')
+                    await seed_equipment(session, category_ids)
+                    logger.info('Successfully created all equipment')
 
-                # Create bookings
-                # logger.info('Creating bookings...')
-                # await create_bookings(session)
-                # logger.info('Successfully created all bookings')
+                    # Create clients
+                    logger.info('Creating clients...')
+                    await create_clients(session)
+                    logger.info('Successfully created all clients')
 
-                logger.info('Database seeding completed successfully')
+                    logger.info('Test data seeding completed successfully')
+
             except Exception as e:
                 logger.error('Error seeding database: {}', str(e))
                 raise
@@ -424,5 +780,21 @@ async def seed_data() -> None:
         await engine.dispose()
 
 
+def main() -> None:
+    """Main function with CLI argument parsing."""
+    parser = argparse.ArgumentParser(
+        description='Seed database with test or production data'
+    )
+    parser.add_argument(
+        '--extended-data',
+        action='store_true',
+        help='Load extended data instead of basic test data',
+    )
+
+    args = parser.parse_args()
+
+    asyncio.run(seed_data(use_extended_data=args.extended_data))
+
+
 if __name__ == '__main__':
-    asyncio.run(seed_data())
+    main()

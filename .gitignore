@@ -237,6 +237,7 @@ cython_debug/
 /memory-bank/*
 /custom_modes
 /custom_modes/*
+/ai-docs/*
 
 # HTMLHint
 .htmlhintrc
@@ -251,3 +252,7 @@ docs/Current_task/*
 !frontend/static/js/lib
 !frontend/static/css/lib
 /.supercode
+
+# Scripts
+backend/scripts/*.json
+backend/scripts/*.sql

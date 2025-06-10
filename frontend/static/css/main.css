@@ -280,16 +280,30 @@ body {
 .project-card .card-body {
   display: flex;
   flex-direction: column;
+  padding: 0.5rem 0.75rem;
 }
 
 .project-card .card-title {
-  font-size: 1.1rem;
-  margin-bottom: 0.5rem;
+  font-size: 0.95rem;
+  margin-bottom: 0.15rem;
+  line-height: 1.2;
+}
+
+.project-card .card-text {
+  margin-bottom: 0.1rem;
+  font-size: 0.85rem;
 }
 
 .project-card .project-period {
-  font-size: 0.9rem;
-  margin-top: auto;
+  font-size: 0.8rem;
+  margin-top: 0.2rem;
+  margin-bottom: 0;
+  line-height: 1.1;
+}
+
+.project-card .badge {
+  font-size: 0.8rem;
+  padding: 0.3em 0.6em;
 }
 
 .project-card .bookings-count {
@@ -334,4 +348,35 @@ body {
 
 #sessionEquipmentTable .btn-group {
     white-space: nowrap;
+}
+
+/* Collapse sections styling */
+.collapse-icon {
+    transition: transform 0.2s ease-in-out;
+}
+
+.collapsed .collapse-icon {
+    transform: rotate(-90deg);
+}
+
+/* Project sections headers */
+.card-header .btn-link:hover {
+    text-decoration: none !important;
+}
+
+.card-header .btn-link:focus {
+    box-shadow: none;
+}
+
+/* Client link styling */
+.client-link {
+    transition: color 0.2s ease-in-out;
+    cursor: pointer !important;
+    color: var(--bs-link-color, #0d6efd) !important;
+    text-decoration: none !important;
+}
+
+.client-link:hover {
+    color: var(--bs-link-hover-color, #0a58ca) !important;
+    text-decoration: underline !important;
 }

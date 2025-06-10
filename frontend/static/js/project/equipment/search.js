@@ -14,6 +14,51 @@ let totalCount = 0;
 let searchDebounceTimer;
 
 /**
+ * Safely get booking dates from daterangepicker or use fallback values
+ * @returns {Object} Object with startDate and endDate in YYYY-MM-DD format
+ */
+function getBookingDates() {
+    try {
+        const dateRange = document.getElementById('newBookingPeriod');
+
+        // Check if element exists and daterangepicker is initialized
+        if (dateRange && typeof $ !== 'undefined') {
+            const daterangepicker = $(dateRange).data('daterangepicker');
+
+            if (daterangepicker && daterangepicker.startDate && daterangepicker.endDate) {
+                return {
+                    startDate: daterangepicker.startDate.format('YYYY-MM-DD'),
+                    endDate: daterangepicker.endDate.format('YYYY-MM-DD')
+                };
+            }
+        }
+
+        // Fallback: use today and tomorrow
+        console.warn('DateRangePicker not available, using fallback dates');
+        const today = new Date();
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+
+        return {
+            startDate: today.toISOString().split('T')[0],
+            endDate: tomorrow.toISOString().split('T')[0]
+        };
+    } catch (error) {
+        console.error('Error getting booking dates:', error);
+
+        // Emergency fallback
+        const today = new Date();
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+
+        return {
+            startDate: today.toISOString().split('T')[0],
+            endDate: tomorrow.toISOString().split('T')[0]
+        };
+    }
+}
+
+/**
  * Initialize category filter
  */
 export async function initializeCategoryFilter() {
@@ -46,11 +91,12 @@ export async function initializeCategoryFilter() {
 }
 
 /**
- * Setup search input with debounce
+ * Setup search input with debounce (unified search field)
  */
 export function setupSearchInput() {
-    const searchInput = document.getElementById('catalogSearchInput');
+    const searchInput = document.getElementById('barcodeInput');
     if (searchInput) {
+        // Debounced search on input
         searchInput.addEventListener('input', () => {
             clearTimeout(searchDebounceTimer);
             const query = searchInput.value.trim();
@@ -59,6 +105,20 @@ export function setupSearchInput() {
                     currentPage = 1;
                     searchEquipmentInCatalog();
                 }, 500);
+            }
+        });
+
+        // Immediate search on Enter
+        searchInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                const query = searchInput.value.trim();
+                if (query) {
+                    // Try barcode search first, fallback to catalog search
+                    searchEquipmentByBarcode().catch(() => {
+                        searchEquipmentInCatalog();
+                    });
+                }
             }
         });
     }
@@ -107,10 +167,7 @@ export async function searchEquipmentByBarcode() {
     try {
         const equipment = await api.get(`/equipment/barcode/${barcode}`);
 
-        const dateRange = document.getElementById('newBookingPeriod');
-        const dates = $(dateRange).data('daterangepicker');
-        const startDate = dates.startDate.format('YYYY-MM-DD');
-        const endDate = dates.endDate.format('YYYY-MM-DD');
+        const { startDate, endDate } = getBookingDates();
 
         const availability = await api.get(`/equipment/${equipment.id}/availability`, {
             start_date: startDate,
@@ -128,10 +185,10 @@ export async function searchEquipmentByBarcode() {
 }
 
 /**
- * Search equipment in catalog
+ * Search equipment in catalog (unified search field)
  */
 export async function searchEquipmentInCatalog() {
-    const searchInput = document.getElementById('catalogSearchInput');
+    const searchInput = document.getElementById('barcodeInput');
     const categoryFilter = document.getElementById('categoryFilter');
     const searchSpinner = document.getElementById('search-spinner');
 
@@ -158,7 +215,38 @@ export async function searchEquipmentInCatalog() {
         currentPage = response.page;
         pageSize = response.size;
 
-        displaySearchResults(response.items);
+        // Check availability for each equipment item
+        const { startDate, endDate } = getBookingDates();
+
+        // Show loading state while checking availability
+        if (searchSpinner) {
+            searchSpinner.innerHTML = '<div class="spinner-border spinner-border-sm text-primary" role="status"><span class="visually-hidden">Проверка доступности...</span></div>';
+        }
+
+        // Check availability for all items in parallel
+        const equipmentWithAvailability = await Promise.all(
+            response.items.map(async (equipment) => {
+                try {
+                    const availability = await api.get(`/equipment/${equipment.id}/availability`, {
+                        start_date: startDate,
+                        end_date: endDate
+                    });
+                    return {
+                        ...equipment,
+                        availability: availability
+                    };
+                } catch (error) {
+                    console.error(`Error checking availability for equipment ${equipment.id}:`, error);
+                    // If availability check fails, assume available
+                    return {
+                        ...equipment,
+                        availability: { is_available: true }
+                    };
+                }
+            })
+        );
+
+        displaySearchResults(equipmentWithAvailability);
         updatePaginationUI();
     } catch (error) {
         console.error('Error searching equipment:', error);
