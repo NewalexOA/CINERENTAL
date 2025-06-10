@@ -23,12 +23,16 @@ let filters = {
     client_id: null,
     status: null,
     start_date: null,
-    end_date: null
+    end_date: null,
+    query: null
 };
 
 // View state
 let currentView = 'table'; // 'table' or 'card'
 let projectsData = []; // Cached projects data
+
+// Search debouncing timer
+let searchDebounceTimer;
 
 // Initialize collapse icons animation
 function initCollapseAnimations() {
@@ -64,6 +68,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initialize collapse animations
     initCollapseAnimations();
 
+    // Initialize search handler
+    initSearchHandler();
+
     // Load projects
     loadProjects();
 
@@ -98,6 +105,63 @@ function initFilterListeners() {
     document.getElementById('searchForm').addEventListener('submit', (e) => {
         e.preventDefault();
         applyFilters();
+    });
+}
+
+// Initialize search handler with debouncing
+function initSearchHandler() {
+    const searchInput = document.getElementById('searchQuery');
+    const clearButton = document.getElementById('clearSearch');
+    const spinner = document.getElementById('search-spinner');
+
+    if (!searchInput || !clearButton || !spinner) {
+        console.warn('Search elements not found');
+        return;
+    }
+
+    // Search input handler with debouncing
+    searchInput.addEventListener('input', (e) => {
+        const query = e.target.value.trim();
+
+        // Show/hide clear button based on input content
+        if (query.length > 0) {
+            clearButton.classList.remove('d-none');
+        } else {
+            clearButton.classList.add('d-none');
+        }
+
+        // Show spinner if query is long enough
+        if (query.length >= 3) {
+            spinner.classList.remove('d-none');
+        } else {
+            spinner.classList.add('d-none');
+        }
+
+        // Clear previous timer and set new timer
+        clearTimeout(searchDebounceTimer);
+        searchDebounceTimer = setTimeout(() => {
+            filters.query = query.length >= 3 ? query : null;
+            currentPage = 1;
+            applyFilters();
+        }, 300);
+    });
+
+    // Clear button handler
+    clearButton.addEventListener('click', () => {
+        searchInput.value = '';
+        searchInput.focus();
+        spinner.classList.add('d-none');
+        clearButton.classList.add('d-none');
+        filters.query = null;
+        currentPage = 1;
+        applyFilters();
+    });
+
+    // Hide spinner when search is completed
+    searchInput.addEventListener('blur', () => {
+        setTimeout(() => {
+            spinner.classList.add('d-none');
+        }, 100);
     });
 }
 
@@ -235,14 +299,18 @@ function initPeriodPicker() {
 function applyFilters() {
     const form = document.getElementById('searchForm');
     const formData = new FormData(form);
+    const searchInput = document.getElementById('searchQuery');
 
     filters.client_id = formData.get('client_id') || null;
     filters.status = formData.get('status') || null;
 
-    // Reset to first page
-    currentPage = 1;
+    // Get query from search input
+    if (searchInput) {
+        const query = searchInput.value.trim();
+        filters.query = query.length >= 3 ? query : null;
+    }
 
-    // Load projects with filters
+    currentPage = 1;
     loadProjects();
 }
 
@@ -281,6 +349,7 @@ async function loadProjects() {
         if (filters.status) params.append('project_status', filters.status);
         if (filters.start_date) params.append('start_date', filters.start_date);
         if (filters.end_date) params.append('end_date', filters.end_date);
+        if (filters.query) params.append('query', filters.query);
 
         // Make API request to paginated endpoint
         const response = await api.get(`/projects/paginated?${params.toString()}`);
