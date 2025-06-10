@@ -6,7 +6,7 @@ This module implements business logic for managing equipment bookings.
 import logging
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
-from typing import List, Optional
+from typing import Any, List, Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -25,9 +25,9 @@ from backend.schemas import BookingWithDetails
 from backend.services.equipment import EquipmentService
 
 # Constants for booking validation
-MIN_BOOKING_DURATION = timedelta(days=1)  # Minimum booking duration
-MAX_BOOKING_DURATION = timedelta(days=365)  # Maximum booking duration
-MAX_ADVANCE_DAYS = 365  # Maximum days in advance for booking
+MIN_BOOKING_DURATION = timedelta(days=1)
+MAX_BOOKING_DURATION = timedelta(days=365)
+MAX_ADVANCE_DAYS = 365
 
 # Configure logger
 log = logging.getLogger(__name__)
@@ -717,6 +717,60 @@ class BookingService:
             )
 
         return booking
+
+    async def get_filtered_bookings_query(
+        self,
+        query: Optional[str] = None,
+        equipment_query: Optional[str] = None,
+        equipment_id: Optional[int] = None,
+        booking_status: Optional[BookingStatus] = None,
+        payment_status: Optional[PaymentStatus] = None,
+        start_date: Optional[datetime] = None,
+        end_date: Optional[datetime] = None,
+        active_only: bool = False,
+    ) -> Any:
+        """Get bookings query for pagination support.
+
+        This method returns a SQLAlchemy query object that can be used
+        with fastapi-pagination to provide efficient database-level pagination.
+
+        Args:
+            query: Search query for client details.
+            equipment_query: Search query for equipment details.
+            equipment_id: Filter by equipment ID.
+            booking_status: Filter by booking status.
+            payment_status: Filter by payment status.
+            start_date: Filter by start date.
+            end_date: Filter by end date.
+            active_only: Return only active bookings.
+
+        Returns:
+            SQLAlchemy query object for pagination
+        """
+        # Get the paginatable query from repository
+        bookings_query = self.repository.get_paginatable_query(
+            query=query,
+            equipment_query=equipment_query,
+            equipment_id=equipment_id,
+            booking_status=booking_status,
+            payment_status=payment_status,
+            start_date=start_date,
+            end_date=end_date,
+        )
+
+        # Apply active_only filter if needed
+        if active_only:
+            active_statuses = [
+                BookingStatus.PENDING,
+                BookingStatus.CONFIRMED,
+                BookingStatus.ACTIVE,
+                BookingStatus.OVERDUE,
+            ]
+            bookings_query = bookings_query.where(
+                Booking.booking_status.in_(active_statuses)
+            )
+
+        return bookings_query
 
     async def get_filtered_bookings(
         self,

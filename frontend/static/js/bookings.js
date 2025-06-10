@@ -263,39 +263,7 @@ const bookingManager = {
 
     // Load bookings from the API based on current filters
     async loadBookings() {
-        console.log('Loading bookings...');
-        const { bookingsTableBody, clientSearchSpinner, equipmentSearchSpinner } = this.elements;
-        if (!bookingsTableBody) {
-            console.error('Bookings table body not found.');
-                return;
-            }
-
-        // Show spinners
-        if (clientSearchSpinner) clientSearchSpinner.classList.remove('d-none');
-        if (equipmentSearchSpinner) equipmentSearchSpinner.classList.remove('d-none');
-
-        this.updateUrl();
-        const apiParams = this.getApiParams();
-        const queryString = new URLSearchParams(apiParams).toString();
-
-        try {
-            const response = await fetch(`/api/v1/bookings/?${queryString}`);
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            const bookings = await response.json();
-            console.log('Bookings received:', bookings);
-            this.renderBookings(bookings);
-        } catch (error) {
-            console.error('Error loading bookings:', error);
-            bookingsTableBody.innerHTML = '<tr><td colspan="5" class="text-center text-danger">Ошибка загрузки бронирований.</td></tr>';
-            showToast('Ошибка загрузки бронирований', 'danger');
-        } finally {
-            // Hide spinners
-             if (clientSearchSpinner) clientSearchSpinner.classList.add('d-none');
-             if (equipmentSearchSpinner) equipmentSearchSpinner.classList.add('d-none');
-            console.log('Booking loading finished.');
-        }
+        await this.loadBookingsPage(1);
     },
 
     // Render the list of bookings in the table
@@ -304,7 +272,7 @@ const bookingManager = {
         bookingsTableBody.innerHTML = '';
 
         if (!bookings || bookings.length === 0) {
-            bookingsTableBody.innerHTML = '<tr><td colspan="5" class="text-center">Бронирования не найдены.</td></tr>';
+            bookingsTableBody.innerHTML = '<tr><td colspan="6" class="text-center">Бронирования не найдены.</td></tr>';
             return;
         }
 
@@ -373,6 +341,76 @@ const bookingManager = {
             `;
             bookingsTableBody.appendChild(row);
         });
+    },
+
+    // Render pagination information and controls
+    renderPaginationInfo(data) {
+        const pageStart = document.getElementById('pageStart');
+        const pageEnd = document.getElementById('pageEnd');
+        const totalItems = document.getElementById('totalItems');
+        const prevPage = document.getElementById('prevPage');
+        const nextPage = document.getElementById('nextPage');
+
+        if (!pageStart || !pageEnd || !totalItems || !prevPage || !nextPage) return;
+
+        const startItem = (data.page - 1) * data.size + 1;
+        const endItem = Math.min(data.page * data.size, data.total);
+
+        pageStart.textContent = data.total > 0 ? startItem : 0;
+        pageEnd.textContent = endItem;
+        totalItems.textContent = data.total;
+
+        // Update pagination controls
+        const prevPageItem = prevPage.closest('.page-item');
+        const nextPageItem = nextPage.closest('.page-item');
+
+        prevPageItem.classList.toggle('disabled', data.page <= 1);
+        nextPageItem.classList.toggle('disabled', data.page >= data.pages);
+
+        // Add click handlers
+        prevPage.onclick = (e) => {
+            e.preventDefault();
+            if (data.page > 1) {
+                this.loadBookingsPage(data.page - 1);
+            }
+        };
+
+        nextPage.onclick = (e) => {
+            e.preventDefault();
+            if (data.page < data.pages) {
+                this.loadBookingsPage(data.page + 1);
+            }
+        };
+    },
+
+    // Load specific page of bookings
+    async loadBookingsPage(page = 1) {
+        const { bookingsTableBody, clientSearchSpinner, equipmentSearchSpinner } = this.elements;
+        if (!bookingsTableBody) return;
+
+        if (clientSearchSpinner) clientSearchSpinner.classList.remove('d-none');
+        if (equipmentSearchSpinner) equipmentSearchSpinner.classList.remove('d-none');
+
+        this.updateUrl();
+        const apiParams = this.getApiParams();
+        apiParams.page = page;
+        const queryString = new URLSearchParams(apiParams).toString();
+
+        try {
+            const response = await fetch(`/api/v1/bookings/?${queryString}`);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const data = await response.json();
+            this.renderBookings(data.items);
+            this.renderPaginationInfo(data);
+        } catch (error) {
+            console.error('Error loading bookings:', error);
+            bookingsTableBody.innerHTML = '<tr><td colspan="6" class="text-center text-danger">Ошибка загрузки бронирований.</td></tr>';
+        } finally {
+            if (clientSearchSpinner) clientSearchSpinner.classList.add('d-none');
+            if (equipmentSearchSpinner) equipmentSearchSpinner.classList.add('d-none');
+        }
     },
 
     // Reset filter form and reload bookings
