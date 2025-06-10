@@ -2,6 +2,10 @@
 
 {% block title %}Проекты - {{ APP_NAME }}{% endblock %}
 
+{% block extra_css %}
+<link rel="stylesheet" href="/static/css/projects-search.css">
+{% endblock %}
+
 {% block content %}
 <div class="row mb-4">
     <div class="col-md-8">
@@ -12,6 +16,34 @@
         <a href="/scanner" class="btn btn-primary">
             <i class="fas fa-barcode"></i> Сканировать оборудование
         </a>
+    </div>
+</div>
+
+<!-- Search row -->
+<div class="row mb-3 search-row">
+    <div class="col-md-8">
+        <div class="position-relative">
+            <input type="text"
+                   class="form-control rounded"
+                   id="searchQuery"
+                   name="query"
+                   placeholder="Поиск по названию проекта..."
+                   minlength="3"
+                   aria-label="Поиск проектов по названию">
+            <div id="search-spinner"
+                 class="spinner-border spinner-border-sm d-none text-primary position-absolute search-spinner"
+                 role="status">
+                <span class="visually-hidden">Поиск...</span>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <button type="button"
+                class="btn btn-outline-secondary"
+                id="clearSearch"
+                title="Очистить поиск">
+            <i class="fas fa-times"></i> Очистить
+        </button>
     </div>
 </div>
 
