@@ -590,22 +590,11 @@ function renderCardView(projects) {
 
     // Show "No projects" message if all groups are empty
     if (projects.length === 0) {
-        const noProjectsMessage = `
-            <div class="col-12 py-5 text-center text-muted">
-                <i class="fas fa-folder-open fa-3x mb-3"></i>
-                <p>Нет проектов, соответствующих условиям поиска</p>
-            </div>
-        `;
-        draftProjectsList.innerHTML = noProjectsMessage;
-
         // Hide all accordion sections when no projects
         document.getElementById('draftProjects').classList.add('d-none');
         document.getElementById('activeProjects').classList.add('d-none');
         document.getElementById('completedProjects').classList.add('d-none');
         document.getElementById('cancelledProjects').classList.add('d-none');
-
-        // Show a general message instead
-        document.getElementById('cardView').innerHTML = `<div class="text-center py-5">${noProjectsMessage}</div>`;
     }
 }
 
