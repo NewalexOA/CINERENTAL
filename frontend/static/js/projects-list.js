@@ -123,6 +123,13 @@ function initSearchHandler() {
     searchInput.addEventListener('input', (e) => {
         const query = e.target.value.trim();
 
+        // Show/hide clear button based on input content
+        if (query.length > 0) {
+            clearButton.classList.remove('d-none');
+        } else {
+            clearButton.classList.add('d-none');
+        }
+
         // Show spinner if query is long enough
         if (query.length >= 3) {
             spinner.classList.remove('d-none');
@@ -144,6 +151,7 @@ function initSearchHandler() {
         searchInput.value = '';
         searchInput.focus();
         spinner.classList.add('d-none');
+        clearButton.classList.add('d-none');
         filters.query = null;
         currentPage = 1;
         applyFilters();
