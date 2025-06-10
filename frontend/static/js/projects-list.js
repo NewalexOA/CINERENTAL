@@ -300,8 +300,13 @@ function applyFilters() {
     const form = document.getElementById('searchForm');
     const formData = new FormData(form);
 
+    // Read search query from DOM element to preserve user input
+    const searchInput = document.getElementById('searchQuery');
+    const searchQuery = searchInput ? searchInput.value.trim() : '';
+
     filters.client_id = formData.get('client_id') || null;
     filters.status = formData.get('status') || null;
+    filters.query = searchQuery.length >= 3 ? searchQuery : null;
 
     currentPage = 1;
     loadProjects();
