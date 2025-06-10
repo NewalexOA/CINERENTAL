@@ -7,9 +7,11 @@ rental bookings, as well as managing their status and payment information.
 
 import traceback
 from datetime import datetime
-from typing import Annotated, Any, List, Optional
+from typing import Annotated, Any, Optional
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Query, status
+from fastapi_pagination import Page, Params
+from fastapi_pagination.ext.sqlalchemy import paginate
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -202,10 +204,11 @@ async def create_booking(
 @typed_get(
     bookings_router,
     '/',
-    response_model=List[BookingResponse],
+    response_model=Page[BookingResponse],
 )
 async def get_bookings(
     db: Annotated[AsyncSession, Depends(get_db)],
+    params: Params = Depends(),
     query: Optional[str] = Query(
         None, description='Search by client name, email, or phone'
     ),
@@ -226,44 +229,11 @@ async def get_bookings(
         None, description='Filter by end date (inclusive)'
     ),
     active_only: bool = Query(False, description='Return only active bookings'),
-    skip: int = Query(0, description='Number of records to skip'),
-    limit: int = Query(100, description='Maximum number of records to return'),
-) -> List[BookingResponse]:
-    """Get bookings with optional filtering.
-
-    Args:
-        db: Database session
-        query: Search by client name, email, or phone
-        equipment_query: Search by equipment name or serial number
-        equipment_id: Filter by equipment ID
-        booking_status: Filter by booking status
-        payment_status: Filter by payment status
-        start_date: Filter by start date
-        end_date: Filter by end date
-        active_only: Return only active bookings
-        skip: Number of records to skip
-        limit: Maximum number of records to return
-
-    Returns:
-        List of bookings
-    """
-    logger.debug('Starting get_bookings method with filters:')
-    logger.debug('  booking_status: {}', booking_status)
-    logger.debug('  payment_status: {}', payment_status)
-    logger.debug('  equipment_id: {}', equipment_id)
-    logger.debug('  query: {}', query)
-    logger.debug('  equipment_query: {}', equipment_query)
-    logger.debug('  active_only: {}', active_only)
-    logger.debug('  start_date: {}', start_date)
-    logger.debug('  end_date: {}', end_date)
-    logger.debug('  skip: {}, limit: {}', skip, limit)
-
+) -> Page[BookingResponse]:
+    """Get bookings with pagination and filtering."""
     booking_service = BookingService(db)
     try:
-        logger.debug('Calling booking_service.get_filtered_bookings')
-        # Fetch bookings using the service layer, passing filters
-        # The service/repository should handle the actual filtering logic
-        filtered_bookings = await booking_service.get_filtered_bookings(
+        bookings_query = await booking_service.get_filtered_bookings_query(
             query=query,
             equipment_query=equipment_query,
             equipment_id=equipment_id,
@@ -271,59 +241,38 @@ async def get_bookings(
             payment_status=payment_status,
             start_date=start_date,
             end_date=end_date,
+            active_only=active_only,
         )
-        logger.debug(f'Service returned {len(filtered_bookings)} bookings')
 
-        if booking_status:
-            logger.debug(
-                'Checking bookings with status filter {}: {}',
-                booking_status,
-                [b.booking_status for b in filtered_bookings],
-            )
-
-        if active_only:
-            active_statuses = [
-                BookingStatus.PENDING,
-                BookingStatus.CONFIRMED,
-                BookingStatus.ACTIVE,
-                BookingStatus.OVERDUE,
-            ]
-            filtered_bookings = [
-                b for b in filtered_bookings if b.booking_status in active_statuses
-            ]
-
-        # Apply pagination (consider moving to service/repo)
-        paginated_bookings = filtered_bookings[skip : skip + limit]
-        logger.debug('After pagination: {} bookings', len(paginated_bookings))
-
-        # Convert Booking objects to BookingResponse objects
-        responses = []
-        for booking_obj in paginated_bookings:
-            try:
-                logger.debug(
-                    'Converting booking {} (status: {}) to response',
-                    booking_obj.id,
-                    booking_obj.booking_status,
+        result: Page[BookingResponse] = await paginate(
+            db,
+            bookings_query,
+            params,
+            transformer=lambda bookings: [
+                BookingResponse(
+                    id=booking.id,
+                    equipment_id=booking.equipment_id,
+                    project_id=booking.project_id,
+                    client_id=booking.client_id,
+                    start_date=booking.start_date,
+                    end_date=booking.end_date,
+                    total_amount=booking.total_amount,
+                    booking_status=booking.booking_status,
+                    payment_status=booking.payment_status,
+                    created_at=booking.created_at,
+                    updated_at=booking.updated_at,
+                    equipment_name=booking.equipment.name if booking.equipment else '',
+                    client_name=booking.client.name if booking.client else '',
+                    project_name=booking.project.name if booking.project else None,
+                    quantity=booking.quantity,
                 )
-                # Ensure related objects are loaded or handle potential None values
-                response = await _booking_to_response(booking_obj, db)
-                responses.append(response)
-                logger.debug('Successfully converted booking {}', booking_obj.id)
-            except Exception as e:
-                logger.error('Error converting booking to response: {}', str(e))
-                logger.error(traceback.format_exc())
+                for booking in bookings
+            ],
+        )
 
-        logger.debug('Returning {} responses', len(responses))
-        if booking_status:
-            logger.debug(
-                'Response bookings with status {}: {}',
-                booking_status,
-                [(b.id, b.booking_status) for b in responses],
-            )
-        return responses
+        return result
     except Exception as e:
-        logger.error('Error in get_bookings method: {}', str(e))
-        logger.error(traceback.format_exc())
+        logger.error('Error in get_bookings: {}', str(e))
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f'Failed to retrieve bookings: {str(e)}',
