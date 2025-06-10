@@ -2,6 +2,63 @@
 
 This document lists notable changes to the ACT-Rental application.
 
+## [0.12.0-beta.1] - 2025-06-10
+
+### Equipment Search Revolution
+
+- **Unified Search Interface:** Eliminated dual-tab navigation between scanner and catalog modes, replacing with single universal search field for streamlined user experience
+- **Automatic Scanner Lifecycle:** HID barcode scanner now auto-starts on modal open and stops on close, removing manual intervention requirements
+- **Intelligent Search Logic:** Implemented barcode-first search with automatic fallback to catalog search for seamless equipment discovery
+- **Real-Time Availability:** Added immediate availability checking for all search results with parallel API calls for optimal performance
+- **Zero-Click Workflow:** Reduced user interaction from 2 clicks to 0 for equipment search with Enter key support for instant execution
+- **Smart Pagination:** Hidden pagination when results ≤20 items, automatically shown for larger datasets
+- **Enhanced Error Handling:** Added graceful fallback when daterangepicker unavailable, using today/tomorrow as default dates with comprehensive try-catch blocks
+
+### Advanced Project Management System
+
+- **Paginated API Infrastructure:** New `/projects/paginated` endpoint with full pagination support, proper joins, and backward compatibility with existing `/projects` endpoint
+- **Service Layer Enhancement:** Added `get_projects_list_query()` method for building optimized paginated queries with `get_paginatable_query()` repository method
+- **Intelligent Date Filtering:** Replaced exact date containment logic with interval overlap logic - projects now show when partially intersecting with filter periods
+- **Status-Based Collapsible Sections:** Converted static project groups to independent collapsible sections (DRAFT, ACTIVE, COMPLETED, CANCELLED) using Bootstrap collapse
+- **Color-Coded Visual Hierarchy:** Implemented color-coded headers (gray, green, blue, red) matching project statuses with chevron rotation animations
+- **Smart Project Sorting:** Status priority ordering (DRAFT → ACTIVE → COMPLETED → CANCELLED) with chronological secondary sort by start date
+- **Enhanced Navigation:** Added clickable client links in project details with Bootstrap styling, hover effects, and proper fallback handling
+- **UI Optimization:** Compact card layout with optimized padding (0.5rem 0.75rem), reduced typography (0.95rem), and smaller status badges (0.8rem)
+
+### Production-Ready Data Loading Infrastructure
+
+- **ID Mapping System:** Comprehensive mapping infrastructure for clients, categories, equipment, projects, and bookings with foreign key constraint resolution
+- **Hierarchical Category Loading:** Multi-pass dependency resolution for parent-child relationships with proper validation and error handling
+- **Extended Data Support:** JSON file loading with automatic ID remapping for production datasets, enabling seamless migration from existing systems
+- **Smart Docker Integration:** Automatic detection of extended vs basic data with fallback mechanisms in startup scripts
+- **SQL Dump Processing:** Added `extract_from_sql_dump.sh` and `extract_extended_data.py` utilities for PostgreSQL dump extraction and JSON conversion
+- **Zero Data Loss:** All valid records preserved with correct relationships, invalid references logged and gracefully skipped
+- **Comprehensive Documentation:** Step-by-step workflow guides and troubleshooting documentation for data migration processes
+
+### System Reliability & Performance
+
+- **API Response Consistency:** PATCH endpoints now return complete data including bookings, preventing frontend equipment list clearing issues
+- **Enhanced Error Handling:** Comprehensive validation with fallback protection for undefined/unknown statuses throughout the system
+- **Performance Optimization:** Reduced console logging volume, parallel API calls, and optimized database queries for better performance
+- **Type Safety Improvements:** Proper `Page[ProjectResponse]` return type annotations and enhanced type checking throughout pagination system
+- **Backward Compatibility:** All existing API endpoints preserved with seamless migration paths for current integrations
+
+### UI/UX Enhancements
+
+- **Modern Collapsible Interface:** Bootstrap-based independent sections with smooth expand/collapse animations and proper ARIA attributes
+- **Status Color Consistency:** Unified status badge colors across all project views and tables for visual consistency
+- **Interactive Elements:** Smooth CSS transitions, hover effects, and focus management throughout the interface
+- **Responsive Design:** Optimized spacing, typography, and layout for different screen sizes
+- **Enhanced Loading States:** Project counters, loading indicators, and improved user feedback throughout client detail pages
+
+### Technical Improvements & Bug Fixes
+
+- **Client Name Display:** Fixed JavaScript code to use correct API field `client_name` instead of `project.client?.name`
+- **Equipment List Clearing:** Resolved issue where equipment list disappeared after saving project notes by updating PATCH response models
+- **Status Mapping:** Corrected status mapping to use `booking_status` instead of generic `status` field in client project history
+- **Table Layout:** Removed unnecessary Actions columns from project tables and fixed colspan values for cleaner interface
+- **Logging Optimization:** Replaced detailed JSON logging with concise console.debug() for better development experience
+
 ## [0.10.0-beta.1] - 2025-05-30
 
 ### Scanner Enhancements
@@ -46,7 +103,7 @@ This document lists notable changes to the ACT-Rental application.
 - **Seamless User Experience:** Integrated scanner with existing `BarcodeScanner` class from `main.js` for consistent keypress event handling. Auto-starts scanner if Scanner tab is active on page load, providing immediate functionality without manual activation.
 - **Clean Interface Design:** Removed misleading camera button with `id="toggleScannerBtn"` from scanner tab and expanded input field to full width, eliminating confusion about actual device connectivity detection.
 
-### Technical Improvements & Bug Fixes
+### Technical Improvements & Bug Fixes (0.9.0-beta.1)
 
 - **Project Management:** Fixed project deletion button functionality by correcting ID mismatch between JavaScript selector (`deleteProjectBtn`) and HTML element (`deleteProject`). Replaced browser `confirm()` with Bootstrap modal workflow for consistent UI experience.
 - **Code Optimization:** Removed unused imports (Dict, Set) from typing module in equipment service after simplifying status transition logic. Cleaned up complex validation methods that are no longer needed.
