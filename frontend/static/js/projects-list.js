@@ -594,12 +594,23 @@ function renderCardView(projects) {
     document.getElementById('cancelledProjects').classList.toggle('d-none', cancelledProjects.length === 0);
 
     // Show "No projects" message if all groups are empty
+    const cardViewEmptyState = document.getElementById('cardViewEmptyState');
     if (projects.length === 0) {
         // Hide all accordion sections when no projects
         document.getElementById('draftProjects').classList.add('d-none');
         document.getElementById('activeProjects').classList.add('d-none');
         document.getElementById('completedProjects').classList.add('d-none');
         document.getElementById('cancelledProjects').classList.add('d-none');
+
+        // Show global empty state message
+        if (cardViewEmptyState) {
+            cardViewEmptyState.classList.remove('d-none');
+        }
+    } else {
+        // Hide global empty state message when projects exist
+        if (cardViewEmptyState) {
+            cardViewEmptyState.classList.add('d-none');
+        }
     }
 }
 
