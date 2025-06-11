@@ -5,6 +5,7 @@
 
 import { api } from '../../utils/api.js';
 import { showToast } from '../../utils/common.js';
+import { initializeBookingPeriodPickers } from './availability.js';
 
 class ProjectEquipmentFilters {
     constructor(projectId) {
@@ -25,8 +26,9 @@ class ProjectEquipmentFilters {
     init() {
         this.createFilterUI();
         this.loadCategories();
-        this.loadEquipmentList();
         this.setupEventListeners();
+        // Load equipment list immediately to replace server-rendered content
+        this.loadEquipmentList();
     }
 
     createFilterUI() {
@@ -35,6 +37,86 @@ class ProjectEquipmentFilters {
 
         const cardBody = equipmentCard.querySelector('.card-body');
         if (!cardBody) return;
+
+        // Add class to table immediately
+        const table = cardBody.querySelector('table');
+        if (table) {
+            table.classList.add('equipment-table');
+
+            // Remove inline width styles from headers that conflict with our CSS
+            const headers = table.querySelectorAll('th[style*="width"]');
+            headers.forEach(header => {
+                // Remove only width from style attribute, keep other styles
+                const style = header.getAttribute('style');
+                if (style) {
+                    const newStyle = style.replace(/width\s*:\s*[^;]+;?/gi, '').trim();
+                    if (newStyle) {
+                        header.setAttribute('style', newStyle);
+                    } else {
+                        header.removeAttribute('style');
+                    }
+                }
+            });
+        }
+
+        // Add CSS for Bootstrap grid-based table layout
+        const style = document.createElement('style');
+        style.textContent = `
+            .equipment-table {
+                table-layout: fixed !important;
+                width: 100% !important;
+            }
+            .equipment-table th:nth-child(1),
+            .equipment-table td:nth-child(1) {
+                width: 33.33% !important; /* 4/12 */
+            }
+            .equipment-table th:nth-child(2),
+            .equipment-table td:nth-child(2) {
+                width: 16.67% !important; /* 2/12 */
+            }
+            .equipment-table th:nth-child(3),
+            .equipment-table td:nth-child(3) {
+                width: 16.67% !important; /* 2/12 */
+            }
+            .equipment-table th:nth-child(4),
+            .equipment-table td:nth-child(4) {
+                width: 8.33% !important; /* 1/12 */
+                text-align: center;
+            }
+            .equipment-table th:nth-child(5),
+            .equipment-table td:nth-child(5) {
+                width: 16.67% !important; /* 2/12 */
+                text-align: center;
+            }
+            .equipment-table th:nth-child(6),
+            .equipment-table td:nth-child(6) {
+                width: 8.33% !important; /* 1/12 */
+                display: none; /* Hidden dates column - moved to last position */
+            }
+
+            /* Responsive adjustments */
+            @media (max-width: 768px) {
+                .equipment-table th:nth-child(1),
+                .equipment-table td:nth-child(1) {
+                    width: 60% !important;
+                }
+                .equipment-table th:nth-child(2),
+                .equipment-table td:nth-child(2) {
+                    width: 40% !important;
+                }
+                .equipment-table th:nth-child(3),
+                .equipment-table td:nth-child(3),
+                .equipment-table th:nth-child(4),
+                .equipment-table td:nth-child(4),
+                .equipment-table th:nth-child(5),
+                .equipment-table td:nth-child(5),
+                .equipment-table th:nth-child(6),
+                .equipment-table td:nth-child(6) {
+                    display: none !important;
+                }
+            }
+        `;
+        document.head.appendChild(style);
 
         // Create filters container
         const filtersHTML = `
@@ -194,7 +276,7 @@ class ProjectEquipmentFilters {
             });
 
             if (this.filters.search) {
-                params.append('search', this.filters.search);
+                params.append('query', this.filters.search);
             }
             if (this.filters.category) {
                 params.append('category_id', this.filters.category);
@@ -241,6 +323,11 @@ class ProjectEquipmentFilters {
         if (countElement) {
             countElement.textContent = `${this.totalItems} позиций`;
         }
+
+        // Initialize date pickers for booking period inputs
+        setTimeout(() => {
+            initializeBookingPeriodPickers();
+        }, 100);
     }
 
     createEquipmentRow(booking) {
@@ -250,12 +337,15 @@ class ProjectEquipmentFilters {
         row.dataset.equipmentId = booking.equipment_id;
 
         const hasSerialNumber = booking.serial_number && booking.serial_number.trim().length > 0;
+        const equipmentName = booking.equipment_name || 'Неизвестное оборудование';
+        const equipmentId = booking.equipment_id;
 
         row.innerHTML = `
             <td>
-                <div>${booking.equipment_name}${booking.quantity > 1 ? ` (x${booking.quantity})` : ''}</div>
-                <small class="text-muted">${booking.barcode || ''}</small>
+                <div>${equipmentId ? `<a href="/equipment/${equipmentId}">${equipmentName}</a>` : equipmentName}${booking.quantity > 1 ? ` (x${booking.quantity})` : ''}</div>
+                <small class="text-muted"><i class="fas fa-barcode me-1"></i>${booking.barcode || ''}</small>
                 ${booking.serial_number ? `<small class="text-muted d-block">S/N: ${booking.serial_number}</small>` : ''}
+                <span class="quantity d-none">${booking.quantity}</span>
             </td>
             <td>
                 <div>${booking.category_name || 'Без категории'}</div>
@@ -263,13 +353,12 @@ class ProjectEquipmentFilters {
             <td>
                 <input type="text" class="form-control form-control-sm booking-period-input"
                        data-booking-id="${booking.id}"
+                       data-start-date="${booking.start_date}"
+                       data-end-date="${booking.end_date}"
                        value="${this.formatDateTime(booking.start_date)} - ${this.formatDateTime(booking.end_date)}"
                        placeholder="ДД.ММ.ГГГГ ЧЧ:ММ - ДД.ММ.ГГГГ ЧЧ:ММ">
             </td>
             <td class="text-center">${booking.quantity}</td>
-            <td class="equipment-dates-cell" style="display: none;">
-                ${booking.has_different_dates ? `<small class="text-info">${this.formatDateTime(booking.start_date)} - ${this.formatDateTime(booking.end_date)}</small>` : ''}
-            </td>
             <td class="text-center">
                 <div class="btn-group btn-group-sm" role="group">
                     ${hasSerialNumber ?
@@ -289,6 +378,9 @@ class ProjectEquipmentFilters {
                         }`
                     }
                 </div>
+            </td>
+            <td class="equipment-dates-cell" style="display: none;">
+                ${booking.has_different_dates ? `<small class="text-info">${this.formatDateTime(booking.start_date)} - ${this.formatDateTime(booking.end_date)}</small>` : ''}
             </td>
         `;
 
