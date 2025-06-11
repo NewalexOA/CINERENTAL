@@ -3,7 +3,6 @@
 This module provides service functionality for project management.
 """
 
-# Import ProjectService from the original file during refactoring
-from backend.services.project.project import ProjectService
+from .project_facade import ProjectService
 
 __all__ = ['ProjectService']
