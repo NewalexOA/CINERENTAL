@@ -320,6 +320,25 @@ async def load_bookings_from_json(
     """Load bookings from JSON data."""
     repository = BookingRepository(session)
 
+    # Load all existing bookings once at the beginning to avoid transaction issues
+    existing_bookings = await repository.get_all()
+
+    # Create a simple set of existing booking identifiers
+    existing_booking_keys = set()
+    for booking in existing_bookings:
+        # Create a simple string key for comparison
+        key = (
+            f'{booking.client_id}|{booking.equipment_id}|'
+            f'{booking.start_date}|{booking.end_date}|'
+            f'{booking.booking_status}|{booking.payment_status}'
+        )
+        existing_booking_keys.add(key)
+
+    logger.info('Found {} existing bookings in database', len(existing_bookings))
+
+    created_count = 0
+    skipped_count = 0
+
     for booking_data in bookings_data:
         # Skip bookings with missing references
         if (
@@ -332,17 +351,42 @@ async def load_bookings_from_json(
                 booking_data['client_id'],
                 booking_data['equipment_id'],
             )
+            skipped_count += 1
             continue
 
-        # Simple check to avoid duplicates (you may want to improve this)
-        existing_bookings = await repository.get_all()
         mapped_client_id = client_id_mapping[booking_data['client_id']]
         mapped_equipment_id = equipment_id_mapping[booking_data['equipment_id']]
 
-        if any(
-            b.equipment_id == mapped_equipment_id and b.client_id == mapped_client_id
-            for b in existing_bookings
-        ):
+        # Parse dates from booking data
+        booking_start_date = (
+            datetime.fromisoformat(booking_data['start_date'])
+            if booking_data['start_date']
+            else None
+        )
+        booking_end_date = (
+            datetime.fromisoformat(booking_data['end_date'])
+            if booking_data['end_date']
+            else None
+        )
+
+        # Create key for this booking
+        booking_key = (
+            f'{mapped_client_id}|{mapped_equipment_id}|'
+            f'{booking_start_date}|{booking_end_date}|'
+            f'{booking_data["booking_status"]}|{booking_data["payment_status"]}'
+        )
+
+        # Check for duplicates using the key
+        if booking_key in existing_booking_keys:
+            logger.debug(
+                'Duplicate booking skipped: client_id={}, equipment_id={}, '
+                'start_date={}, end_date={}',
+                mapped_client_id,
+                mapped_equipment_id,
+                booking_start_date,
+                booking_end_date,
+            )
+            skipped_count += 1
             continue
 
         # Get project_id with proper mapping
@@ -350,27 +394,31 @@ async def load_bookings_from_json(
         mapped_project_id = project_id_mapping.get(project_id) if project_id else None
 
         booking = Booking(
-            client_id=client_id_mapping[booking_data['client_id']],
-            equipment_id=equipment_id_mapping[booking_data['equipment_id']],
+            client_id=mapped_client_id,
+            equipment_id=mapped_equipment_id,
             project_id=mapped_project_id,
             booking_status=getattr(BookingStatus, booking_data['booking_status']),
             payment_status=getattr(PaymentStatus, booking_data['payment_status']),
-            start_date=(
-                datetime.fromisoformat(booking_data['start_date'])
-                if booking_data['start_date']
-                else None
-            ),
-            end_date=(
-                datetime.fromisoformat(booking_data['end_date'])
-                if booking_data['end_date']
-                else None
-            ),
+            start_date=booking_start_date,
+            end_date=booking_end_date,
             total_amount=Decimal(str(booking_data.get('total_amount', 0))),
             deposit_amount=Decimal(str(booking_data.get('deposit_amount', 0))),
             notes=booking_data.get('notes'),
         )
+
         await repository.create(booking)
-        logger.info('Created booking for equipment {}', booking.equipment_id)
+
+        # Add this booking's key to prevent duplicates within this session
+        existing_booking_keys.add(booking_key)
+
+        created_count += 1
+        logger.debug('Created booking for equipment {}', booking.equipment_id)
+
+    logger.info(
+        'Booking loading completed: {} created, {} skipped',
+        created_count,
+        skipped_count,
+    )
 
 
 async def create_categories(session: AsyncSession) -> Dict[str, int]:
