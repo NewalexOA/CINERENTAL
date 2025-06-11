@@ -6,7 +6,7 @@ This module contains API endpoints for managing projects.
 from datetime import datetime
 from typing import Annotated, List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi_pagination import Page, Params
 from fastapi_pagination.ext.sqlalchemy import paginate
 from loguru import logger
@@ -24,7 +24,9 @@ from backend.exceptions import BusinessError, DateError, NotFoundError, Validati
 from backend.models import ProjectStatus
 from backend.schemas import (
     ClientInfo,
+    DateFilterType,
     EquipmentPrintItem,
+    ProjectBookingResponse,
     ProjectCreateWithBookings,
     ProjectPrint,
     ProjectResponse,
@@ -638,6 +640,112 @@ async def get_project_print_data(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f'Error retrieving project print data: {str(e)}',
+        )
+
+
+@typed_get(
+    projects_router,
+    '/{project_id}/bookings/paginated',
+    response_model=Page[ProjectBookingResponse],
+    summary='Get paginated project bookings with filtering',
+)
+async def get_project_bookings_paginated(
+    project_id: int,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    params: Params = Depends(),
+    query: Optional[str] = Query(
+        None, description='Search by equipment name, serial number, or barcode'
+    ),
+    category_id: Optional[int] = Query(None, description='Filter by category ID'),
+    date_filter: DateFilterType = Query(
+        DateFilterType.ALL, description='Filter by date comparison with project dates'
+    ),
+) -> Page[ProjectBookingResponse]:
+    """Get paginated project bookings with advanced filtering.
+
+    Args:
+        project_id: Project ID
+        db: Database session
+        params: Pagination parameters
+        query: Search query for equipment name, serial number, or barcode
+        category_id: Filter by category ID
+        date_filter: Filter by date comparison (all/different/matching)
+
+    Returns:
+        Paginated list of project bookings
+
+    Raises:
+        HTTPException: If project not found or other error occurs
+    """
+    log = logger.bind(project_id=project_id)
+    log.debug('Getting paginated project bookings')
+
+    service = ProjectService(db)
+    try:
+        # Get the SQLAlchemy query from service
+        query_obj = await service.get_project_bookings_paginated(
+            project_id=project_id,
+            query=query,
+            category_id=category_id,
+            date_filter=date_filter.value,
+        )
+
+        # Use fastapi-pagination to paginate the query
+        from fastapi_pagination.ext.sqlalchemy import paginate
+
+        # Execute query and transform results to match schema
+        paginated_result = await paginate(db, query_obj, params)
+
+        # Transform results to match ProjectBookingResponse schema
+        transformed_items = []
+        for item in paginated_result.items:
+            transformed_item = ProjectBookingResponse(
+                id=item.id,
+                equipment_id=item.equipment_id,
+                equipment_name=item.equipment_name,
+                serial_number=item.serial_number,
+                barcode=item.barcode,
+                category_name=item.category_name,
+                category_id=item.category_id,
+                start_date=item.start_date,
+                end_date=item.end_date,
+                booking_status=(
+                    item.booking_status.value
+                    if hasattr(item.booking_status, 'value')
+                    else str(item.booking_status)
+                ),
+                payment_status=(
+                    item.payment_status.value
+                    if hasattr(item.payment_status, 'value')
+                    else str(item.payment_status)
+                ),
+                quantity=item.quantity,
+                has_different_dates=bool(item.has_different_dates),
+            )
+            transformed_items.append(transformed_item)
+
+        # Create new Page with transformed items
+        from fastapi_pagination import Page as PageType
+
+        result = PageType[ProjectBookingResponse](
+            items=transformed_items,
+            total=paginated_result.total,
+            page=paginated_result.page,
+            size=paginated_result.size,
+            pages=paginated_result.pages,
+        )
+
+        return result
+
+    except NotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except ValidationError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except Exception as e:
+        log.error('Error getting paginated project bookings: {}', str(e))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f'Error retrieving paginated project bookings: {str(e)}',
         )
 
 
