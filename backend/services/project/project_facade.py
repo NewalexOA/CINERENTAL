@@ -11,12 +11,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from backend.models import Project, ProjectStatus
 from backend.repositories import BookingRepository, ClientRepository, ProjectRepository
 from backend.services.booking import BookingService
-from backend.services.project.formatters.formatters_operations import (
-    FormattersOperations,
+from backend.services.project.formatters import FormattersOperations
+from backend.services.project.operations import (
+    BookingOperations,
+    CrudOperations,
+    QueryOperations,
 )
-from backend.services.project.operations.booking_operations import BookingOperations
-from backend.services.project.operations.crud_operations import CrudOperations
-from backend.services.project.operations.query_operations import QueryOperations
 
 
 class ProjectService:
