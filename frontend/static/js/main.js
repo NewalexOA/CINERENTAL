@@ -1,6 +1,7 @@
 // Main JavaScript for rental equipment management system
 import { formatDate, showToast, debounce, formatCurrency, validateForm, initDateRangePicker } from './utils/common.js';
 import { api } from './utils/api.js';
+import { enableDevelopmentLogging, disableAllLogging, enableComponentLogging, getLogConfig } from './utils/logger.js';
 
 // Global API configuration
 window.API_CONFIG = {
@@ -9,6 +10,14 @@ window.API_CONFIG = {
 
 // Make showToast available globally
 window.showToast = showToast;
+
+// Make logger available globally for debugging
+window.logger = {
+    enable: enableDevelopmentLogging,
+    disable: disableAllLogging,
+    enableComponent: enableComponentLogging,
+    getConfig: getLogConfig
+};
 
 // Loader functions
 window.loaderCounter = 0; // Counter of active operations using loader

@@ -9,12 +9,12 @@ import { initializeBookingPeriodPickers } from './availability.js';
 import { initializeActionButtonEventListeners } from './ui.js';
 import { Pagination } from '../../utils/pagination.js';
 
-// Logging configuration
+import { getLogConfig } from '../../utils/logger.js';
+
+// Get logging configuration from global logger
 const LOG_CONFIG = {
-    filters: {
-        enabled: false, // Set to true for development debugging
-        logInit: false,
-        logDataLoad: false
+    get filters() {
+        return getLogConfig('filters');
     }
 };
 
@@ -68,64 +68,7 @@ class ProjectEquipmentFilters {
             });
         }
 
-        // Add CSS for Bootstrap grid-based table layout
-        const style = document.createElement('style');
-        style.textContent = `
-            .equipment-table {
-                table-layout: fixed !important;
-                width: 100% !important;
-            }
-            .equipment-table th:nth-child(1),
-            .equipment-table td:nth-child(1) {
-                width: 33.33% !important; /* 4/12 */
-            }
-            .equipment-table th:nth-child(2),
-            .equipment-table td:nth-child(2) {
-                width: 16.67% !important; /* 2/12 */
-            }
-            .equipment-table th:nth-child(3),
-            .equipment-table td:nth-child(3) {
-                width: 16.67% !important; /* 2/12 */
-            }
-            .equipment-table th:nth-child(4),
-            .equipment-table td:nth-child(4) {
-                width: 8.33% !important; /* 1/12 */
-                text-align: center;
-            }
-            .equipment-table th:nth-child(5),
-            .equipment-table td:nth-child(5) {
-                width: 16.67% !important; /* 2/12 */
-                text-align: center;
-            }
-            .equipment-table th:nth-child(6),
-            .equipment-table td:nth-child(6) {
-                width: 8.33% !important; /* 1/12 */
-                display: none; /* Hidden dates column - moved to last position */
-            }
-
-            /* Responsive adjustments */
-            @media (max-width: 768px) {
-                .equipment-table th:nth-child(1),
-                .equipment-table td:nth-child(1) {
-                    width: 60% !important;
-                }
-                .equipment-table th:nth-child(2),
-                .equipment-table td:nth-child(2) {
-                    width: 40% !important;
-                }
-                .equipment-table th:nth-child(3),
-                .equipment-table td:nth-child(3),
-                .equipment-table th:nth-child(4),
-                .equipment-table td:nth-child(4),
-                .equipment-table th:nth-child(5),
-                .equipment-table td:nth-child(5),
-                .equipment-table th:nth-child(6),
-                .equipment-table td:nth-child(6) {
-                    display: none !important;
-                }
-            }
-        `;
-        document.head.appendChild(style);
+        // Equipment table styles are loaded via base.html
 
         // Create filters container
         const filtersHTML = `
@@ -238,7 +181,7 @@ class ProjectEquipmentFilters {
                 pageSizes: [20, 50, 'all'],
                 showPageInfo: true,
                 showPageSizeSelect: true,
-                autoLoadOnInit: false, // Temporarily disable for debugging
+                autoLoadOnInit: true, // Enable automatic data loading on initialization
                 persistPageSize: true, // Enable page size persistence
                 storageKey: `project_equipment_pagesize_${this.projectId}`, // Unique key per project
                 useUrlParams: false // Disabled for now, can be enabled later
@@ -269,13 +212,7 @@ class ProjectEquipmentFilters {
             console.log('EQUIPMENT FILTERS: Pagination instance created:', this.pagination);
         }
 
-        // Manual initial load after slight delay to ensure DOM is ready
-        setTimeout(() => {
-            if (LOG_CONFIG.filters.enabled && LOG_CONFIG.filters.logInit) {
-                console.log('EQUIPMENT FILTERS: Manually triggering initial data load...');
-            }
-            this.pagination.loadData();
-        }, 100);
+        // Data will be loaded automatically due to autoLoadOnInit: true
     }
 
     async loadCategories() {

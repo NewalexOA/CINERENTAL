@@ -9,13 +9,12 @@
  * @version 1.1.0
  */
 
-// Logging configuration
+import { getLogConfig } from './logger.js';
+
+// Get logging configuration from global logger
 const LOG_CONFIG = {
-    pagination: {
-        enabled: false, // Set to true for development debugging
-        logEvents: false,
-        logDataLoad: false,
-        logStateChanges: false
+    get pagination() {
+        return getLogConfig('pagination');
     }
 };
 
