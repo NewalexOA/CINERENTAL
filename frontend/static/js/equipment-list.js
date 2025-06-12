@@ -87,17 +87,46 @@ async function previewBarcode() {
 // Function to forcibly reset loader state if needed (assuming it might be defined globally)
 // function resetLoader() { ... } - This function definition was present in the original HTML,
 // but should ideally be defined in a global scope (e.g., main.js) if used across pages.
+// Import universal pagination component
+import { Pagination } from './utils/pagination.js';
+
 // If it's ONLY used here, it should be defined here. Assuming it's global for now.
 
 function formatNumber(num) {
     return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ");
 }
 
-// Pagination state variables
-let currentPage = 1;
-let totalPages = 1;
-let pageSize = 20; // Default page size
-let totalCount = 0;
+// Global pagination instance
+let equipmentPagination = null;
+
+// Global debug function for testing pagination
+window.testEquipmentPagination = function() {
+    console.log('=== Testing Equipment Pagination ===');
+    console.log('equipmentPagination instance:', equipmentPagination);
+
+    if (!equipmentPagination) {
+        console.error('equipmentPagination not initialized!');
+        return;
+    }
+
+    console.log('Current state:', equipmentPagination.getState());
+
+    // Test element existence
+    const prevButton = document.getElementById('prevPage');
+    const nextButton = document.getElementById('nextPage');
+    console.log('prevButton element:', prevButton);
+    console.log('nextButton element:', nextButton);
+
+    if (prevButton) {
+        console.log('Testing prev button click...');
+        prevButton.click();
+    }
+
+    if (nextButton) {
+        console.log('Testing next button click...');
+        setTimeout(() => nextButton.click(), 1000);
+    }
+};
 
 // DOM Elements
 const equipmentTableBody = document.getElementById('equipmentTable');
@@ -105,12 +134,6 @@ const searchInput = document.getElementById('searchInput');
 const categoryFilter = document.getElementById('categoryFilter');
 const statusFilter = document.getElementById('statusFilter');
 const searchSpinner = document.getElementById('search-spinner');
-const paginationElement = document.getElementById('pagination');
-const pageStartElement = document.getElementById('pageStart');
-const pageEndElement = document.getElementById('pageEnd');
-const totalItemsElement = document.getElementById('totalItems');
-const prevPageButton = document.getElementById('prevPage');
-const nextPageButton = document.getElementById('nextPage');
 
 // Debounce timer for search input
 let searchDebounceTimer;
@@ -222,21 +245,42 @@ function handleTableClick(event) {
     }
 }
 
-// Function to update pagination UI
-function updatePaginationUI() {
-    if (totalCount > 0) {
-        paginationElement.classList.remove('d-none');
-        const startItem = (currentPage - 1) * pageSize + 1;
-        const endItem = Math.min(currentPage * pageSize, totalCount);
-        pageStartElement.textContent = startItem;
-        pageEndElement.textContent = endItem;
-        totalItemsElement.textContent = totalCount;
+// Initialize pagination component
+function initializePagination() {
+    console.log('Initializing equipment pagination...');
 
-        prevPageButton.parentElement.classList.toggle('disabled', currentPage <= 1);
-        nextPageButton.parentElement.classList.toggle('disabled', currentPage >= totalPages);
-    } else {
-        paginationElement.classList.add('d-none');
-    }
+    equipmentPagination = new Pagination({
+        selectors: {
+            pageStart: '#pageStart',
+            pageEnd: '#pageEnd',
+            totalItems: '#totalItems',
+            currentPage: '#currentPage',
+            totalPages: '#totalPages',
+            prevButton: '#prevPage',
+            nextButton: '#nextPage',
+            pageSizeSelect: '#pageSizeSelect'
+        },
+        options: {
+            pageSize: 20,
+            pageSizes: [20, 50, 100],
+            showPageInfo: true,
+            showPageSizeSelect: true,
+            autoLoadOnInit: false // Temporary: disable auto load for debugging
+        },
+        callbacks: {
+            onDataLoad: async (page, size) => {
+                return await loadEquipmentData(page, size);
+            }
+        }
+    });
+
+    console.log('Equipment pagination initialized:', equipmentPagination);
+
+    // Manual initial load after slight delay
+    setTimeout(() => {
+        console.log('Manually triggering initial data load...');
+        equipmentPagination.loadData();
+    }, 100);
 }
 
 // Setuo event listeners for barcode modal
@@ -256,16 +300,15 @@ function setupBarcodeModalEventListeners() {
     });
 }
 
-// Function to load equipment data
-async function loadEquipment() {
-    if (!equipmentTableBody) return; // Exit if table body not found
+// Function to load equipment data (used by pagination component)
+async function loadEquipmentData(page, size) {
+    if (!equipmentTableBody) return null; // Exit if table body not found
 
     searchSpinner?.classList.remove('d-none');
-    paginationElement?.classList.add('d-none'); // Hide pagination while loading
 
     const params = new URLSearchParams({
-        page: currentPage,
-        size: pageSize
+        page: page,
+        size: size
     });
 
     const query = searchInput?.value.trim();
@@ -280,13 +323,15 @@ async function loadEquipment() {
         // Assuming 'api' is a global object for API calls
         const response = await api.get(`/equipment/paginated?${params.toString()}`);
 
-        totalCount = response.total;
-        totalPages = response.pages;
-        currentPage = response.page;
-        pageSize = response.size;
-
         renderEquipment(response.items);
-        updatePaginationUI();
+
+        // Return pagination data for the Pagination component
+        return {
+            items: response.items,
+            total: response.total,
+            pages: response.pages,
+            page: response.page
+        };
 
     } catch (error) {
         console.error('Error loading equipment:', error);
@@ -297,8 +342,7 @@ async function loadEquipment() {
         cell.colSpan = 5;
         cell.textContent = 'Не удалось загрузить оборудование.';
         cell.classList.add('text-center', 'text-danger');
-        totalCount = 0; // Reset count on error
-        updatePaginationUI(); // Hide pagination block on error
+        throw error; // Re-throw for pagination component error handling
     } finally {
         searchSpinner?.classList.add('d-none');
     }
@@ -312,8 +356,7 @@ function setupEventListeners() {
             const query = searchInput.value.trim();
             if (query.length === 0 || query.length >= 3) {
                 searchDebounceTimer = setTimeout(() => {
-                    currentPage = 1; // Reset page on new search/filter
-                    loadEquipment();
+                    equipmentPagination.reset(); // Reset to first page and reload
                 }, 500); // 500ms debounce
             } else {
                  searchSpinner?.classList.add('d-none'); // Hide spinner if query too short
@@ -324,32 +367,10 @@ function setupEventListeners() {
     [categoryFilter, statusFilter].forEach(filter => {
         if (filter) {
             filter.addEventListener('change', () => {
-                currentPage = 1; // Reset page on new search/filter
-                loadEquipment();
+                equipmentPagination.reset(); // Reset to first page and reload
             });
         }
     });
-
-    // Pagination button listeners
-    if (prevPageButton) {
-        prevPageButton.addEventListener('click', (e) => {
-            e.preventDefault();
-            if (currentPage > 1) {
-                currentPage--;
-                loadEquipment();
-            }
-        });
-    }
-
-    if (nextPageButton) {
-        nextPageButton.addEventListener('click', (e) => {
-            e.preventDefault();
-            if (currentPage < totalPages) {
-                currentPage++;
-                loadEquipment();
-            }
-        });
-    }
 }
 
 // Add event listeners after DOM is loaded
@@ -360,10 +381,10 @@ document.addEventListener('DOMContentLoaded', function() {
     // Setup table event delegation
     setupTableEventListeners();
 
-    // Initial load of equipment
-    loadEquipment();
+    // Initialize pagination component (this will trigger initial data load)
+    initializePagination();
 
-    // Setup filter and pagination listeners
+    // Setup filter listeners
     setupEventListeners();
 
     // Load categories for the modal form
