@@ -48,11 +48,11 @@ class EquipmentRepository(BaseRepository[Equipment]):
             Equipment if found, None otherwise
 
         Note:
-            Search is case-sensitive using regex for exact match
+            Search is case-sensitive using simple equality for debugging
         """
         query: Select[tuple[Equipment]] = select(Equipment).where(
             and_(
-                Equipment.barcode.op('~')(f'^{barcode}$'),
+                Equipment.barcode == barcode,
                 Equipment.deleted_at.is_(None),
             )
         )

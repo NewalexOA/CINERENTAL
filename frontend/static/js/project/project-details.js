@@ -65,47 +65,28 @@ async function loadProjectData(projectId) {
         await withLoading(async () => {
             // Get project details
             projectData = await api.get(`/projects/${projectId}`);
-            console.log('Project data:', projectData);
-
-            // Check API response structure
-            console.log('Project response keys:', Object.keys(projectData));
 
             // Check if bookings exist in the API response under different possible names
             if (projectData.bookings && Array.isArray(projectData.bookings)) {
-                console.log('Bookings found in project response:', projectData.bookings);
+                // Bookings already in project response
             } else if (projectData.reservations && Array.isArray(projectData.reservations)) {
-                console.log('Reservations found in project response:', projectData.reservations);
                 projectData.bookings = projectData.reservations;
             } else if (projectData.equipment && Array.isArray(projectData.equipment)) {
-                console.log('Equipment found in project response:', projectData.equipment);
                 projectData.bookings = projectData.equipment;
             } else {
                 // Get project bookings separately
                 try {
                     const bookingsResponse = await api.get(`/projects/${projectId}/bookings`);
-                    console.log('Raw bookings response:', bookingsResponse);
 
                     // Handle both array response and paginated response
                     projectData.bookings = Array.isArray(bookingsResponse)
                         ? bookingsResponse
                         : (bookingsResponse.items || []);
 
-                    console.log('Processed bookings:', projectData.bookings);
-
                     // create empty array if API returns empty array or null
                     if (!projectData.bookings) {
                         projectData.bookings = [];
                     }
-
-                    // check format of each booking
-                    projectData.bookings.forEach((booking, index) => {
-                        console.log(`Booking ${index}:`, booking);
-                        if (booking && booking.equipment) {
-                            console.log(`Booking ${index} equipment:`, booking.equipment);
-                        } else if (booking) {
-                            console.log(`Booking ${index} has no equipment property`);
-                        }
-                    });
                 } catch (bookingError) {
                     console.error('Error loading project bookings:', bookingError);
                     projectData.bookings = [];
@@ -138,8 +119,6 @@ function initializeEventListeners(projectId) {
     document.getElementById('editProjectBtn')?.addEventListener('click', () => {
         const editModal = document.getElementById('editProjectModal');
         if (editModal) {
-            console.log("Opening edit modal with project data");
-
             // Fill form and then show modal
             fillEditProjectForm(projectData);
             new bootstrap.Modal(editModal).show();
