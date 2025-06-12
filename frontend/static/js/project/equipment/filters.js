@@ -6,6 +6,7 @@
 import { api } from '../../utils/api.js';
 import { showToast } from '../../utils/common.js';
 import { initializeBookingPeriodPickers } from './availability.js';
+import { initializeActionButtonEventListeners } from './ui.js';
 
 class ProjectEquipmentFilters {
     constructor(projectId) {
@@ -327,6 +328,8 @@ class ProjectEquipmentFilters {
         // Initialize date pickers for booking period inputs
         setTimeout(() => {
             initializeBookingPeriodPickers();
+            // Reinitialize action button event listeners after pagination
+            initializeActionButtonEventListeners();
         }, 100);
     }
 

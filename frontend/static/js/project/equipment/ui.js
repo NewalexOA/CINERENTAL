@@ -297,16 +297,12 @@ export function renderEquipmentSection(project) {
         return;
     }
 
-    // Debug output
-    console.log('Rendering equipment section with bookings:', project.bookings);
-
     // Sort equipment by name
     project.bookings.sort((a, b) => {
         const nameA = (a.equipment?.name || a.equipment_name || '').toLowerCase();
         const nameB = (b.equipment?.name || b.equipment_name || '').toLowerCase();
         return nameA.localeCompare(nameB);
     });
-    console.log('Sorted bookings:', project.bookings.map(b => b.equipment?.name || b.equipment_name));
 
     // Update equipment count
     if (equipmentCount) {
@@ -330,8 +326,7 @@ export function renderEquipmentSection(project) {
             return;
         }
 
-        // Basic booking validation log
-        console.debug('Processing booking:', booking.id, 'equipment:', booking.equipment_name);
+        // Basic booking validation (removed verbose logging)
 
         const equipmentName = booking.equipment_name || 'Неизвестное оборудование';
         const barcode = booking.barcode || '';
@@ -437,16 +432,48 @@ export function renderEquipmentSection(project) {
     initializeBookingPeriodPickers();
 
     // Add event listeners for quantity buttons
-    document.querySelectorAll('.quantity-increase-btn').forEach(btn => {
+    const increaseButtons = document.querySelectorAll('.quantity-increase-btn');
+    const decreaseButtons = document.querySelectorAll('.quantity-decrease-btn');
+    const removeButtons = document.querySelectorAll('.remove-booking-btn');
+
+    // Action buttons found and initialized
+
+    increaseButtons.forEach(btn => {
         btn.addEventListener('click', handleQuantityIncrease);
     });
 
-    document.querySelectorAll('.quantity-decrease-btn').forEach(btn => {
+    decreaseButtons.forEach(btn => {
         btn.addEventListener('click', handleQuantityDecrease);
     });
 
-    // Add event listeners for remove booking buttons
-    document.querySelectorAll('.remove-booking-btn').forEach(btn => {
+    removeButtons.forEach(btn => {
+        btn.addEventListener('click', handleBookingRemoval);
+    });
+}
+
+/**
+ * Initialize action button event listeners (for use after pagination)
+ */
+export function initializeActionButtonEventListeners() {
+    const increaseButtons = document.querySelectorAll('.quantity-increase-btn');
+    const decreaseButtons = document.querySelectorAll('.quantity-decrease-btn');
+    const removeButtons = document.querySelectorAll('.remove-booking-btn');
+
+    console.log('Reinitializing action buttons after pagination:', {
+        increaseButtons: increaseButtons.length,
+        decreaseButtons: decreaseButtons.length,
+        removeButtons: removeButtons.length
+    });
+
+    increaseButtons.forEach(btn => {
+        btn.addEventListener('click', handleQuantityIncrease);
+    });
+
+    decreaseButtons.forEach(btn => {
+        btn.addEventListener('click', handleQuantityDecrease);
+    });
+
+    removeButtons.forEach(btn => {
         btn.addEventListener('click', handleBookingRemoval);
     });
 }
