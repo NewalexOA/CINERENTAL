@@ -294,8 +294,8 @@ class ProjectEquipmentFilters {
                 });
             }
 
-            // Update equipment table with new data
-            this.updateEquipmentTable(response.items);
+            // Update equipment table with new data and total count
+            this.updateEquipmentTable(response.items, response.total);
 
             // Return pagination data for the Pagination component
             // Calculate pages if not provided or incorrect
@@ -329,7 +329,7 @@ class ProjectEquipmentFilters {
         }
     }
 
-    updateEquipmentTable(bookings) {
+    updateEquipmentTable(bookings, total) {
         const tbody = document.getElementById('equipmentList');
         if (!tbody) return;
 
@@ -346,11 +346,10 @@ class ProjectEquipmentFilters {
             tbody.appendChild(row);
         });
 
-        // Update equipment count (get current state from pagination component)
-        const paginationState = this.pagination ? this.pagination.getState() : { totalItems: 0 };
+        // Update equipment count with actual total from API response
         const countElement = document.getElementById('equipmentCount');
         if (countElement) {
-            countElement.textContent = `${paginationState.totalItems} позиций`;
+            countElement.textContent = `${total || 0} позиций`;
         }
 
         // Initialize date pickers for booking period inputs
