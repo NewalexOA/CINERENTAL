@@ -63,6 +63,7 @@ export function displaySearchResults(results) {
  * Update pagination UI
  */
 export function updatePaginationUI() {
+    console.log('=== CATALOG: updatePaginationUI() called ===');
     const paginationElement = document.getElementById('catalogPagination');
     const pageStartElement = document.getElementById('catalogPageStart');
     const pageEndElement = document.getElementById('catalogPageEnd');
@@ -70,10 +71,24 @@ export function updatePaginationUI() {
     const prevPageButton = document.getElementById('catalogPrevPage');
     const nextPageButton = document.getElementById('catalogNextPage');
 
-    if (!paginationElement) return;
+    console.log('CATALOG: Pagination state:', {
+        currentPage,
+        totalPages,
+        pageSize,
+        totalCount,
+        paginationElement: !!paginationElement,
+        prevPageButton: !!prevPageButton,
+        nextPageButton: !!nextPageButton
+    });
+
+    if (!paginationElement) {
+        console.warn('CATALOG: catalogPagination element not found!');
+        return;
+    }
 
     // Show pagination only if there are more results than page size
     if (totalCount > pageSize) {
+        console.log('CATALOG: Showing pagination (totalCount > pageSize)');
         paginationElement.classList.remove('d-none');
         const startItem = (currentPage - 1) * pageSize + 1;
         const endItem = Math.min(currentPage * pageSize, totalCount);
@@ -83,14 +98,21 @@ export function updatePaginationUI() {
         if (totalItemsElement) totalItemsElement.textContent = totalCount;
 
         if (prevPageButton) {
-            prevPageButton.parentElement.classList.toggle('disabled', currentPage <= 1);
+            const shouldDisablePrev = currentPage <= 1;
+            console.log('CATALOG: Setting prevPageButton disabled:', shouldDisablePrev, 'currentPage:', currentPage);
+            prevPageButton.parentElement.classList.toggle('disabled', shouldDisablePrev);
         }
         if (nextPageButton) {
-            nextPageButton.parentElement.classList.toggle('disabled', currentPage >= totalPages);
+            const shouldDisableNext = currentPage >= totalPages;
+            console.log('CATALOG: Setting nextPageButton disabled:', shouldDisableNext, 'currentPage:', currentPage, 'totalPages:', totalPages);
+            nextPageButton.parentElement.classList.toggle('disabled', shouldDisableNext);
         }
     } else {
+        console.log('CATALOG: Hiding pagination (totalCount <= pageSize)');
         paginationElement.classList.add('d-none');
     }
+
+    console.log('=== CATALOG: updatePaginationUI() complete ===');
 }
 
 /**

@@ -11,12 +11,10 @@
 // Import API client
 import { api } from './utils/api.js';
 import { showToast, DATERANGEPICKER_LOCALE } from './utils/common.js';
+import { Pagination } from './utils/pagination.js';
 
-// Pagination state
-let currentPage = 1;
-let totalPages = 1;
-let pageSize = 20;
-let totalCount = 0;
+// Global pagination instance
+let projectsPagination = null;
 
 // Filter state
 let filters = {
@@ -71,27 +69,11 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initialize search handler
     initSearchHandler();
 
-    // Load projects
-    loadProjects();
+    // Initialize pagination component (this will trigger initial data load)
+    initializePagination();
 
     // Add event listeners for instant filtering
     initFilterListeners();
-
-    document.getElementById('prevPage').addEventListener('click', (e) => {
-        e.preventDefault();
-        if (currentPage > 1) {
-            currentPage--;
-            loadProjects();
-        }
-    });
-
-    document.getElementById('nextPage').addEventListener('click', (e) => {
-        e.preventDefault();
-        if (currentPage < totalPages) {
-            currentPage++;
-            loadProjects();
-        }
-    });
 });
 
 // Initialize filter listeners for instant filtering
@@ -141,8 +123,7 @@ function initSearchHandler() {
         clearTimeout(searchDebounceTimer);
         searchDebounceTimer = setTimeout(() => {
             filters.query = query.length >= 3 ? query : null;
-            currentPage = 1;
-            applyFilters();
+            projectsPagination.reset(); // Reset to first page and reload
         }, 300);
     });
 
@@ -153,8 +134,7 @@ function initSearchHandler() {
         spinner.classList.add('d-none');
         clearButton.classList.add('d-none');
         filters.query = null;
-        currentPage = 1;
-        applyFilters();
+        projectsPagination.reset(); // Reset to first page and reload
     });
 
     // Hide spinner when search is completed
@@ -308,12 +288,110 @@ function applyFilters() {
     filters.status = formData.get('status') || null;
     filters.query = searchQuery.length >= 3 ? searchQuery : null;
 
-    currentPage = 1;
-    loadProjects();
+    projectsPagination.reset(); // Reset to first page and reload
 }
 
-// Load projects with pagination and filters
-async function loadProjects() {
+// Initialize pagination component
+function initializePagination() {
+    console.log('=== PROJECTS LIST: Initializing pagination ===');
+
+    // Check if required DOM elements exist for primary pagination (bottom)
+    const requiredElements = [
+        '#projectsBottomPageStart', '#projectsBottomPageEnd', '#projectsBottomTotalItems',
+        '#projectsBottomCurrentPage', '#projectsBottomTotalPages',
+        '#projectsBottomPrevPage', '#projectsBottomNextPage', '#projectsBottomPageSize'
+    ];
+    const missingElements = [];
+
+    requiredElements.forEach(selector => {
+        const element = document.querySelector(selector);
+        if (!element) {
+            missingElements.push(selector);
+        }
+    });
+
+    if (missingElements.length > 0) {
+        console.error('PROJECTS LIST: Missing required elements:', missingElements);
+        return;
+    }
+
+    console.log('PROJECTS LIST: All required elements found');
+
+    // Create primary pagination (bottom) - this one controls the data
+    projectsPagination = new Pagination({
+        selectors: {
+            pageStart: '#projectsBottomPageStart',
+            pageEnd: '#projectsBottomPageEnd',
+            totalItems: '#projectsBottomTotalItems',
+            currentPage: '#projectsBottomCurrentPage',
+            totalPages: '#projectsBottomTotalPages',
+            prevButton: '#projectsBottomPrevPage',
+            nextButton: '#projectsBottomNextPage',
+            pageSizeSelect: '#projectsBottomPageSize'
+        },
+        options: {
+            pageSize: 20,
+            pageSizes: [20, 50, 100],
+            showPageInfo: true,
+            showPageSizeSelect: true,
+            autoLoadOnInit: false, // Temporarily disable for debugging
+            persistPageSize: true, // Enable page size persistence
+            storageKey: 'projects_list_pagesize', // Unique key for projects list
+            useUrlParams: false // Disabled for now, can be enabled later
+        },
+        callbacks: {
+            onDataLoad: async (page, size) => {
+                return await loadProjectsData(page, size);
+            }
+        }
+    });
+
+    // Add secondary pagination (top table view) that syncs with primary
+    projectsPagination.addSecondaryPagination({
+        pageStart: '#projectsTopPageStart',
+        pageEnd: '#projectsTopPageEnd',
+        totalItems: '#projectsTopTotalItems',
+        currentPage: '#projectsTopCurrentPage',
+        totalPages: '#projectsTopTotalPages',
+        prevButton: '#projectsTopPrevPage',
+        nextButton: '#projectsTopNextPage',
+        pageSizeSelect: '#projectsTopPageSize'
+    });
+
+    // Add card view paginations that sync with primary
+    projectsPagination.addSecondaryPagination({
+        pageStart: '#projectsCardTopPageStart',
+        pageEnd: '#projectsCardTopPageEnd',
+        totalItems: '#projectsCardTopTotalItems',
+        currentPage: '#projectsCardTopCurrentPage',
+        totalPages: '#projectsCardTopTotalPages',
+        prevButton: '#projectsCardTopPrevPage',
+        nextButton: '#projectsCardTopNextPage',
+        pageSizeSelect: '#projectsCardTopPageSize'
+    });
+
+    projectsPagination.addSecondaryPagination({
+        pageStart: '#projectsCardBottomPageStart',
+        pageEnd: '#projectsCardBottomPageEnd',
+        totalItems: '#projectsCardBottomTotalItems',
+        currentPage: '#projectsCardBottomCurrentPage',
+        totalPages: '#projectsCardBottomTotalPages',
+        prevButton: '#projectsCardBottomPrevPage',
+        nextButton: '#projectsCardBottomNextPage',
+        pageSizeSelect: '#projectsCardBottomPageSize'
+    });
+
+    console.log('PROJECTS LIST: Pagination instance created:', projectsPagination);
+
+    // Manual initial load after slight delay
+    setTimeout(() => {
+        console.log('PROJECTS LIST: Manually triggering initial data load...');
+        projectsPagination.loadData();
+    }, 100);
+}
+
+// Load projects data (used by pagination component)
+async function loadProjectsData(page, size) {
     const projectsList = document.getElementById('projectsList');
     const spinner = document.getElementById('search-spinner');
 
@@ -342,8 +420,8 @@ async function loadProjects() {
     try {
         // Build query parameters for paginated endpoint
         const params = new URLSearchParams();
-        params.append('page', currentPage);
-        params.append('size', pageSize);
+        params.append('page', page);
+        params.append('size', size);
 
         if (filters.client_id) params.append('client_id', filters.client_id);
         if (filters.status) params.append('project_status', filters.status);
@@ -358,20 +436,22 @@ async function loadProjects() {
 
         // Extract pagination data from response
         projectsData = response.items || [];
-        totalCount = response.total || 0;
-        totalPages = response.pages || 1;
-        currentPage = response.page || 1;
 
         // Update UI with project items
         renderProjects(projectsData);
-
-        // Update pagination controls
-        updatePagination();
 
         // Hide search spinner after successful API response
         if (spinner) {
             spinner.classList.add('d-none');
         }
+
+        // Return pagination data for the Pagination component
+        return {
+            items: response.items,
+            total: response.total,
+            pages: response.pages,
+            page: response.page
+        };
     } catch (error) {
         console.error('Error loading projects:', error);
         if (typeof showToast === 'function') {
@@ -405,6 +485,8 @@ async function loadProjects() {
         if (spinner) {
             spinner.classList.add('d-none');
         }
+
+        throw error; // Re-throw for pagination component error handling
     }
 }
 
@@ -619,19 +701,32 @@ function renderCardView(projects) {
     }
 }
 
-// Update pagination controls
-function updatePagination() {
-    const pageStart = Math.min((currentPage - 1) * pageSize + 1, totalCount);
-    const pageEnd = Math.min(currentPage * pageSize, totalCount);
+// Global debug function for testing projects pagination
+window.testProjectsPagination = function() {
+    console.log('=== TESTING PROJECTS PAGINATION ===');
+    console.log('projectsPagination instance:', projectsPagination);
 
-    document.getElementById('pageStart').textContent = pageStart;
-    document.getElementById('pageEnd').textContent = pageEnd;
-    document.getElementById('totalItems').textContent = totalCount;
+    if (!projectsPagination) {
+        console.error('projectsPagination not initialized!');
+        return;
+    }
 
-    // Enable/disable pagination buttons
-    const prevBtn = document.getElementById('prevPage').parentElement;
-    const nextBtn = document.getElementById('nextPage').parentElement;
+    console.log('Current state:', projectsPagination.getState());
 
-    prevBtn.classList.toggle('disabled', currentPage === 1);
-    nextBtn.classList.toggle('disabled', currentPage >= totalPages);
-}
+    // Test element existence
+    const prevButton = document.getElementById('prevPage');
+    const nextButton = document.getElementById('nextPage');
+    console.log('prevButton element:', prevButton);
+    console.log('nextButton element:', nextButton);
+
+    // Test button functionality
+    if (prevButton) {
+        console.log('Testing prev button click...');
+        prevButton.click();
+    }
+
+    if (nextButton) {
+        console.log('Testing next button click...');
+        setTimeout(() => nextButton.click(), 1000);
+    }
+};

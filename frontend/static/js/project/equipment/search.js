@@ -128,28 +128,62 @@ export function setupSearchInput() {
  * Setup pagination buttons
  */
 export function setupPaginationButtons() {
+    console.log('=== CATALOG: Setting up pagination buttons ===');
+
     const prevPageButton = document.getElementById('catalogPrevPage');
     const nextPageButton = document.getElementById('catalogNextPage');
 
+    console.log('CATALOG: prevPageButton found:', !!prevPageButton);
+    console.log('CATALOG: nextPageButton found:', !!nextPageButton);
+
     if (prevPageButton) {
+        console.log('CATALOG: Adding click listener to prevPageButton');
         prevPageButton.addEventListener('click', (e) => {
+            console.log('=== CATALOG: Previous button clicked! ===');
+            console.log('CATALOG: Event:', e);
+            console.log('CATALOG: currentPage before:', currentPage);
+            console.log('CATALOG: Check (currentPage > 1):', currentPage > 1);
             e.preventDefault();
             if (currentPage > 1) {
                 currentPage--;
+                console.log('CATALOG: currentPage after decrement:', currentPage);
+                console.log('CATALOG: Calling searchEquipmentInCatalog()...');
                 searchEquipmentInCatalog();
+            } else {
+                console.log('CATALOG: Previous button disabled - currentPage is not > 1');
             }
         });
+    } else {
+        console.warn('CATALOG: catalogPrevPage button not found!');
     }
 
     if (nextPageButton) {
+        console.log('CATALOG: Adding click listener to nextPageButton');
         nextPageButton.addEventListener('click', (e) => {
+            console.log('=== CATALOG: Next button clicked! ===');
+            console.log('CATALOG: Event:', e);
+            console.log('CATALOG: currentPage before:', currentPage);
+            console.log('CATALOG: totalPages:', totalPages);
+            console.log('CATALOG: Check (currentPage < totalPages):', currentPage < totalPages);
             e.preventDefault();
             if (currentPage < totalPages) {
                 currentPage++;
+                console.log('CATALOG: currentPage after increment:', currentPage);
+                console.log('CATALOG: Calling searchEquipmentInCatalog()...');
                 searchEquipmentInCatalog();
+            } else {
+                console.log('CATALOG: Next button disabled - currentPage is not < totalPages');
             }
         });
+    } else {
+        console.warn('CATALOG: catalogNextPage button not found!');
     }
+
+    console.log('CATALOG: Pagination buttons setup complete');
+
+    // AUTO-INITIALIZE: Load catalog data to enable pagination buttons
+    console.log('CATALOG: Auto-initializing catalog data...');
+    searchEquipmentInCatalog();
 }
 
 /**
@@ -258,3 +292,34 @@ export async function searchEquipmentInCatalog() {
 }
 
 export { currentPage, totalPages, pageSize, totalCount };
+
+// DEBUG: Test pagination buttons functionality
+window.testCatalogPagination = function() {
+    console.log('=== TESTING CATALOG PAGINATION ===');
+    console.log('Current state:', { currentPage, totalPages, pageSize, totalCount });
+
+    const prevPageButton = document.getElementById('catalogPrevPage');
+    const nextPageButton = document.getElementById('catalogNextPage');
+
+    console.log('Elements found:', {
+        prevPageButton: !!prevPageButton,
+        nextPageButton: !!nextPageButton
+    });
+
+    if (prevPageButton) {
+        console.log('PrevButton parent classes:', prevPageButton.parentElement.className);
+        console.log('PrevButton disabled state:', prevPageButton.parentElement.classList.contains('disabled'));
+    }
+
+    if (nextPageButton) {
+        console.log('NextButton parent classes:', nextPageButton.parentElement.className);
+        console.log('NextButton disabled state:', nextPageButton.parentElement.classList.contains('disabled'));
+    }
+
+    console.log('Try clicking nextPageButton manually...');
+    if (nextPageButton && !nextPageButton.parentElement.classList.contains('disabled')) {
+        nextPageButton.click();
+    } else {
+        console.log('NextButton is disabled or not found');
+    }
+};
