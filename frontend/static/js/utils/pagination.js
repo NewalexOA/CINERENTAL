@@ -968,7 +968,7 @@ export function createPaginationHTML(config = {}) {
                 </div>
             </div>
             <div class="d-flex justify-content-end mt-2">
-                <select class="form-select form-select-sm" id="${prefix}PageSize" style="width: auto;">
+                <select class="form-select form-select-sm pagination-size-select" id="${prefix}PageSize">
                     ${pageSizeOptions}
                 </select>
             </div>

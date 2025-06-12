@@ -294,92 +294,96 @@ class BarcodeScanner {
 window.BarcodeScanner = BarcodeScanner;
 
 // Equipment search functionality
-window.equipmentSearch = {
-    init() {
-        const searchInput = document.querySelector('#searchInput');
-        const categoryFilter = document.querySelector('#categoryFilter');
-        const statusFilter = document.querySelector('#statusFilter');
-        const searchSpinner = document.querySelector('#search-spinner');
-        const initialEquipment = [...document.getElementById('equipmentTable').children];
-
-        // Get initial values from URL parameters
-        const urlParams = new URLSearchParams(window.location.search);
-        const initialQuery = urlParams.get('query') || '';
-        const initialCategory = urlParams.get('category_id') || '';
-        const initialStatus = urlParams.get('status') || '';
-
-        // Set initial values
-        searchInput.value = initialQuery;
-        categoryFilter.value = initialCategory;
-        statusFilter.value = initialStatus;
-
-        const updateResults = debounce(async () => {
-            const query = searchInput.value.trim();
-            const category = categoryFilter.value;
-            const status = statusFilter.value;
-
-            searchSpinner.classList.remove('d-none');
-            try {
-                const params = new URLSearchParams();
-
-                // Добавляем поисковый запрос если он достаточной длины
-                if (query.length >= 3) {
-                    params.append('query', query);
-                }
-
-                // Добавляем фильтры
-                if (category) {
-                    params.append('category_id', category);
-                }
-                if (status) {
-                    params.append('status', status);
-                }
-
-                params.append('include_deleted', 'false');
-
-                // Add timestamp for cache prevention
-                params.append('_t', Date.now());
-
-                // Формируем URL с параметрами
-                const url = params.toString() ? `/equipment?${params.toString()}` : '/equipment';
-
-                // Update browser URL without reloading the page
-                const newUrl = params.toString() ? `?${params.toString()}` : window.location.pathname;
-                window.history.replaceState({}, '', newUrl);
-
-                console.log('Request URL:', url);
-                const results = await api.get(url);
-                console.log('Results:', results);
-
-                const table = document.getElementById('equipmentTable');
-                if (!table) {
-                    console.error('Table element not found');
-                    return;
-                }
-
-                if (results.length === 0) {
-                    table.innerHTML = '<tr><td colspan="6" class="text-center">Ничего не найдено</td></tr>';
-                    return;
-                }
-
-                table.innerHTML = results.map(item => formatEquipmentRow(item)).join('');
-            } catch (error) {
-                console.error('Search error:', error);
-                showToast('Ошибка при поиске оборудования', 'danger');
-            } finally {
-                searchSpinner.classList.add('d-none');
-            }
-        }, 300);
-
-        // Add event listeners
-        searchInput.addEventListener('input', updateResults);
-        categoryFilter.addEventListener('change', updateResults);
-        statusFilter.addEventListener('change', updateResults);
-
-        // Load initial data
-        updateResults();
+const setupEquipmentSearch = () => {
+    // Check if global equipment search should be disabled for this page
+    if (window.disableGlobalEquipmentSearch) {
+        console.log('🚫 Global equipment search disabled by page-specific module');
+        return;
     }
-};
+
+    const searchInput = document.querySelector('#searchInput');
+    const categoryFilter = document.querySelector('#categoryFilter');
+    const statusFilter = document.querySelector('#statusFilter');
+    const searchSpinner = document.querySelector('#search-spinner');
+    const initialEquipment = [...document.getElementById('equipmentTable').children];
+
+    // Get initial values from URL parameters
+    const urlParams = new URLSearchParams(window.location.search);
+    const initialQuery = urlParams.get('query') || '';
+    const initialCategory = urlParams.get('category_id') || '';
+    const initialStatus = urlParams.get('status') || '';
+
+    // Set initial values
+    searchInput.value = initialQuery;
+    categoryFilter.value = initialCategory;
+    statusFilter.value = initialStatus;
+
+    const updateResults = debounce(async () => {
+        const query = searchInput.value.trim();
+        const category = categoryFilter.value;
+        const status = statusFilter.value;
+
+        searchSpinner.classList.remove('d-none');
+        try {
+            const params = new URLSearchParams();
+
+            // Добавляем поисковый запрос если он достаточной длины
+            if (query.length >= 3) {
+                params.append('query', query);
+            }
+
+            // Добавляем фильтры
+            if (category) {
+                params.append('category_id', category);
+            }
+            if (status) {
+                params.append('status', status);
+            }
+
+            params.append('include_deleted', 'false');
+
+            // Add timestamp for cache prevention
+            params.append('_t', Date.now());
+
+            // Формируем URL с параметрами
+            const url = params.toString() ? `/equipment?${params.toString()}` : '/equipment';
+
+            // Update browser URL without reloading the page
+            const newUrl = params.toString() ? `?${params.toString()}` : window.location.pathname;
+            window.history.replaceState({}, '', newUrl);
+
+            console.log('Request URL:', url);
+            const results = await api.get(url);
+            console.log('Results:', results);
+
+            const table = document.getElementById('equipmentTable');
+            if (!table) {
+                console.error('Table element not found');
+                return;
+            }
+
+            if (results.length === 0) {
+                table.innerHTML = '<tr><td colspan="6" class="text-center">Ничего не найдено</td></tr>';
+                return;
+            }
+
+            table.innerHTML = results.map(item => formatEquipmentRow(item)).join('');
+        } catch (error) {
+            console.error('Search error:', error);
+            showToast('Ошибка при поиске оборудования', 'danger');
+        } finally {
+            searchSpinner.classList.add('d-none');
+        }
+    }, 300);
+
+    // Add event listeners
+    searchInput.addEventListener('input', updateResults);
+    categoryFilter.addEventListener('change', updateResults);
+    statusFilter.addEventListener('change', updateResults);
+
+    // Load initial data
+    updateResults();
+}
 
 // Get status color for badges
 function getStatusColor(status) {
@@ -687,10 +691,8 @@ document.addEventListener('DOMContentLoaded', function() {
     // Setup global event handlers
     setupGlobalEventHandlers();
 
-    // Initialize equipment search
-    if (document.getElementById('searchInput')) {
-        window.equipmentSearch.init();
-    }
+    // Initialize equipment search if not disabled
+    setupEquipmentSearch();
 
     initClientControls(); // Initialize client search and sort
 });
