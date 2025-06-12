@@ -9,6 +9,15 @@ import { initializeBookingPeriodPickers } from './availability.js';
 import { initializeActionButtonEventListeners } from './ui.js';
 import { Pagination } from '../../utils/pagination.js';
 
+// Logging configuration
+const LOG_CONFIG = {
+    filters: {
+        enabled: false, // Set to true for development debugging
+        logInit: false,
+        logDataLoad: false
+    }
+};
+
 class ProjectEquipmentFilters {
     constructor(projectId) {
         this.projectId = projectId;
@@ -184,7 +193,9 @@ class ProjectEquipmentFilters {
     }
 
     initializePagination() {
-        console.log('=== EQUIPMENT FILTERS: Initializing pagination ===');
+        if (LOG_CONFIG.filters.enabled && LOG_CONFIG.filters.logInit) {
+            console.log('=== EQUIPMENT FILTERS: Initializing pagination ===');
+        }
 
         // Check if required DOM elements exist for primary pagination (bottom)
         const requiredElements = [
@@ -206,7 +217,9 @@ class ProjectEquipmentFilters {
             return;
         }
 
-        console.log('EQUIPMENT FILTERS: All required elements found');
+        if (LOG_CONFIG.filters.enabled && LOG_CONFIG.filters.logInit) {
+            console.log('EQUIPMENT FILTERS: All required elements found');
+        }
 
         // Create primary pagination (bottom) - this one controls the data
         this.pagination = new Pagination({
@@ -232,7 +245,9 @@ class ProjectEquipmentFilters {
             },
             callbacks: {
                 onDataLoad: async (page, size) => {
-                    console.log('EQUIPMENT FILTERS: Loading data for page:', page, 'size:', size);
+                    if (LOG_CONFIG.filters.enabled && LOG_CONFIG.filters.logDataLoad) {
+                        console.log('EQUIPMENT FILTERS: Loading data for page:', page, 'size:', size);
+                    }
                     return await this.loadEquipmentData(page, size);
                 }
             }
@@ -250,11 +265,15 @@ class ProjectEquipmentFilters {
             pageSizeSelect: '#equipmentTopPageSize'
         });
 
-        console.log('EQUIPMENT FILTERS: Pagination instance created:', this.pagination);
+        if (LOG_CONFIG.filters.enabled && LOG_CONFIG.filters.logInit) {
+            console.log('EQUIPMENT FILTERS: Pagination instance created:', this.pagination);
+        }
 
         // Manual initial load after slight delay to ensure DOM is ready
         setTimeout(() => {
-            console.log('EQUIPMENT FILTERS: Manually triggering initial data load...');
+            if (LOG_CONFIG.filters.enabled && LOG_CONFIG.filters.logInit) {
+                console.log('EQUIPMENT FILTERS: Manually triggering initial data load...');
+            }
             this.pagination.loadData();
         }, 100);
     }

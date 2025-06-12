@@ -1,6 +1,17 @@
 /**
- * API client for making HTTP requests
+ * API utility for making HTTP requests
  */
+
+// Logging configuration
+const LOG_CONFIG = {
+    api: {
+        enabled: false, // Set to true for development debugging
+        logRequests: false,
+        logResponses: false,
+        logHeaders: false,
+        logTiming: true // Keep timing for performance monitoring
+    }
+};
 
 const API_BASE_URL = '/api/v1';
 
@@ -26,12 +37,21 @@ class ApiClient {
         const finalUrl = url;
 
         try {
-            console.group(`%c[API] GET Request: ${API_BASE_URL}${finalUrl}`, 'color: #2196F3; font-weight: bold;');
-            console.log('Time:', new Date().toISOString());
+            if (LOG_CONFIG.api.enabled && LOG_CONFIG.api.logRequests) {
+                console.group(`%c[API] GET Request: ${API_BASE_URL}${finalUrl}`, 'color: #2196F3; font-weight: bold;');
+                console.log('Time:', new Date().toISOString());
+            }
 
             const response = await fetch(`${API_BASE_URL}${finalUrl}`);
-            console.log('Status:', response.status, response.statusText);
-            console.log('Headers:', Object.fromEntries(response.headers.entries()));
+
+            if (LOG_CONFIG.api.enabled) {
+                if (LOG_CONFIG.api.logRequests) {
+                    console.log('Status:', response.status, response.statusText);
+                }
+                if (LOG_CONFIG.api.logHeaders) {
+                    console.log('Headers:', Object.fromEntries(response.headers.entries()));
+                }
+            }
 
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({ detail: 'Ошибка сети' }));
@@ -43,13 +63,25 @@ class ApiClient {
 
             const data = await response.json();
             const endTime = performance.now();
-            console.log('Response Data:', data);
-            console.log(`Request took ${(endTime - startTime).toFixed(2)}ms`);
-            console.groupEnd();
+
+            if (LOG_CONFIG.api.enabled) {
+                if (LOG_CONFIG.api.logResponses) {
+                    console.log('Response Data:', data);
+                }
+                if (LOG_CONFIG.api.logTiming) {
+                    console.log(`Request took ${(endTime - startTime).toFixed(2)}ms`);
+                }
+                if (LOG_CONFIG.api.logRequests) {
+                    console.groupEnd();
+                }
+            }
+
             return data;
         } catch (error) {
             console.error('Error Details:', error);
-            console.groupEnd();
+            if (LOG_CONFIG.api.enabled && LOG_CONFIG.api.logRequests) {
+                console.groupEnd();
+            }
             const errorMessage = error.response?.data?.detail || error.message || 'Ошибка при получении данных';
             throw new Error(errorMessage);
         }
@@ -64,9 +96,11 @@ class ApiClient {
     async post(endpoint, data) {
         const startTime = performance.now();
         try {
-            console.group(`%c[API] POST Request: ${API_BASE_URL}${endpoint}`, 'color: #4CAF50; font-weight: bold;');
-            console.log('Time:', new Date().toISOString());
-            console.log('Request Data:', data);
+            if (LOG_CONFIG.api.enabled && LOG_CONFIG.api.logRequests) {
+                console.group(`%c[API] POST Request: ${API_BASE_URL}${endpoint}`, 'color: #4CAF50; font-weight: bold;');
+                console.log('Time:', new Date().toISOString());
+                console.log('Request Data:', data);
+            }
 
             if (data && typeof data === 'object') {
                 Object.keys(data).forEach(key => {
@@ -84,8 +118,14 @@ class ApiClient {
                 body: JSON.stringify(data)
             });
 
-            console.log('Status:', response.status, response.statusText);
-            console.log('Headers:', Object.fromEntries(response.headers.entries()));
+            if (LOG_CONFIG.api.enabled) {
+                if (LOG_CONFIG.api.logRequests) {
+                    console.log('Status:', response.status, response.statusText);
+                }
+                if (LOG_CONFIG.api.logHeaders) {
+                    console.log('Headers:', Object.fromEntries(response.headers.entries()));
+                }
+            }
 
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({ detail: 'Ошибка сети' }));
@@ -97,9 +137,19 @@ class ApiClient {
 
             const responseData = await response.json();
             const endTime = performance.now();
-            console.log('Response Data:', responseData);
-            console.log(`Request took ${(endTime - startTime).toFixed(2)}ms`);
-            console.groupEnd();
+
+            if (LOG_CONFIG.api.enabled) {
+                if (LOG_CONFIG.api.logResponses) {
+                    console.log('Response Data:', responseData);
+                }
+                if (LOG_CONFIG.api.logTiming) {
+                    console.log(`Request took ${(endTime - startTime).toFixed(2)}ms`);
+                }
+                if (LOG_CONFIG.api.logRequests) {
+                    console.groupEnd();
+                }
+            }
+
             return responseData;
         } catch (error) {
             console.error('Error Data:', error.response?.data);

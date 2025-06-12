@@ -9,6 +9,16 @@
  * @version 1.1.0
  */
 
+// Logging configuration
+const LOG_CONFIG = {
+    pagination: {
+        enabled: false, // Set to true for development debugging
+        logEvents: false,
+        logDataLoad: false,
+        logStateChanges: false
+    }
+};
+
 /**
  * Universal Pagination Class
  *
@@ -303,15 +313,21 @@ class Pagination {
      * @private
      */
     _setupEventListeners() {
-        console.log('PAGINATION: Setting up event listeners...');
+        if (LOG_CONFIG.pagination.enabled && LOG_CONFIG.pagination.logEvents) {
+            console.log('PAGINATION: Setting up event listeners...');
+        }
 
         // Previous page button
         if (this.elements.prevButton) {
-            console.log('PAGINATION: Adding click listener to prevButton');
+            if (LOG_CONFIG.pagination.enabled && LOG_CONFIG.pagination.logEvents) {
+                console.log('PAGINATION: Adding click listener to prevButton');
+            }
             this.elements.prevButton.addEventListener('click', (e) => {
-                console.log('=== PAGINATION: Previous button clicked! ===');
-                console.log('PAGINATION: Current state:', this.state);
-                console.log('PAGINATION: Button disabled:', this.elements.prevButton.disabled);
+                if (LOG_CONFIG.pagination.enabled && LOG_CONFIG.pagination.logEvents) {
+                    console.log('=== PAGINATION: Previous button clicked! ===');
+                    console.log('PAGINATION: Current state:', this.state);
+                    console.log('PAGINATION: Button disabled:', this.elements.prevButton.disabled);
+                }
                 e.preventDefault();
                 this.previousPage();
             });
@@ -321,11 +337,15 @@ class Pagination {
 
         // Next page button
         if (this.elements.nextButton) {
-            console.log('PAGINATION: Adding click listener to nextButton');
+            if (LOG_CONFIG.pagination.enabled && LOG_CONFIG.pagination.logEvents) {
+                console.log('PAGINATION: Adding click listener to nextButton');
+            }
             this.elements.nextButton.addEventListener('click', (e) => {
-                console.log('=== PAGINATION: Next button clicked! ===');
-                console.log('PAGINATION: Current state:', this.state);
-                console.log('PAGINATION: Button disabled:', this.elements.nextButton.disabled);
+                if (LOG_CONFIG.pagination.enabled && LOG_CONFIG.pagination.logEvents) {
+                    console.log('=== PAGINATION: Next button clicked! ===');
+                    console.log('PAGINATION: Current state:', this.state);
+                    console.log('PAGINATION: Button disabled:', this.elements.nextButton.disabled);
+                }
                 e.preventDefault();
                 this.nextPage();
             });
@@ -335,16 +355,22 @@ class Pagination {
 
         // Page size selector
         if (this.elements.pageSizeSelect && this.options.showPageSizeSelect) {
-            console.log('PAGINATION: Adding change listener to pageSizeSelect');
+            if (LOG_CONFIG.pagination.enabled && LOG_CONFIG.pagination.logEvents) {
+                console.log('PAGINATION: Adding change listener to pageSizeSelect');
+            }
             this.elements.pageSizeSelect.addEventListener('change', (e) => {
-                console.log('PAGINATION: Page size changed to:', e.target.value);
+                if (LOG_CONFIG.pagination.enabled && LOG_CONFIG.pagination.logEvents) {
+                    console.log('PAGINATION: Page size changed to:', e.target.value);
+                }
                 this.changePageSize(e.target.value);
             });
         } else {
             console.warn('PAGINATION: pageSizeSelect element not found or disabled');
         }
 
-        console.log('PAGINATION: Event listeners setup complete');
+        if (LOG_CONFIG.pagination.enabled && LOG_CONFIG.pagination.logEvents) {
+            console.log('PAGINATION: Event listeners setup complete');
+        }
     }
 
     /**
@@ -353,12 +379,16 @@ class Pagination {
      */
     async loadData() {
         if (this.state.isLoading) {
-            console.log('PAGINATION: Already loading, skipping...');
+            if (LOG_CONFIG.pagination.enabled && LOG_CONFIG.pagination.logDataLoad) {
+                console.log('PAGINATION: Already loading, skipping...');
+            }
             return;
         }
 
         try {
-            console.log('PAGINATION: Starting data load...');
+            if (LOG_CONFIG.pagination.enabled && LOG_CONFIG.pagination.logDataLoad) {
+                console.log('PAGINATION: Starting data load...');
+            }
             this.state.isLoading = true;
             this._showLoadingState();
 
@@ -367,15 +397,21 @@ class Pagination {
                 this.state.pageSize
             );
 
-            console.log('PAGINATION: Data loaded successfully:', result);
+            if (LOG_CONFIG.pagination.enabled && LOG_CONFIG.pagination.logDataLoad) {
+                console.log('PAGINATION: Data loaded successfully:', result);
+            }
             this._updateState(result);
 
             // IMPORTANT: Reset loading state BEFORE updating UI
             this.state.isLoading = false;
-            console.log('PAGINATION: Loading state reset to false');
+            if (LOG_CONFIG.pagination.enabled && LOG_CONFIG.pagination.logDataLoad) {
+                console.log('PAGINATION: Loading state reset to false');
+            }
 
             this._updateUI();
-            console.log('PAGINATION: UI updated');
+            if (LOG_CONFIG.pagination.enabled && LOG_CONFIG.pagination.logDataLoad) {
+                console.log('PAGINATION: UI updated');
+            }
 
         } catch (error) {
             console.error('Pagination: Error loading data:', error);
@@ -408,7 +444,9 @@ class Pagination {
      * @public
      */
     async previousPage() {
-        console.log('PAGINATION: previousPage() called, current page:', this.state.currentPage);
+        if (LOG_CONFIG.pagination.enabled && LOG_CONFIG.pagination.logEvents) {
+            console.log('PAGINATION: previousPage() called, current page:', this.state.currentPage);
+        }
         await this.goToPage(this.state.currentPage - 1);
     }
 
@@ -417,7 +455,9 @@ class Pagination {
      * @public
      */
     async nextPage() {
-        console.log('PAGINATION: nextPage() called, current page:', this.state.currentPage);
+        if (LOG_CONFIG.pagination.enabled && LOG_CONFIG.pagination.logEvents) {
+            console.log('PAGINATION: nextPage() called, current page:', this.state.currentPage);
+        }
         await this.goToPage(this.state.currentPage + 1);
     }
 
@@ -526,32 +566,42 @@ class Pagination {
      * @private
      */
     _updateNavigationButtons() {
-        console.log('PAGINATION: Updating navigation buttons, state:', {
-            currentPage: this.state.currentPage,
-            totalPages: this.state.totalPages,
-            isLoading: this.state.isLoading
-        });
+        if (LOG_CONFIG.pagination.enabled && LOG_CONFIG.pagination.logStateChanges) {
+            console.log('PAGINATION: Updating navigation buttons, state:', {
+                currentPage: this.state.currentPage,
+                totalPages: this.state.totalPages,
+                isLoading: this.state.isLoading
+            });
+        }
 
         // Update previous button
         if (this.elements.prevButton) {
             const shouldDisablePrev = this.state.currentPage <= 1 || this.state.isLoading;
-            console.log('PAGINATION: Setting prevButton disabled:', shouldDisablePrev);
-            console.log('PAGINATION: prevButton element type:', this.elements.prevButton.tagName);
+            if (LOG_CONFIG.pagination.enabled && LOG_CONFIG.pagination.logStateChanges) {
+                console.log('PAGINATION: Setting prevButton disabled:', shouldDisablePrev);
+                console.log('PAGINATION: prevButton element type:', this.elements.prevButton.tagName);
+            }
 
             // Handle both <button> elements and Bootstrap pagination <a> elements
             if (this.elements.prevButton.tagName === 'BUTTON') {
                 this.elements.prevButton.disabled = shouldDisablePrev;
-                console.log('PAGINATION: Updated BUTTON prevButton.disabled to:', shouldDisablePrev);
+                if (LOG_CONFIG.pagination.enabled && LOG_CONFIG.pagination.logStateChanges) {
+                    console.log('PAGINATION: Updated BUTTON prevButton.disabled to:', shouldDisablePrev);
+                }
             } else if (this.elements.prevButton.tagName === 'A') {
                 // For Bootstrap pagination <a> inside <li>
                 const parentLi = this.elements.prevButton.parentElement;
                 if (parentLi && parentLi.tagName === 'LI') {
                     if (shouldDisablePrev) {
                         parentLi.classList.add('disabled');
-                        console.log('PAGINATION: Added disabled class to prevButton parent LI');
+                        if (LOG_CONFIG.pagination.enabled && LOG_CONFIG.pagination.logStateChanges) {
+                            console.log('PAGINATION: Added disabled class to prevButton parent LI');
+                        }
                     } else {
                         parentLi.classList.remove('disabled');
-                        console.log('PAGINATION: Removed disabled class from prevButton parent LI');
+                        if (LOG_CONFIG.pagination.enabled && LOG_CONFIG.pagination.logStateChanges) {
+                            console.log('PAGINATION: Removed disabled class from prevButton parent LI');
+                        }
                     }
                 }
             }
@@ -560,23 +610,31 @@ class Pagination {
         // Update next button
         if (this.elements.nextButton) {
             const shouldDisableNext = this.state.currentPage >= this.state.totalPages || this.state.isLoading;
-            console.log('PAGINATION: Setting nextButton disabled:', shouldDisableNext);
-            console.log('PAGINATION: nextButton element type:', this.elements.nextButton.tagName);
+            if (LOG_CONFIG.pagination.enabled && LOG_CONFIG.pagination.logStateChanges) {
+                console.log('PAGINATION: Setting nextButton disabled:', shouldDisableNext);
+                console.log('PAGINATION: nextButton element type:', this.elements.nextButton.tagName);
+            }
 
             // Handle both <button> elements and Bootstrap pagination <a> elements
             if (this.elements.nextButton.tagName === 'BUTTON') {
                 this.elements.nextButton.disabled = shouldDisableNext;
-                console.log('PAGINATION: Updated BUTTON nextButton.disabled to:', shouldDisableNext);
+                if (LOG_CONFIG.pagination.enabled && LOG_CONFIG.pagination.logStateChanges) {
+                    console.log('PAGINATION: Updated BUTTON nextButton.disabled to:', shouldDisableNext);
+                }
             } else if (this.elements.nextButton.tagName === 'A') {
                 // For Bootstrap pagination <a> inside <li>
                 const parentLi = this.elements.nextButton.parentElement;
                 if (parentLi && parentLi.tagName === 'LI') {
                     if (shouldDisableNext) {
                         parentLi.classList.add('disabled');
-                        console.log('PAGINATION: Added disabled class to nextButton parent LI');
+                        if (LOG_CONFIG.pagination.enabled && LOG_CONFIG.pagination.logStateChanges) {
+                            console.log('PAGINATION: Added disabled class to nextButton parent LI');
+                        }
                     } else {
                         parentLi.classList.remove('disabled');
-                        console.log('PAGINATION: Removed disabled class from nextButton parent LI');
+                        if (LOG_CONFIG.pagination.enabled && LOG_CONFIG.pagination.logStateChanges) {
+                            console.log('PAGINATION: Removed disabled class from nextButton parent LI');
+                        }
                     }
                 }
             }
@@ -589,22 +647,30 @@ class Pagination {
      */
     _updatePageSizeSelector() {
         if (!this.elements.pageSizeSelect || !this.options.showPageSizeSelect) {
-            console.log('PAGINATION: pageSizeSelect not found or disabled');
+            if (LOG_CONFIG.pagination.enabled && LOG_CONFIG.pagination.logStateChanges) {
+                console.log('PAGINATION: pageSizeSelect not found or disabled');
+            }
             return;
         }
 
-        console.log('PAGINATION: Updating page size selector, isLoading:', this.state.isLoading);
+        if (LOG_CONFIG.pagination.enabled && LOG_CONFIG.pagination.logStateChanges) {
+            console.log('PAGINATION: Updating page size selector, isLoading:', this.state.isLoading);
+        }
 
         // Enable/disable selector based on loading state
         this.elements.pageSizeSelect.disabled = this.state.isLoading;
-        console.log('PAGINATION: Set pageSizeSelect.disabled to:', this.state.isLoading);
+        if (LOG_CONFIG.pagination.enabled && LOG_CONFIG.pagination.logStateChanges) {
+            console.log('PAGINATION: Set pageSizeSelect.disabled to:', this.state.isLoading);
+        }
 
         // Update selected value
         const currentValue = this.state.isShowingAll ? 'all' : this.state.pageSize.toString();
 
         if (this.elements.pageSizeSelect.value !== currentValue) {
             this.elements.pageSizeSelect.value = currentValue;
-            console.log('PAGINATION: Updated pageSizeSelect value to:', currentValue);
+            if (LOG_CONFIG.pagination.enabled && LOG_CONFIG.pagination.logStateChanges) {
+                console.log('PAGINATION: Updated pageSizeSelect value to:', currentValue);
+            }
         }
     }
 
@@ -613,22 +679,30 @@ class Pagination {
      * @private
      */
     _showLoadingState() {
-        console.log('PAGINATION: Showing loading state - disabling all controls');
+        if (LOG_CONFIG.pagination.enabled && LOG_CONFIG.pagination.logStateChanges) {
+            console.log('PAGINATION: Showing loading state - disabling all controls');
+        }
 
         // Disable navigation buttons during loading
         if (this.elements.prevButton) {
             this.elements.prevButton.disabled = true;
-            console.log('PAGINATION: Disabled prevButton during loading');
+            if (LOG_CONFIG.pagination.enabled && LOG_CONFIG.pagination.logStateChanges) {
+                console.log('PAGINATION: Disabled prevButton during loading');
+            }
         }
 
         if (this.elements.nextButton) {
             this.elements.nextButton.disabled = true;
-            console.log('PAGINATION: Disabled nextButton during loading');
+            if (LOG_CONFIG.pagination.enabled && LOG_CONFIG.pagination.logStateChanges) {
+                console.log('PAGINATION: Disabled nextButton during loading');
+            }
         }
 
         if (this.elements.pageSizeSelect) {
             this.elements.pageSizeSelect.disabled = true;
-            console.log('PAGINATION: Disabled pageSizeSelect during loading');
+            if (LOG_CONFIG.pagination.enabled && LOG_CONFIG.pagination.logStateChanges) {
+                console.log('PAGINATION: Disabled pageSizeSelect during loading');
+            }
         }
     }
 
