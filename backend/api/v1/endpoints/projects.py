@@ -732,7 +732,6 @@ async def get_project_bookings_paginated(
             total=paginated_result.total,
             page=paginated_result.page,
             size=paginated_result.size,
-            pages=paginated_result.pages,
         )
 
         return result
