@@ -500,6 +500,13 @@ class Pagination {
      * @private
      */
     _updateState(result) {
+        if (LOG_CONFIG.pagination.enabled && LOG_CONFIG.pagination.stateChanges) {
+            console.log('PAGINATION: _updateState called:', {
+                inputResult: result,
+                previousState: { ...this.state }
+            });
+        }
+
         if (result && typeof result === 'object') {
             this.state.totalItems = result.total || 0;
             this.state.totalPages = result.pages || 1;
@@ -507,6 +514,22 @@ class Pagination {
 
             // Ensure current page is within valid range
             this.state.currentPage = Math.max(1, Math.min(this.state.currentPage, this.state.totalPages));
+
+            if (LOG_CONFIG.pagination.enabled && LOG_CONFIG.pagination.stateChanges) {
+                console.log('PAGINATION: State updated:', {
+                    updatedState: { ...this.state },
+                    calculation: {
+                        'result.total': result.total,
+                        'result.pages': result.pages,
+                        'result.page': result.page,
+                        'final totalItems': this.state.totalItems,
+                        'final totalPages': this.state.totalPages,
+                        'final currentPage': this.state.currentPage
+                    }
+                });
+            }
+        } else {
+            console.warn('PAGINATION: Invalid result object:', result);
         }
     }
 
@@ -538,6 +561,18 @@ class Pagination {
             (this.state.currentPage - 1) * this.state.pageSize + 1 : 0;
         const endItem = Math.min(this.state.currentPage * this.state.pageSize, this.state.totalItems);
 
+        if (LOG_CONFIG.pagination.enabled && LOG_CONFIG.pagination.stateChanges) {
+            console.log('PAGINATION: _updatePageInfo called:', {
+                state: {
+                    totalItems: this.state.totalItems,
+                    currentPage: this.state.currentPage,
+                    totalPages: this.state.totalPages,
+                    pageSize: this.state.pageSize
+                },
+                calculated: { startItem, endItem }
+            });
+        }
+
         // Update page info elements
         if (this.elements.pageStart) {
             this.elements.pageStart.textContent = startItem;
@@ -557,6 +592,9 @@ class Pagination {
 
         if (this.elements.totalPages) {
             this.elements.totalPages.textContent = this.state.totalPages;
+            if (LOG_CONFIG.pagination.enabled && LOG_CONFIG.pagination.stateChanges) {
+                console.log('PAGINATION: Updated totalPages DOM to:', this.state.totalPages);
+            }
         }
     }
 
