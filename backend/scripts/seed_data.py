@@ -3,6 +3,7 @@
 import argparse
 import asyncio
 import json
+import shutil
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 from pathlib import Path
@@ -28,63 +29,71 @@ from backend.schemas import PaymentStatus
 from backend.services.barcode import BarcodeService
 
 
-async def load_extended_data_from_json(
-    session: AsyncSession,
-    json_file: Path,
-) -> None:
-    """Load production data from JSON file.
+async def load_extended_data_from_json(session: AsyncSession) -> None:
+    """Load extended production data from JSON file."""
+    extended_data_path = Path(__file__).parent / 'extended_data.json'
 
-    Args:
-        session: Database session
-        json_file: Path to JSON file with production data
-    """
-    if not json_file.exists():
-        logger.error('Production data file not found: {}', json_file)
-        raise FileNotFoundError(f'Production data file not found: {json_file}')
+    # Check if data already loaded (file was renamed)
+    loaded_data_path = Path(__file__).parent / 'extended_data_loaded.json'
 
-    logger.info('Loading production data from {}', json_file)
+    if loaded_data_path.exists() and not extended_data_path.exists():
+        logger.info(
+            'Extended data already loaded (found {}, no {}). Skipping.',
+            loaded_data_path.name,
+            extended_data_path.name,
+        )
+        return
 
-    with open(json_file, 'r', encoding='utf-8') as f:
-        data = json.load(f)
+    if not extended_data_path.exists():
+        logger.warning('Extended data file not found: {}', extended_data_path)
+        return
 
-    # Load categories first and get ID mapping
-    category_id_mapping = await load_categories_from_json(session, data['categories'])
+    logger.info('Loading production data from {}', extended_data_path)
 
-    # Load clients and get ID mapping
-    client_id_mapping = await load_clients_from_json(session, data['clients'])
+    with open(extended_data_path, 'r', encoding='utf-8') as file:
+        data = json.load(file)
 
-    # Update equipment data with new category IDs
-    updated_equipment_data = []
-    for equipment in data['equipment']:
-        old_category_id = equipment['category_id']
-        if old_category_id in category_id_mapping:
-            equipment['category_id'] = category_id_mapping[old_category_id]
-            updated_equipment_data.append(equipment)
-        else:
-            logger.warning(
-                'Equipment "{}" references unknown category_id: {}. Skipping.',
-                equipment.get('name', 'Unknown'),
-                old_category_id,
-            )
-
-    # Load equipment with updated category IDs and get ID mapping
-    equipment_id_mapping = await load_equipment_from_json(
-        session, updated_equipment_data
+    # Load categories and create ID mapping
+    category_id_mapping = await load_categories_from_json(
+        session, data.get('categories', [])
     )
 
-    # Update projects data with new client IDs and load projects
+    # Load clients and create ID mapping
+    client_id_mapping = await load_clients_from_json(session, data.get('clients', []))
+
+    # Load projects and create ID mapping
     project_id_mapping = await load_projects_from_json(
-        session, data['projects'], client_id_mapping
+        session, data.get('projects', []), client_id_mapping
     )
 
-    # Update bookings data with new client, equipment, and project IDs
+    # Load equipment and create ID mapping
+    equipment_id_mapping = await load_equipment_from_json(
+        session, data.get('equipment', []), category_id_mapping
+    )
+
+    # Load bookings
     await load_bookings_from_json(
         session,
-        data['bookings'],
+        data.get('bookings', []),
         client_id_mapping,
         project_id_mapping,
         equipment_id_mapping,
     )
+
+    # After successful loading, rename the file to prevent re-loading
+    try:
+        shutil.move(str(extended_data_path), str(loaded_data_path))
+        logger.info(
+            'Extended data file renamed from {} to {} to prevent re-loading',
+            extended_data_path.name,
+            loaded_data_path.name,
+        )
+    except Exception as e:
+        logger.warning(
+            'Failed to rename extended data file: {}. '
+            'Data may be loaded again on next run.',
+            e,
+        )
 
     logger.info('Production data loaded successfully')
 
@@ -222,35 +231,58 @@ async def load_clients_from_json(
 async def load_equipment_from_json(
     session: AsyncSession,
     equipment_data: List[Dict[str, Any]],
+    category_id_mapping: Dict[int, int],
 ) -> Dict[int, int]:
     """Load equipment from JSON data."""
     repository = EquipmentRepository(session)
-
-    id_mapping = {}
+    equipment_id_mapping: Dict[int, int] = {}
 
     for eq_data in equipment_data:
-        # Check if equipment already exists by barcode
-        existing = await repository.get_by_barcode(eq_data['barcode'])
-        if existing:
-            logger.info('Equipment already exists: {}', eq_data['name'])
-            id_mapping[eq_data['id']] = existing.id
+        # Skip equipment with unknown category references
+        old_category_id = eq_data['category_id']
+        if old_category_id not in category_id_mapping:
+            logger.warning(
+                'Equipment "{}" references unknown category_id: {}. Skipping.',
+                eq_data.get('name', 'Unknown'),
+                old_category_id,
+            )
             continue
 
+        # Check if equipment already exists by barcode
+        barcode = eq_data['barcode']
+        logger.debug('Searching for existing equipment with barcode: {}', barcode)
+        existing_equipment = await repository.get_by_barcode(barcode)
+
+        if existing_equipment:
+            logger.info(
+                'Equipment already exists: {} (barcode: {})', eq_data['name'], barcode
+            )
+            equipment_id_mapping[eq_data['id']] = existing_equipment.id
+            continue
+        else:
+            logger.debug('No existing equipment found for barcode: {}', barcode)
+
+        # Create new equipment
         equipment = Equipment(
             name=eq_data['name'],
             description=eq_data.get('description'),
             serial_number=eq_data.get('serial_number'),
             barcode=eq_data['barcode'],
-            category_id=eq_data['category_id'],
+            category_id=category_id_mapping[old_category_id],
             status=getattr(EquipmentStatus, eq_data['status']),
             replacement_cost=eq_data.get('replacement_cost', 0),
-            notes=eq_data.get('notes'),
         )
-        await repository.create(equipment)
-        id_mapping[eq_data['id']] = equipment.id
-        logger.info('Created equipment: {}', equipment.name)
 
-    return id_mapping
+        created_equipment = await repository.create(equipment)
+        equipment_id_mapping[eq_data['id']] = created_equipment.id
+
+        logger.info('Created equipment: {}', eq_data['name'])
+
+    logger.info(
+        'Equipment loading completed. Created mapping for {} equipment',
+        len(equipment_id_mapping),
+    )
+    return equipment_id_mapping
 
 
 async def load_projects_from_json(
@@ -320,25 +352,6 @@ async def load_bookings_from_json(
     """Load bookings from JSON data."""
     repository = BookingRepository(session)
 
-    # Load all existing bookings once at the beginning to avoid transaction issues
-    existing_bookings = await repository.get_all()
-
-    # Create a simple set of existing booking identifiers
-    existing_booking_keys = set()
-    for booking in existing_bookings:
-        # Create a simple string key for comparison
-        key = (
-            f'{booking.client_id}|{booking.equipment_id}|'
-            f'{booking.start_date}|{booking.end_date}|'
-            f'{booking.booking_status}|{booking.payment_status}'
-        )
-        existing_booking_keys.add(key)
-
-    logger.info('Found {} existing bookings in database', len(existing_bookings))
-
-    created_count = 0
-    skipped_count = 0
-
     for booking_data in bookings_data:
         # Skip bookings with missing references
         if (
@@ -351,74 +364,45 @@ async def load_bookings_from_json(
                 booking_data['client_id'],
                 booking_data['equipment_id'],
             )
-            skipped_count += 1
             continue
 
+        # Map old IDs to new IDs
         mapped_client_id = client_id_mapping[booking_data['client_id']]
         mapped_equipment_id = equipment_id_mapping[booking_data['equipment_id']]
 
-        # Parse dates from booking data
-        booking_start_date = (
-            datetime.fromisoformat(booking_data['start_date'])
-            if booking_data['start_date']
-            else None
-        )
-        booking_end_date = (
-            datetime.fromisoformat(booking_data['end_date'])
-            if booking_data['end_date']
-            else None
-        )
-
-        # Create key for this booking
-        booking_key = (
-            f'{mapped_client_id}|{mapped_equipment_id}|'
-            f'{booking_start_date}|{booking_end_date}|'
-            f'{booking_data["booking_status"]}|{booking_data["payment_status"]}'
-        )
-
-        # Check for duplicates using the key
-        if booking_key in existing_booking_keys:
-            logger.debug(
-                'Duplicate booking skipped: client_id={}, equipment_id={}, '
-                'start_date={}, end_date={}',
-                mapped_client_id,
-                mapped_equipment_id,
-                booking_start_date,
-                booking_end_date,
-            )
-            skipped_count += 1
-            continue
-
-        # Get project_id with proper mapping
+        # Handle project_id mapping safely
         project_id = booking_data.get('project_id')
         mapped_project_id = project_id_mapping.get(project_id) if project_id else None
 
+        # Parse dates
+        start_date = datetime.fromisoformat(
+            booking_data['start_date'].replace('Z', '+00:00')
+        )
+        end_date = datetime.fromisoformat(
+            booking_data['end_date'].replace('Z', '+00:00')
+        )
+
+        # Create booking
         booking = Booking(
             client_id=mapped_client_id,
             equipment_id=mapped_equipment_id,
             project_id=mapped_project_id,
-            booking_status=getattr(BookingStatus, booking_data['booking_status']),
-            payment_status=getattr(PaymentStatus, booking_data['payment_status']),
-            start_date=booking_start_date,
-            end_date=booking_end_date,
-            total_amount=Decimal(str(booking_data.get('total_amount', 0))),
+            start_date=start_date,
+            end_date=end_date,
+            total_amount=Decimal(str(booking_data.get('total_cost', 0))),
             deposit_amount=Decimal(str(booking_data.get('deposit_amount', 0))),
             notes=booking_data.get('notes'),
+            payment_status=getattr(
+                PaymentStatus, booking_data.get('payment_status', 'PENDING')
+            ),
         )
 
         await repository.create(booking)
-
-        # Add this booking's key to prevent duplicates within this session
-        existing_booking_keys.add(booking_key)
-
-        created_count += 1
-        logger.debug('Created booking for equipment {}', booking.equipment_id)
-
-    logger.info(
-        'Booking loading completed: {} created, {} skipped',
-        created_count,
-        skipped_count,
-    )
+        logger.info(
+            'Created booking for equipment {} (client {})',
+            mapped_equipment_id,
+            mapped_client_id,
+        )
 
 
 async def create_categories(session: AsyncSession) -> Dict[str, int]:
@@ -791,8 +775,7 @@ async def seed_data(use_extended_data: bool = False) -> None:
                 if use_extended_data:
                     # Load extended data from JSON
                     logger.info('Loading extended data...')
-                    json_file = Path(__file__).parent / 'extended_data.json'
-                    await load_extended_data_from_json(session, json_file)
+                    await load_extended_data_from_json(session)
                     logger.info('Extended data loaded successfully')
                 else:
                     # Create test data (original logic)
