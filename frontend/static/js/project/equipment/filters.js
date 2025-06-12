@@ -7,19 +7,19 @@ import { api } from '../../utils/api.js';
 import { showToast } from '../../utils/common.js';
 import { initializeBookingPeriodPickers } from './availability.js';
 import { initializeActionButtonEventListeners } from './ui.js';
+import { Pagination } from '../../utils/pagination.js';
 
 class ProjectEquipmentFilters {
     constructor(projectId) {
         this.projectId = projectId;
-        this.currentPage = 1;
-        this.pageSize = 50;
-        this.totalItems = 0;
-        this.totalPages = 1;
         this.filters = {
             search: '',
             category: '',
             dateFilter: 'all'
         };
+
+        // Initialize pagination component after DOM setup
+        this.pagination = null;
 
         this.init();
     }
@@ -27,9 +27,8 @@ class ProjectEquipmentFilters {
     init() {
         this.createFilterUI();
         this.loadCategories();
-        this.setupEventListeners();
-        // Load equipment list immediately to replace server-rendered content
-        this.loadEquipmentList();
+        this.setupFilterEventListeners();
+        this.initializePagination();
     }
 
     createFilterUI() {
@@ -132,41 +131,16 @@ class ProjectEquipmentFilters {
                             <option value="">Все категории</option>
                         </select>
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-md-5">
                         <select class="form-select" id="equipmentDateFilter">
                             <option value="all">Все позиции</option>
                             <option value="different">Отличающиеся даты</option>
                             <option value="matching">Совпадающие даты</option>
                         </select>
                     </div>
-                    <div class="col-md-2">
-                        <select class="form-select" id="equipmentPageSize">
-                            <option value="20">20</option>
-                            <option value="50" selected>50</option>
-                            <option value="all">Все</option>
-                        </select>
-                    </div>
                 </div>
             </div>
-            <div class="enhanced-pagination mb-3">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div class="pagination-info">
-                        Показано <span id="equipmentPageStart">1</span>-<span id="equipmentPageEnd">50</span>
-                        из <span id="equipmentTotalItems">0</span> позиций
-                    </div>
-                    <div class="pagination-controls">
-                        <button class="btn btn-outline-secondary btn-sm" id="equipmentPrevPage" disabled>
-                            <i class="fas fa-chevron-left"></i>
-                        </button>
-                        <span class="mx-2">
-                            <span id="equipmentCurrentPage">1</span> из <span id="equipmentTotalPages">1</span>
-                        </span>
-                        <button class="btn btn-outline-secondary btn-sm" id="equipmentNextPage" disabled>
-                            <i class="fas fa-chevron-right"></i>
-                        </button>
-                    </div>
-                </div>
-            </div>
+
         `;
 
         // Insert filters before table
@@ -176,7 +150,7 @@ class ProjectEquipmentFilters {
         }
     }
 
-    setupEventListeners() {
+    setupFilterEventListeners() {
         // Search input with debounce
         const searchInput = document.getElementById('equipmentSearchInput');
         if (searchInput) {
@@ -185,8 +159,7 @@ class ProjectEquipmentFilters {
                 clearTimeout(debounceTimer);
                 debounceTimer = setTimeout(() => {
                     this.filters.search = searchInput.value.trim();
-                    this.currentPage = 1;
-                    this.loadEquipmentList();
+                    this.pagination.reset(); // Reset to first page and reload
                 }, 300);
             });
         }
@@ -196,8 +169,7 @@ class ProjectEquipmentFilters {
         if (categoryFilter) {
             categoryFilter.addEventListener('change', () => {
                 this.filters.category = categoryFilter.value;
-                this.currentPage = 1;
-                this.loadEquipmentList();
+                this.pagination.reset(); // Reset to first page and reload
             });
         }
 
@@ -206,43 +178,85 @@ class ProjectEquipmentFilters {
         if (dateFilter) {
             dateFilter.addEventListener('change', () => {
                 this.filters.dateFilter = dateFilter.value;
-                this.currentPage = 1;
-                this.loadEquipmentList();
+                this.pagination.reset(); // Reset to first page and reload
             });
         }
+    }
 
-        // Page size
-        const pageSizeSelect = document.getElementById('equipmentPageSize');
-        if (pageSizeSelect) {
-            pageSizeSelect.addEventListener('change', () => {
-                const newSize = pageSizeSelect.value;
-                this.pageSize = newSize === 'all' ? 999999 : parseInt(newSize);
-                this.currentPage = 1;
-                this.loadEquipmentList();
-            });
+    initializePagination() {
+        console.log('=== EQUIPMENT FILTERS: Initializing pagination ===');
+
+        // Check if required DOM elements exist for primary pagination (bottom)
+        const requiredElements = [
+            '#equipmentBottomPageStart', '#equipmentBottomPageEnd', '#equipmentBottomTotalItems',
+            '#equipmentBottomCurrentPage', '#equipmentBottomTotalPages',
+            '#equipmentBottomPrevPage', '#equipmentBottomNextPage', '#equipmentBottomPageSize'
+        ];
+        const missingElements = [];
+
+        requiredElements.forEach(selector => {
+            const element = document.querySelector(selector);
+            if (!element) {
+                missingElements.push(selector);
+            }
+        });
+
+        if (missingElements.length > 0) {
+            console.error('EQUIPMENT FILTERS: Missing required elements:', missingElements);
+            return;
         }
 
-        // Pagination buttons
-        const prevButton = document.getElementById('equipmentPrevPage');
-        const nextButton = document.getElementById('equipmentNextPage');
+        console.log('EQUIPMENT FILTERS: All required elements found');
 
-        if (prevButton) {
-            prevButton.addEventListener('click', () => {
-                if (this.currentPage > 1) {
-                    this.currentPage--;
-                    this.loadEquipmentList();
+        // Create primary pagination (bottom) - this one controls the data
+        this.pagination = new Pagination({
+            selectors: {
+                pageStart: '#equipmentBottomPageStart',
+                pageEnd: '#equipmentBottomPageEnd',
+                totalItems: '#equipmentBottomTotalItems',
+                currentPage: '#equipmentBottomCurrentPage',
+                totalPages: '#equipmentBottomTotalPages',
+                prevButton: '#equipmentBottomPrevPage',
+                nextButton: '#equipmentBottomNextPage',
+                pageSizeSelect: '#equipmentBottomPageSize'
+            },
+            options: {
+                pageSize: 20,
+                pageSizes: [20, 50, 'all'],
+                showPageInfo: true,
+                showPageSizeSelect: true,
+                autoLoadOnInit: false, // Temporarily disable for debugging
+                persistPageSize: true, // Enable page size persistence
+                storageKey: `project_equipment_pagesize_${this.projectId}`, // Unique key per project
+                useUrlParams: false // Disabled for now, can be enabled later
+            },
+            callbacks: {
+                onDataLoad: async (page, size) => {
+                    console.log('EQUIPMENT FILTERS: Loading data for page:', page, 'size:', size);
+                    return await this.loadEquipmentData(page, size);
                 }
-            });
-        }
+            }
+        });
 
-        if (nextButton) {
-            nextButton.addEventListener('click', () => {
-                if (this.currentPage < this.totalPages) {
-                    this.currentPage++;
-                    this.loadEquipmentList();
-                }
-            });
-        }
+        // Add secondary pagination (top) that syncs with primary
+        this.pagination.addSecondaryPagination({
+            pageStart: '#equipmentTopPageStart',
+            pageEnd: '#equipmentTopPageEnd',
+            totalItems: '#equipmentTopTotalItems',
+            currentPage: '#equipmentTopCurrentPage',
+            totalPages: '#equipmentTopTotalPages',
+            prevButton: '#equipmentTopPrevPage',
+            nextButton: '#equipmentTopNextPage',
+            pageSizeSelect: '#equipmentTopPageSize'
+        });
+
+        console.log('EQUIPMENT FILTERS: Pagination instance created:', this.pagination);
+
+        // Manual initial load after slight delay to ensure DOM is ready
+        setTimeout(() => {
+            console.log('EQUIPMENT FILTERS: Manually triggering initial data load...');
+            this.pagination.loadData();
+        }, 100);
     }
 
     async loadCategories() {
@@ -268,12 +282,12 @@ class ProjectEquipmentFilters {
         }
     }
 
-    async loadEquipmentList() {
+    async loadEquipmentData(page, size) {
         try {
             // Build query parameters
             const params = new URLSearchParams({
-                page: this.currentPage,
-                size: this.pageSize
+                page: page,
+                size: size
             });
 
             if (this.filters.search) {
@@ -289,16 +303,21 @@ class ProjectEquipmentFilters {
             // Use the new paginated endpoint
             const response = await api.get(`/projects/${this.projectId}/bookings/paginated?${params.toString()}`);
 
-            this.totalItems = response.total;
-            this.totalPages = response.pages;
-            this.currentPage = response.page;
-
+            // Update equipment table with new data
             this.updateEquipmentTable(response.items);
-            this.updatePaginationUI();
+
+            // Return pagination data for the Pagination component
+            return {
+                items: response.items,
+                total: response.total,
+                pages: response.pages,
+                page: response.page
+            };
 
         } catch (error) {
-            console.error('Error loading equipment list:', error);
+            console.error('Error loading equipment data:', error);
             showToast('Ошибка загрузки списка оборудования', 'danger');
+            throw error; // Re-throw for pagination component error handling
         }
     }
 
@@ -319,10 +338,11 @@ class ProjectEquipmentFilters {
             tbody.appendChild(row);
         });
 
-        // Update equipment count
+        // Update equipment count (get current state from pagination component)
+        const paginationState = this.pagination ? this.pagination.getState() : { totalItems: 0 };
         const countElement = document.getElementById('equipmentCount');
         if (countElement) {
-            countElement.textContent = `${this.totalItems} позиций`;
+            countElement.textContent = `${paginationState.totalItems} позиций`;
         }
 
         // Initialize date pickers for booking period inputs
@@ -390,36 +410,6 @@ class ProjectEquipmentFilters {
         return row;
     }
 
-    updatePaginationUI() {
-        // Update pagination info
-        const startItem = (this.currentPage - 1) * this.pageSize + 1;
-        const endItem = Math.min(this.currentPage * this.pageSize, this.totalItems);
-
-        const elements = {
-            pageStart: document.getElementById('equipmentPageStart'),
-            pageEnd: document.getElementById('equipmentPageEnd'),
-            totalItems: document.getElementById('equipmentTotalItems'),
-            currentPage: document.getElementById('equipmentCurrentPage'),
-            totalPages: document.getElementById('equipmentTotalPages'),
-            prevButton: document.getElementById('equipmentPrevPage'),
-            nextButton: document.getElementById('equipmentNextPage')
-        };
-
-        if (elements.pageStart) elements.pageStart.textContent = startItem;
-        if (elements.pageEnd) elements.pageEnd.textContent = endItem;
-        if (elements.totalItems) elements.totalItems.textContent = this.totalItems;
-        if (elements.currentPage) elements.currentPage.textContent = this.currentPage;
-        if (elements.totalPages) elements.totalPages.textContent = this.totalPages;
-
-        // Update button states
-        if (elements.prevButton) {
-            elements.prevButton.disabled = this.currentPage <= 1;
-        }
-        if (elements.nextButton) {
-            elements.nextButton.disabled = this.currentPage >= this.totalPages;
-        }
-    }
-
     formatDateTime(dateString) {
         if (!dateString) return '';
         try {
@@ -442,12 +432,48 @@ export function initializeProjectEquipmentFilters() {
     const projectIdElement = document.getElementById('project-id');
     const projectId = projectIdElement ? projectIdElement.value : null;
 
-    if (!projectId) {
-        console.error('Project ID not found');
-        return;
+    if (projectId) {
+        window.projectEquipmentFilters = new ProjectEquipmentFilters(projectId);
+    }
+}
+
+// DEBUG: Test equipment pagination functionality
+window.testEquipmentPagination = function() {
+    console.log('=== TESTING EQUIPMENT PAGINATION ===');
+
+    const prevPageButton = document.getElementById('equipmentPrevPage');
+    const nextPageButton = document.getElementById('equipmentNextPage');
+
+    console.log('Elements found:', {
+        prevPageButton: !!prevPageButton,
+        nextPageButton: !!nextPageButton
+    });
+
+    if (prevPageButton) {
+        console.log('PrevButton classes:', prevPageButton.className);
+        console.log('PrevButton disabled state:', prevPageButton.disabled);
+        console.log('PrevButton parent classes:', prevPageButton.parentElement?.className);
     }
 
-    new ProjectEquipmentFilters(projectId);
-}
+    if (nextPageButton) {
+        console.log('NextButton classes:', nextPageButton.className);
+        console.log('NextButton disabled state:', nextPageButton.disabled);
+        console.log('NextButton parent classes:', nextPageButton.parentElement?.className);
+    }
+
+    if (window.projectEquipmentFilters && window.projectEquipmentFilters.pagination) {
+        const state = window.projectEquipmentFilters.pagination.getState();
+        console.log('Pagination state:', state);
+
+        console.log('Try clicking nextPageButton manually...');
+        if (nextPageButton && !nextPageButton.disabled) {
+            nextPageButton.click();
+        } else {
+            console.log('NextButton is disabled or not found');
+        }
+    } else {
+        console.log('projectEquipmentFilters instance not found');
+    }
+};
 
 export { ProjectEquipmentFilters };
