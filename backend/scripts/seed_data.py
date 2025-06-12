@@ -374,13 +374,55 @@ async def load_bookings_from_json(
         project_id = booking_data.get('project_id')
         mapped_project_id = project_id_mapping.get(project_id) if project_id else None
 
-        # Parse dates
-        start_date = datetime.fromisoformat(
-            booking_data['start_date'].replace('Z', '+00:00')
+        # Parse dates first for availability check
+        try:
+            start_date_str = booking_data.get('start_date')
+            end_date_str = booking_data.get('end_date')
+
+            if not start_date_str or not end_date_str:
+                logger.warning(
+                    'Booking has missing dates (start: {}, end: {}). ' 'Skipping.',
+                    start_date_str,
+                    end_date_str,
+                )
+                continue
+
+            start_date = datetime.fromisoformat(
+                start_date_str.replace('Z', '+00:00')
+                if 'Z' in start_date_str
+                else start_date_str
+            )
+            end_date = datetime.fromisoformat(
+                end_date_str.replace('Z', '+00:00')
+                if 'Z' in end_date_str
+                else end_date_str
+            )
+        except (AttributeError, TypeError, ValueError) as e:
+            logger.warning(
+                'Failed to parse dates for booking (start: {}, end: {}). '
+                'Error: {}. Skipping.',
+                booking_data.get('start_date'),
+                booking_data.get('end_date'),
+                e,
+            )
+            continue
+
+        # Check equipment availability using proper service layer
+        equipment_repository = EquipmentRepository(session)
+        is_available = await equipment_repository.check_availability(
+            mapped_equipment_id, start_date, end_date
         )
-        end_date = datetime.fromisoformat(
-            booking_data['end_date'].replace('Z', '+00:00')
-        )
+
+        if not is_available:
+            logger.info(
+                'Equipment {} is not available for dates {}-{}. '
+                'Skipping booking for client {}.',
+                mapped_equipment_id,
+                start_date.date(),
+                end_date.date(),
+                mapped_client_id,
+            )
+            continue
 
         # Create booking
         booking = Booking(
@@ -389,7 +431,12 @@ async def load_bookings_from_json(
             project_id=mapped_project_id,
             start_date=start_date,
             end_date=end_date,
-            total_amount=Decimal(str(booking_data.get('total_cost', 0))),
+            booking_status=getattr(
+                BookingStatus, booking_data.get('booking_status', 'ACTIVE')
+            ),
+            total_amount=Decimal(
+                str(booking_data.get('total_amount', booking_data.get('total_cost', 0)))
+            ),
             deposit_amount=Decimal(str(booking_data.get('deposit_amount', 0))),
             notes=booking_data.get('notes'),
             payment_status=getattr(
