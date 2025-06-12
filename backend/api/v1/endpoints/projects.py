@@ -682,7 +682,6 @@ async def get_project_bookings_paginated(
 
     service = ProjectService(db)
     try:
-        # Get the SQLAlchemy query from service
         query_obj = await service.get_project_bookings_paginated(
             project_id=project_id,
             query=query,
@@ -690,48 +689,36 @@ async def get_project_bookings_paginated(
             date_filter=date_filter.value,
         )
 
-        # Use fastapi-pagination to paginate the query
-        from fastapi_pagination.ext.sqlalchemy import paginate
-
-        # Execute query and transform results to match schema
-        paginated_result = await paginate(db, query_obj, params)
-
-        # Transform results to match ProjectBookingResponse schema
-        transformed_items = []
-        for item in paginated_result.items:
-            transformed_item = ProjectBookingResponse(
-                id=item.id,
-                equipment_id=item.equipment_id,
-                equipment_name=item.equipment_name,
-                serial_number=item.serial_number,
-                barcode=item.barcode,
-                category_name=item.category_name,
-                category_id=item.category_id,
-                start_date=item.start_date,
-                end_date=item.end_date,
-                booking_status=(
-                    item.booking_status.value
-                    if hasattr(item.booking_status, 'value')
-                    else str(item.booking_status)
-                ),
-                payment_status=(
-                    item.payment_status.value
-                    if hasattr(item.payment_status, 'value')
-                    else str(item.payment_status)
-                ),
-                quantity=item.quantity,
-                has_different_dates=bool(item.has_different_dates),
-            )
-            transformed_items.append(transformed_item)
-
-        # Create new Page with transformed items
-        from fastapi_pagination import Page as PageType
-
-        result = PageType[ProjectBookingResponse](
-            items=transformed_items,
-            total=paginated_result.total,
-            page=paginated_result.page,
-            size=paginated_result.size,
+        result: Page[ProjectBookingResponse] = await paginate(
+            db,
+            query_obj,
+            params,
+            transformer=lambda items: [
+                ProjectBookingResponse(
+                    id=item.id,
+                    equipment_id=item.equipment_id,
+                    equipment_name=item.equipment_name,
+                    serial_number=item.serial_number,
+                    barcode=item.barcode,
+                    category_name=item.category_name,
+                    category_id=item.category_id,
+                    start_date=item.start_date,
+                    end_date=item.end_date,
+                    booking_status=(
+                        item.booking_status.value
+                        if hasattr(item.booking_status, 'value')
+                        else str(item.booking_status)
+                    ),
+                    payment_status=(
+                        item.payment_status.value
+                        if hasattr(item.payment_status, 'value')
+                        else str(item.payment_status)
+                    ),
+                    quantity=item.quantity,
+                    has_different_dates=bool(item.has_different_dates),
+                )
+                for item in items
+            ],
         )
 
         return result
@@ -775,11 +762,7 @@ async def patch_project(
     service = ProjectService(db)
     try:
         update_data = project.model_dump(exclude_unset=True)
-
-        # Update the project
         await service.update_project(project_id=project_id, **update_data)
-
-        # Return full project data including bookings (same as GET endpoint)
         project_dict = await service.get_project_as_dict(project_id)
         return ProjectWithBookings.model_validate(project_dict)
     except NotFoundError as e:
