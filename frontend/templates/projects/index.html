@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "macros.jinja2" import pagination %}
 
 {% block title %}Проекты - {{ APP_NAME }}{% endblock %}
 
@@ -19,7 +20,7 @@
     </div>
 </div>
 
-<div class="card mb-4">
+<div class="card mb-3">
     <div class="card-header">
         <form id="searchForm" class="row g-3 align-items-center">
             <div class="col-md-4">
@@ -76,7 +77,9 @@
 </div>
 
 <!-- Table view -->
-<div id="tableView" class="view-container">
+<div id="tableView" class="view-container" style="padding-top: 0;">
+    <!-- Projects Pagination Top -->
+    {{ pagination("projectsTop", default_page_size=20, container_class="d-flex justify-content-between align-items-center px-3 pb-3") }}
     <div class="table-responsive">
         <table class="table table-hover">
             <thead>
@@ -99,10 +102,14 @@
             </tbody>
         </table>
     </div>
+    <!-- Projects Pagination Bottom -->
+    {{ pagination("projectsBottom", default_page_size=20, container_class="d-flex justify-content-between align-items-center mt-2 px-3 pb-3") }}
 </div>
 
 <!-- Card view -->
-<div id="cardView" class="view-container d-none">
+<div id="cardView" class="view-container d-none" style="padding-top: 0;">
+    <!-- Projects Pagination Top (Card View) -->
+    {{ pagination("projectsCardTop", default_page_size=20, container_class="d-flex justify-content-between align-items-center px-3 pb-3") }}
     <!-- Draft projects group -->
     <div class="card mb-3" id="draftProjects">
         <div class="card-header bg-secondary text-white">
@@ -185,22 +192,8 @@
         <h5 class="text-muted">Нет проектов, соответствующих условиям поиска</h5>
         <p class="text-muted">Попробуйте изменить критерии поиска или создать новый проект</p>
     </div>
-</div>
-
-<div id="pagination" class="d-flex justify-content-between align-items-center mt-3">
-    <div class="pagination-info">
-        Показано <span id="pageStart">0</span>-<span id="pageEnd">0</span> из <span id="totalItems">0</span>
-    </div>
-    <nav>
-        <ul class="pagination">
-            <li class="page-item disabled">
-                <a class="page-link" href="#" id="prevPage">Назад</a>
-            </li>
-            <li class="page-item disabled">
-                <a class="page-link" href="#" id="nextPage">Вперед</a>
-            </li>
-        </ul>
-    </nav>
+    <!-- Projects Pagination Bottom (Card View) -->
+    {{ pagination("projectsCardBottom", default_page_size=20, container_class="d-flex justify-content-between align-items-center mt-2 px-3 pb-3") }}
 </div>
 {% endblock %}
 
