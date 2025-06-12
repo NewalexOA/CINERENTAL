@@ -1,234 +1,237 @@
-# Универсальные макросы пагинации
+# Universal Pagination Macros
 
-## Описание
+## Description
 
-Созданы универсальные макросы для переиспользования компонентов пагинации в разных частях приложения. Включают функциональность сохранения размера страницы между перезагрузками через localStorage.
+Universal macros created for reusing pagination components in different parts of the application. Includes functionality for persisting page size between reloads through localStorage.
 
-## Файлы
+## Files
 
-- **Макросы**: `frontend/templates/macros.jinja2`
-- **Применение**: `frontend/templates/projects/view.html`
+- **Macros**: `frontend/templates/macros.jinja2`
+- **Implementation**: `frontend/templates/projects/view.html`
 
-## Доступные макросы
+## Available Macros
 
-### 1. `pagination()` - Полная пагинация
+### 1. `pagination()` - Full Pagination
 
-Полнофункциональный макрос пагинации с селектором размера страницы.
+Full-featured pagination macro with page size selector.
 
-#### Параметры
+#### Parameters
 
 ```jinja2
 {% from "macros.jinja2" import pagination %}
 
 {{ pagination(
-    prefix="equipment",                  # Префикс для ID элементов (обязательный)
-    page_start_id=None,                 # ID для начального элемента (опционально)
-    page_end_id=None,                   # ID для конечного элемента (опционально)
-    total_items_id=None,                # ID для общего количества (опционально)
-    total_pages_id=None,                # ID для общего количества страниц (опционально)
-    current_page_id=None,               # ID для текущей страницы (опционально)
-    page_size_id=None,                  # ID для селектора размера (опционально)
-    prev_page_id=None,                  # ID для кнопки "назад" (опционально)
-    next_page_id=None,                  # ID для кнопки "вперед" (опционально)
-    page_sizes=[20, 50, 100],           # Доступные размеры страниц
-    default_page_size=20,               # Размер страницы по умолчанию
-    show_all_option=true,               # Показывать опцию "Все"
-    container_class="..."               # CSS классы контейнера
+    prefix="equipment",                  # Prefix for element IDs (required)
+    page_start_id=None,                 # ID for start element (optional)
+    page_end_id=None,                   # ID for end element (optional)
+    total_items_id=None,                # ID for total count (optional)
+    total_pages_id=None,                # ID for total pages (optional)
+    current_page_id=None,               # ID for current page (optional)
+    page_size_id=None,                  # ID for size selector (optional)
+    prev_page_id=None,                  # ID for "previous" button (optional)
+    next_page_id=None,                  # ID for "next" button (optional)
+    page_sizes=[20, 50, 100],           # Available page sizes
+    default_page_size=20,               # Default page size
+    show_all_option=true,               # Show "All" option
+    container_class="..."               # Container CSS classes
 ) }}
 ```
 
-#### Пример использования
+#### Usage Example
 
 ```jinja2
 {{ pagination("equipment", default_page_size=20) }}
 ```
 
-#### Генерируемые ID
+#### Generated IDs
 
-При использовании префикса `"equipment"` автоматически создаются:
+When using prefix `"equipment"`, automatically creates:
 
-- `equipmentPagination` - контейнер пагинации
-- `equipmentPageStart` - начальный элемент
-- `equipmentPageEnd` - конечный элемент
-- `equipmentTotalItems` - общее количество
-- `equipmentTotalPages` - общее количество страниц
-- `equipmentCurrentPage` - текущая страница
-- `equipmentPageSize` - селектор размера
-- `equipmentPrevPage` - кнопка "назад"
-- `equipmentNextPage` - кнопка "вперед"
+- `equipmentPagination` - pagination container
+- `equipmentPageStart` - start element
+- `equipmentPageEnd` - end element
+- `equipmentTotalItems` - total count
+- `equipmentTotalPages` - total pages
+- `equipmentCurrentPage` - current page
+- `equipmentPageSize` - size selector
+- `equipmentPrevPage` - previous button
+- `equipmentNextPage` - next button
 
-### 2. `simple_pagination()` - Упрощенная пагинация
+### 2. `simple_pagination()` - Simplified Pagination
 
-Упрощенный макрос пагинации без селектора размера страницы (для каталогов).
+Simplified pagination macro without page size selector (for catalogs).
 
-#### Параметры
+#### Configuration
 
 ```jinja2
 {% from "macros.jinja2" import simple_pagination %}
 
 {{ simple_pagination(
-    prefix="catalog",                   # Префикс для ID элементов (обязательный)
-    page_start_id=None,                 # ID для начального элемента (опционально)
-    page_end_id=None,                   # ID для конечного элемента (опционально)
-    total_items_id=None,                # ID для общего количества (опционально)
-    prev_page_id=None,                  # ID для кнопки "назад" (опционально)
-    next_page_id=None,                  # ID для кнопки "вперед" (опционально)
-    container_class="d-none",           # CSS классы контейнера
-    show_total_pages=false              # Показывать общее количество страниц
+    prefix="catalog",                   # Prefix for element IDs (required)
+    page_start_id=None,                 # ID for start element (optional)
+    page_end_id=None,                   # ID for end element (optional)
+    total_items_id=None,                # ID for total count (optional)
+    prev_page_id=None,                  # ID for "previous" button (optional)
+    next_page_id=None,                  # ID for "next" button (optional)
+    container_class="d-none",           # Container CSS classes
+    show_total_pages=false              # Show total pages count
 ) }}
 ```
 
-#### Пример использования
+#### Usage
 
 ```jinja2
 {{ simple_pagination("catalog") }}
 ```
 
-#### Генерируемые ID
+#### Created Elements
 
-При использовании префикса `"catalog"` автоматически создаются:
+When using prefix `"catalog"`, automatically creates:
 
-- `catalogPagination` - контейнер пагинации
-- `catalogPageStart` - начальный элемент
-- `catalogPageEnd` - конечный элемент
-- `catalogTotalItems` - общее количество
-- `catalogPrevPage` - кнопка "назад"
-- `catalogNextPage` - кнопка "вперед"
+- `catalogPagination` - pagination container
+- `catalogPageStart` - start element
+- `catalogPageEnd` - end element
+- `catalogTotalItems` - total count
+- `catalogPrevPage` - previous button
+- `catalogNextPage` - next button
 
-## Структура вывода
+## Output Structure
 
-### Полная пагинация
-
-```text
-[Показано 1-50 из 57 (Всего 2 стр.)]    [20 ▼] [« 1 »]
-```
-
-### Упрощенная пагинация
+### Full Pagination
 
 ```text
-[Показано 1-20 из 57]                   [‹ ›]
+[Showing 1-50 of 57 (Total 2 pages)]    [20 ▼] [« 1 »]
 ```
 
-## JavaScript интеграция
+### Simplified Pagination
 
-Все ID элементов сохраняются совместимыми с существующим JavaScript кодом. Логика пагинации работает без изменений.
+```text
+[Showing 1-20 of 57]                    [‹ ›]
+```
 
-## Преимущества
+## JavaScript Integration
 
-1. **Переиспользование кода** - один макрос для всех страниц
-2. **Единообразие интерфейса** - везде одинаковый вид пагинации
-3. **Легкое сопровождение** - изменения в одном месте
-4. **Гибкость настройки** - настройка через параметры
-5. **Обратная совместимость** - все ID сохранены
-6. **Умная обработка "Все"** - опция "Все" использует реальное количество элементов
-7. **Точное отслеживание выбора** - селектор показывает "100", даже если элементов меньше
+All element IDs remain compatible with existing JavaScript code. Pagination logic works without changes.
 
-## Применение в других местах
+## Benefits
 
-Для использования в других шаблонах:
+1. **Code Reuse** - one macro for all pages
+2. **Interface Consistency** - same pagination appearance everywhere
+3. **Easy Maintenance** - changes in one place
+4. **Flexible Configuration** - customization through parameters
+5. **Backward Compatibility** - all IDs preserved
+6. **Smart "All" Handling** - "All" option uses actual item count
+7. **Precise Selection Tracking** - selector shows "100" even if fewer items
 
-1. Добавьте импорт:
+## Usage in Other Places
+
+To use in other templates:
+
+1. Add import:
 
     ```jinja2
     {% from "macros.jinja2" import pagination, simple_pagination %}
     ```
 
-2. Используйте макрос с уникальным префиксом:
+2. Use macro with unique prefix:
 
     ```jinja2
     {{ pagination("clients", default_page_size=50) }}
     {{ simple_pagination("search") }}
     ```
 
-## Примеры для разных секций
+## Examples for Different Sections
 
 ```jinja2
-{# Клиенты #}
+{# Clients #}
 {{ pagination("clients", default_page_size=25, page_sizes=[25, 50, 100]) }}
 
-{# Оборудование в проекте - двойная пагинация #}
+{# Equipment in project - dual pagination #}
 {{ pagination("equipmentTop", default_page_size=20) }}
 {{ pagination("equipmentBottom", default_page_size=20) }}
 
-{# Список проектов - множественная пагинация для разных режимов #}
+{# Project list - multiple pagination for different modes #}
 {{ pagination("projectsTop", default_page_size=20) }}
 {{ pagination("projectsBottom", default_page_size=20) }}
 {{ pagination("projectsCardTop", default_page_size=20) }}
 {{ pagination("projectsCardBottom", default_page_size=20) }}
 
-{# Поиск в каталоге #}
+{# Catalog search #}
 {{ simple_pagination("search") }}
 
-{# Бронирования #}
+{# Bookings #}
 {{ pagination("bookings", default_page_size=30, show_all_option=false) }}
 ```
 
-## Сохранение размера страницы (Version 1.1.0)
+## Page Size Persistence (Version 1.1.0)
 
-### Функциональность
+### Functionality
 
-Система автоматически сохраняет выбранный пользователем размер страницы в `localStorage` и восстанавливает его при следующем посещении страницы.
+The system automatically saves user-selected page size to `localStorage` and restores it on next page visit.
 
-### Настройки в JavaScript
+### JavaScript Configuration
 
 ```javascript
-// В конфигурации Pagination включены следующие опции:
+// In Pagination configuration, the following options are enabled:
 new Pagination({
     options: {
-        persistPageSize: true,  // Включить сохранение размера страницы
-        storageKey: 'project_equipment_pagesize_123',  // Уникальный ключ для каждого проекта
-        useUrlParams: false     // Использование URL параметров (опционально)
+        persistPageSize: true,  // Enable page size persistence
+        storageKey: 'project_equipment_pagesize_123',  // Unique key for each project
+        useUrlParams: false     // Use URL parameters (optional)
     }
 });
 ```
 
-### Приоритет восстановления
+### Restoration Priority
 
-1. **URL параметр** (если `useUrlParams: true`) - `?size=50` или `?size=all`
-2. **localStorage** - сохраненное значение пользователя
-3. **Значение по умолчанию** - из конфигурации
+1. **URL parameter** (if `useUrlParams: true`) - `?size=50` or `?size=all`
+2. **localStorage** - user's saved value
+3. **Default value** - from configuration
 
-### Ключи хранения
+### Storage Keys
 
-- `project_equipment_pagesize_{projectId}` - для списка оборудования в проектах
-- `projects_list_pagesize` - для общего списка проектов
-- `pagination_pagesize` - стандартный ключ для общих случаев
+- `project_equipment_pagesize_{projectId}` - for equipment list in projects
+- `projects_list_pagesize` - for general project list
+- `pagination_pagesize` - standard key for general cases
 
-### Поддержка опции "Все"
+### "All" Option Support
 
-Система корректно сохраняет и восстанавливает выбор "Все":
-- Сохраняется как строка `'all'` в localStorage
-- При восстановлении правильно устанавливается флаг `isShowingAll`
-- Селектор отображает "Все" вместо числового значения
+The system correctly saves and restores "All" selection:
 
-### Примеры использования
+- Saved as string `'all'` in localStorage
+- Properly sets `isShowingAll` flag when restored
+- Selector displays "All" instead of numeric value
+
+### Usage Examples
 
 ```javascript
-// Уникальное хранение для разных проектов
+// Unique storage for different projects
 storageKey: `project_equipment_pagesize_${projectId}`
 
-// Общее хранение для списков клиентов
+// General storage for client lists
 storageKey: 'clients_pagesize'
 
-// Список проектов
+// Project list
 storageKey: 'projects_list_pagesize'
 
-// С поддержкой URL параметров
-useUrlParams: true  // Размер страницы будет в URL
+// With URL parameter support
+useUrlParams: true  // Page size will be in URL
 ```
 
 ## Version History
 
 ### Version 1.1.0 (December 2024)
-- **ENHANCED**: Добавлено сохранение размера страницы через localStorage
-- **NEW**: Поддержка URL-параметров для состояния пагинации (опционально)
-- **NEW**: Уникальные ключи хранения для изоляции настроек между проектами
-- **IMPROVED**: Размер страницы сохраняется между перезагрузками страницы
-- **ENHANCED**: Улучшенная обработка состояния опции "Все"
+
+- **ENHANCED**: Added page size persistence through localStorage
+- **NEW**: URL parameter support for pagination state (optional)
+- **NEW**: Unique storage keys for isolation between projects
+- **IMPROVED**: Page size preserved between page reloads
+- **ENHANCED**: Improved "All" option state handling
 
 ### Version 1.0.0 (December 2024)
-- Начальная реализация с двумя типами макросов
-- Полная пагинация с селектором размера страницы
-- Упрощенная пагинация для каталогов
-- Совместимость с Bootstrap 5
-- Адаптивный дизайн с оптимизацией для мобильных устройств
+
+- Initial implementation with two macro types
+- Full pagination with page size selector
+- Simplified pagination for catalogs
+- Bootstrap 5 compatibility
+- Responsive design with mobile optimization
