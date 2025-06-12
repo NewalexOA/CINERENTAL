@@ -10,6 +10,7 @@
 
 import { initializeProjectDetails } from './project/project-details.js';
 import { initializeEquipmentManagement } from './project/equipment/index.js';
+import { initializeProjectEquipmentFilters } from './project/equipment/filters.js';
 import { getProjectIdFromUrl } from './project/project-utils.js';
 import { showToast } from './utils/common.js';
 
@@ -46,6 +47,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Initialize equipment management
     initializeEquipmentManagement();
+
+    // Initialize equipment filters
+    initializeProjectEquipmentFilters();
 
     // Initialize equipment dates column visibility
     toggleEquipmentDatesColumn();

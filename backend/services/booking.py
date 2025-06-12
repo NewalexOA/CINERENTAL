@@ -25,7 +25,7 @@ from backend.schemas import BookingWithDetails
 from backend.services.equipment import EquipmentService
 
 # Constants for booking validation
-MIN_BOOKING_DURATION = timedelta(days=1)
+MIN_BOOKING_DURATION = timedelta(hours=1)  # Minimum 1 hour instead of 1 day
 MAX_BOOKING_DURATION = timedelta(days=365)
 MAX_ADVANCE_DAYS = 365
 
@@ -132,22 +132,16 @@ class BookingService:
 
             # Validate booking duration
             duration = end_date - start_date
+            duration_hours = duration.total_seconds() / 3600  # Convert to hours
             duration_days = duration.days
 
-            # Special case for same-day bookings
-            same_day_booking = (
-                start_date.year == end_date.year
-                and start_date.month == end_date.month
-                and start_date.day == end_date.day
-            )
-
-            # Allow bookings that span the same calendar day
-            if not same_day_booking and duration < MIN_BOOKING_DURATION:
+            # Check minimum duration (1 hour) for all bookings
+            if duration < MIN_BOOKING_DURATION:
+                min_hours = MIN_BOOKING_DURATION.total_seconds() / 3600
                 raise DurationError(
-                    'Booking duration must be at least '
-                    f'{MIN_BOOKING_DURATION.days} day(s)',
-                    min_days=MIN_BOOKING_DURATION.days,
+                    f'Booking duration must be at least {min_hours:.0f} hour(s)',
                     actual_days=duration_days,
+                    details={'min_hours': min_hours, 'actual_hours': duration_hours},
                 )
             if duration > MAX_BOOKING_DURATION:
                 raise DurationError(
@@ -271,21 +265,19 @@ class BookingService:
                         'Start date must be earlier or equal to end date'
                     )
 
-                # Special case for same-day bookings
-                same_day_booking = (
-                    start_date.year == end_date.year
-                    and start_date.month == end_date.month
-                    and start_date.day == end_date.day
-                )
-
-                # Validate booking duration (except for same-day bookings)
+                # Validate booking duration (minimum 1 hour)
                 duration = end_date - start_date
-                if not same_day_booking and duration < MIN_BOOKING_DURATION:
+                duration_hours = duration.total_seconds() / 3600
+
+                if duration < MIN_BOOKING_DURATION:
+                    min_hours = MIN_BOOKING_DURATION.total_seconds() / 3600
                     raise DurationError(
-                        'Booking duration must be at least '
-                        f'{MIN_BOOKING_DURATION.days} day(s)',
-                        min_days=MIN_BOOKING_DURATION.days,
+                        f'Booking duration must be at least {min_hours:.0f} hour(s)',
                         actual_days=duration.days,
+                        details={
+                            'min_hours': min_hours,
+                            'actual_hours': duration_hours,
+                        },
                     )
                 if duration > MAX_BOOKING_DURATION:
                     raise DurationError(
