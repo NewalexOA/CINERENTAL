@@ -1,0 +1,63 @@
+/* Equipment table layout styles - extracted from filters.js */
+
+.equipment-table {
+    table-layout: fixed !important;
+    width: 100% !important;
+}
+
+.equipment-table th:nth-child(1),
+.equipment-table td:nth-child(1) {
+    width: 33.33% !important; /* 4/12 */
+}
+
+.equipment-table th:nth-child(2),
+.equipment-table td:nth-child(2) {
+    width: 16.67% !important; /* 2/12 */
+}
+
+.equipment-table th:nth-child(3),
+.equipment-table td:nth-child(3) {
+    width: 16.67% !important; /* 2/12 */
+}
+
+.equipment-table th:nth-child(4),
+.equipment-table td:nth-child(4) {
+    width: 8.33% !important; /* 1/12 */
+    text-align: center;
+}
+
+.equipment-table th:nth-child(5),
+.equipment-table td:nth-child(5) {
+    width: 16.67% !important; /* 2/12 */
+    text-align: center;
+}
+
+.equipment-table th:nth-child(6),
+.equipment-table td:nth-child(6) {
+    width: 8.33% !important; /* 1/12 */
+    display: none; /* Hidden dates column - moved to last position */
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .equipment-table th:nth-child(1),
+    .equipment-table td:nth-child(1) {
+        width: 60% !important;
+    }
+
+    .equipment-table th:nth-child(2),
+    .equipment-table td:nth-child(2) {
+        width: 40% !important;
+    }
+
+    .equipment-table th:nth-child(3),
+    .equipment-table td:nth-child(3),
+    .equipment-table th:nth-child(4),
+    .equipment-table td:nth-child(4),
+    .equipment-table th:nth-child(5),
+    .equipment-table td:nth-child(5),
+    .equipment-table th:nth-child(6),
+    .equipment-table td:nth-child(6) {
+        display: none !important;
+    }
+}

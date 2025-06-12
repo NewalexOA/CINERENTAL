@@ -195,16 +195,6 @@ body {
     padding-bottom: 8px;
 }
 
-.equipment-table tfoot td {
-    border-top: 2px solid #000;
-    border-bottom: none !important;
-    border-left: none;
-    border-right: none;
-    font-weight: bold;
-    color: #000;
-    padding: 4px 1px;
-}
-
 .col-num {
     width: 5%;
     text-align: center;
@@ -232,14 +222,6 @@ body {
     width: 17%;
     text-align: center;
     font-size: 0.9em;
-}
-
-.total-label {
-    text-align: right;
-}
-
-.total-amount {
-    text-align: right;
 }
 
 /* Category separator row */

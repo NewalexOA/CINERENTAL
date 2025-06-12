@@ -5,6 +5,7 @@ including request/response schemas for creating and managing project records.
 """
 
 from datetime import datetime
+from enum import Enum
 from typing import List, Optional
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -233,4 +234,42 @@ class ProjectPrint(BaseModel):
 
     model_config = ConfigDict(
         from_attributes=True,
+    )
+
+
+# New schemas for enhanced equipment filtering and pagination
+class DateFilterType(str, Enum):
+    """Enum for date filter types in project equipment view."""
+
+    ALL = 'all'
+    DIFFERENT = 'different'  # Equipment with dates different from project
+    MATCHING = 'matching'  # Equipment with dates matching project
+
+
+class ProjectBookingResponse(BaseModel):
+    """Response schema for paginated project bookings with enhanced information."""
+
+    id: int = Field(..., title='Booking ID')
+    equipment_id: int = Field(..., title='Equipment ID')
+    equipment_name: str = Field(..., title='Equipment Name')
+    serial_number: Optional[str] = Field(None, title='Serial Number')
+    barcode: Optional[str] = Field(None, title='Barcode')
+    category_name: Optional[str] = Field(None, title='Category Name')
+    category_id: Optional[int] = Field(None, title='Category ID')
+    start_date: datetime = Field(..., title='Booking Start Date')
+    end_date: datetime = Field(..., title='Booking End Date')
+    booking_status: str = Field(..., title='Booking Status')
+    payment_status: str = Field(..., title='Payment Status')
+    quantity: int = Field(1, title='Quantity')
+    has_different_dates: bool = Field(
+        False,
+        title='Has Different Dates',
+        description='True if booking dates differ from project dates',
+    )
+
+    model_config = ConfigDict(
+        from_attributes=True,
+        ser_json_bytes='utf8',
+        ser_json_timedelta='iso8601',
+        validate_default=True,
     )

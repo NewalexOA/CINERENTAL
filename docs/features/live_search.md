@@ -1,37 +1,40 @@
-# Функциональность живого поиска в таблице оборудования
+# Live Search Functionality in Equipment Table
 
-## 1. Общее описание
+## 1. Overview
 
-Функциональность живого поиска позволяет пользователям мгновенно находить оборудование в системе ACT-RENTAL по мере ввода поискового запроса. Поиск выполняется в реальном времени с фильтрацией результатов без необходимости перезагрузки страницы.
+Live search functionality allows users to instantly find equipment in the ACT-RENTAL system as they type their search query. The search is performed in real-time with result filtering without the need to reload the page.
 
-### Основные возможности:
-- Поиск по названию, описанию, штрих-коду и серийному номеру оборудования
-- Фильтрация по категории и статусу оборудования
-- Мгновенное обновление результатов в таблице
-- Визуальная индикация процесса поиска
-- Обновление URL с параметрами поиска для возможности поделиться результатами
+### Key features
 
-## 2. Архитектура решения
+- Search by equipment name, description, barcode, and serial number
+- Filter by equipment category and status
+- Instant table result updates
+- Visual search process indication
+- URL update with search parameters for shareable results
 
-### 2.1. Frontend компоненты
+## 2. Solution Architecture
 
-#### HTML структура (frontend/templates/equipment/list.html)
+### 2.1. Frontend Components
+
+#### HTML Structure (frontend/templates/equipment/list.html)
+
 ```html
 <div class="position-relative">
     <input type="text"
            class="form-control rounded"
            id="searchInput"
-           placeholder="Поиск по названию, описанию, штрих-коду или серийному номеру..."
+           placeholder="Search by name, description, barcode, or serial number..."
            minlength="3">
     <div id="search-spinner" class="spinner-border spinner-border-sm d-none text-primary position-absolute"
          style="right: 10px; top: 50%; transform: translateY(-50%)" role="status">
-        <span class="visually-hidden">Поиск...</span>
+        <span class="visually-hidden">Searching...</span>
     </div>
 </div>
 ```
 
-#### JavaScript модуль (frontend/static/js/main.js)
-Основной модуль `equipmentSearch` отвечает за инициализацию и обработку поисковых запросов:
+#### JavaScript Module (frontend/static/js/main.js)
+
+The main `equipmentSearch` module handles initialization and search request processing:
 
 ```javascript
 const equipmentSearch = {
@@ -41,22 +44,23 @@ const equipmentSearch = {
         const statusFilter = document.querySelector('#statusFilter');
         const searchSpinner = document.querySelector('#search-spinner');
 
-        // Обработчики событий
+        // Event handlers
         searchInput.addEventListener('input', updateResults);
         categoryFilter.addEventListener('change', updateResults);
         statusFilter.addEventListener('change', updateResults);
 
-        // Функция обновления результатов с debounce
+        // Results update function with debounce
         const updateResults = debounce(async () => {
-            // Логика запроса и обновления таблицы
+            // Request logic and table update
         }, 300);
     }
 };
 ```
 
-### 2.2. Backend компоненты
+### 2.2. Backend Components
 
 #### API Endpoint (backend/api/v1/endpoints/equipment.py)
+
 ```python
 @typed_get(
     equipment_router,
@@ -74,7 +78,7 @@ async def get_equipment_list(
     db: AsyncSession = Depends(get_db),
 ) -> List[EquipmentResponse]:
     """Get list of equipment with optional filtering."""
-    # Валидация и обработка запроса
+    # Request validation and processing
     equipment_service = EquipmentService(db)
     equipment_list = await equipment_service.get_equipment_list(
         skip=skip,
@@ -88,7 +92,8 @@ async def get_equipment_list(
     return equipment_list
 ```
 
-#### Сервисный слой (backend/services/equipment.py)
+#### Service Layer (backend/services/equipment.py)
+
 ```python
 async def get_equipment_list(
     self,
@@ -101,7 +106,7 @@ async def get_equipment_list(
     available_to: Optional[datetime] = None,
 ) -> List[EquipmentResponse]:
     """Get list of equipment with optional filtering."""
-    # Валидация и подготовка параметров
+    # Parameter validation and preparation
     equipment_list = await self.repository.get_list(
         skip=skip,
         limit=limit,
@@ -116,7 +121,8 @@ async def get_equipment_list(
     ]
 ```
 
-#### Репозиторий (backend/repositories/equipment.py)
+#### Repository (backend/repositories/equipment.py)
+
 ```python
 async def get_list(
     self,
@@ -146,7 +152,7 @@ async def get_list(
             )
         )
 
-    # Дополнительная фильтрация по датам доступности
+    # Additional availability date filtering
     # ...
 
     stmt = stmt.offset(skip).limit(limit)
@@ -154,81 +160,81 @@ async def get_list(
     return list(result.scalars().all())
 ```
 
-### 2.3. Оптимизация базы данных
+### 2.3. Database Optimization
 
-Для обеспечения высокой производительности поиска используются GIN индексы PostgreSQL с расширением pg_trgm:
+To ensure high search performance, PostgreSQL GIN indexes with pg_trgm extension are used:
 
 ```sql
--- Создание расширения для поиска по триграммам
+-- Create extension for trigram search
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
 
--- Индексы для полей поиска
+-- Search field indexes
 CREATE INDEX idx_equipment_name_search ON equipment USING gin (name gin_trgm_ops);
 CREATE INDEX idx_equipment_barcode_search ON equipment USING gin (barcode gin_trgm_ops);
 CREATE INDEX idx_equipment_description_search ON equipment USING gin (description gin_trgm_ops);
 CREATE INDEX idx_equipment_serial_number_search ON equipment USING gin (serial_number gin_trgm_ops);
 ```
 
-## 3. Алгоритм работы
+## 3. Algorithm Flow
 
-### 3.1. Процесс поиска
+### 3.1. Search Process
 
-1. Пользователь вводит текст в поле поиска
-2. Если длина запроса ≥ 3 символов, активируется функция поиска
-3. Отображается индикатор загрузки (спиннер)
-4. Выполняется debounce для предотвращения частых запросов
-5. Формируется URL с параметрами поиска и фильтрации
-6. Отправляется AJAX запрос к API
-7. Обновляется URL в браузере без перезагрузки страницы
-8. Результаты отображаются в таблице
-9. Скрывается индикатор загрузки
+1. User types text in search field
+2. If query length ≥ 3 characters, search function activates
+3. Loading indicator (spinner) is displayed
+4. Debounce is executed to prevent frequent requests
+5. URL is formed with search and filter parameters
+6. AJAX request is sent to API
+7. Browser URL is updated without page reload
+8. Results are displayed in table
+9. Loading indicator is hidden
 
-### 3.2. Обработка ошибок
+### 3.2. Error Handling
 
-- При ошибке запроса отображается уведомление с помощью функции `showToast`
-- Логирование ошибок в консоль и на сервере
-- Возврат к предыдущему состоянию при неудачном запросе
+- On request error, notification is displayed using `showToast` function
+- Error logging to console and server
+- Return to previous state on failed request
 
-## 4. Производительность
+## 4. Performance
 
-### 4.1. Оптимизации на стороне клиента
+### 4.1. Client-side Optimizations
 
-- Использование debounce для предотвращения частых запросов (300мс)
-- Минимальная длина запроса (3 символа) для уменьшения нагрузки
-- Асинхронное обновление DOM без перезагрузки страницы
+- Using debounce to prevent frequent requests (300ms)
+- Minimum query length (3 characters) to reduce load
+- Asynchronous DOM updates without page reload
 
-### 4.2. Оптимизации на стороне сервера
+### 4.2. Server-side Optimizations
 
-- Использование GIN индексов для быстрого поиска по текстовым полям
-- Расширение pg_trgm для эффективного поиска подстрок
-- Асинхронная обработка запросов с помощью FastAPI
-- Ограничение размера результатов (пагинация)
+- Using GIN indexes for fast text field search
+- pg_trgm extension for efficient substring search
+- Asynchronous request processing with FastAPI
+- Result size limitation (pagination)
 
-## 5. Тестирование
+## 5. Testing
 
-### 5.1. Unit тесты
+### 5.1. Unit Tests
 
 ```python
 async def test_search_by_name():
-    """Тест поиска по имени оборудования."""
+    """Test search by equipment name."""
     service = EquipmentService(db_session)
     results = await service.search("Sony")
     assert len(results) > 0
     assert all("Sony" in item.name.lower() for item in results)
 
 async def test_search_case_insensitive():
-    """Тест нечувствительности к регистру."""
+    """Test case insensitivity."""
     service = EquipmentService(db_session)
     results_lower = await service.search("sony")
     results_upper = await service.search("SONY")
     assert len(results_lower) == len(results_upper)
 ```
 
-### 5.2. Интеграционные тесты
+### 5.2. Integration Tests
 
 ```python
 async def test_search_endpoint():
-    """Тест endpoint поиска."""
+    """Test search endpoint."""
     async with AsyncClient(app=app, base_url="http://test") as client:
         response = await client.get("/api/v1/equipment/?query=sony")
         assert response.status_code == 200
@@ -237,7 +243,7 @@ async def test_search_endpoint():
         assert all("sony" in item["name"].lower() for item in data)
 ```
 
-### 5.3. E2E тесты
+### 5.3. E2E Tests
 
 ```javascript
 describe('Equipment Search', () => {
@@ -257,18 +263,18 @@ describe('Equipment Search', () => {
 });
 ```
 
-## 6. Мониторинг и логирование
+## 6. Monitoring and Logging
 
-### 6.1. Метрики для мониторинга
+### 6.1. Monitoring Metrics
 
-- Время отклика API endpoint `/equipment/?query={query}`
-- Количество запросов к поиску в минуту
-- Процент неудачных запросов
+- API endpoint response time `/equipment/?query={query}`
+- Number of search requests per minute
+- Percentage of failed requests
 
-### 6.2. Логирование
+### 6.2. Logging
 
 ```python
-# Формат логов
+# Log format
 {
     "time": "2024-02-21T11:34:33",
     "level": "INFO",
@@ -281,14 +287,14 @@ describe('Equipment Search', () => {
 }
 ```
 
-## 7. Возможные улучшения
+## 7. Possible Improvements
 
-1. **Полнотекстовый поиск**: Внедрение более продвинутых возможностей поиска с использованием PostgreSQL Full Text Search или Elasticsearch
-2. **Автодополнение**: Добавление выпадающего списка с предложениями по мере ввода
-3. **Сохранение истории поиска**: Отслеживание и отображение недавних поисковых запросов пользователя
-4. **Фасетный поиск**: Расширение фильтрации с динамическим обновлением доступных фильтров
-5. **Кеширование результатов**: Использование Redis для кеширования частых поисковых запросов
+1. **Full-text Search**: Implementing more advanced search capabilities using PostgreSQL Full Text Search or Elasticsearch
+2. **Autocomplete**: Adding dropdown list with suggestions as user types
+3. **Search History**: Tracking and displaying user's recent search queries
+4. **Faceted Search**: Expanding filtering with dynamic available filter updates
+5. **Result Caching**: Using Redis for caching frequent search queries
 
-## 8. Заключение
+## 8. Conclusion
 
-Функциональность живого поиска в таблице оборудования обеспечивает быстрый и удобный способ нахождения нужного оборудования в системе ACT-RENTAL. Благодаря оптимизациям на стороне клиента и сервера, а также использованию современных технологий, поиск работает быстро и эффективно даже при большом количестве данных.
+Live search functionality in equipment table provides a fast and convenient way to find needed equipment in the ACT-RENTAL system. Thanks to client-side and server-side optimizations, as well as the use of modern technologies, search works quickly and efficiently even with large amounts of data.

@@ -106,15 +106,6 @@
                         </tr>
                     {% endfor %}
                 </tbody>
-                <tfoot>
-                    <tr>
-                        <td colspan="4" class="total-label">Итого:</td>
-                        <td class="total-amount">{{ total_liability | format_currency }}</td>
-                        {% if show_dates_column %}
-                        <td></td>
-                        {% endif %}
-                    </tr>
-                </tfoot>
             </table>
         </section>
 

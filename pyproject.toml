@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "act-rental"
-version = "v0.12.0-beta.1"
+version = "v0.13.0-beta.1"
 description = "Equipment rental management system"
 authors = ["Alexey Anashkin <dev.anashkin@gmail.com>"]
 license = "MIT"

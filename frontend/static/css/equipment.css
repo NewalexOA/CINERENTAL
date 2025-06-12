@@ -88,6 +88,93 @@
     border-radius: 5px;
 }
 
+/* Защита таблицы оборудования от сжатия */
+.table {
+    min-width: 800px; /* Минимальная ширина таблицы */
+    table-layout: fixed; /* Фиксированная раскладка таблицы */
+}
+
+.col-name      { width: 41.67%; min-width: 180px; }
+.col-category  { width: 16.67%; min-width: 100px; }
+.col-serial    { width: 8.33%; min-width: 60px; }
+.col-status    { width: 8.33%;  min-width: 60px;  text-align: center; }
+.col-actions   { width: 33.33%; min-width: 10px; white-space: nowrap; text-align: center; }
+
+
+/* Защита столбца действий - усиленная версия */
+.col-actions,
+.table th:last-child,
+.table td:last-child,
+th.col-actions,
+td.col-actions,
+.table thead th:nth-child(5),
+.table tbody td:nth-child(5) {
+    white-space: nowrap !important;
+    width: 180px !important;
+    min-width: 180px !important;
+    max-width: 180px !important;
+    overflow: visible !important;
+    text-overflow: initial !important;
+}
+
+/* Группа кнопок не должна сжиматься - усиленная версия */
+.col-actions .btn-group,
+.table td:last-child .btn-group,
+td.col-actions .btn-group {
+    white-space: nowrap !important;
+    display: flex !important;
+    flex-shrink: 0 !important;
+    flex-wrap: nowrap !important;
+    width: 100% !important;
+    justify-content: center !important;
+}
+
+.col-actions .btn-group .btn,
+.table td:last-child .btn-group .btn,
+td.col-actions .btn-group .btn {
+    flex-shrink: 0 !important;
+    flex-grow: 0 !important;
+    min-width: auto !important;
+}
+
+/* Принудительное удаление inline стилей через CSS */
+.col-actions[style],
+.table td:last-child[style],
+td.col-actions[style] {
+    width: 160px !important;
+    min-width: 160px !important;
+    max-width: 160px !important;
+}
+
+/* Ширины других колонок для фиксированной таблицы */
+.table th:nth-child(1),
+.table td:nth-child(1) {
+    width: auto; /* Название - занимает оставшееся место */
+    min-width: 200px;
+}
+
+.table th:nth-child(2),
+.table td:nth-child(2) {
+    width: 200px;
+    min-width: 200px;
+    max-width: 200px;
+}
+
+.table th:nth-child(3),
+.table td:nth-child(3) {
+    width: 160px;
+    min-width: 160px;
+    max-width: 160px;
+}
+
+.table th:nth-child(4),
+.table td:nth-child(4) {
+    width: 120px;
+    min-width: 120px;
+    max-width: 120px;
+    text-align: center;
+}
+
 /* Стили для кнопки добавления в сессию */
 .btn-qrcode {
     transition: all 0.2s ease;
@@ -99,4 +186,48 @@
 
 .btn-outline-success:focus {
     box-shadow: 0 0 0 0.25rem rgba(25, 135, 84, 0.25);
+}
+
+/* Стили для селектора размера страниц */
+.pagination-size-select {
+    width: auto !important;
+    min-width: 80px;
+    max-width: 120px;
+}
+
+/* Адаптивность для мобильных устройств */
+@media (max-width: 768px) {
+    .table {
+        min-width: 600px; /* Уменьшаем минимальную ширину на мобильных */
+    }
+
+    /* На очень маленьких экранах делаем кнопки вертикально */
+    .actions-column .btn-group {
+        flex-direction: column !important;
+        gap: 2px;
+        width: 100%;
+    }
+
+    .actions-column .btn-group .btn {
+        width: 100%;
+        margin: 0;
+    }
+
+    /* Увеличиваем высоту ячеек для вертикальных кнопок */
+    .actions-column {
+        padding: 8px 4px !important;
+        height: auto;
+        min-height: 80px;
+    }
+}
+
+@media (max-width: 576px) {
+    .table {
+        min-width: 500px;
+    }
+
+    /* Скрываем описание на очень маленьких экранах */
+    .table td:first-child small {
+        display: none;
+    }
 }

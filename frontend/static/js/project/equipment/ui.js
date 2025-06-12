@@ -63,6 +63,7 @@ export function displaySearchResults(results) {
  * Update pagination UI
  */
 export function updatePaginationUI() {
+    console.log('=== CATALOG: updatePaginationUI() called ===');
     const paginationElement = document.getElementById('catalogPagination');
     const pageStartElement = document.getElementById('catalogPageStart');
     const pageEndElement = document.getElementById('catalogPageEnd');
@@ -70,10 +71,24 @@ export function updatePaginationUI() {
     const prevPageButton = document.getElementById('catalogPrevPage');
     const nextPageButton = document.getElementById('catalogNextPage');
 
-    if (!paginationElement) return;
+    console.log('CATALOG: Pagination state:', {
+        currentPage,
+        totalPages,
+        pageSize,
+        totalCount,
+        paginationElement: !!paginationElement,
+        prevPageButton: !!prevPageButton,
+        nextPageButton: !!nextPageButton
+    });
+
+    if (!paginationElement) {
+        console.warn('CATALOG: catalogPagination element not found!');
+        return;
+    }
 
     // Show pagination only if there are more results than page size
     if (totalCount > pageSize) {
+        console.log('CATALOG: Showing pagination (totalCount > pageSize)');
         paginationElement.classList.remove('d-none');
         const startItem = (currentPage - 1) * pageSize + 1;
         const endItem = Math.min(currentPage * pageSize, totalCount);
@@ -83,14 +98,21 @@ export function updatePaginationUI() {
         if (totalItemsElement) totalItemsElement.textContent = totalCount;
 
         if (prevPageButton) {
-            prevPageButton.parentElement.classList.toggle('disabled', currentPage <= 1);
+            const shouldDisablePrev = currentPage <= 1;
+            console.log('CATALOG: Setting prevPageButton disabled:', shouldDisablePrev, 'currentPage:', currentPage);
+            prevPageButton.parentElement.classList.toggle('disabled', shouldDisablePrev);
         }
         if (nextPageButton) {
-            nextPageButton.parentElement.classList.toggle('disabled', currentPage >= totalPages);
+            const shouldDisableNext = currentPage >= totalPages;
+            console.log('CATALOG: Setting nextPageButton disabled:', shouldDisableNext, 'currentPage:', currentPage, 'totalPages:', totalPages);
+            nextPageButton.parentElement.classList.toggle('disabled', shouldDisableNext);
         }
     } else {
+        console.log('CATALOG: Hiding pagination (totalCount <= pageSize)');
         paginationElement.classList.add('d-none');
     }
+
+    console.log('=== CATALOG: updatePaginationUI() complete ===');
 }
 
 /**
@@ -297,16 +319,12 @@ export function renderEquipmentSection(project) {
         return;
     }
 
-    // Debug output
-    console.log('Rendering equipment section with bookings:', project.bookings);
-
     // Sort equipment by name
     project.bookings.sort((a, b) => {
         const nameA = (a.equipment?.name || a.equipment_name || '').toLowerCase();
         const nameB = (b.equipment?.name || b.equipment_name || '').toLowerCase();
         return nameA.localeCompare(nameB);
     });
-    console.log('Sorted bookings:', project.bookings.map(b => b.equipment?.name || b.equipment_name));
 
     // Update equipment count
     if (equipmentCount) {
@@ -330,8 +348,7 @@ export function renderEquipmentSection(project) {
             return;
         }
 
-        // Basic booking validation log
-        console.debug('Processing booking:', booking.id, 'equipment:', booking.equipment_name);
+        // Basic booking validation (removed verbose logging)
 
         const equipmentName = booking.equipment_name || 'Неизвестное оборудование';
         const barcode = booking.barcode || '';
@@ -437,16 +454,48 @@ export function renderEquipmentSection(project) {
     initializeBookingPeriodPickers();
 
     // Add event listeners for quantity buttons
-    document.querySelectorAll('.quantity-increase-btn').forEach(btn => {
+    const increaseButtons = document.querySelectorAll('.quantity-increase-btn');
+    const decreaseButtons = document.querySelectorAll('.quantity-decrease-btn');
+    const removeButtons = document.querySelectorAll('.remove-booking-btn');
+
+    // Action buttons found and initialized
+
+    increaseButtons.forEach(btn => {
         btn.addEventListener('click', handleQuantityIncrease);
     });
 
-    document.querySelectorAll('.quantity-decrease-btn').forEach(btn => {
+    decreaseButtons.forEach(btn => {
         btn.addEventListener('click', handleQuantityDecrease);
     });
 
-    // Add event listeners for remove booking buttons
-    document.querySelectorAll('.remove-booking-btn').forEach(btn => {
+    removeButtons.forEach(btn => {
+        btn.addEventListener('click', handleBookingRemoval);
+    });
+}
+
+/**
+ * Initialize action button event listeners (for use after pagination)
+ */
+export function initializeActionButtonEventListeners() {
+    const increaseButtons = document.querySelectorAll('.quantity-increase-btn');
+    const decreaseButtons = document.querySelectorAll('.quantity-decrease-btn');
+    const removeButtons = document.querySelectorAll('.remove-booking-btn');
+
+    console.log('Reinitializing action buttons after pagination:', {
+        increaseButtons: increaseButtons.length,
+        decreaseButtons: decreaseButtons.length,
+        removeButtons: removeButtons.length
+    });
+
+    increaseButtons.forEach(btn => {
+        btn.addEventListener('click', handleQuantityIncrease);
+    });
+
+    decreaseButtons.forEach(btn => {
+        btn.addEventListener('click', handleQuantityDecrease);
+    });
+
+    removeButtons.forEach(btn => {
         btn.addEventListener('click', handleBookingRemoval);
     });
 }

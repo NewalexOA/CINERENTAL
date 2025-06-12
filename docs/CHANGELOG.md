@@ -2,6 +2,42 @@
 
 This document lists notable changes to the ACT-Rental application.
 
+## [0.13.0-beta.1] - 2025-06-14
+
+### Project Search & Unified Filters
+
+- **Backend Project Name Search:** Added case-insensitive search by project name using ILIKE in the repository layer. All project endpoints now support an optional query parameter for name filtering, following the equipment search pattern for consistency.
+- **Frontend Real-Time Search:** Implemented responsive search input with 300ms debounce, loading spinner, and clear button. Search and filters are unified in a single row with optimized Bootstrap grid proportions. Accessibility features (ARIA labels, keyboard navigation) and Material Design principles applied for a consistent user experience.
+- **Unified Filters Row:** Merged search and filters into a compact, responsive row. Integrated inline clear button, reduced filter widths, and ensured full compatibility with existing JavaScript and mobile devices.
+
+### Bookings API Modernization & SQL-Level Pagination
+
+- **Repository & Service Pagination:** Introduced efficient SQL OFFSET/LIMIT pagination in the booking repository and service layers, reducing memory usage from O(n) to O(page_size). All existing filtering parameters are preserved, and query/result separation enables fastapi-pagination integration.
+- **API & Frontend Pagination:** Switched bookings API to `Page[BookingResponse]` format with full pagination metadata. Updated frontend to handle new response structure, including Bootstrap pagination UI, state management, and metadata display. All integration tests updated and passing (14/14 booking, 329/329 total).
+
+### Modular ProjectService & Advanced Booking Filtering
+
+- **Modular Architecture:** Refactored ProjectService into a modular facade with CRUD, query, booking, and formatter operations. Introduced `DateFilterType` enum for advanced booking filtering (ALL, DIFFERENT, MATCHING). API endpoints updated for modular service and enhanced filtering. Achieved 69% code reduction and improved maintainability with 100% backward compatibility.
+- **Booking Data Reliability:** Optimized booking data loading and seeding to prevent duplicates. Improved logging, import paths, and field mapping. Cleaned up validators directory and optimized import structure.
+
+### Universal Frontend Pagination & Equipment List Modernization
+
+- **Universal Pagination System:** Added reusable JavaScript utility and Jinja2 macro for pagination with persistent page size (localStorage). Supported multiple synchronized paginations per page (dual/quadruple controls). Migrated equipment and projects lists to the universal system with unified CSS and markup consistency.
+- **UI/UX Enhancements:** Unified table column classes, implemented Bootstrap grid-based widths, and ensured mobile responsiveness. Optimized logging system and translated documentation to English.
+
+### Critical Bug Fixes & Quality Improvements
+
+- Fixed card view accordion DOM destruction and added empty state feedback for search results.
+- Improved barcode scanner error handling and promise management.
+- Resolved search spinner persistence and redundant query updates.
+- Fixed action button event listeners after pagination and reduced minimum booking duration to 1 hour.
+- Removed excessive logging and legacy code for improved maintainability.
+
+### Technical Improvements & Documentation
+
+- **Comprehensive Documentation:** Added and translated documentation for the universal pagination system, logging, and live search functionality. Updated all code comments and examples to English for international consistency.
+- **Test Coverage:** All booking and project tests updated for new pagination and search features, with 100% pass rate.
+
 ## [0.12.0-beta.1] - 2025-06-10
 
 ### Equipment Search Revolution

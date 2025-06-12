@@ -11,24 +11,26 @@
 // Import API client
 import { api } from './utils/api.js';
 import { showToast, DATERANGEPICKER_LOCALE } from './utils/common.js';
+import { Pagination } from './utils/pagination.js';
 
-// Pagination state
-let currentPage = 1;
-let totalPages = 1;
-let pageSize = 20;
-let totalCount = 0;
+// Global pagination instance
+let projectsPagination = null;
 
 // Filter state
 let filters = {
     client_id: null,
     status: null,
     start_date: null,
-    end_date: null
+    end_date: null,
+    query: null
 };
 
 // View state
 let currentView = 'table'; // 'table' or 'card'
 let projectsData = []; // Cached projects data
+
+// Search debouncing timer
+let searchDebounceTimer;
 
 // Initialize collapse icons animation
 function initCollapseAnimations() {
@@ -64,27 +66,14 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initialize collapse animations
     initCollapseAnimations();
 
-    // Load projects
-    loadProjects();
+    // Initialize search handler
+    initSearchHandler();
+
+    // Initialize pagination component (this will trigger initial data load)
+    initializePagination();
 
     // Add event listeners for instant filtering
     initFilterListeners();
-
-    document.getElementById('prevPage').addEventListener('click', (e) => {
-        e.preventDefault();
-        if (currentPage > 1) {
-            currentPage--;
-            loadProjects();
-        }
-    });
-
-    document.getElementById('nextPage').addEventListener('click', (e) => {
-        e.preventDefault();
-        if (currentPage < totalPages) {
-            currentPage++;
-            loadProjects();
-        }
-    });
 });
 
 // Initialize filter listeners for instant filtering
@@ -98,6 +87,61 @@ function initFilterListeners() {
     document.getElementById('searchForm').addEventListener('submit', (e) => {
         e.preventDefault();
         applyFilters();
+    });
+}
+
+// Initialize search handler with debouncing
+function initSearchHandler() {
+    const searchInput = document.getElementById('searchQuery');
+    const clearButton = document.getElementById('clearSearch');
+    const spinner = document.getElementById('search-spinner');
+
+    if (!searchInput || !clearButton || !spinner) {
+        console.warn('Search elements not found');
+        return;
+    }
+
+    // Search input handler with debouncing
+    searchInput.addEventListener('input', (e) => {
+        const query = e.target.value.trim();
+
+        // Show/hide clear button based on input content
+        if (query.length > 0) {
+            clearButton.classList.remove('d-none');
+        } else {
+            clearButton.classList.add('d-none');
+        }
+
+        // Show spinner if query is long enough
+        if (query.length >= 3) {
+            spinner.classList.remove('d-none');
+        } else {
+            spinner.classList.add('d-none');
+        }
+
+        // Clear previous timer and set new timer
+        clearTimeout(searchDebounceTimer);
+        searchDebounceTimer = setTimeout(() => {
+            filters.query = query.length >= 3 ? query : null;
+            projectsPagination.reset(); // Reset to first page and reload
+        }, 300);
+    });
+
+    // Clear button handler
+    clearButton.addEventListener('click', () => {
+        searchInput.value = '';
+        searchInput.focus();
+        spinner.classList.add('d-none');
+        clearButton.classList.add('d-none');
+        filters.query = null;
+        projectsPagination.reset(); // Reset to first page and reload
+    });
+
+    // Hide spinner when search is completed
+    searchInput.addEventListener('blur', () => {
+        setTimeout(() => {
+            spinner.classList.add('d-none');
+        }, 100);
     });
 }
 
@@ -236,19 +280,121 @@ function applyFilters() {
     const form = document.getElementById('searchForm');
     const formData = new FormData(form);
 
+    // Read search query from DOM element to preserve user input
+    const searchInput = document.getElementById('searchQuery');
+    const searchQuery = searchInput ? searchInput.value.trim() : '';
+
     filters.client_id = formData.get('client_id') || null;
     filters.status = formData.get('status') || null;
+    filters.query = searchQuery.length >= 3 ? searchQuery : null;
 
-    // Reset to first page
-    currentPage = 1;
-
-    // Load projects with filters
-    loadProjects();
+    projectsPagination.reset(); // Reset to first page and reload
 }
 
-// Load projects with pagination and filters
-async function loadProjects() {
+// Initialize pagination component
+function initializePagination() {
+    console.log('=== PROJECTS LIST: Initializing pagination ===');
+
+    // Check if required DOM elements exist for primary pagination (bottom)
+    const requiredElements = [
+        '#projectsBottomPageStart', '#projectsBottomPageEnd', '#projectsBottomTotalItems',
+        '#projectsBottomCurrentPage', '#projectsBottomTotalPages',
+        '#projectsBottomPrevPage', '#projectsBottomNextPage', '#projectsBottomPageSize'
+    ];
+    const missingElements = [];
+
+    requiredElements.forEach(selector => {
+        const element = document.querySelector(selector);
+        if (!element) {
+            missingElements.push(selector);
+        }
+    });
+
+    if (missingElements.length > 0) {
+        console.error('PROJECTS LIST: Missing required elements:', missingElements);
+        return;
+    }
+
+    console.log('PROJECTS LIST: All required elements found');
+
+    // Create primary pagination (bottom) - this one controls the data
+    projectsPagination = new Pagination({
+        selectors: {
+            pageStart: '#projectsBottomPageStart',
+            pageEnd: '#projectsBottomPageEnd',
+            totalItems: '#projectsBottomTotalItems',
+            currentPage: '#projectsBottomCurrentPage',
+            totalPages: '#projectsBottomTotalPages',
+            prevButton: '#projectsBottomPrevPage',
+            nextButton: '#projectsBottomNextPage',
+            pageSizeSelect: '#projectsBottomPageSize'
+        },
+        options: {
+            pageSize: 20,
+            pageSizes: [20, 50, 100],
+            showPageInfo: true,
+            showPageSizeSelect: true,
+            autoLoadOnInit: false, // Temporarily disable for debugging
+            persistPageSize: true, // Enable page size persistence
+            storageKey: 'projects_list_pagesize', // Unique key for projects list
+            useUrlParams: false // Disabled for now, can be enabled later
+        },
+        callbacks: {
+            onDataLoad: async (page, size) => {
+                return await loadProjectsData(page, size);
+            }
+        }
+    });
+
+    // Add secondary pagination (top table view) that syncs with primary
+    projectsPagination.addSecondaryPagination({
+        pageStart: '#projectsTopPageStart',
+        pageEnd: '#projectsTopPageEnd',
+        totalItems: '#projectsTopTotalItems',
+        currentPage: '#projectsTopCurrentPage',
+        totalPages: '#projectsTopTotalPages',
+        prevButton: '#projectsTopPrevPage',
+        nextButton: '#projectsTopNextPage',
+        pageSizeSelect: '#projectsTopPageSize'
+    });
+
+    // Add card view paginations that sync with primary
+    projectsPagination.addSecondaryPagination({
+        pageStart: '#projectsCardTopPageStart',
+        pageEnd: '#projectsCardTopPageEnd',
+        totalItems: '#projectsCardTopTotalItems',
+        currentPage: '#projectsCardTopCurrentPage',
+        totalPages: '#projectsCardTopTotalPages',
+        prevButton: '#projectsCardTopPrevPage',
+        nextButton: '#projectsCardTopNextPage',
+        pageSizeSelect: '#projectsCardTopPageSize'
+    });
+
+    projectsPagination.addSecondaryPagination({
+        pageStart: '#projectsCardBottomPageStart',
+        pageEnd: '#projectsCardBottomPageEnd',
+        totalItems: '#projectsCardBottomTotalItems',
+        currentPage: '#projectsCardBottomCurrentPage',
+        totalPages: '#projectsCardBottomTotalPages',
+        prevButton: '#projectsCardBottomPrevPage',
+        nextButton: '#projectsCardBottomNextPage',
+        pageSizeSelect: '#projectsCardBottomPageSize'
+    });
+
+    console.log('PROJECTS LIST: Pagination instance created:', projectsPagination);
+
+    // Manual initial load after slight delay
+    setTimeout(() => {
+        console.log('PROJECTS LIST: Manually triggering initial data load...');
+        projectsPagination.loadData();
+    }, 100);
+}
+
+// Load projects data (used by pagination component)
+async function loadProjectsData(page, size) {
     const projectsList = document.getElementById('projectsList');
+    const spinner = document.getElementById('search-spinner');
+
     projectsList.innerHTML = `
         <tr>
             <td colspan="6" class="text-center py-4">
@@ -274,13 +420,14 @@ async function loadProjects() {
     try {
         // Build query parameters for paginated endpoint
         const params = new URLSearchParams();
-        params.append('page', currentPage);
-        params.append('size', pageSize);
+        params.append('page', page);
+        params.append('size', size);
 
         if (filters.client_id) params.append('client_id', filters.client_id);
         if (filters.status) params.append('project_status', filters.status);
         if (filters.start_date) params.append('start_date', filters.start_date);
         if (filters.end_date) params.append('end_date', filters.end_date);
+        if (filters.query) params.append('query', filters.query);
 
         // Make API request to paginated endpoint
         const response = await api.get(`/projects/paginated?${params.toString()}`);
@@ -289,15 +436,22 @@ async function loadProjects() {
 
         // Extract pagination data from response
         projectsData = response.items || [];
-        totalCount = response.total || 0;
-        totalPages = response.pages || 1;
-        currentPage = response.page || 1;
 
         // Update UI with project items
         renderProjects(projectsData);
 
-        // Update pagination controls
-        updatePagination();
+        // Hide search spinner after successful API response
+        if (spinner) {
+            spinner.classList.add('d-none');
+        }
+
+        // Return pagination data for the Pagination component
+        return {
+            items: response.items,
+            total: response.total,
+            pages: response.pages,
+            page: response.page
+        };
     } catch (error) {
         console.error('Error loading projects:', error);
         if (typeof showToast === 'function') {
@@ -326,6 +480,13 @@ async function loadProjects() {
         document.getElementById('activeProjectsList').innerHTML = errorMessage;
         document.getElementById('completedProjectsList').innerHTML = errorMessage;
         document.getElementById('cancelledProjectsList').innerHTML = errorMessage;
+
+        // Hide search spinner even on error
+        if (spinner) {
+            spinner.classList.add('d-none');
+        }
+
+        throw error; // Re-throw for pagination component error handling
     }
 }
 
@@ -520,39 +681,52 @@ function renderCardView(projects) {
     document.getElementById('cancelledProjects').classList.toggle('d-none', cancelledProjects.length === 0);
 
     // Show "No projects" message if all groups are empty
+    const cardViewEmptyState = document.getElementById('cardViewEmptyState');
     if (projects.length === 0) {
-        const noProjectsMessage = `
-            <div class="col-12 py-5 text-center text-muted">
-                <i class="fas fa-folder-open fa-3x mb-3"></i>
-                <p>Нет проектов, соответствующих условиям поиска</p>
-            </div>
-        `;
-        draftProjectsList.innerHTML = noProjectsMessage;
-
         // Hide all accordion sections when no projects
         document.getElementById('draftProjects').classList.add('d-none');
         document.getElementById('activeProjects').classList.add('d-none');
         document.getElementById('completedProjects').classList.add('d-none');
         document.getElementById('cancelledProjects').classList.add('d-none');
 
-        // Show a general message instead
-        document.getElementById('cardView').innerHTML = `<div class="text-center py-5">${noProjectsMessage}</div>`;
+        // Show global empty state message
+        if (cardViewEmptyState) {
+            cardViewEmptyState.classList.remove('d-none');
+        }
+    } else {
+        // Hide global empty state message when projects exist
+        if (cardViewEmptyState) {
+            cardViewEmptyState.classList.add('d-none');
+        }
     }
 }
 
-// Update pagination controls
-function updatePagination() {
-    const pageStart = Math.min((currentPage - 1) * pageSize + 1, totalCount);
-    const pageEnd = Math.min(currentPage * pageSize, totalCount);
+// Global debug function for testing projects pagination
+window.testProjectsPagination = function() {
+    console.log('=== TESTING PROJECTS PAGINATION ===');
+    console.log('projectsPagination instance:', projectsPagination);
 
-    document.getElementById('pageStart').textContent = pageStart;
-    document.getElementById('pageEnd').textContent = pageEnd;
-    document.getElementById('totalItems').textContent = totalCount;
+    if (!projectsPagination) {
+        console.error('projectsPagination not initialized!');
+        return;
+    }
 
-    // Enable/disable pagination buttons
-    const prevBtn = document.getElementById('prevPage').parentElement;
-    const nextBtn = document.getElementById('nextPage').parentElement;
+    console.log('Current state:', projectsPagination.getState());
 
-    prevBtn.classList.toggle('disabled', currentPage === 1);
-    nextBtn.classList.toggle('disabled', currentPage >= totalPages);
-}
+    // Test element existence
+    const prevButton = document.getElementById('prevPage');
+    const nextButton = document.getElementById('nextPage');
+    console.log('prevButton element:', prevButton);
+    console.log('nextButton element:', nextButton);
+
+    // Test button functionality
+    if (prevButton) {
+        console.log('Testing prev button click...');
+        prevButton.click();
+    }
+
+    if (nextButton) {
+        console.log('Testing next button click...');
+        setTimeout(() => nextButton.click(), 1000);
+    }
+};

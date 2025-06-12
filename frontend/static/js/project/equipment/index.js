@@ -6,7 +6,7 @@ import { checkEquipmentAvailability, initializeBookingPeriodPickers, initializeN
 import { handleQuantityIncrease, handleQuantityDecrease, handleBookingRemoval, addSelectedEquipmentToProject } from './booking.js';
 import { initializeHIDScanner, startHIDScanner, stopHIDScanner, autoStartHIDScanner, autoStopHIDScanner } from './scanner.js';
 import { initializeCategoryFilter, setupSearchInput, setupPaginationButtons, searchEquipmentByBarcode, searchEquipmentInCatalog } from './search.js';
-import { displaySearchResults, updatePaginationUI, selectEquipment, showEquipmentDetails, hideEquipmentDetails, resetEquipmentSelection, showAddEquipmentZone, hideAddEquipmentZone, renderEquipmentSection } from './ui.js';
+import { displaySearchResults, updatePaginationUI, selectEquipment, showEquipmentDetails, hideEquipmentDetails, resetEquipmentSelection, showAddEquipmentZone, hideAddEquipmentZone, renderEquipmentSection, initializeActionButtonEventListeners } from './ui.js';
 
 // Re-export all imported functions
 export {
@@ -14,7 +14,7 @@ export {
     handleQuantityIncrease, handleQuantityDecrease, handleBookingRemoval, addSelectedEquipmentToProject,
     initializeHIDScanner, startHIDScanner, stopHIDScanner, autoStartHIDScanner, autoStopHIDScanner,
     initializeCategoryFilter, setupSearchInput, setupPaginationButtons, searchEquipmentByBarcode, searchEquipmentInCatalog,
-    displaySearchResults, updatePaginationUI, selectEquipment, showEquipmentDetails, hideEquipmentDetails, resetEquipmentSelection, showAddEquipmentZone, hideAddEquipmentZone, renderEquipmentSection
+    displaySearchResults, updatePaginationUI, selectEquipment, showEquipmentDetails, hideEquipmentDetails, resetEquipmentSelection, showAddEquipmentZone, hideAddEquipmentZone, renderEquipmentSection, initializeActionButtonEventListeners
 };
 
 /**
@@ -37,19 +37,8 @@ export function initializeEquipmentManagement() {
     // Setup pagination buttons
     setupPaginationButtons();
 
-    // Add event listeners for quantity buttons
-    document.querySelectorAll('.quantity-increase-btn').forEach(btn => {
-        btn.addEventListener('click', handleQuantityIncrease);
-    });
-
-    document.querySelectorAll('.quantity-decrease-btn').forEach(btn => {
-        btn.addEventListener('click', handleQuantityDecrease);
-    });
-
-    // Add event listeners for remove booking buttons
-    document.querySelectorAll('.remove-booking-btn').forEach(btn => {
-        btn.addEventListener('click', handleBookingRemoval);
-    });
+    // Event listeners for action buttons are initialized in renderEquipmentSection()
+    // when the buttons are actually created
 
     // Add equipment zone functionality with auto HID scanner management
     document.getElementById('addEquipmentBtn')?.addEventListener('click', () => {

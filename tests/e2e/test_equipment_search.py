@@ -53,7 +53,9 @@ async def test_search_no_results(test_page: Page) -> None:
     await test_page.wait_for_timeout(300)  # Wait for debounce
 
     # Wait for "No results" message
-    await expect(results_table).to_contain_text('Ничего не найдено', timeout=30000)
+    await expect(results_table).to_contain_text(
+        'Оборудование не найдено', timeout=30000
+    )
 
 
 async def test_search_clear(test_page: Page) -> None:

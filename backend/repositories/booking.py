@@ -12,6 +12,7 @@ from loguru import logger
 from sqlalchemy import and_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
+from sqlalchemy.sql import Select
 
 # Keep Project import as it's used in joinedload
 from backend.models import Project  # noqa: F401
@@ -728,6 +729,92 @@ class BookingRepository(BaseRepository[Booking]):
             logger.error(f'Error in get_filtered method: {str(e)}')
             logger.error(traceback.format_exc())
             raise
+
+    def get_paginatable_query(
+        self,
+        query: Optional[str] = None,
+        equipment_query: Optional[str] = None,
+        equipment_id: Optional[int] = None,
+        booking_status: Optional[BookingStatus] = None,
+        payment_status: Optional[PaymentStatus] = None,
+        start_date: Optional[datetime] = None,
+        end_date: Optional[datetime] = None,
+    ) -> Select:
+        """Get a paginatable query for bookings with optional filtering.
+
+        This method returns a SQLAlchemy Select query object that can be used
+        with fastapi-pagination to provide efficient database-level pagination.
+
+        Args:
+            query: Search query for client details (name, email, phone).
+            equipment_query: Search query for equipment details (name, serial, barcode).
+            equipment_id: Filter by equipment ID.
+            booking_status: Filter by booking status.
+            payment_status: Filter by payment status.
+            start_date: Filter by start date (overlap logic).
+            end_date: Filter by end date (overlap logic).
+
+        Returns:
+            SQLAlchemy Select query object
+        """
+        # Base query with relationships
+        stmt = (
+            select(Booking)
+            .where(Booking.deleted_at.is_(None))
+            .options(
+                joinedload(Booking.equipment).joinedload(Equipment.category),
+                joinedload(Booking.client),
+                joinedload(Booking.project),
+            )
+            .order_by(Booking.created_at.desc())
+        )
+
+        # Apply filters conditionally
+        if query:
+            search_query = f'%{query}%'
+            # Ensure Client relationship is joined before filtering on it
+            stmt = stmt.join(Booking.client).where(
+                or_(
+                    Client.name.ilike(search_query),
+                    Client.email.ilike(search_query),
+                    Client.phone.ilike(search_query),
+                )
+            )
+
+        if equipment_query:
+            search_eq_query = f'%{equipment_query}%'
+            # Ensure Equipment relationship is joined before filtering on it
+            stmt = stmt.join(Booking.equipment).where(
+                or_(
+                    Equipment.name.ilike(search_eq_query),
+                    Equipment.serial_number.ilike(search_eq_query),
+                    Equipment.barcode.ilike(search_eq_query),
+                )
+            )
+
+        if equipment_id is not None:
+            stmt = stmt.where(Booking.equipment_id == equipment_id)
+
+        if booking_status is not None:
+            stmt = stmt.where(Booking.booking_status == booking_status)
+
+        if payment_status is not None:
+            stmt = stmt.where(Booking.payment_status == payment_status)
+
+        # Apply date range filter (overlap logic)
+        if start_date and end_date:
+            stmt = stmt.where(
+                and_(
+                    Booking.start_date <= end_date,
+                    Booking.end_date >= start_date,
+                )
+            )
+        elif start_date:
+            stmt = stmt.where(Booking.end_date >= start_date)
+        elif end_date:
+            stmt = stmt.where(Booking.start_date <= end_date)
+
+        return stmt
 
     async def update(self, instance: Booking) -> Booking:
         """Update booking instance.

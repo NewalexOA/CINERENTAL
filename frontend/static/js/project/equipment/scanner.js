@@ -3,7 +3,7 @@
  */
 
 import { showToast } from '../../utils/common.js';
-import { searchEquipmentByBarcode } from './search.js';
+import { searchEquipmentByBarcode, searchEquipmentInCatalog } from './search.js';
 
 let scannerActive = false;
 let hidScanner = null;
@@ -83,8 +83,13 @@ async function handleHIDScanResult(equipment, scanInfo) {
         await searchEquipmentByBarcode();
     } catch (error) {
         // If barcode search failed, try catalog search
-        const { searchEquipmentInCatalog } = await import('./search.js');
-        searchEquipmentInCatalog();
+        console.log('Barcode search failed, falling back to catalog search:', error.message);
+        try {
+            await searchEquipmentInCatalog();
+        } catch (catalogError) {
+            console.error('Catalog search also failed:', catalogError);
+            showToast('Ошибка поиска оборудования', 'danger');
+        }
     }
 
     showToast(`Отсканирован штрих-код: ${equipment.barcode}`, 'success');
@@ -177,12 +182,18 @@ export function stopScanner() {
  * Handle barcode scan result
  * @param {Object} result - Scan result
  */
-function handleScanResult(result) {
+async function handleScanResult(result) {
     if (result && result.codeResult) {
         const barcode = result.codeResult.code;
         stopScanner();
         document.getElementById('barcodeInput').value = barcode;
-        searchEquipmentByBarcode();
+
+        try {
+            await searchEquipmentByBarcode();
+        } catch (error) {
+            console.error('Barcode search failed in camera scanner:', error);
+            showToast('Ошибка поиска по штрих-коду', 'danger');
+        }
     }
 }
 

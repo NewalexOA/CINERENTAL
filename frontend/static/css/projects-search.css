@@ -1,0 +1,74 @@
+/* Projects Search Styles */
+
+/* Search input focus state */
+#searchQuery:focus {
+    border-color: #0d6efd;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+
+/* Clear button inside search field */
+.clear-search-btn {
+    right: 10px !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+    padding: 0.25rem !important;
+    color: #6c757d !important;
+    text-decoration: none !important;
+    background: none !important;
+    border: none !important;
+    z-index: 5;
+}
+
+.clear-search-btn:hover {
+    color: #dc3545 !important;
+    background: none !important;
+}
+
+.clear-search-btn:focus {
+    outline: none !important;
+    box-shadow: none !important;
+}
+
+/* Search spinner positioning - adjusted for inline clear button */
+.search-spinner {
+    right: 40px !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+    z-index: 4;
+}
+
+/* Date range picker font size adjustment */
+#searchPeriod {
+    font-size: 0.875rem;
+}
+
+/* Responsive styles for mobile devices */
+@media (max-width: 767.98px) {
+    /* Stack filters vertically on mobile */
+    #searchForm .col-md-3,
+    #searchForm .col-md-2 {
+        margin-bottom: 0.5rem;
+    }
+
+    /* Adjust clear button positioning on small screens */
+    .clear-search-btn {
+        right: 8px !important;
+    }
+
+    .search-spinner {
+        right: 35px !important;
+    }
+}
+
+/* Accessibility helper class */
+.visually-hidden {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    padding: 0 !important;
+    margin: -1px !important;
+    overflow: hidden !important;
+    clip: rect(0, 0, 0, 0) !important;
+    white-space: nowrap !important;
+    border: 0 !important;
+}

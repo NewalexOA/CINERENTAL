@@ -60,7 +60,12 @@ async def test_get_bookings(
     response = await async_client.get('/api/v1/bookings/')
     assert response.status_code == status.HTTP_200_OK
 
-    bookings = response.json()
+    pagination_response = response.json()
+    assert 'items' in pagination_response
+    assert 'total' in pagination_response
+    assert 'page' in pagination_response
+
+    bookings = pagination_response['items']
     assert isinstance(bookings, list)
     assert len(bookings) > 0
 
@@ -70,7 +75,8 @@ async def test_get_bookings(
     response = await async_client.get(url)
     assert response.status_code == status.HTTP_200_OK
 
-    client_bookings = response.json()
+    client_pagination_response = response.json()
+    client_bookings = client_pagination_response['items']
     assert isinstance(client_bookings, list)
     assert len(client_bookings) > 0
     assert all(booking.get('client_id') == client_id for booking in client_bookings)
@@ -280,7 +286,8 @@ async def test_filter_by_equipment_id(
     url = f'/api/v1/bookings/?equipment_id={test_equipment.id}'
     response = await async_client.get(url)
     assert response.status_code == status.HTTP_200_OK
-    bookings = response.json()
+    pagination_response = response.json()
+    bookings = pagination_response['items']
     assert any(b['equipment_id'] == test_equipment.id for b in bookings)
 
 
@@ -309,7 +316,8 @@ async def test_filter_by_status(
     url = '/api/v1/bookings/?booking_status=COMPLETED'
     response = await async_client.get(url)
     assert response.status_code == status.HTTP_200_OK
-    bookings = response.json()
+    pagination_response = response.json()
+    bookings = pagination_response['items']
     assert any(
         b['id'] == booking_id and b['booking_status'] == 'COMPLETED' for b in bookings
     )
@@ -338,7 +346,8 @@ async def test_filter_by_payment_status(
     url = '/api/v1/bookings/?payment_status=PAID'
     response = await async_client.get(url)
     assert response.status_code == status.HTTP_200_OK
-    bookings = response.json()
+    pagination_response = response.json()
+    bookings = pagination_response['items']
     assert any(
         b['id'] == booking_id and b['payment_status'] == 'PAID' for b in bookings
     )
@@ -365,7 +374,8 @@ async def test_filter_by_date_range(
     )
     response = await async_client.get(url)
     assert response.status_code == status.HTTP_200_OK
-    bookings = response.json()
+    pagination_response = response.json()
+    bookings = pagination_response['items']
     assert any(
         b['start_date'].startswith(start_date.isoformat()[:10])
         and b['end_date'].startswith(end_date.isoformat()[:10])
@@ -391,7 +401,8 @@ async def test_filter_by_active_only(
     url = '/api/v1/bookings/?active_only=true'
     response = await async_client.get(url)
     assert response.status_code == status.HTTP_200_OK
-    bookings = response.json()
+    pagination_response = response.json()
+    bookings = pagination_response['items']
     assert all(
         b['booking_status'] in ['PENDING', 'CONFIRMED', 'ACTIVE', 'OVERDUE']
         for b in bookings
@@ -416,5 +427,6 @@ async def test_filter_by_equipment_query(
     url = f'/api/v1/bookings/?equipment_query={test_equipment.name}'
     response = await async_client.get(url)
     assert response.status_code == status.HTTP_200_OK
-    bookings = response.json()
+    pagination_response = response.json()
+    bookings = pagination_response['items']
     assert any(b['equipment_id'] == test_equipment.id for b in bookings)

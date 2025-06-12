@@ -92,6 +92,7 @@ class ProjectRepository(BaseRepository[Project]):
         status: Optional[ProjectStatus] = None,
         start_date: Optional[datetime] = None,
         end_date: Optional[datetime] = None,
+        query: Optional[str] = None,
     ) -> Tuple[List[Project], int]:
         """Get all projects with pagination and filtering.
 
@@ -102,43 +103,50 @@ class ProjectRepository(BaseRepository[Project]):
             status: Filter by project status
             start_date: Filter by start date
             end_date: Filter by end date
+            query: Search by project name (case-insensitive)
 
         Returns:
             Tuple of list of projects and total count
         """
-        query = select(Project).where(Project.deleted_at.is_(None))
+        query_obj = select(Project).where(Project.deleted_at.is_(None))
         count_query = select(func.count(Project.id)).where(Project.deleted_at.is_(None))
 
         # Apply filters
         if client_id is not None:
-            query = query.where(Project.client_id == client_id)
+            query_obj = query_obj.where(Project.client_id == client_id)
             count_query = count_query.where(Project.client_id == client_id)
 
         if status is not None:
-            query = query.where(Project.status == status)
+            query_obj = query_obj.where(Project.status == status)
             count_query = count_query.where(Project.status == status)
 
         if start_date is not None and end_date is not None:
             date_filter = (Project.start_date <= end_date) & (
                 Project.end_date >= start_date
             )
-            query = query.where(date_filter)
+            query_obj = query_obj.where(date_filter)
             count_query = count_query.where(date_filter)
         elif start_date is not None:
-            query = query.where(Project.end_date >= start_date)
+            query_obj = query_obj.where(Project.end_date >= start_date)
             count_query = count_query.where(Project.end_date >= start_date)
         elif end_date is not None:
-            query = query.where(Project.start_date <= end_date)
+            query_obj = query_obj.where(Project.start_date <= end_date)
             count_query = count_query.where(Project.start_date <= end_date)
 
+        # Add search filter
+        if query is not None and query.strip():
+            search_filter = Project.name.ilike(f'%{query.strip()}%')
+            query_obj = query_obj.where(search_filter)
+            count_query = count_query.where(search_filter)
+
         # Add client relationship for response
-        query = query.join(Client).add_columns(Client.name.label('client_name'))
+        query_obj = query_obj.join(Client).add_columns(Client.name.label('client_name'))
 
         # Apply pagination
-        query = query.limit(limit).offset(offset)
+        query_obj = query_obj.limit(limit).offset(offset)
 
         # Execute queries
-        result = await self.session.execute(query)
+        result = await self.session.execute(query_obj)
         count_result = await self.session.execute(count_query)
 
         # Process results
@@ -185,6 +193,7 @@ class ProjectRepository(BaseRepository[Project]):
         start_date: Optional[datetime] = None,
         end_date: Optional[datetime] = None,
         include_deleted: bool = False,
+        query: Optional[str] = None,
     ) -> Select:
         """Get a paginatable query for projects with optional filtering.
 
@@ -194,33 +203,39 @@ class ProjectRepository(BaseRepository[Project]):
             start_date: Filter by start date
             end_date: Filter by end date
             include_deleted: Whether to include deleted projects
+            query: Search by project name (case-insensitive)
 
         Returns:
             SQLAlchemy Select query object
         """
-        query = select(Project).join(Client).options(joinedload(Project.client))
+        query_obj = select(Project).join(Client).options(joinedload(Project.client))
 
         if not include_deleted:
-            query = query.where(Project.deleted_at.is_(None))
+            query_obj = query_obj.where(Project.deleted_at.is_(None))
 
         if client_id is not None:
-            query = query.where(Project.client_id == client_id)
+            query_obj = query_obj.where(Project.client_id == client_id)
 
         if status is not None:
-            query = query.where(Project.status == status)
+            query_obj = query_obj.where(Project.status == status)
 
         if start_date is not None and end_date is not None:
-            query = query.where(
+            query_obj = query_obj.where(
                 (Project.start_date <= end_date) & (Project.end_date >= start_date)
             )
         elif start_date is not None:
-            query = query.where(Project.end_date >= start_date)
+            query_obj = query_obj.where(Project.end_date >= start_date)
         elif end_date is not None:
-            query = query.where(Project.start_date <= end_date)
+            query_obj = query_obj.where(Project.start_date <= end_date)
 
-        query = query.order_by(Project.created_at.desc())
+        # Add search filter
+        if query is not None and query.strip():
+            search_filter = Project.name.ilike(f'%{query.strip()}%')
+            query_obj = query_obj.where(search_filter)
 
-        return query
+        query_obj = query_obj.order_by(Project.created_at.desc())
+
+        return query_obj
 
     async def delete(self, project_id: Union[int, UUID]) -> bool:
         """Soft delete project.
