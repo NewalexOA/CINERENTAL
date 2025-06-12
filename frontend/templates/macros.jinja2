@@ -1,0 +1,100 @@
+{# Universal pagination macro for reuse across the application #}
+{% macro pagination(
+    prefix,
+    page_start_id=None,
+    page_end_id=None,
+    total_items_id=None,
+    total_pages_id=None,
+    current_page_id=None,
+    page_size_id=None,
+    prev_page_id=None,
+    next_page_id=None,
+    page_sizes=[20, 50, 100],
+    default_page_size=20,
+    show_all_option=true,
+    container_class="d-flex justify-content-between align-items-center mt-3 px-3 pb-3"
+) %}
+    {# Set default IDs based on prefix if not provided #}
+    {% set page_start_id = page_start_id or prefix + "PageStart" %}
+    {% set page_end_id = page_end_id or prefix + "PageEnd" %}
+    {% set total_items_id = total_items_id or prefix + "TotalItems" %}
+    {% set total_pages_id = total_pages_id or prefix + "TotalPages" %}
+    {% set current_page_id = current_page_id or prefix + "CurrentPage" %}
+    {% set page_size_id = page_size_id or prefix + "PageSize" %}
+    {% set prev_page_id = prev_page_id or prefix + "PrevPage" %}
+    {% set next_page_id = next_page_id or prefix + "NextPage" %}
+
+    <div id="{{ prefix }}Pagination" class="{{ container_class }}">
+        <div class="pagination-info">
+            Показано <span id="{{ page_start_id }}">0</span>-<span id="{{ page_end_id }}">0</span> из <span id="{{ total_items_id }}">0</span> (Всего <span id="{{ total_pages_id }}">1</span> стр.)
+        </div>
+        <div class="pagination-controls d-flex align-items-center gap-3">
+            <div class="page-size-control">
+                <select class="form-select form-select-sm" id="{{ page_size_id }}">
+                    {% for size in page_sizes %}
+                        <option value="{{ size }}" {% if size == default_page_size %}selected{% endif %}>{{ size }}</option>
+                    {% endfor %}
+                    {% if show_all_option %}
+                        <option value="all">Все</option>
+                    {% endif %}
+                </select>
+            </div>
+            <nav aria-label="{{ prefix }} pagination">
+                <ul class="pagination pagination-sm mb-0">
+                    <li class="page-item disabled">
+                        <a class="page-link" href="#" id="{{ prev_page_id }}" aria-label="Previous">
+                            <span aria-hidden="true">&laquo;</span>
+                        </a>
+                    </li>
+                    <li class="page-item active">
+                        <span class="page-link" id="{{ current_page_id }}">1</span>
+                    </li>
+                    <li class="page-item disabled">
+                        <a class="page-link" href="#" id="{{ next_page_id }}" aria-label="Next">
+                            <span aria-hidden="true">&raquo;</span>
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+    </div>
+{% endmacro %}
+
+{# Simplified pagination macro for catalog (without page size selector) #}
+{% macro simple_pagination(
+    prefix,
+    page_start_id=None,
+    page_end_id=None,
+    total_items_id=None,
+    prev_page_id=None,
+    next_page_id=None,
+    container_class="d-none",
+    show_total_pages=false
+) %}
+    {# Set default IDs based on prefix if not provided #}
+    {% set page_start_id = page_start_id or prefix + "PageStart" %}
+    {% set page_end_id = page_end_id or prefix + "PageEnd" %}
+    {% set total_items_id = total_items_id or prefix + "TotalItems" %}
+    {% set prev_page_id = prev_page_id or prefix + "PrevPage" %}
+    {% set next_page_id = next_page_id or prefix + "NextPage" %}
+
+    <nav id="{{ prefix }}Pagination" class="{{ container_class }}">
+        <div class="d-flex justify-content-between align-items-center">
+            <div class="text-muted">
+                Показано <span id="{{ page_start_id }}">1</span>-<span id="{{ page_end_id }}">20</span> из <span id="{{ total_items_id }}">0</span>
+            </div>
+            <ul class="pagination mb-0">
+                <li class="page-item">
+                    <a class="page-link" href="#" id="{{ prev_page_id }}">
+                        <i class="fas fa-chevron-left"></i>
+                    </a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="#" id="{{ next_page_id }}">
+                        <i class="fas fa-chevron-right"></i>
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </nav>
+{% endmacro %}
