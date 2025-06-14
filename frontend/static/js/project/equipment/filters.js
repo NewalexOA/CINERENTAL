@@ -197,7 +197,7 @@ class ProjectEquipmentFilters {
             },
             options: {
                 pageSize: 20,
-                pageSizes: [20, 50, 'all'],
+                pageSizes: [20, 50, 100],
                 showPageInfo: true,
                 showPageSizeSelect: true,
                 autoLoadOnInit: true, // Enable automatic data loading on initialization
@@ -299,7 +299,7 @@ class ProjectEquipmentFilters {
 
             // Return pagination data for the Pagination component
             // Calculate pages if not provided or incorrect
-            const calculatedPages = size === 'all' ? 1 : Math.ceil((response.total || 0) / size);
+            const calculatedPages = Math.ceil((response.total || 0) / size);
 
             if (LOG_CONFIG.filters.enabled && LOG_CONFIG.filters.dataLoad) {
                 console.log('EQUIPMENT FILTERS: Pagination calculation:', {

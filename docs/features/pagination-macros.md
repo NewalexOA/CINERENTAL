@@ -32,7 +32,6 @@ Full-featured pagination macro with page size selector.
     next_page_id=None,                  # ID for "next" button (optional)
     page_sizes=[20, 50, 100],           # Available page sizes
     default_page_size=20,               # Default page size
-    show_all_option=true,               # Show "All" option
     container_class="..."               # Container CSS classes
 ) }}
 ```
@@ -120,8 +119,7 @@ All element IDs remain compatible with existing JavaScript code. Pagination logi
 3. **Easy Maintenance** - changes in one place
 4. **Flexible Configuration** - customization through parameters
 5. **Backward Compatibility** - all IDs preserved
-6. **Smart "All" Handling** - "All" option uses actual item count
-7. **Precise Selection Tracking** - selector shows "100" even if fewer items
+6. **Precise Selection Tracking** - selector shows "100" even if fewer items
 
 ## Usage in Other Places
 
@@ -160,7 +158,7 @@ To use in other templates:
 {{ simple_pagination("search") }}
 
 {# Bookings #}
-{{ pagination("bookings", default_page_size=30, show_all_option=false) }}
+{{ pagination("bookings", default_page_size=30) }}
 ```
 
 ## Page Size Persistence (Version 1.1.0)
@@ -184,7 +182,7 @@ new Pagination({
 
 ### Restoration Priority
 
-1. **URL parameter** (if `useUrlParams: true`) - `?size=50` or `?size=all`
+1. **URL parameter** (if `useUrlParams: true`) - `?size=50`
 2. **localStorage** - user's saved value
 3. **Default value** - from configuration
 
@@ -194,13 +192,13 @@ new Pagination({
 - `projects_list_pagesize` - for general project list
 - `pagination_pagesize` - standard key for general cases
 
-### "All" Option Support
+### Page Size Options
 
-The system correctly saves and restores "All" selection:
+The system supports standard page size options [20, 50, 100]:
 
-- Saved as string `'all'` in localStorage
-- Properly sets `isShowingAll` flag when restored
-- Selector displays "All" instead of numeric value
+- Saved as numeric values in localStorage
+- Properly restores user's preferred page size
+- Selector displays selected numeric value
 
 ### Usage Examples
 
@@ -226,7 +224,7 @@ useUrlParams: true  // Page size will be in URL
 - **NEW**: URL parameter support for pagination state (optional)
 - **NEW**: Unique storage keys for isolation between projects
 - **IMPROVED**: Page size preserved between page reloads
-- **ENHANCED**: Improved "All" option state handling
+- **ENHANCED**: Improved page size state handling
 
 ### Version 1.0.0 (December 2024)
 
