@@ -172,7 +172,6 @@ class Pagination {
      * @private
      */
     _getInitialShowingAll() {
-        // Since "all" option is removed, always return false
         return false;
     }
 
@@ -184,7 +183,6 @@ class Pagination {
         if (!this.options.persistPageSize) return;
 
         try {
-            // Since "all" option is removed, always store numeric size
             const valueToStore = size.toString();
             localStorage.setItem(this.options.storageKey, valueToStore);
 
@@ -452,7 +450,7 @@ class Pagination {
 
         if (newSize !== this.state.pageSize) {
             this.state.pageSize = newSize;
-            this.state.isShowingAll = false; // Always false since "all" is removed
+            this.state.isShowingAll = false;
             this.state.currentPage = 1; // Reset to first page
 
             // Save page size to persistence storage
