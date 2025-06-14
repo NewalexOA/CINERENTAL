@@ -1,4 +1,21 @@
 /**
+ * ProjectEquipmentFilters - Enhanced equipment filtering and pagination
+ *
+ * DEBUG INSTRUCTIONS:
+ * To enable detailed logging for debugging pagination issues, run in browser console:
+ *
+ * // Enable all logging:
+ * window.logger.enable()
+ *
+ * // Or enable specific components:
+ * window.logger.enableComponent('filters', { dataLoad: true })
+ * window.logger.enableComponent('pagination', { stateChanges: true })
+ *
+ * // Disable all logging:
+ * window.logger.disable()
+ */
+
+/**
  * Project Equipment Filters
  * Provides filtering and pagination for equipment list in project view
  */
@@ -41,7 +58,9 @@ class ProjectEquipmentFilters {
     }
 
     createFilterUI() {
-        const equipmentCard = document.querySelector('.card:has(#equipmentList)');
+        // Find equipment card by locating the equipmentList element and getting its parent card
+        const equipmentList = document.getElementById('equipmentList');
+        const equipmentCard = equipmentList?.closest('.card');
         if (!equipmentCard) return;
 
         const cardBody = equipmentCard.querySelector('.card-body');
@@ -259,16 +278,49 @@ class ProjectEquipmentFilters {
             // Use the new paginated endpoint
             const response = await api.get(`/projects/${this.projectId}/bookings/paginated?${params.toString()}`);
 
-            // Update equipment table with new data
-            this.updateEquipmentTable(response.items);
+            // Log API response using global logger
+            if (LOG_CONFIG.filters.enabled && LOG_CONFIG.filters.dataLoad) {
+                console.log('EQUIPMENT FILTERS: API Response:', {
+                    url: `/projects/${this.projectId}/bookings/paginated?${params.toString()}`,
+                    params: { page, size, filters: this.filters },
+                    response: response,
+                    structure: {
+                        items: response.items?.length || 0,
+                        total: response.total,
+                        pages: response.pages,
+                        page: response.page,
+                        size: response.size
+                    }
+                });
+            }
+
+            // Update equipment table with new data and total count
+            this.updateEquipmentTable(response.items, response.total);
 
             // Return pagination data for the Pagination component
-            return {
+            // Calculate pages if not provided or incorrect
+            const calculatedPages = size === 'all' ? 1 : Math.ceil((response.total || 0) / size);
+
+            if (LOG_CONFIG.filters.enabled && LOG_CONFIG.filters.dataLoad) {
+                console.log('EQUIPMENT FILTERS: Pagination calculation:', {
+                    originalPages: response.pages,
+                    calculatedPages: calculatedPages,
+                    finalPages: response.pages || calculatedPages
+                });
+            }
+
+            const result = {
                 items: response.items,
                 total: response.total,
-                pages: response.pages,
+                pages: response.pages || calculatedPages,
                 page: response.page
             };
+
+            if (LOG_CONFIG.filters.enabled && LOG_CONFIG.filters.dataLoad) {
+                console.log('EQUIPMENT FILTERS: Final result:', result);
+            }
+
+            return result;
 
         } catch (error) {
             console.error('Error loading equipment data:', error);
@@ -277,7 +329,7 @@ class ProjectEquipmentFilters {
         }
     }
 
-    updateEquipmentTable(bookings) {
+    updateEquipmentTable(bookings, total) {
         const tbody = document.getElementById('equipmentList');
         if (!tbody) return;
 
@@ -294,11 +346,10 @@ class ProjectEquipmentFilters {
             tbody.appendChild(row);
         });
 
-        // Update equipment count (get current state from pagination component)
-        const paginationState = this.pagination ? this.pagination.getState() : { totalItems: 0 };
+        // Update equipment count with actual total from API response
         const countElement = document.getElementById('equipmentCount');
         if (countElement) {
-            countElement.textContent = `${paginationState.totalItems} позиций`;
+            countElement.textContent = `${total || 0} позиций`;
         }
 
         // Initialize date pickers for booking period inputs
@@ -324,7 +375,6 @@ class ProjectEquipmentFilters {
                 <div>${equipmentId ? `<a href="/equipment/${equipmentId}">${equipmentName}</a>` : equipmentName}${booking.quantity > 1 ? ` (x${booking.quantity})` : ''}</div>
                 <small class="text-muted"><i class="fas fa-barcode me-1"></i>${booking.barcode || ''}</small>
                 ${booking.serial_number ? `<small class="text-muted d-block">S/N: ${booking.serial_number}</small>` : ''}
-                <span class="quantity d-none">${booking.quantity}</span>
             </td>
             <td>
                 <div>${booking.category_name || 'Без категории'}</div>
@@ -337,7 +387,7 @@ class ProjectEquipmentFilters {
                        value="${this.formatDateTime(booking.start_date)} - ${this.formatDateTime(booking.end_date)}"
                        placeholder="ДД.ММ.ГГГГ ЧЧ:ММ - ДД.ММ.ГГГГ ЧЧ:ММ">
             </td>
-            <td class="text-center">${booking.quantity}</td>
+            <td class="text-center quantity">${booking.quantity}</td>
             <td class="text-center">
                 <div class="btn-group btn-group-sm" role="group">
                     ${hasSerialNumber ?
