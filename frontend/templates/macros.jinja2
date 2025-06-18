@@ -11,7 +11,6 @@
     next_page_id=None,
     page_sizes=[20, 50, 100],
     default_page_size=20,
-    show_all_option=true,
     container_class="d-flex justify-content-between align-items-center mt-3 px-3 pb-3"
 ) %}
     {# Set default IDs based on prefix if not provided #}
@@ -34,9 +33,6 @@
                     {% for size in page_sizes %}
                         <option value="{{ size }}" {% if size == default_page_size %}selected{% endif %}>{{ size }}</option>
                     {% endfor %}
-                    {% if show_all_option %}
-                        <option value="all">Все</option>
-                    {% endif %}
                 </select>
             </div>
             <nav aria-label="{{ prefix }} pagination">
@@ -69,7 +65,7 @@
     prev_page_id=None,
     next_page_id=None,
     container_class="d-none",
-    show_total_pages=false
+    show_total_pages=False
 ) %}
     {# Set default IDs based on prefix if not provided #}
     {% set page_start_id = page_start_id or prefix + "PageStart" %}

@@ -2,6 +2,36 @@
 
 This document lists notable changes to the ACT-Rental application.
 
+## [0.14.0-beta.1] - 2025-06-19
+
+### Pagination System Overhaul & API Fixes
+
+- **FastAPI Pagination Fixes:** Resolved critical ValidationError issues in multiple paginated endpoints by replacing manual Page object creation with proper fastapi-pagination transformer patterns. Fixed HTTP 422/500 errors in `/projects/{project_id}/bookings/paginated` endpoint using paginate() function with lambda transformers.
+- **Pagination System Standardization:** Removed problematic "show all" option from all pagination components across the application. Standardized page sizes to 20, 50, 100 items for consistent behavior and improved performance. Fixed pagination defaults conflict when "all" page size was persisted in localStorage.
+
+### Equipment Booking History Pagination
+
+- **New Equipment Pagination Feature:** Added comprehensive pagination to equipment booking history with dedicated `/equipment/{id}/bookings/paginated` API endpoint. Integrated universal Pagination class with synchronized top and bottom pagination controls, configurable page sizes, and localStorage persistence.
+- **Enhanced Error Handling:** Implemented robust error handling for pagination initialization with try-catch blocks, user-friendly toast notifications, and graceful API failure management. Fixed page size consistency between UI display and actual loaded data.
+
+### Architecture & Code Quality Improvements
+
+- **Data Architecture Fixes:** Resolved non-existent method references in seed_data.py by replacing `get_overlapping_bookings` with proper `check_availability` following DDD principles. Added safe fallback values for enum status types (BookingStatus, PaymentStatus, ClientStatus, EquipmentStatus, ProjectStatus) to prevent AttributeError exceptions.
+- **Frontend Stability:** Fixed null reference errors in equipment search setup with comprehensive DOM element validation. Resolved CSS `:has()` selector compatibility issues for older browsers by replacing with `closest()` method. Improved quantity UI handling and filter operations with proper error boundaries.
+
+### Documentation & Development Experience
+
+- **Comprehensive Documentation Updates:** Updated pagination documentation to reflect show_all_option removal and added comprehensive English code style guide translated from Russian. Enhanced pagination logging and debugging capabilities with detailed calculation information and consistent logging format.
+- **GitHub Workflow Improvements:** Improved issue auto-closing logic in GitHub Actions with enhanced regex matching, existence validation, and proper error handling for 404 cases.
+
+### Technical Improvements & Bug Fixes
+
+- Fixed equipment count synchronization lag in project filters by passing total count from API responses
+- Resolved pagination calculation errors when itemsPerPage is undefined with proper fallback mechanisms
+- Improved JavaScript promise rejection handling in pagination initialization
+- Enhanced enum handling throughout the application with defensive programming practices
+- Cleaned up obsolete comments and references to removed "show all" functionality
+
 ## [0.13.0-beta.1] - 2025-06-14
 
 ### Project Search & Unified Filters
@@ -87,7 +117,7 @@ This document lists notable changes to the ACT-Rental application.
 - **Responsive Design:** Optimized spacing, typography, and layout for different screen sizes
 - **Enhanced Loading States:** Project counters, loading indicators, and improved user feedback throughout client detail pages
 
-### Technical Improvements & Bug Fixes
+### Technical Improvements & Bug Fixes (0.12.0-beta.1)
 
 - **Client Name Display:** Fixed JavaScript code to use correct API field `client_name` instead of `project.client?.name`
 - **Equipment List Clearing:** Resolved issue where equipment list disappeared after saving project notes by updating PATCH response models

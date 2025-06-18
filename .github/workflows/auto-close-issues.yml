@@ -25,7 +25,7 @@ jobs:
               console.log(`Checking commit: ${message}`);
 
               // Look for issue closing keywords
-              const closeKeywords = /(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)\s+#(\d+)/gi;
+              const closeKeywords = /(?:clos(?:e[sd]?)|fix(?:e[sd])?|resolv(?:e[sd])?)\s+#(\d+)/gi;
               let match;
 
               while ((match = closeKeywords.exec(message)) !== null) {
@@ -33,25 +33,40 @@ jobs:
                 console.log(`Found issue reference: #${issueNumber}`);
 
                 try {
-                  // Close the issue
-                  await github.rest.issues.update({
+                  // Check if issue exists and is open
+                  const issue = await github.rest.issues.get({
                     owner: context.repo.owner,
                     repo: context.repo.repo,
-                    issue_number: issueNumber,
-                    state: 'closed'
+                    issue_number: issueNumber
                   });
 
-                  // Add a comment explaining the closure
-                  await github.rest.issues.createComment({
-                    owner: context.repo.owner,
-                    repo: context.repo.repo,
-                    issue_number: issueNumber,
-                    body: `Automatically closed by commit ${commit.id} in develop branch.`
-                  });
+                  if (issue.data.state === 'open') {
+                    // Close the issue
+                    await github.rest.issues.update({
+                      owner: context.repo.owner,
+                      repo: context.repo.repo,
+                      issue_number: issueNumber,
+                      state: 'closed'
+                    });
 
-                  console.log(`Successfully closed issue #${issueNumber}`);
+                    // Add a comment explaining the closure
+                    await github.rest.issues.createComment({
+                      owner: context.repo.owner,
+                      repo: context.repo.repo,
+                      issue_number: issueNumber,
+                      body: `Automatically closed by commit ${commit.id} in develop branch.\n\nCommit message: ${commit.message}`
+                    });
+
+                    console.log(`Successfully closed issue #${issueNumber}`);
+                  } else {
+                    console.log(`Issue #${issueNumber} is already ${issue.data.state}`);
+                  }
                 } catch (error) {
-                  console.error(`Failed to close issue #${issueNumber}:`, error);
+                  if (error.status === 404) {
+                    console.log(`Issue #${issueNumber} not found`);
+                  } else {
+                    console.error(`Failed to process issue #${issueNumber}:`, error);
+                  }
                 }
               }
             }

@@ -218,7 +218,7 @@ async def load_clients_from_json(
             email=client_data['email'],
             phone=client_data['phone'],
             company=client_data.get('company'),
-            status=getattr(ClientStatus, client_data['status']),
+            status=getattr(ClientStatus, client_data['status'], ClientStatus.ACTIVE),
             notes=client_data.get('notes'),
         )
         await repository.create(client)
@@ -262,6 +262,11 @@ async def load_equipment_from_json(
         else:
             logger.debug('No existing equipment found for barcode: {}', barcode)
 
+        # Get equipment status with safe fallback
+        equipment_status = getattr(
+            EquipmentStatus, eq_data['status'], EquipmentStatus.AVAILABLE
+        )
+
         # Create new equipment
         equipment = Equipment(
             name=eq_data['name'],
@@ -269,7 +274,7 @@ async def load_equipment_from_json(
             serial_number=eq_data.get('serial_number'),
             barcode=eq_data['barcode'],
             category_id=category_id_mapping[old_category_id],
-            status=getattr(EquipmentStatus, eq_data['status']),
+            status=equipment_status,
             replacement_cost=eq_data.get('replacement_cost', 0),
         )
 
@@ -328,7 +333,7 @@ async def load_projects_from_json(
                 if proj_data['end_date']
                 else None
             ),
-            status=getattr(ProjectStatus, proj_data['status']),
+            status=getattr(ProjectStatus, proj_data['status'], ProjectStatus.DRAFT),
             description=proj_data.get('description'),
             notes=proj_data.get('notes'),
         )
@@ -374,13 +379,43 @@ async def load_bookings_from_json(
         project_id = booking_data.get('project_id')
         mapped_project_id = project_id_mapping.get(project_id) if project_id else None
 
-        # Parse dates
-        start_date = datetime.fromisoformat(
-            booking_data['start_date'].replace('Z', '+00:00')
+        # Parse dates first for availability check
+        try:
+            start_date = datetime.fromisoformat(booking_data['start_date'])
+            end_date = datetime.fromisoformat(booking_data['end_date'])
+        except (AttributeError, TypeError, ValueError) as e:
+            logger.warning(
+                'Failed to parse dates for booking (start: {}, end: {}). '
+                'Error: {}. Skipping.',
+                booking_data.get('start_date'),
+                booking_data.get('end_date'),
+                e,
+            )
+            continue
+
+        # Check equipment availability using proper service layer
+        equipment_repository = EquipmentRepository(session)
+        is_available = await equipment_repository.check_availability(
+            mapped_equipment_id, start_date, end_date
         )
-        end_date = datetime.fromisoformat(
-            booking_data['end_date'].replace('Z', '+00:00')
-        )
+
+        if not is_available:
+            logger.info(
+                'Equipment {} is not available for dates {}-{}. '
+                'Skipping booking for client {}.',
+                mapped_equipment_id,
+                start_date.date(),
+                end_date.date(),
+                mapped_client_id,
+            )
+            continue
+
+        # Get booking and payment statuses with safe fallbacks
+        status_key = booking_data.get('booking_status', 'ACTIVE')
+        booking_status = getattr(BookingStatus, status_key, BookingStatus.ACTIVE)
+
+        payment_key = booking_data.get('payment_status', 'PENDING')
+        payment_status = getattr(PaymentStatus, payment_key, PaymentStatus.PENDING)
 
         # Create booking
         booking = Booking(
@@ -389,12 +424,13 @@ async def load_bookings_from_json(
             project_id=mapped_project_id,
             start_date=start_date,
             end_date=end_date,
-            total_amount=Decimal(str(booking_data.get('total_cost', 0))),
+            booking_status=booking_status,
+            total_amount=Decimal(
+                str(booking_data.get('total_amount', booking_data.get('total_cost', 0)))
+            ),
             deposit_amount=Decimal(str(booking_data.get('deposit_amount', 0))),
             notes=booking_data.get('notes'),
-            payment_status=getattr(
-                PaymentStatus, booking_data.get('payment_status', 'PENDING')
-            ),
+            payment_status=payment_status,
         )
 
         await repository.create(booking)
@@ -674,7 +710,7 @@ async def create_clients(session: AsyncSession) -> None:
             email=client_data['email'],
             phone=client_data['phone'],
             company=client_data['company'],
-            status=ClientStatus.ACTIVE,
+            status=getattr(ClientStatus, client_data['status'], ClientStatus.ACTIVE),
         )
         await repository.create(client)
         logger.info('Created client: {}', client.name)

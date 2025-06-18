@@ -38,7 +38,7 @@ const LOG_CONFIG = {
  *   },
  *   options: {
  *     pageSize: 20,
- *     pageSizes: [20, 50, 100, 'all'],
+ *     pageSizes: [20, 50, 100],
  *     showPageInfo: true,
  *     showPageSizeSelect: true,
  *     persistPageSize: true,  // Enable page size persistence
@@ -136,14 +136,9 @@ class Pagination {
             const urlParams = new URLSearchParams(window.location.search);
             const urlPageSize = urlParams.get('size');
             if (urlPageSize) {
-                if (urlPageSize === 'all' && this.options.pageSizes.includes('all')) {
-                    // Note: isShowingAll will be set during state initialization, not here
-                    return this.options.pageSize; // Return default as numeric size
-                } else {
-                    const parsedSize = parseInt(urlPageSize);
-                    if (parsedSize > 0 && this.options.pageSizes.includes(parsedSize)) {
-                        return parsedSize;
-                    }
+                const parsedSize = parseInt(urlPageSize);
+                if (parsedSize > 0 && this.options.pageSizes.includes(parsedSize)) {
+                    return parsedSize;
                 }
             }
         }
@@ -153,14 +148,14 @@ class Pagination {
             try {
                 const stored = localStorage.getItem(this.options.storageKey);
                 if (stored) {
-                    if (stored === 'all' && this.options.pageSizes.includes('all')) {
-                        // Note: isShowingAll will be set during state initialization, not here
-                        return this.options.pageSize; // Return default as numeric size
+                    const parsedSize = parseInt(stored);
+                    if (parsedSize > 0 && this.options.pageSizes.includes(parsedSize)) {
+                        return parsedSize;
                     } else {
-                        const parsedSize = parseInt(stored);
-                        if (parsedSize > 0 && this.options.pageSizes.includes(parsedSize)) {
-                            return parsedSize;
-                        }
+                        // localStorage contains invalid size
+                        console.warn('Pagination: localStorage contains invalid page size:', stored, 'Available sizes:', this.options.pageSizes);
+                        localStorage.removeItem(this.options.storageKey);
+                        return this.options.pageSize;
                     }
                 }
             } catch (error) {
@@ -177,28 +172,6 @@ class Pagination {
      * @private
      */
     _getInitialShowingAll() {
-        // Priority 1: URL parameter
-        if (this.options.useUrlParams) {
-            const urlParams = new URLSearchParams(window.location.search);
-            const urlPageSize = urlParams.get('size');
-            if (urlPageSize === 'all' && this.options.pageSizes.includes('all')) {
-                return true;
-            }
-        }
-
-        // Priority 2: localStorage
-        if (this.options.persistPageSize) {
-            try {
-                const stored = localStorage.getItem(this.options.storageKey);
-                if (stored === 'all' && this.options.pageSizes.includes('all')) {
-                    return true;
-                }
-            } catch (error) {
-                console.warn('Pagination: Error reading from localStorage:', error);
-            }
-        }
-
-        // Priority 3: Default
         return false;
     }
 
@@ -210,7 +183,7 @@ class Pagination {
         if (!this.options.persistPageSize) return;
 
         try {
-            const valueToStore = isShowingAll ? 'all' : size.toString();
+            const valueToStore = size.toString();
             localStorage.setItem(this.options.storageKey, valueToStore);
 
             // Optionally update URL parameter
@@ -264,7 +237,7 @@ class Pagination {
     _mergeOptions(userOptions = {}) {
         const defaults = {
             pageSize: 20,
-            pageSizes: [20, 50, 100, 'all'],
+            pageSizes: [20, 50, 100],
             showPageInfo: true,
             showPageSizeSelect: true,
             autoLoadOnInit: true,
@@ -391,6 +364,7 @@ class Pagination {
             this.state.isLoading = true;
             this._showLoadingState();
 
+            // Make the data request with current pageSize
             const result = await this.callbacks.onDataLoad(
                 this.state.currentPage,
                 this.state.pageSize
@@ -462,30 +436,25 @@ class Pagination {
 
     /**
      * Change page size
-     * @param {number|string} size - New page size ('all' for all items)
+     * @param {number|string} size - New page size
      * @public
      */
     async changePageSize(size) {
-        let newSize;
-        let isShowingAll = false;
+        const newSize = parseInt(size);
 
-        if (size === 'all') {
-            // Use total items count instead of arbitrary large number
-            // If totalItems not yet loaded, use a reasonable maximum
-            newSize = this.state.totalItems > 0 ? this.state.totalItems : 500;
-            isShowingAll = true;
-        } else {
-            newSize = parseInt(size);
-            isShowingAll = false;
+        // Validate that the new size is supported
+        if (!this.options.pageSizes.includes(newSize)) {
+            console.warn('Pagination: Invalid page size:', size, 'Available sizes:', this.options.pageSizes);
+            return;
         }
 
-        if (newSize !== this.state.pageSize || isShowingAll !== this.state.isShowingAll) {
+        if (newSize !== this.state.pageSize) {
             this.state.pageSize = newSize;
-            this.state.isShowingAll = isShowingAll;
+            this.state.isShowingAll = false;
             this.state.currentPage = 1; // Reset to first page
 
             // Save page size to persistence storage
-            this._savePageSize(newSize, isShowingAll);
+            this._savePageSize(newSize, false);
 
             if (this.callbacks.onPageSizeChange) {
                 this.callbacks.onPageSizeChange(newSize);
@@ -500,6 +469,13 @@ class Pagination {
      * @private
      */
     _updateState(result) {
+        if (LOG_CONFIG.pagination.enabled && LOG_CONFIG.pagination.stateChanges) {
+            console.log('PAGINATION: _updateState called:', {
+                inputResult: result,
+                previousState: { ...this.state }
+            });
+        }
+
         if (result && typeof result === 'object') {
             this.state.totalItems = result.total || 0;
             this.state.totalPages = result.pages || 1;
@@ -507,6 +483,22 @@ class Pagination {
 
             // Ensure current page is within valid range
             this.state.currentPage = Math.max(1, Math.min(this.state.currentPage, this.state.totalPages));
+
+            if (LOG_CONFIG.pagination.enabled && LOG_CONFIG.pagination.stateChanges) {
+                console.log('PAGINATION: State updated:', {
+                    updatedState: { ...this.state },
+                    calculation: {
+                        'result.total': result.total,
+                        'result.pages': result.pages,
+                        'result.page': result.page,
+                        'final totalItems': this.state.totalItems,
+                        'final totalPages': this.state.totalPages,
+                        'final currentPage': this.state.currentPage
+                    }
+                });
+            }
+        } else {
+            console.warn('PAGINATION: Invalid result object:', result);
         }
     }
 
@@ -538,6 +530,18 @@ class Pagination {
             (this.state.currentPage - 1) * this.state.pageSize + 1 : 0;
         const endItem = Math.min(this.state.currentPage * this.state.pageSize, this.state.totalItems);
 
+        if (LOG_CONFIG.pagination.enabled && LOG_CONFIG.pagination.stateChanges) {
+            console.log('PAGINATION: _updatePageInfo called:', {
+                state: {
+                    totalItems: this.state.totalItems,
+                    currentPage: this.state.currentPage,
+                    totalPages: this.state.totalPages,
+                    pageSize: this.state.pageSize
+                },
+                calculated: { startItem, endItem }
+            });
+        }
+
         // Update page info elements
         if (this.elements.pageStart) {
             this.elements.pageStart.textContent = startItem;
@@ -557,6 +561,9 @@ class Pagination {
 
         if (this.elements.totalPages) {
             this.elements.totalPages.textContent = this.state.totalPages;
+            if (LOG_CONFIG.pagination.enabled && LOG_CONFIG.pagination.stateChanges) {
+                console.log('PAGINATION: Updated totalPages DOM to:', this.state.totalPages);
+            }
         }
     }
 
@@ -662,8 +669,8 @@ class Pagination {
             console.log('PAGINATION: Set pageSizeSelect.disabled to:', this.state.isLoading);
         }
 
-        // Update selected value
-        const currentValue = this.state.isShowingAll ? 'all' : this.state.pageSize.toString();
+        // Update selected value - always use numeric size
+        const currentValue = this.state.pageSize.toString();
 
         if (this.elements.pageSizeSelect.value !== currentValue) {
             this.elements.pageSizeSelect.value = currentValue;
@@ -918,8 +925,8 @@ class Pagination {
         // Enable/disable selector based on loading state
         elements.pageSizeSelect.disabled = this.state.isLoading;
 
-        // Update selected value
-        const currentValue = this.state.isShowingAll ? 'all' : this.state.pageSize.toString();
+        // Update selected value - always use numeric size
+        const currentValue = this.state.pageSize.toString();
 
         if (elements.pageSizeSelect.value !== currentValue) {
             elements.pageSizeSelect.value = currentValue;
@@ -938,12 +945,12 @@ class Pagination {
  */
 export function createPaginationHTML(config = {}) {
     const prefix = config.prefix || 'pagination';
-    const pageSizes = config.pageSizes || [20, 50, 100, 'all'];
+    const pageSizes = config.pageSizes || [20, 50, 100];
     const defaultPageSize = config.defaultPageSize || 20;
 
     const pageSizeOptions = pageSizes.map(size => {
-        const value = size === 'all' ? 'all' : size;
-        const text = size === 'all' ? 'Все' : size;
+        const value = size;
+        const text = size;
         const selected = size === defaultPageSize ? 'selected' : '';
         return `<option value="${value}" ${selected}>${text}</option>`;
     }).join('');
