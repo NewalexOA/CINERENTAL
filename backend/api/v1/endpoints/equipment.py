@@ -21,7 +21,7 @@ from backend.api.v1.decorators import (
     typed_post,
     typed_put,
 )
-from backend.api.v1.endpoints.bookings import _booking_to_response
+from backend.api.v1.endpoints.bookings import _booking_to_response, _extract_safe_name
 from backend.core.database import get_db
 from backend.exceptions import BusinessError, NotFoundError, StateError, ValidationError
 from backend.models.booking import BookingStatus
@@ -702,24 +702,44 @@ async def get_equipment_bookings_paginated(
             equipment_id=equipment_id
         )
 
-        # Apply pagination using fastapi-pagination
-        paginated_bookings = await paginate(db, bookings_query, params)
-
-        # Transform items to BookingResponse format
-        booking_responses = []
-        for booking in paginated_bookings.items:
-            booking_response = await _booking_to_response(booking)
-            booking_responses.append(booking_response)
-
-        # Return paginated result with transformed items
-        return Page(
-            items=booking_responses,
-            total=paginated_bookings.total,
-            page=paginated_bookings.page,
-            size=paginated_bookings.size,
-            pages=paginated_bookings.pages,
+        # Apply pagination using fastapi-pagination with transformer
+        result: Page[BookingResponse] = await paginate(
+            db,
+            bookings_query,
+            params,
+            transformer=lambda bookings: [
+                BookingResponse(
+                    id=booking.id,
+                    equipment_id=booking.equipment_id,
+                    project_id=booking.project_id,
+                    client_id=booking.client_id,
+                    start_date=booking.start_date,
+                    end_date=booking.end_date,
+                    total_amount=booking.total_amount,
+                    booking_status=booking.booking_status,
+                    payment_status=booking.payment_status,
+                    created_at=booking.created_at,
+                    updated_at=booking.updated_at,
+                    equipment_name=_extract_safe_name(
+                        booking.equipment, 'name', booking.equipment_id, 'Equipment'
+                    ),
+                    client_name=_extract_safe_name(
+                        booking.client, 'name', booking.client_id, 'Client'
+                    ),
+                    project_name=(
+                        _extract_safe_name(
+                            booking.project, 'name', booking.project_id, 'Project'
+                        )
+                        if booking.project_id
+                        else None
+                    ),
+                    quantity=booking.quantity,
+                )
+                for booking in bookings
+            ],
         )
 
+        return result
     except NotFoundError as e:
         raise HTTPException(
             status_code=http_status.HTTP_404_NOT_FOUND,
