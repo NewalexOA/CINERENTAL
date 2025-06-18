@@ -305,7 +305,8 @@ const setupEquipmentSearch = () => {
     const categoryFilter = document.querySelector('#categoryFilter');
     const statusFilter = document.querySelector('#statusFilter');
     const searchSpinner = document.querySelector('#search-spinner');
-    const initialEquipment = [...document.getElementById('equipmentTable').children];
+    const equipmentTable = document.getElementById('equipmentTable');
+    const initialEquipment = equipmentTable ? [...equipmentTable.children] : [];
 
     // Get initial values from URL parameters
     const urlParams = new URLSearchParams(window.location.search);
@@ -313,17 +314,23 @@ const setupEquipmentSearch = () => {
     const initialCategory = urlParams.get('category_id') || '';
     const initialStatus = urlParams.get('status') || '';
 
-    // Set initial values
-    searchInput.value = initialQuery;
-    categoryFilter.value = initialCategory;
-    statusFilter.value = initialStatus;
+    // Set initial values with null checks
+    if (searchInput) searchInput.value = initialQuery;
+    if (categoryFilter) categoryFilter.value = initialCategory;
+    if (statusFilter) statusFilter.value = initialStatus;
 
     const updateResults = debounce(async () => {
+        // Skip if required elements are not available
+        if (!searchInput || !categoryFilter || !statusFilter) {
+            console.warn('Equipment search elements not found, skipping update');
+            return;
+        }
+
         const query = searchInput.value.trim();
         const category = categoryFilter.value;
         const status = statusFilter.value;
 
-        searchSpinner.classList.remove('d-none');
+        if (searchSpinner) searchSpinner.classList.remove('d-none');
         try {
             const params = new URLSearchParams();
 
@@ -372,14 +379,20 @@ const setupEquipmentSearch = () => {
             console.error('Search error:', error);
             showToast('Ошибка при поиске оборудования', 'danger');
         } finally {
-            searchSpinner.classList.add('d-none');
+            if (searchSpinner) searchSpinner.classList.add('d-none');
         }
     }, 300);
 
-    // Add event listeners
-    searchInput.addEventListener('input', updateResults);
-    categoryFilter.addEventListener('change', updateResults);
-    statusFilter.addEventListener('change', updateResults);
+    // Add event listeners with comprehensive null checks
+    if (searchInput && typeof searchInput.addEventListener === 'function') {
+        searchInput.addEventListener('input', updateResults);
+    }
+    if (categoryFilter && typeof categoryFilter.addEventListener === 'function') {
+        categoryFilter.addEventListener('change', updateResults);
+    }
+    if (statusFilter && typeof statusFilter.addEventListener === 'function') {
+        statusFilter.addEventListener('change', updateResults);
+    }
 
     // Load initial data
     updateResults();

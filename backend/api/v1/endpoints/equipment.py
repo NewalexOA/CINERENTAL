@@ -21,7 +21,7 @@ from backend.api.v1.decorators import (
     typed_post,
     typed_put,
 )
-from backend.api.v1.endpoints.bookings import _booking_to_response
+from backend.api.v1.endpoints.bookings import _booking_to_response, _extract_safe_name
 from backend.core.database import get_db
 from backend.exceptions import BusinessError, NotFoundError, StateError, ValidationError
 from backend.models.booking import BookingStatus
@@ -659,6 +659,96 @@ async def get_equipment_bookings(
         raise HTTPException(
             status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f'Failed to retrieve bookings: {str(e)}',
+        ) from e
+
+
+@typed_get(
+    equipment_router,
+    '/{equipment_id}/bookings/paginated',
+    response_model=Page[BookingResponse],
+    summary='Get Paginated Equipment Bookings',
+)
+async def get_equipment_bookings_paginated(
+    equipment_id: int,
+    params: Params = Depends(),
+    db: AsyncSession = Depends(get_db),
+) -> Page[BookingResponse]:
+    """Get paginated bookings for a specific equipment item.
+
+    Args:
+        equipment_id: Equipment ID
+        params: Pagination parameters (page, size)
+        db: Database session
+
+    Returns:
+        Paginated list of bookings for the specified equipment
+
+    Raises:
+        HTTPException: If equipment not found
+    """
+    try:
+        service = EquipmentService(db)
+        # Verify equipment exists
+        equipment = await service.get_equipment(equipment_id)
+        if not equipment:
+            raise HTTPException(
+                status_code=http_status.HTTP_404_NOT_FOUND,
+                detail=f'Equipment with ID {equipment_id} not found',
+            )
+
+        # Get paginated query for equipment bookings
+        booking_service = BookingService(db)
+        bookings_query = await booking_service.get_filtered_bookings_query(
+            equipment_id=equipment_id
+        )
+
+        # Apply pagination using fastapi-pagination with transformer
+        result: Page[BookingResponse] = await paginate(
+            db,
+            bookings_query,
+            params,
+            transformer=lambda bookings: [
+                BookingResponse(
+                    id=booking.id,
+                    equipment_id=booking.equipment_id,
+                    project_id=booking.project_id,
+                    client_id=booking.client_id,
+                    start_date=booking.start_date,
+                    end_date=booking.end_date,
+                    total_amount=booking.total_amount,
+                    booking_status=booking.booking_status,
+                    payment_status=booking.payment_status,
+                    created_at=booking.created_at,
+                    updated_at=booking.updated_at,
+                    equipment_name=_extract_safe_name(
+                        booking.equipment, 'name', booking.equipment_id, 'Equipment'
+                    ),
+                    client_name=_extract_safe_name(
+                        booking.client, 'name', booking.client_id, 'Client'
+                    ),
+                    project_name=(
+                        _extract_safe_name(
+                            booking.project, 'name', booking.project_id, 'Project'
+                        )
+                        if booking.project_id
+                        else None
+                    ),
+                    quantity=booking.quantity,
+                )
+                for booking in bookings
+            ],
+        )
+
+        return result
+    except NotFoundError as e:
+        raise HTTPException(
+            status_code=http_status.HTTP_404_NOT_FOUND,
+            detail=str(e),
+        ) from e
+    except Exception as e:
+        raise HTTPException(
+            status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f'Failed to retrieve paginated bookings: {str(e)}',
         ) from e
 
 

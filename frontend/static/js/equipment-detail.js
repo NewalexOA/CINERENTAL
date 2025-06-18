@@ -7,6 +7,7 @@
 import { api } from './utils/api.js';
 import { showToast, formatDate, formatDateRange } from './utils/common.js';
 import { buildCategoryTree, renderCategoriesRecursive } from './utils/ui-helpers.js';
+import { Pagination } from './utils/pagination.js';
 
 // Initialize equipment data from data attributes
 const scriptTag = document.getElementById('equipment-data'); // Get the dedicated script tag
@@ -16,6 +17,10 @@ const EQUIPMENT_DATA = {
     categoryId: scriptTag.dataset.categoryId ? parseInt(scriptTag.dataset.categoryId, 10) : null,
     barcode: scriptTag.dataset.barcode
 };
+
+// Pagination instances
+let bookingHistoryTopPagination = null;
+let bookingHistoryBottomPagination = null;
 
 // Enhance the showToast function to auto-dismiss notifications
 const originalShowToast = showToast;
@@ -60,20 +65,28 @@ async function loadCategories() {
     }
 }
 
-// Load booking history
-async function loadBookingHistory() {
+// Load booking history with pagination
+async function loadBookingHistoryData(page = 1, size = 20) {
     try {
-        const bookings = await api.get(`/equipment/${EQUIPMENT_DATA.id}/bookings`);
+        console.log(`📊 Loading booking history data - Page: ${page}, Size: ${size}`);
+
+        const response = await api.get(`/equipment/${EQUIPMENT_DATA.id}/bookings/paginated`, {
+            page: page,
+            size: size
+        });
+
+        console.log('📊 Booking history response:', response);
+
         const container = document.getElementById('bookingHistory');
 
-        if (bookings.length === 0) {
+        if (!response.items || response.items.length === 0) {
             container.innerHTML = '<div class="text-center py-3">Нет истории бронирований</div>';
-            return;
+            return response;
         }
 
         container.innerHTML = `
             <div class="list-group list-group-flush">
-                ${bookings.map(booking => `
+                ${response.items.map(booking => `
                     <a href="/bookings/${booking.id}" class="list-group-item list-group-item-action">
                         <div class="d-flex w-100 justify-content-between">
                             <h6 class="mb-1">${booking.client_name || 'Клиент не указан'}</h6>
@@ -88,6 +101,8 @@ async function loadBookingHistory() {
                 `).join('')}
             </div>
         `;
+
+        return response;
     } catch (error) {
         console.error('Error loading booking history:', error);
         document.getElementById('bookingHistory').innerHTML = `
@@ -95,7 +110,159 @@ async function loadBookingHistory() {
                 Ошибка загрузки истории бронирований
             </div>
         `;
+        throw error;
     }
+}
+
+// Initialize booking history pagination
+async function initializeBookingHistoryPagination() {
+    console.log('🚀 Booking history pagination initialization started');
+
+    // Initialize top pagination
+    bookingHistoryTopPagination = new Pagination({
+        selectors: {
+            pageStart: '#bookingHistoryTopPageStart',
+            pageEnd: '#bookingHistoryTopPageEnd',
+            totalItems: '#bookingHistoryTopTotalItems',
+            currentPage: '#bookingHistoryTopCurrentPage',
+            totalPages: '#bookingHistoryTopTotalPages',
+            prevButton: '#bookingHistoryTopPrevPage',
+            nextButton: '#bookingHistoryTopNextPage',
+            pageSizeSelect: '#bookingHistoryTopPageSize'
+        },
+        options: {
+            pageSize: 20,
+            pageSizes: [20, 50, 100],
+            showPageInfo: true,
+            showPageSizeSelect: true,
+            persistPageSize: true,
+            storageKey: 'booking_history_pagesize',
+            useUrlParams: false,  // Don't use URL params for booking history
+            autoLoadOnInit: false
+        },
+        callbacks: {
+            onDataLoad: loadBookingHistoryData,
+            onPageChange: (page) => {
+                console.log('📄 Top booking pagination page changed to:', page);
+                // Sync bottom pagination
+                if (bookingHistoryBottomPagination && bookingHistoryBottomPagination.state.currentPage !== page) {
+                    bookingHistoryBottomPagination.state.currentPage = page;
+                    bookingHistoryBottomPagination._updateUI();
+                }
+            },
+            onPageSizeChange: (size) => {
+                console.log('📏 Top booking pagination page size changed to:', size);
+                // Sync bottom pagination
+                if (bookingHistoryBottomPagination && bookingHistoryBottomPagination.state.pageSize !== size) {
+                    bookingHistoryBottomPagination.state.pageSize = size;
+                    bookingHistoryBottomPagination._updateUI();
+                }
+            }
+        }
+    });
+
+    // Initialize bottom pagination
+    bookingHistoryBottomPagination = new Pagination({
+        selectors: {
+            pageStart: '#bookingHistoryBottomPageStart',
+            pageEnd: '#bookingHistoryBottomPageEnd',
+            totalItems: '#bookingHistoryBottomTotalItems',
+            currentPage: '#bookingHistoryBottomCurrentPage',
+            totalPages: '#bookingHistoryBottomTotalPages',
+            prevButton: '#bookingHistoryBottomPrevPage',
+            nextButton: '#bookingHistoryBottomNextPage',
+            pageSizeSelect: '#bookingHistoryBottomPageSize'
+        },
+        options: {
+            pageSize: 20,
+            pageSizes: [20, 50, 100],
+            showPageInfo: true,
+            showPageSizeSelect: true,
+            persistPageSize: true,
+            storageKey: 'booking_history_pagesize',
+            useUrlParams: false,  // Don't use URL params for booking history
+            autoLoadOnInit: false
+        },
+        callbacks: {
+            onDataLoad: loadBookingHistoryData,
+            onPageChange: (page) => {
+                console.log('📄 Bottom booking pagination page changed to:', page);
+                // Sync top pagination
+                if (bookingHistoryTopPagination && bookingHistoryTopPagination.state.currentPage !== page) {
+                    bookingHistoryTopPagination.state.currentPage = page;
+                    bookingHistoryTopPagination._updateUI();
+                }
+            },
+            onPageSizeChange: (size) => {
+                console.log('📏 Bottom booking pagination page size changed to:', size);
+                // Sync top pagination
+                if (bookingHistoryTopPagination && bookingHistoryTopPagination.state.pageSize !== size) {
+                    bookingHistoryTopPagination.state.pageSize = size;
+                    bookingHistoryTopPagination._updateUI();
+                }
+            }
+        }
+    });
+
+    console.log('📡 Loading initial booking history data...');
+
+    try {
+        // Load initial data using the pagination's actual page size (respects localStorage)
+        const initialPageSize = bookingHistoryTopPagination.state.pageSize;
+        console.log('📏 Using page size from pagination state:', initialPageSize);
+        const initialData = await loadBookingHistoryData(1, initialPageSize);
+
+        // Update both paginations with the same data
+        if (initialData && bookingHistoryTopPagination && bookingHistoryBottomPagination) {
+            console.log('🔄 Updating booking pagination UI with initial data');
+
+            // Update top pagination
+            bookingHistoryTopPagination._updateState(initialData);
+            bookingHistoryTopPagination._updateUI();
+
+            // Update bottom pagination
+            bookingHistoryBottomPagination._updateState(initialData);
+            bookingHistoryBottomPagination._updateUI();
+        }
+
+        // Show pagination elements
+        const topPagination = document.getElementById('bookingHistoryTopPagination');
+        const bottomPagination = document.getElementById('bookingHistoryBottomPagination');
+
+        if (topPagination) {
+            topPagination.classList.remove('d-none');
+            console.log('✅ Top booking pagination shown');
+        }
+
+        if (bottomPagination) {
+            bottomPagination.classList.remove('d-none');
+            console.log('✅ Bottom booking pagination shown');
+        }
+    } catch (error) {
+        console.error('❌ Error loading initial booking history data:', error);
+
+        // Show user-friendly error message
+        showToast('Не удалось загрузить историю бронирований. Попробуйте обновить страницу.', 'warning');
+
+        // Set error state in booking history container
+        const container = document.getElementById('bookingHistory');
+        if (container) {
+            container.innerHTML = `
+                <div class="alert alert-warning d-flex align-items-center">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <div>
+                        <strong>Ошибка загрузки данных</strong><br>
+                        <small>Не удалось загрузить историю бронирований. Проверьте подключение к интернету или попробуйте обновить страницу.</small>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Keep pagination controls hidden since there's no data to paginate
+        console.log('⚠️ Booking pagination controls remain hidden due to data loading error');
+    }
+
+    console.log('✅ Booking history pagination initialization complete');
 }
 
 // Load status timeline
@@ -370,7 +537,7 @@ document.addEventListener('DOMContentLoaded', function() {
     setupButtonHandlers();
 
     // Load data
-    loadBookingHistory();
+    initializeBookingHistoryPagination();
     loadStatusTimeline();
     loadCategories();
 
