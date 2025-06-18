@@ -205,34 +205,59 @@ async function initializeBookingHistoryPagination() {
     });
 
     console.log('📡 Loading initial booking history data...');
-    // Load initial data
-    const initialData = await loadBookingHistoryData(1, 20);
 
-    // Update both paginations with the same data
-    if (initialData && bookingHistoryTopPagination && bookingHistoryBottomPagination) {
-        console.log('🔄 Updating booking pagination UI with initial data');
+    try {
+        // Load initial data
+        const initialData = await loadBookingHistoryData(1, 20);
 
-        // Update top pagination
-        bookingHistoryTopPagination._updateState(initialData);
-        bookingHistoryTopPagination._updateUI();
+        // Update both paginations with the same data
+        if (initialData && bookingHistoryTopPagination && bookingHistoryBottomPagination) {
+            console.log('🔄 Updating booking pagination UI with initial data');
 
-        // Update bottom pagination
-        bookingHistoryBottomPagination._updateState(initialData);
-        bookingHistoryBottomPagination._updateUI();
-    }
+            // Update top pagination
+            bookingHistoryTopPagination._updateState(initialData);
+            bookingHistoryTopPagination._updateUI();
 
-    // Show pagination elements
-    const topPagination = document.getElementById('bookingHistoryTopPagination');
-    const bottomPagination = document.getElementById('bookingHistoryBottomPagination');
+            // Update bottom pagination
+            bookingHistoryBottomPagination._updateState(initialData);
+            bookingHistoryBottomPagination._updateUI();
+        }
 
-    if (topPagination) {
-        topPagination.classList.remove('d-none');
-        console.log('✅ Top booking pagination shown');
-    }
+        // Show pagination elements
+        const topPagination = document.getElementById('bookingHistoryTopPagination');
+        const bottomPagination = document.getElementById('bookingHistoryBottomPagination');
 
-    if (bottomPagination) {
-        bottomPagination.classList.remove('d-none');
-        console.log('✅ Bottom booking pagination shown');
+        if (topPagination) {
+            topPagination.classList.remove('d-none');
+            console.log('✅ Top booking pagination shown');
+        }
+
+        if (bottomPagination) {
+            bottomPagination.classList.remove('d-none');
+            console.log('✅ Bottom booking pagination shown');
+        }
+    } catch (error) {
+        console.error('❌ Error loading initial booking history data:', error);
+
+        // Show user-friendly error message
+        showToast('Не удалось загрузить историю бронирований. Попробуйте обновить страницу.', 'warning');
+
+        // Set error state in booking history container
+        const container = document.getElementById('bookingHistory');
+        if (container) {
+            container.innerHTML = `
+                <div class="alert alert-warning d-flex align-items-center">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <div>
+                        <strong>Ошибка загрузки данных</strong><br>
+                        <small>Не удалось загрузить историю бронирований. Проверьте подключение к интернету или попробуйте обновить страницу.</small>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Keep pagination controls hidden since there's no data to paginate
+        console.log('⚠️ Booking pagination controls remain hidden due to data loading error');
     }
 
     console.log('✅ Booking history pagination initialization complete');
