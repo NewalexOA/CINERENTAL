@@ -207,8 +207,10 @@ async function initializeBookingHistoryPagination() {
     console.log('📡 Loading initial booking history data...');
 
     try {
-        // Load initial data
-        const initialData = await loadBookingHistoryData(1, 20);
+        // Load initial data using the pagination's actual page size (respects localStorage)
+        const initialPageSize = bookingHistoryTopPagination.state.pageSize;
+        console.log('📏 Using page size from pagination state:', initialPageSize);
+        const initialData = await loadBookingHistoryData(1, initialPageSize);
 
         // Update both paginations with the same data
         if (initialData && bookingHistoryTopPagination && bookingHistoryBottomPagination) {
