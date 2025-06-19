@@ -33,8 +33,9 @@ export function validateConfig(config) {
         }
     }
 
-    // Validate callback
-    if (!config.callbacks?.onDataLoad || typeof config.callbacks.onDataLoad !== 'function') {
+    // Validate callback (not required for slave instances)
+    const isSlave = config.role === 'slave';
+    if (!isSlave && (!config.callbacks?.onDataLoad || typeof config.callbacks.onDataLoad !== 'function')) {
         errors.push(ERROR_MESSAGES.MISSING_CALLBACK);
     }
 
