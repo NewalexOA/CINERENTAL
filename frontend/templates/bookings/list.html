@@ -91,6 +91,9 @@
                 </div>
             </div>
             <div class="card-body">
+                <!-- Top Pagination -->
+                <div id="bookingsTopPagination" class="mb-3"></div>
+
                 <div class="table-responsive">
                     <table class="table table-hover">
                         <thead>
@@ -113,22 +116,8 @@
     </div>
 </div>
 
-<!-- Pagination -->
-<div id="pagination" class="d-flex justify-content-between align-items-center mt-3">
-    <div class="pagination-info">
-        Показано <span id="pageStart">0</span>-<span id="pageEnd">0</span> из <span id="totalItems">0</span>
-    </div>
-    <nav>
-        <ul class="pagination">
-            <li class="page-item disabled">
-                <a class="page-link" href="#" id="prevPage">Назад</a>
-            </li>
-            <li class="page-item disabled">
-                <a class="page-link" href="#" id="nextPage">Вперед</a>
-            </li>
-        </ul>
-    </nav>
-</div>
+<!-- New Pagination Module Container -->
+<div id="bookingsPagination"></div>
 
 <!-- New Booking Modal -->
 <div class="modal fade" id="newBookingModal" tabindex="-1">
