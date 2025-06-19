@@ -55,8 +55,8 @@
         </div>
     </div>
 
-    <!-- Universal pagination at top -->
-    {{ pagination("equipmentTop", default_page_size=20, page_sizes=[20, 50, 100], container_class="d-flex justify-content-between align-items-center pb-2 d-none") }}
+    <!-- Equipment pagination at top -->
+    <div id="equipmentTop" class="d-none"></div>
 
     <!-- Equipment Table Card -->
     <div class="card">
@@ -110,8 +110,8 @@
         </div>
     </div>
 
-    <!-- Universal pagination at bottom -->
-    {{ pagination("equipmentBottom", default_page_size=20, page_sizes=[20, 50, 100], container_class="d-flex justify-content-between align-items-center mt-2 pb-3 d-none") }}
+    <!-- Equipment pagination at bottom -->
+    <div id="equipmentBottom" class="d-none"></div>
 
 </div>
 
@@ -267,7 +267,7 @@
 {{ super() }}
 <script src="{{ url_for('static', path='js/utils/logger.js') }}" type="module"></script>
 <script src="{{ url_for('static', path='js/utils/api.js') }}" type="module"></script>
-<script src="{{ url_for('static', path='js/utils/pagination.js') }}" type="module"></script>
+<script src="{{ url_for('static', path='js/utils/pagination/index.js') }}" type="module"></script>
 <script src="{{ url_for('static', path='js/scan-storage.js') }}" type="module"></script>
 <script src="{{ url_for('static', path='js/equipment-list.js') }}" type="module"></script>
 {% endblock %}

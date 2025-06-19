@@ -2,7 +2,8 @@
 import { api } from './utils/api.js';
 import { buildCategoryTree, renderCategoriesRecursive } from './utils/ui-helpers.js';
 import { scanStorage } from './scan-storage.js';
-import { Pagination } from './utils/pagination.js';
+import { createPagination, globalTemplateEngine } from './utils/pagination/index.js';
+import { EquipmentTheme } from './utils/pagination/themes/equipment-theme.js';
 
 // Enable debug logging for pagination
 if (window.logger && window.logger.enableComponent) {
@@ -451,7 +452,7 @@ function renderEquipment(items) {
 
 // Initialize pagination
 async function initializePagination() {
-    console.log('🚀 Equipment pagination initialization started');
+    console.log('🚀 Equipment pagination initialization started (NEW MODULE)');
 
     // Get URL parameters for initial state
     const urlParams = new URLSearchParams(window.location.search);
@@ -483,176 +484,90 @@ async function initializePagination() {
         statusFilter.value = currentFilters.status;
     }
 
-    // Unique storage keys for equipment pagination
-    const storageKeyTop = 'equipment_list_pagesize';
-    const storageKeyBottom = 'equipment_list_pagesize'; // Same key for sync
+    // Create and register equipment theme
+    const equipmentTheme = new EquipmentTheme();
+
+    // Import and register theme
+    const { globalTemplateEngine: templateEngine } = await import('./utils/pagination/index.js');
+    templateEngine.registerTheme('equipment', equipmentTheme);
+
+    // Configuration for pagination instances
+    const paginationConfig = {
+        theme: 'equipment',  // Use theme name string, not object
+        groupId: 'equipment-list',
+        options: {
+            pageSize: initialSize,
+            currentPage: initialPage,
+            showPageSizeSelect: true,
+            pageSizes: [20, 50, 100],
+            className: 'equipment-pagination-container',
+            useUrlSync: true,
+            storageKey: 'equipment_list_pagesize'
+        },
+        callbacks: {
+            onDataLoad: loadEquipmentData,
+            onPageChange: (page, size) => {
+                console.log('📄 Equipment pagination changed:', { page, size });
+                // Note: Synchronization will be handled by the group manager automatically
+                // No manual sync needed when using groupId
+            }
+        }
+    };
 
     console.log('🔧 Creating top pagination...');
 
-    // Check if pagination elements exist
-    const topElements = {
-        pageStart: document.getElementById('equipmentTopPageStart'),
-        pageEnd: document.getElementById('equipmentTopPageEnd'),
-        totalItems: document.getElementById('equipmentTopTotalItems'),
-        currentPage: document.getElementById('equipmentTopCurrentPage'),
-        totalPages: document.getElementById('equipmentTopTotalPages'),
-        prevButton: document.getElementById('equipmentTopPrevPage'),
-        nextButton: document.getElementById('equipmentTopNextPage'),
-        pageSizeSelect: document.getElementById('equipmentTopPageSize')
-    };
-
-    console.log('🎯 Top pagination elements:', topElements);
-
-    // Check for missing elements
-    const missingTop = Object.entries(topElements).filter(([key, el]) => !el);
-    if (missingTop.length > 0) {
-        console.error('❌ Missing top pagination elements:', missingTop.map(([key]) => key));
-    }
-
-    // Initialize top pagination
-    equipmentTopPagination = new Pagination({
-        selectors: {
-            pageStart: '#equipmentTopPageStart',
-            pageEnd: '#equipmentTopPageEnd',
-            totalItems: '#equipmentTopTotalItems',
-            currentPage: '#equipmentTopCurrentPage',
-            totalPages: '#equipmentTopTotalPages',
-            prevButton: '#equipmentTopPrevPage',
-            nextButton: '#equipmentTopNextPage',
-            pageSizeSelect: '#equipmentTopPageSize'
-        },
-        options: {
-            pageSize: initialSize,
-            pageSizes: [20, 50, 100],
-            showPageInfo: true,
-            showPageSizeSelect: true,
-            persistPageSize: true,
-            storageKey: storageKeyTop,
-            useUrlParams: true,
-            autoLoadOnInit: false  // Disable auto loading
-        },
-        callbacks: {
-            onDataLoad: loadEquipmentData,
-            onPageChange: (page) => {
-                console.log('📄 Top pagination page changed to:', page);
-                // Sync bottom pagination
-                if (equipmentBottomPagination && equipmentBottomPagination.state.currentPage !== page) {
-                    equipmentBottomPagination.state.currentPage = page;
-                    equipmentBottomPagination._updateUI();
-                }
-            },
-            onPageSizeChange: (size) => {
-                console.log('📏 Top pagination page size changed to:', size);
-                // Sync bottom pagination
-                if (equipmentBottomPagination && equipmentBottomPagination.state.pageSize !== size) {
-                    equipmentBottomPagination.state.pageSize = size;
-                    equipmentBottomPagination._updateUI();
-                }
-            }
-        }
+    // Initialize top pagination as master (handles data loading)
+    equipmentTopPagination = await createPagination('equipmentTop', {
+        ...paginationConfig,
+        role: 'master'
     });
-
-    console.log('✅ Top pagination created:', equipmentTopPagination);
 
     console.log('🔧 Creating bottom pagination...');
 
-    // Initialize bottom pagination
-    equipmentBottomPagination = new Pagination({
-        selectors: {
-            pageStart: '#equipmentBottomPageStart',
-            pageEnd: '#equipmentBottomPageEnd',
-            totalItems: '#equipmentBottomTotalItems',
-            currentPage: '#equipmentBottomCurrentPage',
-            totalPages: '#equipmentBottomTotalPages',
-            prevButton: '#equipmentBottomPrevPage',
-            nextButton: '#equipmentBottomNextPage',
-            pageSizeSelect: '#equipmentBottomPageSize'
-        },
-        options: {
-            pageSize: initialSize,
-            pageSizes: [20, 50, 100],
-            showPageInfo: true,
-            showPageSizeSelect: true,
-            persistPageSize: true,
-            storageKey: storageKeyBottom,
-            useUrlParams: true,
-            autoLoadOnInit: false  // Disable auto loading
-        },
+    // Initialize bottom pagination as slave (synced with master)
+    equipmentBottomPagination = await createPagination('equipmentBottom', {
+        ...paginationConfig,
+        role: 'slave',
         callbacks: {
+            // Slaves still need data loading callback (but won't use it due to role)
             onDataLoad: loadEquipmentData,
-            onPageChange: (page) => {
-                console.log('📄 Bottom pagination page changed to:', page);
-                // Sync top pagination
-                if (equipmentTopPagination && equipmentTopPagination.state.currentPage !== page) {
-                    equipmentTopPagination.state.currentPage = page;
-                    equipmentTopPagination._updateUI();
-                }
-            },
-            onPageSizeChange: (size) => {
-                console.log('📏 Bottom pagination page size changed to:', size);
-                // Sync top pagination
-                if (equipmentTopPagination && equipmentTopPagination.state.pageSize !== size) {
-                    equipmentTopPagination.state.pageSize = size;
-                    equipmentTopPagination._updateUI();
-                }
-            }
+            onPageChange: paginationConfig.callbacks.onPageChange
         }
     });
 
-    console.log('✅ Bottom pagination created:', equipmentBottomPagination);
-
-    // Set initial page if from URL
-    if (initialPage > 1) {
-        console.log('🔄 Setting initial page to:', initialPage);
-        equipmentTopPagination.state.currentPage = initialPage;
-        equipmentBottomPagination.state.currentPage = initialPage;
-    }
+    console.log('✅ Equipment pagination instances created');
 
     console.log('📡 Loading initial data...');
-    // Load initial data only once for both paginations
+
+    // Load initial data
     const initialData = await loadEquipmentData(initialPage, initialSize);
 
-    // Update both paginations with the same data
-    if (initialData && equipmentTopPagination && equipmentBottomPagination) {
+    if (initialData) {
         console.log('🔄 Updating pagination UI with initial data');
 
-        // Update top pagination
-        equipmentTopPagination._updateState(initialData);
-        equipmentTopPagination._updateUI();
-
-        // Update bottom pagination
-        equipmentBottomPagination._updateState(initialData);
-        equipmentBottomPagination._updateUI();
+        // Update master pagination (slave will sync automatically)
+        equipmentTopPagination.setTotalItems(initialData.total);
     }
 
-    // Show pagination elements
-    const topPagination = document.getElementById('equipmentTopPagination');
-    const bottomPagination = document.getElementById('equipmentBottomPagination');
+    // Show pagination containers
+    const topContainer = document.getElementById('equipmentTop');
+    const bottomContainer = document.getElementById('equipmentBottom');
 
-    console.log('👁️ Pagination containers:', {
-        topPagination: topPagination ? `${topPagination.tagName}#${topPagination.id}.${topPagination.className}` : null,
-        bottomPagination: bottomPagination ? `${bottomPagination.tagName}#${bottomPagination.id}.${bottomPagination.className}` : null
-    });
-
-    if (topPagination) {
-        console.log('🔍 Top pagination classes before removal:', topPagination.className);
-        topPagination.classList.remove('d-none');
-        console.log('🔍 Top pagination classes after removal:', topPagination.className);
+    if (topContainer) {
+        topContainer.classList.remove('d-none');
         console.log('✅ Top pagination shown');
     } else {
         console.error('❌ Top pagination container not found');
     }
 
-    if (bottomPagination) {
-        console.log('🔍 Bottom pagination classes before removal:', bottomPagination.className);
-        bottomPagination.classList.remove('d-none');
-        console.log('🔍 Bottom pagination classes after removal:', bottomPagination.className);
+    if (bottomContainer) {
+        bottomContainer.classList.remove('d-none');
         console.log('✅ Bottom pagination shown');
     } else {
         console.error('❌ Bottom pagination container not found');
     }
 
-    console.log('🎉 Equipment pagination initialization completed');
+    console.log('🎉 Equipment pagination initialization completed (NEW MODULE)');
 
     // Clean any existing inline styles first
     cleanAllInlineStyles();
@@ -673,11 +588,11 @@ function setupFilterEventListeners() {
     if (searchInput) {
         searchInput.addEventListener('input', (e) => {
             clearTimeout(searchDebounceTimer);
-                searchDebounceTimer = setTimeout(() => {
+            searchDebounceTimer = setTimeout(() => {
                 currentFilters.query = e.target.value;
                 // Reset to first page when filtering
                 if (equipmentTopPagination) {
-                    equipmentTopPagination.reset();
+                    equipmentTopPagination.goToPage(1);
                 }
             }, 300);
         });
@@ -688,17 +603,17 @@ function setupFilterEventListeners() {
             currentFilters.category_id = e.target.value ? parseInt(e.target.value) : null;
             // Reset to first page when filtering
             if (equipmentTopPagination) {
-                equipmentTopPagination.reset();
-        }
-    });
-}
+                equipmentTopPagination.goToPage(1);
+            }
+        });
+    }
 
     if (statusFilter) {
         statusFilter.addEventListener('change', (e) => {
             currentFilters.status = e.target.value || null;
             // Reset to first page when filtering
             if (equipmentTopPagination) {
-                equipmentTopPagination.reset();
+                equipmentTopPagination.goToPage(1);
             }
         });
     }
