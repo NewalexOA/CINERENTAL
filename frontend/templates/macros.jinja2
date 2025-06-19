@@ -62,6 +62,8 @@
     page_start_id=None,
     page_end_id=None,
     total_items_id=None,
+    total_pages_id=None,
+    current_page_id=None,
     prev_page_id=None,
     next_page_id=None,
     container_class="d-none",
@@ -71,6 +73,8 @@
     {% set page_start_id = page_start_id or prefix + "PageStart" %}
     {% set page_end_id = page_end_id or prefix + "PageEnd" %}
     {% set total_items_id = total_items_id or prefix + "TotalItems" %}
+    {% set total_pages_id = total_pages_id or prefix + "TotalPages" %}
+    {% set current_page_id = current_page_id or prefix + "CurrentPage" %}
     {% set prev_page_id = prev_page_id or prefix + "PrevPage" %}
     {% set next_page_id = next_page_id or prefix + "NextPage" %}
 
@@ -92,5 +96,8 @@
                 </li>
             </ul>
         </div>
+        {# Hidden elements required by Pagination component but not displayed in simple UI #}
+        <span id="{{ total_pages_id }}" class="d-none">1</span>
+        <span id="{{ current_page_id }}" class="d-none">1</span>
     </nav>
 {% endmacro %}
