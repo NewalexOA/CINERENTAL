@@ -2,6 +2,8 @@
 
 // Import utilities
 import { debounce } from './utils/common.js';
+import { PaginationPresets, globalTemplateEngine } from './utils/pagination/index.js';
+import { BookingsTheme } from './utils/pagination/themes/bookings-theme.js';
 
 // Check if the showToast function already exists
 if (typeof window.showToast !== 'function') {
@@ -67,12 +69,16 @@ const bookingManager = {
 
     // State
     state: {
-        // We might store pagination state here later if needed
+        paginationInstances: null // Store pagination instances object
     },
 
     // Initialize the component
-    init() {
+    async init() {
         console.log('Booking Manager Initializing...');
+
+        // Initialize pagination first
+        await this.initializePagination();
+
         if (this.elements.form) {
             this.initFilterForm();
             console.log('Filter form initialized.');
@@ -80,6 +86,44 @@ const bookingManager = {
             console.warn('Filter form not found. Skipping initialization.');
         }
         // Add event listeners for modals, etc. if needed
+    },
+
+    // Initialize pagination system
+    async initializePagination() {
+        console.log('Initializing pagination...');
+        try {
+            // Register bookings theme
+            const bookingsTheme = new BookingsTheme();
+            globalTemplateEngine.registerTheme('bookings', bookingsTheme);
+
+            // Create synchronized pagination instances (top = master, bottom = slave)
+            this.state.paginationInstances = await PaginationPresets.listView({
+                main: '#bookingsTopPagination',  // Top pagination is master
+                bottom: '#bookingsPagination'     // Bottom pagination is slave
+            }, async (page, size) => {
+                return await this.loadBookingsData(page, size);
+            }, 'bookings-list');
+
+            console.log('Pagination instances created:', this.state.paginationInstances);
+            console.log('Top pagination element (master):', document.querySelector('#bookingsTopPagination'));
+            console.log('Bottom pagination element (slave):', document.querySelector('#bookingsPagination'));
+
+            // Override theme for both instances to use our custom bookings theme
+            this.state.paginationInstances.main.setTheme('bookings');    // Top pagination (master)
+            if (this.state.paginationInstances.bottom) {
+                this.state.paginationInstances.bottom.setTheme('bookings');  // Bottom pagination (slave)
+                console.log('Bottom pagination theme set');
+            } else {
+                console.error('Bottom pagination instance not created!');
+            }
+
+            console.log('Pagination initialized successfully');
+
+            // Load initial data (only need to call on main instance)
+            await this.state.paginationInstances.main.loadData();
+        } catch (error) {
+            console.error('Error initializing pagination:', error);
+        }
     },
 
     // Initialize filter form functionality
@@ -152,8 +196,7 @@ const bookingManager = {
             console.warn('Date range input not found.');
         }
 
-        // 3. Load initial bookings based on URL/form values
-        this.loadBookings();
+        // 3. Initial data will be loaded after pagination initialization
 
         // 4. Add Event Listeners
         form.addEventListener('submit', (event) => {
@@ -261,9 +304,48 @@ const bookingManager = {
         console.log('URL Updated:', newUrl);
     },
 
-    // Load bookings from the API based on current filters
+    // Load bookings from the API based on current filters (triggers pagination reset)
     async loadBookings() {
-        await this.loadBookingsPage(1);
+        // Reset pagination to page 1 when filters change
+        if (this.state.paginationInstances && this.state.paginationInstances.main) {
+            this.state.paginationInstances.main.goToPage(1);
+        }
+    },
+
+    // Load bookings data for pagination system
+    async loadBookingsData(page = 1, size = 20) {
+        const { bookingsTableBody, clientSearchSpinner, equipmentSearchSpinner } = this.elements;
+        if (!bookingsTableBody) return { totalItems: 0 };
+
+        if (clientSearchSpinner) clientSearchSpinner.classList.remove('d-none');
+        if (equipmentSearchSpinner) equipmentSearchSpinner.classList.remove('d-none');
+
+        this.updateUrl();
+        const apiParams = this.getApiParams();
+        apiParams.page = page;
+        apiParams.size = size;
+        const queryString = new URLSearchParams(apiParams).toString();
+
+        try {
+            const response = await fetch(`/api/v1/bookings/?${queryString}`);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const data = await response.json();
+
+            // Render bookings in table
+            this.renderBookings(data.items);
+
+            // Return total items for pagination
+            return { totalItems: data.total };
+        } catch (error) {
+            console.error('Error loading bookings:', error);
+            bookingsTableBody.innerHTML = '<tr><td colspan="6" class="text-center text-danger">Ошибка загрузки бронирований.</td></tr>';
+            return { totalItems: 0 };
+        } finally {
+            if (clientSearchSpinner) clientSearchSpinner.classList.add('d-none');
+            if (equipmentSearchSpinner) equipmentSearchSpinner.classList.add('d-none');
+        }
     },
 
     // Render the list of bookings in the table
@@ -343,75 +425,7 @@ const bookingManager = {
         });
     },
 
-    // Render pagination information and controls
-    renderPaginationInfo(data) {
-        const pageStart = document.getElementById('pageStart');
-        const pageEnd = document.getElementById('pageEnd');
-        const totalItems = document.getElementById('totalItems');
-        const prevPage = document.getElementById('prevPage');
-        const nextPage = document.getElementById('nextPage');
 
-        if (!pageStart || !pageEnd || !totalItems || !prevPage || !nextPage) return;
-
-        const startItem = (data.page - 1) * data.size + 1;
-        const endItem = Math.min(data.page * data.size, data.total);
-
-        pageStart.textContent = data.total > 0 ? startItem : 0;
-        pageEnd.textContent = endItem;
-        totalItems.textContent = data.total;
-
-        // Update pagination controls
-        const prevPageItem = prevPage.closest('.page-item');
-        const nextPageItem = nextPage.closest('.page-item');
-
-        prevPageItem.classList.toggle('disabled', data.page <= 1);
-        nextPageItem.classList.toggle('disabled', data.page >= data.pages);
-
-        // Add click handlers
-        prevPage.onclick = (e) => {
-            e.preventDefault();
-            if (data.page > 1) {
-                this.loadBookingsPage(data.page - 1);
-            }
-        };
-
-        nextPage.onclick = (e) => {
-            e.preventDefault();
-            if (data.page < data.pages) {
-                this.loadBookingsPage(data.page + 1);
-            }
-        };
-    },
-
-    // Load specific page of bookings
-    async loadBookingsPage(page = 1) {
-        const { bookingsTableBody, clientSearchSpinner, equipmentSearchSpinner } = this.elements;
-        if (!bookingsTableBody) return;
-
-        if (clientSearchSpinner) clientSearchSpinner.classList.remove('d-none');
-        if (equipmentSearchSpinner) equipmentSearchSpinner.classList.remove('d-none');
-
-        this.updateUrl();
-        const apiParams = this.getApiParams();
-        apiParams.page = page;
-        const queryString = new URLSearchParams(apiParams).toString();
-
-        try {
-            const response = await fetch(`/api/v1/bookings/?${queryString}`);
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            const data = await response.json();
-            this.renderBookings(data.items);
-            this.renderPaginationInfo(data);
-        } catch (error) {
-            console.error('Error loading bookings:', error);
-            bookingsTableBody.innerHTML = '<tr><td colspan="6" class="text-center text-danger">Ошибка загрузки бронирований.</td></tr>';
-        } finally {
-            if (clientSearchSpinner) clientSearchSpinner.classList.add('d-none');
-            if (equipmentSearchSpinner) equipmentSearchSpinner.classList.add('d-none');
-        }
-    },
 
     // Reset filter form and reload bookings
     resetFilter() {
@@ -435,7 +449,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const equipmentId = urlParams.get('equipment');
 
     // Initialize bookings functionality
-    bookingManager.init();
+    bookingManager.init().catch(error => {
+        console.error('Error initializing booking manager:', error);
+    });
 
     // If equipment parameter exists, open the booking modal with preselected equipment
     if (equipmentId) {
