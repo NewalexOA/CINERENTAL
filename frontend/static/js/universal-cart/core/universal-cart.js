@@ -664,7 +664,17 @@ class UniversalCart {
     }
 }
 
+// Global export for browser usage
+if (typeof window !== 'undefined') {
+    window.UniversalCart = UniversalCart;
+}
+
 // Export for module usage
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = UniversalCart;
+}
+
+// ES6 module export
+if (typeof exports !== 'undefined') {
+    exports.UniversalCart = UniversalCart;
 }

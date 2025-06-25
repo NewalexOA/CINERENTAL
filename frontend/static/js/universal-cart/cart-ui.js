@@ -1,263 +1,219 @@
 /**
- * Cart UI for Universal Cart
- *
- * UI components and rendering for Universal Cart
- * Uses Bootstrap 5 for modern interface
+ * Universal Cart UI Module
+ * Main UI coordinator class that delegates work to specialized modules
  *
  * @author ACT-Rental Team
  * @created 2025-06-23
+ * @refactored 2025-12-21 - Split into modular architecture
  */
 
 class CartUI {
     /**
-     * CartUI constructor
      * @param {UniversalCart} cart - Cart instance
+     * @param {Object} config - Configuration object
      */
-    constructor(cart) {
+    constructor(cart, config = {}) {
         this.cart = cart;
-        this.config = cart.config;
+        this.config = this._mergeConfig(config);
 
-        // UI Elements (will be found during initialization)
+        // UI state
+        this.isVisible = false;
+        this.isInitialized = false;
+
+        // DOM elements
         this.container = null;
-        this.badge = null;
         this.toggleButton = null;
+        this.badge = null;
         this.itemsList = null;
         this.summary = null;
 
-        // UI State
-        this.isVisible = false;
-        this.isAnimating = false;
+        // Module instances
+        this.templates = null;
+        this.renderer = null;
+        this.eventHandler = null;
+        this.dialogs = null;
 
-        // Templates
-        this.templates = {};
-
-        // Initialize UI
-        this._init();
+        // Initialize modules
+        this._initializeModules();
     }
 
     /**
-     * UI initialization
+     * Initialize all modules
      * @private
      */
-    _init() {
+    _initializeModules() {
+        // Templates module
+        this.templates = new CartTemplates();
+
+        // Dialogs module
+        this.dialogs = new CartDialogs();
+
+        // Renderer module
+        this.renderer = new CartRenderer(this.cart, this.templates, this.config);
+
+        // Event handler module
+        this.eventHandler = new CartEventHandler(this.cart, this, this.renderer, this.config);
+    }
+
+    /**
+     * Merge configuration with defaults
+     * @param {Object} config - User configuration
+     * @returns {Object}
+     * @private
+     */
+    _mergeConfig(config) {
+        const defaultConfig = {
+            containerId: 'universal-cart-container',
+            toggleButtonId: 'cart-toggle',
+            badgeId: 'cart-badge',
+            position: 'right',
+            showCostInfo: true,
+            showActivity: true,
+            hideOnClear: false,
+            maxItems: 50,
+            enableNotifications: true,
+            autoSave: true,
+            animations: true
+        };
+
+        return { ...defaultConfig, ...config };
+    }
+
+    /**
+     * Initialize the cart UI
+     * @returns {Promise<void>}
+     */
+    async init() {
+        if (this.isInitialized) {
+            console.warn('CartUI already initialized');
+            return;
+        }
+
         try {
-            this._setupElements();
-            this._loadTemplates();
+            await this._loadCSS();
+            this._createUI();
+            this._bindElements();
             this._setupEventListeners();
-            this._subscribeToCartEvents();
             this.render();
 
-            if (this.config.debug) {
-                console.log('[CartUI] Initialized successfully');
+            this.isInitialized = true;
+            console.log('CartUI initialized successfully');
+        } catch (error) {
+            console.error('Failed to initialize CartUI:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Load external CSS
+     * @returns {Promise<void>}
+     * @private
+     */
+    _loadCSS() {
+        return new Promise((resolve, reject) => {
+            // Check if CSS is already loaded
+            if (document.querySelector('link[href*="universal-cart.css"]')) {
+                resolve();
+                return;
             }
 
-        } catch (error) {
-            console.error('[CartUI] Initialization failed:', error);
+            const link = document.createElement('link');
+            link.rel = 'stylesheet';
+            link.href = '/static/css/universal-cart.css';
+
+            link.onload = () => resolve();
+            link.onerror = () => {
+                console.warn('Failed to load external CSS, using fallback');
+                this._injectFallbackCSS();
+                resolve();
+            };
+
+            document.head.appendChild(link);
+        });
+    }
+
+    /**
+     * Inject fallback CSS if external file fails to load
+     * @private
+     */
+    _injectFallbackCSS() {
+        const style = document.createElement('style');
+        style.textContent = `
+            /* Minimal fallback styles for Universal Cart */
+            .universal-cart-container {
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                width: 400px;
+                max-height: 80vh;
+                background: white;
+                border: 1px solid #ddd;
+                border-radius: 8px;
+                box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+                z-index: 1050;
+                display: none;
+            }
+            .universal-cart-container.show { display: block; }
+            .cart-header { padding: 1rem; border-bottom: 1px solid #eee; }
+            .cart-body { max-height: 400px; overflow-y: auto; }
+            .cart-item { padding: 0.75rem; border-bottom: 1px solid #f0f0f0; }
+            .cart-footer { padding: 1rem; border-top: 1px solid #eee; }
+        `;
+        document.head.appendChild(style);
+    }
+
+    /**
+     * Create UI elements
+     * @private
+     */
+    _createUI() {
+        // Create main container
+        const containerHTML = this.templates.getCartContainerTemplate();
+        document.body.insertAdjacentHTML('beforeend', containerHTML);
+
+        // Create toggle button if it doesn't exist
+        this._ensureToggleButton();
+    }
+
+    /**
+     * Ensure toggle button exists
+     * @private
+     */
+    _ensureToggleButton() {
+        let toggleButton = document.getElementById(this.config.toggleButtonId);
+
+        if (!toggleButton) {
+            // Create default toggle button
+            const buttonHTML = `
+                <button id="${this.config.toggleButtonId}" class="btn btn-primary position-fixed"
+                        style="bottom: 20px; right: 20px; z-index: 1040; border-radius: 50px;">
+                    <i class="fas fa-shopping-cart"></i>
+                    <span id="${this.config.badgeId}" class="badge bg-danger position-absolute top-0 start-100 translate-middle rounded-pill"
+                          style="display: none;">0</span>
+                </button>
+            `;
+
+            document.body.insertAdjacentHTML('beforeend', buttonHTML);
         }
     }
 
     /**
-     * Setup DOM elements
+     * Bind DOM elements
      * @private
      */
-    _setupElements() {
-        // Find existing cart container or create new one
-        this.container = document.getElementById('universal-cart-container');
+    _bindElements() {
+        this.container = document.getElementById(this.config.containerId);
+        this.toggleButton = document.getElementById(this.config.toggleButtonId);
+        this.badge = document.getElementById(this.config.badgeId);
+
+        if (this.container) {
+            this.itemsList = this.container.querySelector('.cart-items-list');
+            this.summary = this.container.querySelector('.cart-summary');
+        }
 
         if (!this.container) {
-            this.container = this._createCartContainer();
-            document.body.appendChild(this.container);
+            throw new Error('Cart container not found');
         }
-
-        // Find toggle button (usually in navbar or toolbar)
-        this.toggleButton = document.querySelector('[data-cart-toggle]');
-        if (this.toggleButton) {
-            this.badge = this.toggleButton.querySelector('.cart-badge') ||
-                        this._createBadge();
-        }
-
-        // Setup internal elements
-        this.itemsList = this.container.querySelector('.cart-items-list');
-        this.summary = this.container.querySelector('.cart-summary');
-    }
-
-    /**
-     * Create cart container
-     * @returns {HTMLElement}
-     * @private
-     */
-    _createCartContainer() {
-        const container = document.createElement('div');
-        container.id = 'universal-cart-container';
-        container.className = 'universal-cart position-fixed';
-        container.innerHTML = this._getCartTemplate();
-
-        return container;
-    }
-
-    /**
-     * Create badge with quantity
-     * @returns {HTMLElement}
-     * @private
-     */
-    _createBadge() {
-        const badge = document.createElement('span');
-        badge.className = 'cart-badge badge bg-primary position-absolute';
-        badge.style.display = 'none';
-
-        if (this.toggleButton) {
-            this.toggleButton.style.position = 'relative';
-            this.toggleButton.appendChild(badge);
-        }
-
-        return badge;
-    }
-
-    /**
-     * Load templates
-     * @private
-     */
-    _loadTemplates() {
-        this.templates = {
-            cartContainer: this._getCartTemplate(),
-            cartItem: this._getCartItemTemplate(),
-            cartSummary: this._getCartSummaryTemplate(),
-            emptyState: this._getEmptyStateTemplate()
-        };
-    }
-
-    /**
-     * Main cart template
-     * @returns {string}
-     * @private
-     */
-    _getCartTemplate() {
-        return `
-            <div class="cart-panel bg-white shadow-lg border rounded">
-                <div class="cart-header border-bottom p-3">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0">
-                            <i class="fas fa-shopping-cart me-2"></i>
-                            Корзина оборудования
-                        </h5>
-                        <button type="button" class="btn-close cart-close" aria-label="Закрыть"></button>
-                    </div>
-                </div>
-
-                <div class="cart-body">
-                    <div class="cart-items-list"></div>
-                    <div class="cart-summary p-3 border-top"></div>
-                </div>
-
-                <div class="cart-footer border-top p-3">
-                    <div class="d-grid gap-2">
-                        <button type="button" class="btn btn-primary cart-action-primary">
-                            <i class="fas fa-plus me-2"></i>
-                            Добавить в проект
-                        </button>
-                        <div class="btn-group" role="group">
-                            <button type="button" class="btn btn-outline-secondary cart-clear">
-                                <i class="fas fa-trash me-2"></i>
-                                Очистить
-                            </button>
-                            <button type="button" class="btn btn-outline-info cart-save">
-                                <i class="fas fa-save me-2"></i>
-                                Сохранить
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
-    }
-
-    /**
-     * Cart item template
-     * @returns {string}
-     * @private
-     */
-    _getCartItemTemplate() {
-        return `
-            <div class="cart-item border-bottom p-3" data-item-key="{{itemKey}}">
-                <div class="d-flex align-items-start">
-                    <div class="flex-grow-1">
-                        <h6 class="mb-1">{{name}}</h6>
-                        <small class="text-muted">{{category}}</small>
-                        {{#serial_number}}
-                        <div class="badge bg-light text-dark mt-1">S/N: {{serial_number}}</div>
-                        {{/serial_number}}
-                    </div>
-                    <div class="cart-item-controls d-flex align-items-center ms-3">
-                        <div class="quantity-controls me-2">
-                            <div class="input-group input-group-sm">
-                                <button class="btn btn-outline-secondary btn-sm quantity-decrease" type="button">
-                                    <i class="fas fa-minus"></i>
-                                </button>
-                                <input type="number" class="form-control text-center quantity-input"
-                                       value="{{quantity}}" min="1" max="99" style="width: 60px;">
-                                <button class="btn btn-outline-secondary btn-sm quantity-increase" type="button">
-                                    <i class="fas fa-plus"></i>
-                                </button>
-                            </div>
-                        </div>
-                        <button type="button" class="btn btn-outline-danger btn-sm cart-item-remove">
-                            <i class="fas fa-times"></i>
-                        </button>
-                    </div>
-                </div>
-            </div>
-        `;
-    }
-
-    /**
-     * Cart summary template
-     * @returns {string}
-     * @private
-     */
-    _getCartSummaryTemplate() {
-        return `
-            <div class="cart-summary-content">
-                <div class="row text-center">
-                    <div class="col-6">
-                        <div class="summary-stat">
-                            <div class="h4 mb-1 text-primary">{{itemCount}}</div>
-                            <small class="text-muted">позиций</small>
-                        </div>
-                    </div>
-                    <div class="col-6">
-                        <div class="summary-stat">
-                            <div class="h4 mb-1 text-success">{{totalQuantity}}</div>
-                            <small class="text-muted">единиц</small>
-                        </div>
-                    </div>
-                </div>
-                {{#maxItemsWarning}}
-                <div class="alert alert-warning alert-sm mt-2 mb-0">
-                    <i class="fas fa-exclamation-triangle me-1"></i>
-                    Достигнут лимит: {{itemCount}}/{{maxItems}}
-                </div>
-                {{/maxItemsWarning}}
-            </div>
-        `;
-    }
-
-    /**
-     * Empty state template
-     * @returns {string}
-     * @private
-     */
-    _getEmptyStateTemplate() {
-        return `
-            <div class="cart-empty-state text-center p-4">
-                <div class="empty-icon mb-3">
-                    <i class="fas fa-shopping-cart fa-3x text-muted"></i>
-                </div>
-                <h5 class="text-muted mb-2">Корзина пуста</h5>
-                <p class="text-muted mb-0">
-                    Добавьте оборудование из поиска или с помощью сканера
-                </p>
-            </div>
-        `;
     }
 
     /**
@@ -265,236 +221,56 @@ class CartUI {
      * @private
      */
     _setupEventListeners() {
-        // Toggle button
-        if (this.toggleButton) {
-            this.toggleButton.addEventListener('click', (e) => {
-                e.preventDefault();
-                this.toggle();
-            });
-        }
-
-        // Close button
-        const closeBtn = this.container.querySelector('.cart-close');
-        if (closeBtn) {
-            closeBtn.addEventListener('click', () => this.hide());
-        }
-
-        // Action buttons
-        const primaryAction = this.container.querySelector('.cart-action-primary');
-        if (primaryAction) {
-            primaryAction.addEventListener('click', () => this._handlePrimaryAction());
-        }
-
-        const clearBtn = this.container.querySelector('.cart-clear');
-        if (clearBtn) {
-            clearBtn.addEventListener('click', () => this._handleClear());
-        }
-
-        const saveBtn = this.container.querySelector('.cart-save');
-        if (saveBtn) {
-            saveBtn.addEventListener('click', () => this._handleSave());
-        }
-
-        // Item controls (delegated events)
-        this.itemsList.addEventListener('click', (e) => {
-            this._handleItemControlClick(e);
-        });
-
-        this.itemsList.addEventListener('change', (e) => {
-            this._handleItemInputChange(e);
-        });
-
-        // Outside click to close
-        document.addEventListener('click', (e) => {
-            if (this.isVisible && !this.container.contains(e.target) &&
-                e.target !== this.toggleButton &&
-                !this.toggleButton?.contains(e.target)) {
-                this.hide();
-            }
-        });
-
-        // Escape key to close
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape' && this.isVisible) {
-                this.hide();
-            }
-        });
+        this.eventHandler.setupEventListeners(this.container, this.toggleButton);
     }
 
     /**
-     * Subscribe to cart events
-     * @private
-     */
-    _subscribeToCartEvents() {
-        this.cart.on('itemAdded', () => {
-            this.render();
-            this._showNotification('Позиция добавлена в корзину', 'success');
-        });
-
-        this.cart.on('itemRemoved', () => {
-            this.render();
-            this._showNotification('Позиция удалена из корзины', 'info');
-        });
-
-        this.cart.on('itemUpdated', () => {
-            this.render();
-        });
-
-        this.cart.on('cleared', () => {
-            this.render();
-            this._showNotification('Корзина очищена', 'info');
-        });
-
-        this.cart.on('error', (data) => {
-            this._showNotification(`Ошибка: ${data.error.message}`, 'error');
-        });
-    }
-
-    /**
-     * Render all UI components
+     * Render the entire cart UI
      */
     render() {
-        this._updateBadge();
-        this._updateItemsList();
-        this._updateSummary();
-        this._updateActionButtons();
-    }
+        if (!this.isInitialized) return;
 
-    /**
-     * Update badge with quantity
-     * @private
-     */
-    _updateBadge() {
-        if (!this.badge) return;
-
-        const count = this.cart.getItemCount();
-
-        if (count > 0) {
-            this.badge.textContent = count;
-            this.badge.style.display = 'block';
-        } else {
-            this.badge.style.display = 'none';
-        }
-    }
-
-    /**
-     * Update items list
-     * @private
-     */
-    _updateItemsList() {
-        const items = this.cart.getItems();
-
-        if (items.length === 0) {
-            this.itemsList.innerHTML = this.templates.emptyState;
-        } else {
-            this.itemsList.innerHTML = items.map(item =>
-                this._renderItem(item)
-            ).join('');
-        }
-    }
-
-    /**
-     * Render single item
-     * @param {Object} item - Equipment item
-     * @returns {string}
-     * @private
-     */
-    _renderItem(item) {
-        const template = this.templates.cartItem;
-        const itemKey = this.cart._generateItemKey(item);
-
-        return template
-            .replace(/\{\{itemKey\}\}/g, itemKey)
-            .replace(/\{\{name\}\}/g, this._escapeHtml(item.name))
-            .replace(/\{\{category\}\}/g, this._escapeHtml(item.category || 'Без категории'))
-            .replace(/\{\{quantity\}\}/g, item.quantity || 1)
-            .replace(/\{\{#serial_number\}\}(.*?)\{\{\/serial_number\}\}/gs,
-                item.serial_number ? '$1'.replace(/\{\{serial_number\}\}/g, item.serial_number) : '');
-    }
-
-    /**
-     * Update cart summary
-     * @private
-     */
-    _updateSummary() {
-        const itemCount = this.cart.getItemCount();
-        const totalQuantity = this.cart.getTotalQuantity();
-        const maxItems = this.config.maxItems;
-
-        const summaryData = {
-            itemCount: itemCount,
-            totalQuantity: totalQuantity,
-            maxItems: maxItems,
-            maxItemsWarning: itemCount >= maxItems * 0.8 // Warning at 80%
-        };
-
-        let summaryHtml = this.templates.cartSummary;
-
-        // Simple template replacement
-        for (const [key, value] of Object.entries(summaryData)) {
-            if (key === 'maxItemsWarning') {
-                const warningPattern = /\{\{#maxItemsWarning\}\}(.*?)\{\{\/maxItemsWarning\}\}/gs;
-                summaryHtml = summaryHtml.replace(warningPattern,
-                    value ? '$1'.replace(/\{\{itemCount\}\}/g, itemCount).replace(/\{\{maxItems\}\}/g, maxItems) : '');
-            } else {
-                summaryHtml = summaryHtml.replace(new RegExp(`\\{\\{${key}\\}\\}`, 'g'), value);
-            }
+        // Update items list
+        if (this.itemsList) {
+            this.renderer.updateItemsList(this.itemsList);
         }
 
-        this.summary.innerHTML = summaryHtml;
+        // Update summary
+        if (this.summary) {
+            this.renderer.updateSummary(this.summary);
+        }
+
+        // Update badge
+        this.renderer.updateBadge(this.badge);
+
+        // Update action buttons
+        this.renderer.updateActionButtons(this.container);
     }
 
     /**
-     * Update action buttons
-     * @private
-     */
-    _updateActionButtons() {
-        const primaryAction = this.container.querySelector('.cart-action-primary');
-        const clearBtn = this.container.querySelector('.cart-clear');
-
-        const isEmpty = this.cart.isEmpty();
-
-        if (primaryAction) {
-            primaryAction.disabled = isEmpty;
-        }
-
-        if (clearBtn) {
-            clearBtn.disabled = isEmpty;
-        }
-    }
-
-    /**
-     * Show cart
+     * Show the cart
      */
     show() {
-        if (this.isVisible || this.isAnimating) return;
+        if (!this.container) return;
 
-        this.isAnimating = true;
-        this.container.style.display = 'block';
+        this.container.classList.add('show');
+        this.isVisible = true;
 
-        // Animate in
-        setTimeout(() => {
-            this.container.classList.add('show');
-            this.isVisible = true;
-            this.isAnimating = false;
-        }, 10);
+        // Focus management
+        const firstFocusable = this.container.querySelector('button, input, [tabindex]');
+        if (firstFocusable) {
+            setTimeout(() => firstFocusable.focus(), 100);
+        }
     }
 
     /**
-     * Hide cart
+     * Hide the cart
      */
     hide() {
-        if (!this.isVisible || this.isAnimating) return;
+        if (!this.container) return;
 
-        this.isAnimating = true;
         this.container.classList.remove('show');
-
-        // Animate out
-        setTimeout(() => {
-            this.container.style.display = 'none';
-            this.isVisible = false;
-            this.isAnimating = false;
-        }, 300);
+        this.isVisible = false;
     }
 
     /**
@@ -509,371 +285,99 @@ class CartUI {
     }
 
     /**
-     * Handle item control clicks
-     * @param {Event} e - Click event
-     * @private
+     * Show confirmation dialog
+     * @param {Object} options - Dialog options
+     * @returns {Promise<Object>}
      */
-    _handleItemControlClick(e) {
-        const cartItem = e.target.closest('.cart-item');
-        if (!cartItem) return;
-
-        const itemKey = cartItem.dataset.itemKey;
-
-        if (e.target.closest('.quantity-decrease')) {
-            this._changeQuantity(itemKey, -1);
-        } else if (e.target.closest('.quantity-increase')) {
-            this._changeQuantity(itemKey, 1);
-        } else if (e.target.closest('.cart-item-remove')) {
-            this.cart.removeItem(itemKey);
-        }
-    }
-
-    /**
-     * Handle input field changes
-     * @param {Event} e - Change event
-     * @private
-     */
-    _handleItemInputChange(e) {
-        if (e.target.classList.contains('quantity-input')) {
-            const cartItem = e.target.closest('.cart-item');
-            const itemKey = cartItem.dataset.itemKey;
-            const newQuantity = parseInt(e.target.value, 10);
-
-            if (newQuantity > 0) {
-                this.cart.updateQuantity(itemKey, newQuantity);
-            }
-        }
-    }
-
-    /**
-     * Change item quantity
-     * @param {string} itemKey - Item key
-     * @param {number} delta - Quantity change
-     * @private
-     */
-    _changeQuantity(itemKey, delta) {
-        const item = this.cart.getItem(itemKey);
-        if (item) {
-            const newQuantity = (item.quantity || 1) + delta;
-            if (newQuantity > 0) {
-                this.cart.updateQuantity(itemKey, newQuantity);
-            }
-        }
-    }
-
-    /**
-     * Handle primary action
-     * @private
-     */
-    _handlePrimaryAction() {
-        // Trigger custom event for integration
-        this.container.dispatchEvent(new CustomEvent('cart:primaryAction', {
-            detail: {
-                cart: this.cart,
-                items: this.cart.getItems()
-            }
-        }));
-    }
-
-    /**
-     * Handle cart clearing
-     * @private
-     */
-    _handleClear() {
-        if (confirm('Вы уверены, что хотите очистить корзину?')) {
-            this.cart.clear();
-        }
-    }
-
-    /**
-     * Handle cart saving
-     * @private
-     */
-    _handleSave() {
-        // Manual save trigger
-        if (this.cart.storage) {
-            this.cart._saveToStorage();
-            this._showNotification('Корзина сохранена', 'success');
-        }
+    showConfirmDialog(options) {
+        return this.dialogs.showConfirmDialog(options);
     }
 
     /**
      * Show notification
-     * @param {string} message - Message text
-     * @param {string} type - Notification type
-     * @private
+     * @param {string} message
+     * @param {string} type
+     * @param {number} duration
      */
-    _showNotification(message, type = 'info') {
-        // Integration with existing notification system
-        if (typeof showNotification === 'function') {
-            showNotification(message, type);
-        } else {
-            console.log(`[CartUI] ${type.toUpperCase()}: ${message}`);
+    _showNotification(message, type = 'info', duration = 3000) {
+        if (this.config.enableNotifications) {
+            this.dialogs.showNotification(message, type, duration);
         }
     }
 
     /**
-     * Escape HTML
-     * @param {string} text - Text to escape
-     * @returns {string}
-     * @private
+     * Animate badge when item is added
      */
-    _escapeHtml(text) {
-        const div = document.createElement('div');
-        div.textContent = text;
-        return div.innerHTML;
+    _animateBadge() {
+        if (!this.badge || !this.config.animations) return;
+
+        this.badge.classList.add('cart-badge-pulse');
+        setTimeout(() => {
+            this.badge.classList.remove('cart-badge-pulse');
+        }, 600);
     }
 
     /**
-     * Get UI debug information
+     * Show loading dialog
+     * @param {string} message
+     * @returns {Object}
+     */
+    showLoadingDialog(message) {
+        return this.dialogs.showLoadingDialog(message);
+    }
+
+    /**
+     * Cleanup resources
+     */
+    destroy() {
+        if (this.eventHandler) {
+            this.eventHandler.cleanup();
+        }
+
+        if (this.dialogs) {
+            this.dialogs.closeAll();
+        }
+
+        if (this.container && this.container.parentNode) {
+            this.container.parentNode.removeChild(this.container);
+        }
+
+        // Reset state
+        this.isInitialized = false;
+        this.isVisible = false;
+        this.container = null;
+        this.toggleButton = null;
+        this.badge = null;
+    }
+
+    /**
+     * Get debug information
      * @returns {Object}
      */
     getDebugInfo() {
         return {
+            module: 'CartUI',
+            isInitialized: this.isInitialized,
             isVisible: this.isVisible,
-            isAnimating: this.isAnimating,
+            config: this.config,
             hasContainer: !!this.container,
-            hasBadge: !!this.badge,
             hasToggleButton: !!this.toggleButton,
-            containerInDOM: this.container && document.contains(this.container)
+            modules: {
+                templates: this.templates?.getDebugInfo?.() || null,
+                renderer: this.renderer?.getDebugInfo?.() || null,
+                eventHandler: this.eventHandler?.getDebugInfo?.() || null,
+                dialogs: this.dialogs?.getDebugInfo?.() || null
+            }
         };
-    }
-
-    /**
-     * Update cart visibility
-     * @private
-     */
-    _updateVisibility() {
-        if (!this.container) return;
-
-        const isEmpty = this.cart.isEmpty();
-
-        if (isEmpty) {
-            this.container.classList.add('d-none');
-        } else {
-            this.container.classList.remove('d-none');
-        }
-    }
-
-    /**
-     * Show progress indicator
-     * @param {string} message - Progress message
-     * @param {number} percent - Progress percentage (0-100)
-     */
-    showProgress(message = 'Обработка...', percent = 0) {
-        try {
-            // Remove existing progress if any
-            this.hideProgress();
-
-            // Create progress overlay
-            const progressOverlay = document.createElement('div');
-            progressOverlay.id = 'cart-progress-overlay';
-            progressOverlay.className = 'cart-progress-overlay';
-            progressOverlay.innerHTML = `
-                <div class="progress-content">
-                    <div class="progress-spinner">
-                        <div class="spinner-border text-primary" role="status">
-                            <span class="visually-hidden">Загрузка...</span>
-                        </div>
-                    </div>
-                    <div class="progress-message">${message}</div>
-                    <div class="progress mt-2">
-                        <div class="progress-bar" role="progressbar"
-                             style="width: ${percent}%"
-                             aria-valuenow="${percent}"
-                             aria-valuemin="0"
-                             aria-valuemax="100">
-                            ${percent}%
-                        </div>
-                    </div>
-                </div>
-            `;
-
-            // Add to container
-            if (this.container) {
-                this.container.appendChild(progressOverlay);
-            }
-
-            // Add CSS if not already added
-            this._addProgressStyles();
-
-        } catch (error) {
-            console.error('[CartUI] Failed to show progress:', error);
-        }
-    }
-
-    /**
-     * Update progress indicator
-     * @param {string} message - Progress message
-     * @param {number} percent - Progress percentage (0-100)
-     */
-    updateProgress(message, percent) {
-        try {
-            const overlay = document.getElementById('cart-progress-overlay');
-            if (!overlay) return;
-
-            const messageEl = overlay.querySelector('.progress-message');
-            const progressBar = overlay.querySelector('.progress-bar');
-
-            if (messageEl) {
-                messageEl.textContent = message;
-            }
-
-            if (progressBar) {
-                progressBar.style.width = `${percent}%`;
-                progressBar.setAttribute('aria-valuenow', percent);
-                progressBar.textContent = `${percent}%`;
-            }
-
-        } catch (error) {
-            console.error('[CartUI] Failed to update progress:', error);
-        }
-    }
-
-    /**
-     * Hide progress indicator
-     */
-    hideProgress() {
-        try {
-            const overlay = document.getElementById('cart-progress-overlay');
-            if (overlay) {
-                overlay.remove();
-            }
-        } catch (error) {
-            console.error('[CartUI] Failed to hide progress:', error);
-        }
-    }
-
-    /**
-     * Add progress styles
-     * @private
-     */
-    _addProgressStyles() {
-        // Check if styles already added
-        if (document.getElementById('cart-progress-styles')) {
-            return;
-        }
-
-        const style = document.createElement('style');
-        style.id = 'cart-progress-styles';
-        style.textContent = `
-            .cart-progress-overlay {
-                position: absolute;
-                top: 0;
-                left: 0;
-                right: 0;
-                bottom: 0;
-                background: rgba(255, 255, 255, 0.9);
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                z-index: 1000;
-                border-radius: 8px;
-            }
-
-            .progress-content {
-                text-align: center;
-                min-width: 200px;
-                padding: 20px;
-            }
-
-            .progress-spinner {
-                margin-bottom: 15px;
-            }
-
-            .progress-message {
-                font-weight: 500;
-                color: #333;
-                margin-bottom: 10px;
-            }
-
-            .universal-cart {
-                position: relative;
-            }
-        `;
-
-        document.head.appendChild(style);
-    }
-
-    /**
-     * Show action confirmation dialog
-     * @param {Object} options - Dialog options
-     * @returns {Promise<boolean>}
-     */
-    async showConfirmDialog(options = {}) {
-        return new Promise((resolve) => {
-            const {
-                title = 'Подтверждение',
-                message = 'Вы уверены?',
-                confirmText = 'Да',
-                cancelText = 'Отмена',
-                type = 'warning'
-            } = options;
-
-            // Create modal
-            const modalId = 'cart-confirm-modal';
-            const existingModal = document.getElementById(modalId);
-            if (existingModal) {
-                existingModal.remove();
-            }
-
-            const modal = document.createElement('div');
-            modal.id = modalId;
-            modal.className = 'modal fade';
-            modal.innerHTML = `
-                <div class="modal-dialog">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h5 class="modal-title">
-                                <i class="fas fa-exclamation-triangle text-${type}"></i>
-                                ${title}
-                            </h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                        </div>
-                        <div class="modal-body">
-                            ${message}
-                        </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                                ${cancelText}
-                            </button>
-                            <button type="button" class="btn btn-${type}" id="confirm-action">
-                                ${confirmText}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            `;
-
-            document.body.appendChild(modal);
-
-            // Initialize Bootstrap modal
-            const bsModal = new bootstrap.Modal(modal);
-
-            // Handle actions
-            const confirmBtn = modal.querySelector('#confirm-action');
-            const cancelBtn = modal.querySelector('[data-bs-dismiss="modal"]');
-
-            confirmBtn.addEventListener('click', () => {
-                bsModal.hide();
-                resolve(true);
-            });
-
-            cancelBtn.addEventListener('click', () => {
-                resolve(false);
-            });
-
-            modal.addEventListener('hidden.bs.modal', () => {
-                modal.remove();
-                resolve(false);
-            });
-
-            bsModal.show();
-        });
     }
 }
 
 // Export for module usage
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = CartUI;
+}
+
+// Global export for browser usage
+if (typeof window !== 'undefined') {
+    window.CartUI = CartUI;
 }
