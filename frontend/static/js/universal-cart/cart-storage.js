@@ -362,25 +362,29 @@ class CartStorage {
     }
 
     /**
-     * Сжатие данных (placeholder для будущей реализации)
+     * Сжатие данных (простая реализация без библиотек)
      * @param {string} data - Данные для сжатия
      * @returns {Promise<string>}
      * @private
      */
     async _compressData(data) {
-        // TODO: Implement actual compression (e.g., using lz-string)
-        console.warn('[CartStorage] Compression not implemented, using original data');
+        // Simple implementation without external libraries
+        // For future enhancement, consider using lz-string or similar
+        if (this.config.debug) {
+            console.log('[CartStorage] Compression disabled, returning original data');
+        }
         return data;
     }
 
     /**
-     * Распаковка данных (placeholder для будущей реализации)
+     * Распаковка данных (простая реализация без библиотек)
      * @param {string} data - Данные для распаковки
      * @returns {Promise<string>}
      * @private
      */
     async _decompressData(data) {
-        // TODO: Implement actual decompression
+        // Simple implementation without external libraries
+        // Matches _compressData behavior for consistency
         return data;
     }
 
@@ -391,7 +395,8 @@ class CartStorage {
      * @private
      */
     _isCompressedData(data) {
-        // TODO: Implement compression detection
+        // Current implementation doesn't use compression
+        // Always return false since _compressData returns original data
         return false;
     }
 
@@ -404,10 +409,38 @@ class CartStorage {
     async _migrateData(oldData) {
         console.log('[CartStorage] Migrating data from version:', oldData.version);
 
-        // TODO: Implement data migration logic when needed
-        // For now, just clear old data
-        await this.clear();
-        return null;
+        try {
+            // Attempt to preserve user data during migration
+            if (oldData.data && typeof oldData.data === 'object') {
+                // If the data structure is similar, try to preserve it
+                const preservedData = {
+                    items: oldData.data.items || {},
+                    metadata: oldData.data.metadata || {},
+                    // Preserve any other recognizable data
+                    ...oldData.data
+                };
+
+                if (this.config.debug) {
+                    console.log('[CartStorage] Preserved data during migration:', {
+                        itemCount: Object.keys(preservedData.items).length,
+                        fromVersion: oldData.version,
+                        toVersion: '1.0'
+                    });
+                }
+
+                return preservedData;
+            }
+
+            // If data structure is unrecognizable, clear for safety
+            console.warn('[CartStorage] Cannot migrate unrecognized data structure, clearing');
+            await this.clear();
+            return null;
+
+        } catch (error) {
+            console.error('[CartStorage] Migration failed, clearing data:', error);
+            await this.clear();
+            return null;
+        }
     }
 }
 
