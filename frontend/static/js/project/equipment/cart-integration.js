@@ -311,3 +311,309 @@ export function initializeCartIntegration() {
         getSelectionCount
     };
 }
+
+/**
+ * Toggle equipment selection in search results
+ * @param {HTMLElement} checkbox - Equipment checkbox
+ */
+export function toggleEquipmentSelection(checkbox) {
+    try {
+        const row = checkbox.closest('tr');
+        if (!row) return;
+
+        const equipmentId = parseInt(row.dataset.equipmentId);
+        const isChecked = checkbox.checked;
+
+        if (isChecked) {
+            // Add visual selection
+            row.classList.add('table-info');
+
+            // Extract equipment data
+            const equipmentData = extractEquipmentDataFromRow(row);
+
+            // Add to cart
+            addToCartFromSelection(equipmentData);
+        } else {
+            // Remove visual selection
+            row.classList.remove('table-info');
+
+            // Remove from cart
+            removeFromCartByEquipmentId(equipmentId);
+        }
+
+    } catch (error) {
+        console.error('[CartIntegration] Toggle selection failed:', error);
+        showToast('Ошибка при выборе оборудования', 'danger');
+    }
+}
+
+/**
+ * Execute cart action (create bookings)
+ * @param {Object} options - Action options
+ * @returns {Promise<boolean>}
+ */
+export async function executeCartAction(options = {}) {
+    try {
+        const cart = await getCartInstance();
+        if (!cart) {
+            throw new Error('Cart not available');
+        }
+
+        if (cart.isEmpty()) {
+            showToast('Корзина пуста', 'warning');
+            return false;
+        }
+
+        // Get project data
+        const projectData = getProjectDataFromPage();
+        if (!projectData.clientId) {
+            showToast('Не найден клиент проекта', 'danger');
+            return false;
+        }
+
+        // Get booking dates
+        const bookingDates = getBookingDatesFromPage();
+        if (!bookingDates.startDate || !bookingDates.endDate) {
+            showToast('Укажите даты бронирования', 'warning');
+            return false;
+        }
+
+        // Prepare action configuration
+        const actionConfig = {
+            type: 'equipment_add',
+            projectId: projectData.projectId,
+            clientId: projectData.clientId,
+            startDate: bookingDates.startDate,
+            endDate: bookingDates.endDate,
+            showProgress: true,
+            validateAvailability: true,
+            ...options
+        };
+
+        // Show confirmation dialog
+        const itemCount = cart.getItemCount();
+        const confirmed = await cart.ui.showConfirmDialog({
+            title: 'Создание бронирований',
+            message: `Создать ${itemCount} бронирований в проекте?`,
+            confirmText: 'Создать',
+            cancelText: 'Отмена',
+            type: 'primary'
+        });
+
+        if (!confirmed) {
+            return false;
+        }
+
+        // Execute action
+        const result = await cart.executeAction(actionConfig);
+
+        if (result.success) {
+            showToast(`Создано ${result.createdCount} бронирований`, 'success');
+
+            // Handle failed bookings
+            if (result.failedCount > 0) {
+                showToast(`${result.failedCount} позиций не удалось добавить`, 'warning');
+                console.warn('Failed bookings:', result.failedBookings);
+            }
+
+            // Refresh project data
+            if (typeof refreshProjectData === 'function') {
+                await refreshProjectData();
+            }
+
+            // Reset search selection
+            clearSearchSelection();
+
+            return true;
+        } else {
+            showToast(result.error || 'Ошибка при создании бронирований', 'danger');
+            return false;
+        }
+
+    } catch (error) {
+        console.error('[CartIntegration] Action execution failed:', error);
+        showToast('Ошибка при выполнении операции', 'danger');
+        return false;
+    }
+}
+
+/**
+ * Get project data from current page
+ * @returns {Object}
+ */
+function getProjectDataFromPage() {
+    try {
+        // Try to get project ID from URL
+        const urlMatch = window.location.pathname.match(/\/projects\/(\d+)/);
+        const projectId = urlMatch ? parseInt(urlMatch[1]) : null;
+
+        // Try to get client ID from project data
+        let clientId = null;
+        if (window.projectData && window.projectData.client_id) {
+            clientId = window.projectData.client_id;
+        } else if (window.projectData && window.projectData.client && window.projectData.client.id) {
+            clientId = window.projectData.client.id;
+        }
+
+        return {
+            projectId,
+            clientId
+        };
+
+    } catch (error) {
+        console.error('[CartIntegration] Failed to get project data:', error);
+        return {
+            projectId: null,
+            clientId: null
+        };
+    }
+}
+
+/**
+ * Get booking dates from current page
+ * @returns {Object}
+ */
+function getBookingDatesFromPage() {
+    try {
+        // Try to get dates from daterangepicker
+        const dateRangeInput = document.getElementById('newBookingPeriod');
+        if (dateRangeInput && $(dateRangeInput).data('daterangepicker')) {
+            const picker = $(dateRangeInput).data('daterangepicker');
+            return {
+                startDate: picker.startDate.format('YYYY-MM-DDTHH:mm:ss'),
+                endDate: picker.endDate.format('YYYY-MM-DDTHH:mm:ss')
+            };
+        }
+
+        // Fallback: try to find date inputs
+        const startDateInput = document.querySelector('input[name="start_date"], #startDate');
+        const endDateInput = document.querySelector('input[name="end_date"], #endDate');
+
+        if (startDateInput && endDateInput) {
+            return {
+                startDate: startDateInput.value,
+                endDate: endDateInput.value
+            };
+        }
+
+        return {
+            startDate: null,
+            endDate: null
+        };
+
+    } catch (error) {
+        console.error('[CartIntegration] Failed to get booking dates:', error);
+        return {
+            startDate: null,
+            endDate: null
+        };
+    }
+}
+
+/**
+ * Clear search selection
+ */
+function clearSearchSelection() {
+    try {
+        // Clear all checkboxes
+        const checkboxes = document.querySelectorAll('.equipment-checkbox:checked');
+        checkboxes.forEach(checkbox => {
+            checkbox.checked = false;
+            const row = checkbox.closest('tr');
+            if (row) {
+                row.classList.remove('table-info');
+            }
+        });
+
+        // Update bulk selection checkbox
+        const bulkCheckbox = document.getElementById('bulkSelectCheckbox');
+        if (bulkCheckbox) {
+            bulkCheckbox.checked = false;
+        }
+
+    } catch (error) {
+        console.error('[CartIntegration] Failed to clear selection:', error);
+    }
+}
+
+/**
+ * Handle cart action button click
+ * @param {Event} event - Click event
+ */
+export async function handleCartActionClick(event) {
+    event.preventDefault();
+
+    const button = event.target.closest('button');
+    if (button) {
+        button.disabled = true;
+    }
+
+    try {
+        await executeCartAction();
+    } finally {
+        if (button) {
+            button.disabled = false;
+        }
+    }
+}
+
+/**
+ * Initialize cart action integration
+ */
+export function initCartActionIntegration() {
+    try {
+        // Add action button to cart UI if not already present
+        const addActionButton = () => {
+            const cartContainer = document.getElementById('universal-cart-container');
+            if (!cartContainer) return;
+
+            // Check if button already exists
+            if (cartContainer.querySelector('.cart-action-btn')) return;
+
+            // Create action button
+            const actionButton = document.createElement('button');
+            actionButton.className = 'btn btn-primary cart-action-btn mt-2 w-100';
+            actionButton.innerHTML = '<i class="fas fa-plus"></i> Добавить в проект';
+            actionButton.addEventListener('click', handleCartActionClick);
+
+            // Add to cart header or footer
+            const cartBody = cartContainer.querySelector('.cart-body');
+            if (cartBody) {
+                cartBody.appendChild(actionButton);
+            }
+        };
+
+        // Add button when cart is shown
+        const observer = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                if (mutation.type === 'childList') {
+                    const cartContainer = document.getElementById('universal-cart-container');
+                    if (cartContainer && !cartContainer.classList.contains('d-none')) {
+                        addActionButton();
+                    }
+                }
+            });
+        });
+
+        // Start observing
+        observer.observe(document.body, {
+            childList: true,
+            subtree: true
+        });
+
+        // Try to add button immediately if cart is already visible
+        setTimeout(addActionButton, 100);
+
+        console.log('[CartIntegration] Action integration initialized');
+
+    } catch (error) {
+        console.error('[CartIntegration] Failed to initialize action integration:', error);
+    }
+}
+
+// Initialize on DOM ready
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initCartActionIntegration);
+} else {
+    initCartActionIntegration();
+}
