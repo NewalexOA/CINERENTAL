@@ -659,62 +659,206 @@ async def patch_booking(
     booking_update: BookingUpdate,
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> BookingResponse:
-    """Partially update booking.
+    """Partially update a booking.
 
     Args:
-        booking_id: Booking ID
-        booking_update: Updated booking data (partial)
+        booking_id: ID of the booking to update
+        booking_update: Partial booking data
         db: Database session
 
     Returns:
         Updated booking
 
     Raises:
-        HTTPException: If booking not found or validation fails
+        HTTPException: If booking not found or update fails
     """
+    logger.debug(
+        'Partially updating booking {}: {}', booking_id, booking_update.model_dump()
+    )
     booking_service = BookingService(db)
     try:
-        # Get current booking to check if it exists
-        await booking_service.get_booking(booking_id)
-
-        # Update booking with provided fields
         booking_obj = await booking_service.update_booking(
-            booking_id=booking_id,
-            start_date=booking_update.start_date,
-            end_date=booking_update.end_date,
-            quantity=booking_update.quantity,
-            notes=None,
+            booking_id=booking_id, **booking_update.model_dump(exclude_unset=True)
         )
 
-        # Handle status updates if provided
-        if booking_update.booking_status is not None:
-            await booking_service.change_status(
-                booking_id=booking_id,
-                new_status=booking_update.booking_status,
-            )
-        if booking_update.payment_status is not None:
-            await booking_service.change_payment_status(
-                booking_id=booking_id,
-                status=booking_update.payment_status,
+        if not booking_obj:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f'Booking with id {booking_id} not found',
             )
 
-        # Convert Booking object to BookingResponse
-        response = await _booking_to_response(booking_obj, db)
+        await db.commit()
+        logger.debug('Successfully updated booking {}', booking_id)
 
-        return response
-    except NotFoundError:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f'Booking with ID {booking_id} not found',
-        )
+        return await _booking_to_response(booking_obj, db)
+
     except ValidationError as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e),
-        )
+        logger.error('Validation error updating booking {}: {}', booking_id, str(e))
+        await db.rollback()
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except StateError as e:
+        logger.error('State error updating booking {}: {}', booking_id, str(e))
+        await db.rollback()
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
+    except NotFoundError as e:
+        logger.error('Booking {} not found: {}', booking_id, str(e))
+        await db.rollback()
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
     except Exception as e:
+        logger.error('Unexpected error updating booking {}: {}', booking_id, str(e))
         await db.rollback()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f'Failed to update booking: {str(e)}',
+            detail='Internal server error',
+        )
+
+
+@typed_post(
+    bookings_router,
+    '/batch',
+    response_model=dict,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_bookings_batch(
+    bookings_data: list[BookingCreate],
+    db: Annotated[AsyncSession, Depends(get_db)],
+    project_id: Optional[int] = Query(
+        None, description='Project ID to assign to all bookings'
+    ),
+) -> dict:
+    """Create multiple bookings from cart in a single transaction.
+
+    Args:
+        bookings_data: List of booking data from cart
+        db: Database session
+        project_id: Optional project ID to assign to all bookings
+
+    Returns:
+        Dict with created bookings and any errors
+
+    Raises:
+        HTTPException: If critical validation fails
+    """
+    logger.info(
+        'Creating batch bookings: {} items, project_id: {}',
+        len(bookings_data),
+        project_id,
+    )
+
+    if not bookings_data:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail='No booking data provided'
+        )
+
+    if len(bookings_data) > 100:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail='Maximum 100 bookings per batch',
+        )
+
+    booking_service = BookingService(db)
+    created_bookings = []
+    failed_bookings = []
+
+    try:
+        # Start transaction
+        logger.debug('Starting batch booking transaction')
+
+        for i, booking_data in enumerate(bookings_data):
+            try:
+                # Assign project_id if provided
+                if project_id:
+                    booking_data.project_id = project_id
+
+                logger.debug(
+                    'Creating booking {}/{}: {}',
+                    i + 1,
+                    len(bookings_data),
+                    booking_data.model_dump(),
+                )
+
+                booking_obj = await booking_service.create_booking(
+                    client_id=booking_data.client_id,
+                    equipment_id=booking_data.equipment_id,
+                    start_date=booking_data.start_date,
+                    end_date=booking_data.end_date,
+                    total_amount=float(booking_data.total_amount),
+                    deposit_amount=float(booking_data.total_amount) * 0.2,
+                    quantity=booking_data.quantity,
+                    notes=None,
+                )
+
+                booking_response = await _booking_to_response(booking_obj, db)
+                created_bookings.append(booking_response)
+                logger.debug(
+                    'Successfully created booking {}: {}',
+                    booking_obj.id,
+                    booking_obj.equipment_id,
+                )
+
+            except (ValidationError, AvailabilityError, StateError) as e:
+                error_detail = {
+                    'equipment_id': booking_data.equipment_id,
+                    'error': str(e),
+                    'error_type': type(e).__name__,
+                }
+                failed_bookings.append(error_detail)
+                logger.warning(
+                    'Failed to create booking for equipment {}: {}',
+                    booking_data.equipment_id,
+                    str(e),
+                )
+                continue
+
+            except Exception as e:
+                error_detail = {
+                    'equipment_id': booking_data.equipment_id,
+                    'error': f'Unexpected error: {str(e)}',
+                    'error_type': 'UnexpectedError',
+                }
+                failed_bookings.append(error_detail)
+                logger.error(
+                    'Unexpected error creating booking for equipment {}: {}',
+                    booking_data.equipment_id,
+                    str(e),
+                )
+                continue
+
+        # Commit transaction if we have any successful bookings
+        if created_bookings:
+            await db.commit()
+            logger.info(
+                'Committed batch booking transaction: {} created, {} failed',
+                len(created_bookings),
+                len(failed_bookings),
+            )
+        else:
+            await db.rollback()
+            logger.warning(
+                'Rolling back batch booking transaction: no bookings created'
+            )
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail='No bookings could be created',
+            )
+
+        return {
+            'success': True,
+            'created_count': len(created_bookings),
+            'failed_count': len(failed_bookings),
+            'created_bookings': created_bookings,
+            'failed_bookings': failed_bookings,
+            'message': f'Created {len(created_bookings)} bookings successfully',
+        }
+
+    except HTTPException:
+        await db.rollback()
+        raise
+    except Exception as e:
+        await db.rollback()
+        logger.error('Critical error in batch booking creation: {}', str(e))
+        logger.error('Traceback: {}', traceback.format_exc())
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail='Internal server error during batch booking creation',
         )
