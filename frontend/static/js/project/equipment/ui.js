@@ -6,13 +6,7 @@ import { formatDateTime, DATERANGEPICKER_LOCALE } from '../../utils/common.js';
 import { checkEquipmentAvailability, initializeBookingPeriodPickers } from './availability.js';
 import { handleQuantityIncrease, handleQuantityDecrease, handleBookingRemoval } from './booking.js';
 import { currentPage, totalPages, pageSize, totalCount } from './search.js';
-import {
-    generateMultiSelectionControls,
-    generateEquipmentItemWithCheckbox,
-    setupCartIntegrationEventListeners,
-    updateCartControlsVisibility,
-    hideCartControls
-} from './cart-integration.js';
+// Cart integration functions will be available globally after cart modules load
 
 /**
  * Display search results with checkboxes for multi-selection
@@ -28,28 +22,40 @@ export function displaySearchResults(results) {
         if (addToProjectBtn) {
             addToProjectBtn.disabled = true;
         }
-        hideCartControls();
+        // Check if hideCartControls is available
+        if (typeof hideCartControls === 'function') {
+            hideCartControls();
+        }
         return;
     }
 
     let html = '';
 
-    // Add multi-selection controls
-    html += generateMultiSelectionControls();
+    // Add multi-selection controls (if cart integration is loaded)
+    if (typeof generateMultiSelectionControls === 'function') {
+        html += generateMultiSelectionControls();
+    }
 
     // Add equipment list container
     html += '<div class="list-group">';
 
     // Generate each equipment item with checkbox
     results.forEach(item => {
-        html += generateEquipmentItemWithCheckbox(item);
+        if (typeof generateEquipmentItemWithCheckbox === 'function') {
+            html += generateEquipmentItemWithCheckbox(item);
+        } else {
+            // Fallback to simple item display
+            html += `<div class="list-group-item">${item.name} - ${item.barcode}</div>`;
+        }
     });
 
     html += '</div>';
     resultsContainer.innerHTML = html;
 
-    // Setup cart integration event listeners
-    setupCartIntegrationEventListeners();
+    // Setup cart integration event listeners (if available)
+    if (typeof setupCartIntegrationEventListeners === 'function') {
+        setupCartIntegrationEventListeners();
+    }
 
     // Setup original equipment item click handlers (for details)
     document.querySelectorAll('.equipment-item').forEach(item => {
@@ -61,8 +67,10 @@ export function displaySearchResults(results) {
         });
     });
 
-    // Update cart controls visibility
-    updateCartControlsVisibility();
+    // Update cart controls visibility (if available)
+    if (typeof updateCartControlsVisibility === 'function') {
+        updateCartControlsVisibility();
+    }
 }
 
 

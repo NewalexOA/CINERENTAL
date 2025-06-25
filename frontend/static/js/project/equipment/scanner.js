@@ -4,7 +4,7 @@
 
 import { showToast } from '../../utils/common.js';
 import { searchEquipmentByBarcode, searchEquipmentInCatalog } from './search.js';
-import { ADD_EQUIPMENT_CONFIG } from './cart-configs.js';
+// ADD_EQUIPMENT_CONFIG will be available globally after cart modules load
 
 let scannerActive = false;
 let hidScanner = null;
@@ -239,11 +239,19 @@ async function findEquipmentByBarcode(barcode) {
  */
 async function addScannedEquipmentToCart(equipment) {
     try {
-        // Dynamic import to avoid circular dependencies
-        const { UniversalCart } = await import('../../universal-cart/universal-cart.js');
+        // Use global UniversalCart class
+        if (typeof UniversalCart === 'undefined') {
+            console.error('UniversalCart not loaded yet');
+            return false;
+        }
 
         // Initialize or get existing cart
         if (!window.universalCart) {
+            // Ensure ADD_EQUIPMENT_CONFIG is available
+            if (typeof ADD_EQUIPMENT_CONFIG === 'undefined') {
+                console.error('ADD_EQUIPMENT_CONFIG not loaded yet');
+                return false;
+            }
             window.universalCart = new UniversalCart(ADD_EQUIPMENT_CONFIG);
         }
 
