@@ -396,16 +396,271 @@ class UniversalCart {
             config: this.config,
             itemCount: this.items.size,
             totalQuantity: this.getTotalQuantity(),
+            listeners: Object.fromEntries(this.listeners),
             isInitialized: this.isInitialized,
-            hasStorage: !!this.storage,
-            hasUI: !!this.ui,
-            listeners: Object.fromEntries(
-                Array.from(this.listeners.entries()).map(([event, callbacks]) => [
-                    event,
-                    callbacks.length
-                ])
-            )
+            storageEnabled: this.storage !== null,
+            uiEnabled: this.ui !== null
         };
+    }
+
+    /**
+     * Execute action - create bookings from cart
+     * @param {Object} actionConfig - Action configuration
+     * @returns {Promise<Object>}
+     */
+    async executeAction(actionConfig = {}) {
+        try {
+            if (this.isEmpty()) {
+                throw new Error('Cannot execute action: cart is empty');
+            }
+
+            // Validate action configuration
+            const config = {
+                type: actionConfig.type || this.config.type,
+                projectId: actionConfig.projectId,
+                clientId: actionConfig.clientId,
+                startDate: actionConfig.startDate,
+                endDate: actionConfig.endDate,
+                showProgress: actionConfig.showProgress !== false,
+                validateAvailability: actionConfig.validateAvailability !== false,
+                ...actionConfig
+            };
+
+            if (!config.clientId) {
+                throw new Error('Client ID is required for booking creation');
+            }
+
+            if (!config.startDate || !config.endDate) {
+                throw new Error('Start date and end date are required');
+            }
+
+            // Show progress if enabled
+            if (config.showProgress && this.ui) {
+                this.ui.showProgress('Создание бронирований...', 0);
+            }
+
+            // Validate availability if enabled
+            if (config.validateAvailability) {
+                const validationResult = await this._validateAvailability(config);
+                if (!validationResult.success) {
+                    if (config.showProgress && this.ui) {
+                        this.ui.hideProgress();
+                    }
+                    return validationResult;
+                }
+            }
+
+            // Prepare booking data
+            const bookingsData = await this._prepareBookingsData(config);
+
+            if (config.showProgress && this.ui) {
+                this.ui.updateProgress('Отправка данных...', 50);
+            }
+
+            // Execute batch booking creation
+            const result = await this._executeBookingCreation(bookingsData, config);
+
+            // Handle results
+            if (result.success) {
+                if (config.showProgress && this.ui) {
+                    this.ui.updateProgress('Завершение...', 90);
+                }
+
+                // Clear cart on success
+                await this.clear();
+
+                if (config.showProgress && this.ui) {
+                    this.ui.updateProgress('Готово!', 100);
+                    setTimeout(() => this.ui.hideProgress(), 1000);
+                }
+
+                // Emit success event
+                this._emit('actionCompleted', {
+                    type: config.type,
+                    result: result
+                });
+
+                return {
+                    success: true,
+                    message: result.message,
+                    createdCount: result.created_count,
+                    failedCount: result.failed_count,
+                    createdBookings: result.created_bookings,
+                    failedBookings: result.failed_bookings
+                };
+            } else {
+                if (config.showProgress && this.ui) {
+                    this.ui.hideProgress();
+                }
+
+                this._emit('actionFailed', {
+                    type: config.type,
+                    error: result.error || 'Unknown error'
+                });
+
+                return {
+                    success: false,
+                    error: result.error || 'Failed to create bookings'
+                };
+            }
+
+        } catch (error) {
+            console.error('[UniversalCart] Action execution failed:', error);
+
+            if (actionConfig.showProgress && this.ui) {
+                this.ui.hideProgress();
+            }
+
+            this._emit('error', {
+                operation: 'executeAction',
+                error: error.message,
+                actionConfig
+            });
+
+            return {
+                success: false,
+                error: error.message
+            };
+        }
+    }
+
+    /**
+     * Validate equipment availability
+     * @param {Object} config - Configuration
+     * @returns {Promise<Object>}
+     * @private
+     */
+    async _validateAvailability(config) {
+        try {
+            const items = this.getItems();
+            const unavailableItems = [];
+
+            // Check each item availability (simplified validation)
+            for (const item of items) {
+                // In real implementation, this would call API to check availability
+                if (item.status === 'unavailable' || item.quantity > item.available_quantity) {
+                    unavailableItems.push({
+                        equipmentId: item.equipment_id,
+                        name: item.name,
+                        reason: item.status === 'unavailable'
+                            ? 'Equipment not available'
+                            : 'Insufficient quantity available'
+                    });
+                }
+            }
+
+            if (unavailableItems.length > 0) {
+                return {
+                    success: false,
+                    error: 'Some equipment is not available',
+                    unavailableItems: unavailableItems
+                };
+            }
+
+            return { success: true };
+
+        } catch (error) {
+            console.error('[UniversalCart] Availability validation failed:', error);
+            return {
+                success: false,
+                error: 'Failed to validate availability'
+            };
+        }
+    }
+
+    /**
+     * Prepare bookings data for API
+     * @param {Object} config - Configuration
+     * @returns {Promise<Array>}
+     * @private
+     */
+    async _prepareBookingsData(config) {
+        const items = this.getItems();
+        const rentalDuration = this._calculateDays(config.startDate, config.endDate);
+
+        return items.map(item => {
+            const quantity = item.quantity || 1;
+            const dailyRate = item.daily_rate || 0;
+
+            // Calculate total amount based on rental duration
+            // For hourly rentals (< 1 day), use fractional day calculation
+            // For daily/multi-day rentals, use full day pricing
+            const totalAmount = dailyRate * quantity * rentalDuration;
+
+            return {
+                client_id: config.clientId,
+                equipment_id: item.equipment_id,
+                start_date: config.startDate,
+                end_date: config.endDate,
+                quantity: quantity,
+                total_amount: Math.round(totalAmount * 100) / 100 // Round to 2 decimal places
+            };
+        });
+    }
+
+    /**
+     * Execute booking creation via API
+     * @param {Array} bookingsData - Bookings data
+     * @param {Object} config - Configuration
+     * @returns {Promise<Object>}
+     * @private
+     */
+    async _executeBookingCreation(bookingsData, config) {
+        try {
+            let url = '/api/v1/bookings/batch';
+            if (config.projectId) {
+                url += `?project_id=${config.projectId}`;
+            }
+
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(bookingsData)
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.detail || 'Failed to create bookings');
+            }
+
+            return await response.json();
+
+        } catch (error) {
+            console.error('[UniversalCart] Booking creation failed:', error);
+            return {
+                success: false,
+                error: error.message
+            };
+        }
+    }
+
+    /**
+     * Calculate rental duration in days (including fractional days for hourly rentals)
+     * @param {string} startDate - Start date
+     * @param {string} endDate - End date
+     * @returns {number}
+     * @private
+     */
+    _calculateDays(startDate, endDate) {
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+
+        // Calculate difference in milliseconds
+        const diffTime = Math.abs(end - start);
+
+        // Convert to days (with decimals for hourly rentals)
+        const diffDays = diffTime / (1000 * 60 * 60 * 24);
+
+        // For rentals less than 24 hours, calculate as fraction of day
+        if (diffDays < 1) {
+            // Round to 2 decimal places for precision
+            return Math.round(diffDays * 100) / 100;
+        }
+
+        // For multi-day rentals, round up to next day if there's any partial day
+        return Math.ceil(diffDays);
     }
 }
 
