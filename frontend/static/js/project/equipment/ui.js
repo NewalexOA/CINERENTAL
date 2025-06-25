@@ -6,9 +6,16 @@ import { formatDateTime, DATERANGEPICKER_LOCALE } from '../../utils/common.js';
 import { checkEquipmentAvailability, initializeBookingPeriodPickers } from './availability.js';
 import { handleQuantityIncrease, handleQuantityDecrease, handleBookingRemoval } from './booking.js';
 import { currentPage, totalPages, pageSize, totalCount } from './search.js';
+import {
+    generateMultiSelectionControls,
+    generateEquipmentItemWithCheckbox,
+    setupCartIntegrationEventListeners,
+    updateCartControlsVisibility,
+    hideCartControls
+} from './cart-integration.js';
 
 /**
- * Display search results
+ * Display search results with checkboxes for multi-selection
  * @param {Array} results - Equipment search results
  */
 export function displaySearchResults(results) {
@@ -21,43 +28,44 @@ export function displaySearchResults(results) {
         if (addToProjectBtn) {
             addToProjectBtn.disabled = true;
         }
+        hideCartControls();
         return;
     }
 
-    let html = '<div class="list-group">';
+    let html = '';
 
+    // Add multi-selection controls
+    html += generateMultiSelectionControls();
+
+    // Add equipment list container
+    html += '<div class="list-group">';
+
+    // Generate each equipment item with checkbox
     results.forEach(item => {
-        const isAvailable = item.availability ? item.availability.is_available : true;
-        const statusClass = isAvailable ? 'success' : 'danger';
-        const statusText = isAvailable ? 'Доступно' : 'Недоступно';
-
-        html += `
-            <div class="list-group-item list-group-item-action equipment-item d-flex justify-content-between align-items-center"
-                 data-equipment-id="${item.id}"
-                 data-equipment-name="${item.name}"
-                 data-equipment-barcode="${item.barcode}"
-                 data-equipment-serial="${item.serial_number || ''}"
-                 data-equipment-category="${item.category ? item.category.name : 'Без категории'}"
-                 data-equipment-available="${isAvailable}">
-                <div>
-                    <div class="d-flex w-100 justify-content-between">
-                        <h5 class="mb-1">${item.name}</h5>
-                    </div>
-                    <small>${item.barcode}</small>
-                    ${item.serial_number ? `<br><small>S/N: ${item.serial_number}</small>` : ''}
-                </div>
-                <span class="badge bg-${statusClass}">${statusText}</span>
-            </div>
-        `;
+        html += generateEquipmentItemWithCheckbox(item);
     });
 
     html += '</div>';
     resultsContainer.innerHTML = html;
 
+    // Setup cart integration event listeners
+    setupCartIntegrationEventListeners();
+
+    // Setup original equipment item click handlers (for details)
     document.querySelectorAll('.equipment-item').forEach(item => {
-        item.addEventListener('click', selectEquipment);
+        item.addEventListener('click', (e) => {
+            // Don't trigger selection if clicking on checkbox
+            if (e.target.type !== 'checkbox') {
+                selectEquipment(e);
+            }
+        });
     });
+
+    // Update cart controls visibility
+    updateCartControlsVisibility();
 }
+
+
 
 /**
  * Update pagination UI
