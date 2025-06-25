@@ -638,6 +638,239 @@ class CartUI {
             containerInDOM: this.container && document.contains(this.container)
         };
     }
+
+    /**
+     * Update cart visibility
+     * @private
+     */
+    _updateVisibility() {
+        if (!this.container) return;
+
+        const isEmpty = this.cart.isEmpty();
+
+        if (isEmpty) {
+            this.container.classList.add('d-none');
+        } else {
+            this.container.classList.remove('d-none');
+        }
+    }
+
+    /**
+     * Show progress indicator
+     * @param {string} message - Progress message
+     * @param {number} percent - Progress percentage (0-100)
+     */
+    showProgress(message = 'Обработка...', percent = 0) {
+        try {
+            // Remove existing progress if any
+            this.hideProgress();
+
+            // Create progress overlay
+            const progressOverlay = document.createElement('div');
+            progressOverlay.id = 'cart-progress-overlay';
+            progressOverlay.className = 'cart-progress-overlay';
+            progressOverlay.innerHTML = `
+                <div class="progress-content">
+                    <div class="progress-spinner">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Загрузка...</span>
+                        </div>
+                    </div>
+                    <div class="progress-message">${message}</div>
+                    <div class="progress mt-2">
+                        <div class="progress-bar" role="progressbar"
+                             style="width: ${percent}%"
+                             aria-valuenow="${percent}"
+                             aria-valuemin="0"
+                             aria-valuemax="100">
+                            ${percent}%
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Add to container
+            if (this.container) {
+                this.container.appendChild(progressOverlay);
+            }
+
+            // Add CSS if not already added
+            this._addProgressStyles();
+
+        } catch (error) {
+            console.error('[CartUI] Failed to show progress:', error);
+        }
+    }
+
+    /**
+     * Update progress indicator
+     * @param {string} message - Progress message
+     * @param {number} percent - Progress percentage (0-100)
+     */
+    updateProgress(message, percent) {
+        try {
+            const overlay = document.getElementById('cart-progress-overlay');
+            if (!overlay) return;
+
+            const messageEl = overlay.querySelector('.progress-message');
+            const progressBar = overlay.querySelector('.progress-bar');
+
+            if (messageEl) {
+                messageEl.textContent = message;
+            }
+
+            if (progressBar) {
+                progressBar.style.width = `${percent}%`;
+                progressBar.setAttribute('aria-valuenow', percent);
+                progressBar.textContent = `${percent}%`;
+            }
+
+        } catch (error) {
+            console.error('[CartUI] Failed to update progress:', error);
+        }
+    }
+
+    /**
+     * Hide progress indicator
+     */
+    hideProgress() {
+        try {
+            const overlay = document.getElementById('cart-progress-overlay');
+            if (overlay) {
+                overlay.remove();
+            }
+        } catch (error) {
+            console.error('[CartUI] Failed to hide progress:', error);
+        }
+    }
+
+    /**
+     * Add progress styles
+     * @private
+     */
+    _addProgressStyles() {
+        // Check if styles already added
+        if (document.getElementById('cart-progress-styles')) {
+            return;
+        }
+
+        const style = document.createElement('style');
+        style.id = 'cart-progress-styles';
+        style.textContent = `
+            .cart-progress-overlay {
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: rgba(255, 255, 255, 0.9);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                z-index: 1000;
+                border-radius: 8px;
+            }
+
+            .progress-content {
+                text-align: center;
+                min-width: 200px;
+                padding: 20px;
+            }
+
+            .progress-spinner {
+                margin-bottom: 15px;
+            }
+
+            .progress-message {
+                font-weight: 500;
+                color: #333;
+                margin-bottom: 10px;
+            }
+
+            .universal-cart {
+                position: relative;
+            }
+        `;
+
+        document.head.appendChild(style);
+    }
+
+    /**
+     * Show action confirmation dialog
+     * @param {Object} options - Dialog options
+     * @returns {Promise<boolean>}
+     */
+    async showConfirmDialog(options = {}) {
+        return new Promise((resolve) => {
+            const {
+                title = 'Подтверждение',
+                message = 'Вы уверены?',
+                confirmText = 'Да',
+                cancelText = 'Отмена',
+                type = 'warning'
+            } = options;
+
+            // Create modal
+            const modalId = 'cart-confirm-modal';
+            const existingModal = document.getElementById(modalId);
+            if (existingModal) {
+                existingModal.remove();
+            }
+
+            const modal = document.createElement('div');
+            modal.id = modalId;
+            modal.className = 'modal fade';
+            modal.innerHTML = `
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">
+                                <i class="fas fa-exclamation-triangle text-${type}"></i>
+                                ${title}
+                            </h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            ${message}
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                                ${cancelText}
+                            </button>
+                            <button type="button" class="btn btn-${type}" id="confirm-action">
+                                ${confirmText}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            document.body.appendChild(modal);
+
+            // Initialize Bootstrap modal
+            const bsModal = new bootstrap.Modal(modal);
+
+            // Handle actions
+            const confirmBtn = modal.querySelector('#confirm-action');
+            const cancelBtn = modal.querySelector('[data-bs-dismiss="modal"]');
+
+            confirmBtn.addEventListener('click', () => {
+                bsModal.hide();
+                resolve(true);
+            });
+
+            cancelBtn.addEventListener('click', () => {
+                resolve(false);
+            });
+
+            modal.addEventListener('hidden.bs.modal', () => {
+                modal.remove();
+                resolve(false);
+            });
+
+            bsModal.show();
+        });
+    }
 }
 
 // Export for module usage
