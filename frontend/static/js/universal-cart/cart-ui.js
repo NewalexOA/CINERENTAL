@@ -1,8 +1,8 @@
 /**
  * Cart UI for Universal Cart
  *
- * UI компоненты и рендеринг для универсальной корзины
- * Использует Bootstrap 5 для современного интерфейса
+ * UI components and rendering for Universal Cart
+ * Uses Bootstrap 5 for modern interface
  *
  * @author ACT-Rental Team
  * @created 2025-06-23
@@ -10,14 +10,14 @@
 
 class CartUI {
     /**
-     * Конструктор CartUI
-     * @param {UniversalCart} cart - Экземпляр корзины
+     * CartUI constructor
+     * @param {UniversalCart} cart - Cart instance
      */
     constructor(cart) {
         this.cart = cart;
         this.config = cart.config;
 
-        // UI Elements (будут найдены при инициализации)
+        // UI Elements (will be found during initialization)
         this.container = null;
         this.badge = null;
         this.toggleButton = null;
@@ -36,24 +36,15 @@ class CartUI {
     }
 
     /**
-     * Инициализация UI
+     * UI initialization
      * @private
      */
     _init() {
         try {
-            // Find or create UI elements
             this._setupElements();
-
-            // Load templates
             this._loadTemplates();
-
-            // Setup event listeners
             this._setupEventListeners();
-
-            // Subscribe to cart events
             this._subscribeToCartEvents();
-
-            // Initial render
             this.render();
 
             if (this.config.debug) {
@@ -66,7 +57,7 @@ class CartUI {
     }
 
     /**
-     * Настройка DOM элементов
+     * Setup DOM elements
      * @private
      */
     _setupElements() {
@@ -91,7 +82,7 @@ class CartUI {
     }
 
     /**
-     * Создание контейнера корзины
+     * Create cart container
      * @returns {HTMLElement}
      * @private
      */
@@ -105,7 +96,7 @@ class CartUI {
     }
 
     /**
-     * Создание бейджа с количеством
+     * Create badge with quantity
      * @returns {HTMLElement}
      * @private
      */
@@ -123,7 +114,7 @@ class CartUI {
     }
 
     /**
-     * Загрузка шаблонов
+     * Load templates
      * @private
      */
     _loadTemplates() {
@@ -136,7 +127,7 @@ class CartUI {
     }
 
     /**
-     * Основной шаблон корзины
+     * Main cart template
      * @returns {string}
      * @private
      */
@@ -181,7 +172,7 @@ class CartUI {
     }
 
     /**
-     * Шаблон элемента корзины
+     * Cart item template
      * @returns {string}
      * @private
      */
@@ -219,7 +210,7 @@ class CartUI {
     }
 
     /**
-     * Шаблон сводки корзины
+     * Cart summary template
      * @returns {string}
      * @private
      */
@@ -251,7 +242,7 @@ class CartUI {
     }
 
     /**
-     * Шаблон пустого состояния
+     * Empty state template
      * @returns {string}
      * @private
      */
@@ -270,7 +261,7 @@ class CartUI {
     }
 
     /**
-     * Настройка обработчиков событий
+     * Setup event listeners
      * @private
      */
     _setupEventListeners() {
@@ -331,7 +322,7 @@ class CartUI {
     }
 
     /**
-     * Подписка на события корзины
+     * Subscribe to cart events
      * @private
      */
     _subscribeToCartEvents() {
@@ -360,7 +351,7 @@ class CartUI {
     }
 
     /**
-     * Рендеринг всего UI корзины
+     * Render all UI components
      */
     render() {
         this._updateBadge();
@@ -370,7 +361,7 @@ class CartUI {
     }
 
     /**
-     * Обновление бейджа с количеством
+     * Update badge with quantity
      * @private
      */
     _updateBadge() {
@@ -387,7 +378,7 @@ class CartUI {
     }
 
     /**
-     * Обновление списка позиций
+     * Update items list
      * @private
      */
     _updateItemsList() {
@@ -403,8 +394,8 @@ class CartUI {
     }
 
     /**
-     * Рендеринг отдельной позиции
-     * @param {Object} item - Позиция оборудования
+     * Render single item
+     * @param {Object} item - Equipment item
      * @returns {string}
      * @private
      */
@@ -422,7 +413,7 @@ class CartUI {
     }
 
     /**
-     * Обновление сводки корзины
+     * Update cart summary
      * @private
      */
     _updateSummary() {
@@ -454,7 +445,7 @@ class CartUI {
     }
 
     /**
-     * Обновление кнопок действий
+     * Update action buttons
      * @private
      */
     _updateActionButtons() {
@@ -473,7 +464,7 @@ class CartUI {
     }
 
     /**
-     * Показ корзины
+     * Show cart
      */
     show() {
         if (this.isVisible || this.isAnimating) return;
@@ -490,7 +481,7 @@ class CartUI {
     }
 
     /**
-     * Скрытие корзины
+     * Hide cart
      */
     hide() {
         if (!this.isVisible || this.isAnimating) return;
@@ -507,7 +498,7 @@ class CartUI {
     }
 
     /**
-     * Переключение видимости корзины
+     * Toggle cart visibility
      */
     toggle() {
         if (this.isVisible) {
@@ -518,8 +509,8 @@ class CartUI {
     }
 
     /**
-     * Обработка кликов по элементам управления позициями
-     * @param {Event} e - Событие клика
+     * Handle item control clicks
+     * @param {Event} e - Click event
      * @private
      */
     _handleItemControlClick(e) {
@@ -538,8 +529,8 @@ class CartUI {
     }
 
     /**
-     * Обработка изменения полей ввода
-     * @param {Event} e - Событие изменения
+     * Handle input field changes
+     * @param {Event} e - Change event
      * @private
      */
     _handleItemInputChange(e) {
@@ -555,9 +546,9 @@ class CartUI {
     }
 
     /**
-     * Изменение количества позиции
-     * @param {string} itemKey - Ключ позиции
-     * @param {number} delta - Изменение количества
+     * Change item quantity
+     * @param {string} itemKey - Item key
+     * @param {number} delta - Quantity change
      * @private
      */
     _changeQuantity(itemKey, delta) {
@@ -571,7 +562,7 @@ class CartUI {
     }
 
     /**
-     * Обработка основного действия
+     * Handle primary action
      * @private
      */
     _handlePrimaryAction() {
@@ -585,7 +576,7 @@ class CartUI {
     }
 
     /**
-     * Обработка очистки корзины
+     * Handle cart clearing
      * @private
      */
     _handleClear() {
@@ -595,7 +586,7 @@ class CartUI {
     }
 
     /**
-     * Обработка сохранения корзины
+     * Handle cart saving
      * @private
      */
     _handleSave() {
@@ -607,9 +598,9 @@ class CartUI {
     }
 
     /**
-     * Показ уведомления
-     * @param {string} message - Текст сообщения
-     * @param {string} type - Тип уведомления
+     * Show notification
+     * @param {string} message - Message text
+     * @param {string} type - Notification type
      * @private
      */
     _showNotification(message, type = 'info') {
@@ -622,8 +613,8 @@ class CartUI {
     }
 
     /**
-     * Экранирование HTML
-     * @param {string} text - Текст для экранирования
+     * Escape HTML
+     * @param {string} text - Text to escape
      * @returns {string}
      * @private
      */
@@ -634,7 +625,7 @@ class CartUI {
     }
 
     /**
-     * Получение отладочной информации UI
+     * Get UI debug information
      * @returns {Object}
      */
     getDebugInfo() {

@@ -1,8 +1,8 @@
 /**
  * Universal Cart for ACT-Rental
  *
- * Модульная система корзин для временного хранения позиций оборудования
- * Версия: 1.0.0
+ * Modular cart system for temporary storage of equipment positions
+ * Version: 1.0.0
  *
  * @author ACT-Rental Team
  * @created 2025-06-23
@@ -10,8 +10,8 @@
 
 class UniversalCart {
     /**
-     * Конструктор Universal Cart
-     * @param {Object} config - Конфигурация корзины
+     * Universal Cart constructor
+     * @param {Object} config - Cart configuration
      */
     constructor(config = {}) {
         // Merge with default config
@@ -29,7 +29,7 @@ class UniversalCart {
         this.listeners = new Map();
         this.isInitialized = false;
 
-        // Подклассы (будут инициализированы позже)
+        // Subclasses (will be initialized later)
         this.storage = null;
         this.ui = null;
         this.validator = null;
@@ -39,7 +39,7 @@ class UniversalCart {
     }
 
     /**
-     * Инициализация корзины
+     * Cart initialization
      * @private
      */
     async _init() {
@@ -72,8 +72,8 @@ class UniversalCart {
     }
 
     /**
-     * Добавление позиции в корзину
-     * @param {Object} item - Объект позиции оборудования
+     * Add item to cart
+     * @param {Object} item - Equipment item
      * @returns {Promise<boolean>}
      */
     async addItem(item) {
@@ -126,8 +126,8 @@ class UniversalCart {
     }
 
     /**
-     * Удаление позиции из корзины
-     * @param {string} itemKey - Ключ позиции
+     * Remove item from cart
+     * @param {string} itemKey - Item key
      * @returns {boolean}
      */
     async removeItem(itemKey) {
@@ -155,9 +155,9 @@ class UniversalCart {
     }
 
     /**
-     * Обновление количества позиции
-     * @param {string} itemKey - Ключ позиции
-     * @param {number} quantity - Новое количество
+     * Update item quantity
+     * @param {string} itemKey - Item key
+     * @param {number} quantity - New quantity
      * @returns {boolean}
      */
     async updateQuantity(itemKey, quantity) {
@@ -190,7 +190,7 @@ class UniversalCart {
     }
 
     /**
-     * Получение всех позиций
+     * Get all items
      * @returns {Array}
      */
     getItems() {
@@ -198,8 +198,8 @@ class UniversalCart {
     }
 
     /**
-     * Получение позиции по ключу
-     * @param {string} itemKey - Ключ позиции
+     * Get item by key
+     * @param {string} itemKey - Item key
      * @returns {Object|null}
      */
     getItem(itemKey) {
@@ -207,7 +207,7 @@ class UniversalCart {
     }
 
     /**
-     * Получение количества позиций
+     * Get item count
      * @returns {number}
      */
     getItemCount() {
@@ -215,7 +215,7 @@ class UniversalCart {
     }
 
     /**
-     * Получение общего количества единиц оборудования
+     * Get total quantity
      * @returns {number}
      */
     getTotalQuantity() {
@@ -227,7 +227,7 @@ class UniversalCart {
     }
 
     /**
-     * Очистка корзины
+     * Clear cart
      * @returns {Promise<boolean>}
      */
     async clear() {
@@ -251,7 +251,7 @@ class UniversalCart {
     }
 
     /**
-     * Проверка пустоты корзины
+     * Check if cart is empty
      * @returns {boolean}
      */
     isEmpty() {
@@ -259,8 +259,8 @@ class UniversalCart {
     }
 
     /**
-     * Валидация позиции оборудования
-     * @param {Object} item - Объект позиции
+     * Validate equipment item
+     * @param {Object} item - Equipment item
      * @returns {boolean}
      * @private
      */
@@ -272,8 +272,8 @@ class UniversalCart {
     }
 
     /**
-     * Обработка позиции перед добавлением
-     * @param {Object} item - Исходная позиция
+     * Process item before adding
+     * @param {Object} item - Original item
      * @returns {Object}
      * @private
      */
@@ -292,8 +292,8 @@ class UniversalCart {
     }
 
     /**
-     * Генерация уникального ключа для позиции
-     * @param {Object} item - Объект позиции
+     * Generate unique item key
+     * @param {Object} item - Equipment item
      * @returns {string}
      * @private
      */
@@ -305,7 +305,7 @@ class UniversalCart {
     }
 
     /**
-     * Загрузка данных из хранилища
+     * Load data from storage
      * @private
      */
     async _loadFromStorage() {
@@ -323,7 +323,7 @@ class UniversalCart {
     }
 
     /**
-     * Сохранение данных в хранилище
+     * Save data to storage
      * @private
      */
     async _saveToStorage() {
@@ -342,9 +342,9 @@ class UniversalCart {
     }
 
     /**
-     * Подписка на события
-     * @param {string} event - Название события
-     * @param {Function} callback - Функция обратного вызова
+     * Subscribe to events
+     * @param {string} event - Event name
+     * @param {Function} callback - Callback function
      */
     on(event, callback) {
         if (!this.listeners.has(event)) {
@@ -354,9 +354,9 @@ class UniversalCart {
     }
 
     /**
-     * Отписка от событий
-     * @param {string} event - Название события
-     * @param {Function} callback - Функция обратного вызова
+     * Unsubscribe from events
+     * @param {string} event - Event name
+     * @param {Function} callback - Callback function
      */
     off(event, callback) {
         if (!this.listeners.has(event)) return;
@@ -369,9 +369,9 @@ class UniversalCart {
     }
 
     /**
-     * Генерация события
-     * @param {string} event - Название события
-     * @param {Object} data - Данные события
+     * Emit event
+     * @param {string} event - Event name
+     * @param {Object} data - Event data
      * @private
      */
     _emit(event, data = {}) {
@@ -388,7 +388,7 @@ class UniversalCart {
     }
 
     /**
-     * Получение отладочной информации
+     * Get debug information
      * @returns {Object}
      */
     getDebugInfo() {

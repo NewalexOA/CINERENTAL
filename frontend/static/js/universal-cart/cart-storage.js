@@ -1,8 +1,8 @@
 /**
  * Cart Storage for Universal Cart
  *
- * Управление localStorage для сохранения состояния корзины
- * Использует современные подходы для работы с browser storage
+ * Manages localStorage for cart state persistence
+ * Uses modern approaches for browser storage management
  *
  * @author ACT-Rental Team
  * @created 2025-06-23
@@ -10,8 +10,8 @@
 
 class CartStorage {
     /**
-     * Конструктор CartStorage
-     * @param {Object} config - Конфигурация корзины
+     * CartStorage constructor
+     * @param {Object} config - Cart configuration
      */
     constructor(config = {}) {
         this.config = config;
@@ -34,7 +34,7 @@ class CartStorage {
     }
 
     /**
-     * Генерация ключа для localStorage
+     * Generate localStorage key
      * @returns {string}
      * @private
      */
@@ -46,12 +46,12 @@ class CartStorage {
     }
 
     /**
-     * Получение ID текущего проекта
+     * Get current project ID
      * @returns {string}
      * @private
      */
     _getCurrentProjectId() {
-        // Извлекаем project ID из URL или глобального состояния
+        // Extract project ID from URL or global state
         const pathMatch = window.location.pathname.match(/\/projects\/(\d+)/);
         if (pathMatch) {
             return pathMatch[1];
@@ -66,7 +66,7 @@ class CartStorage {
     }
 
     /**
-     * Проверка доступности localStorage
+     * Check localStorage availability
      * @returns {boolean}
      * @private
      */
@@ -83,8 +83,8 @@ class CartStorage {
     }
 
     /**
-     * Сохранение данных в localStorage
-     * @param {Object} data - Данные для сохранения
+     * Save data to localStorage
+     * @param {Object} data - Data to save
      * @returns {Promise<boolean>}
      */
     async save(data) {
@@ -142,7 +142,7 @@ class CartStorage {
     }
 
     /**
-     * Загрузка данных из localStorage
+     * Load data from localStorage
      * @returns {Promise<Object|null>}
      */
     async load() {
@@ -199,7 +199,7 @@ class CartStorage {
     }
 
     /**
-     * Очистка данных из localStorage
+     * Clear data from localStorage
      * @returns {Promise<boolean>}
      */
     async clear() {
@@ -223,7 +223,7 @@ class CartStorage {
     }
 
     /**
-     * Получение информации о хранилище
+     * Get storage information
      * @returns {Object}
      */
     getStorageInfo() {
@@ -257,8 +257,8 @@ class CartStorage {
     }
 
     /**
-     * Валидация структуры данных из хранилища
-     * @param {Object} data - Данные для валидации
+     * Validate storage data structure
+     * @param {Object} data - Data to validate
      * @returns {boolean}
      * @private
      */
@@ -272,7 +272,7 @@ class CartStorage {
     }
 
     /**
-     * Обработка превышения квоты localStorage
+     * Handle localStorage quota exceeded
      * @private
      */
     async _handleQuotaExceeded() {
@@ -312,7 +312,7 @@ class CartStorage {
     }
 
     /**
-     * Получение всех ключей корзин
+     * Get all cart storage keys
      * @returns {Array}
      * @private
      */
@@ -334,7 +334,7 @@ class CartStorage {
     }
 
     /**
-     * Расчет используемого места в localStorage
+     * Calculate localStorage usage
      * @returns {Object}
      * @private
      */
@@ -362,8 +362,8 @@ class CartStorage {
     }
 
     /**
-     * Сжатие данных (простая реализация без библиотек)
-     * @param {string} data - Данные для сжатия
+     * Compress data (simple implementation without libraries)
+     * @param {string} data - Data to compress
      * @returns {Promise<string>}
      * @private
      */
@@ -377,8 +377,8 @@ class CartStorage {
     }
 
     /**
-     * Распаковка данных (простая реализация без библиотек)
-     * @param {string} data - Данные для распаковки
+     * Decompress data (simple implementation without libraries)
+     * @param {string} data - Data to decompress
      * @returns {Promise<string>}
      * @private
      */
@@ -389,8 +389,8 @@ class CartStorage {
     }
 
     /**
-     * Проверка, сжаты ли данные
-     * @param {string} data - Данные для проверки
+     * Check if data is compressed
+     * @param {string} data - Data to check
      * @returns {boolean}
      * @private
      */
@@ -401,8 +401,8 @@ class CartStorage {
     }
 
     /**
-     * Миграция данных старых версий
-     * @param {Object} oldData - Старые данные
+     * Migrate data from old versions
+     * @param {Object} oldData - Old data to migrate
      * @returns {Promise<Object|null>}
      * @private
      */
