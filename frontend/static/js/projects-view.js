@@ -145,31 +145,68 @@ window.clearCart = function() {
 /**
  * Add all cart items to project
  */
-window.addCartToProject = function() {
+window.addCartToProject = async function() {
     if (window.universalCart) {
         const items = window.universalCart.getItems();
         if (items.length === 0) {
-            showNotification('warning', 'Корзина пуста');
+            showToast('Корзина пуста', 'warning');
             return;
         }
 
-        // Process each item and add to project
-        items.forEach(item => {
-            // Create booking for the item
-            const bookingData = {
-                equipment_id: item.id,
-                quantity: item.quantity || 1,
-                start_date: getCurrentProjectStartDate(),
-                end_date: getCurrentProjectEndDate()
-            };
+        // Показываем индикатор начала операции
+        showToast(`Добавление ${items.length} позиций в проект...`, 'info');
 
-            // Add to project using existing functionality
-            addEquipmentToProject(bookingData);
-        });
+        let successCount = 0;
+        let errorCount = 0;
+        const errors = [];
 
-        // Clear cart after adding
-        window.universalCart.clear();
-        showNotification('success', `Добавлено ${items.length} позиций в проект`);
+        // Обрабатываем каждую позицию и добавляем в проект
+        for (const item of items) {
+            try {
+                // Создаем данные бронирования для позиции
+                const bookingData = {
+                    equipment_id: item.id,
+                    quantity: item.quantity || 1,
+                    start_date: getCurrentProjectStartDate(),
+                    end_date: getCurrentProjectEndDate(),
+                    total_amount: item.total_amount || 0.0
+                };
+
+                // Добавляем в проект с использованием обновленной функции
+                const result = await addEquipmentToProject(bookingData);
+
+                if (result.success) {
+                    successCount++;
+                } else {
+                    errorCount++;
+                    errors.push(`${item.name || item.id}: ${result.error}`);
+                }
+            } catch (error) {
+                errorCount++;
+                errors.push(`${item.name || item.id}: ${error.message}`);
+                console.error(`Ошибка при добавлении позиции ${item.id}:`, error);
+            }
+        }
+
+        // Показываем итоговое уведомление
+        if (successCount > 0 && errorCount === 0) {
+            // Все позиции добавлены успешно
+            showToast(`Успешно добавлено ${successCount} позиций в проект`, 'success');
+            window.universalCart.clear();
+        } else if (successCount > 0 && errorCount > 0) {
+            // Частичный успех
+            showToast(`Добавлено ${successCount} из ${items.length} позиций. Ошибки: ${errorCount}`, 'warning');
+            // Удаляем только успешно добавленные позиции из корзины
+            // (это требует дополнительной логики, пока оставляем корзину как есть)
+        } else {
+            // Все позиции с ошибками
+            showToast(`Не удалось добавить ни одной позиции. Ошибки: ${errors.slice(0, 3).join('; ')}`, 'danger');
+        }
+
+        // Логируем детальную информацию об ошибках
+        if (errors.length > 0) {
+            console.error('Ошибки при добавлении позиций из корзины:', errors);
+        }
     }
 };
 
@@ -193,7 +230,196 @@ function getCurrentProjectEndDate() {
  * Add equipment to project (placeholder function)
  * @param {Object} bookingData - Booking data
  */
-function addEquipmentToProject(bookingData) {
-    // TODO: Implement actual API call to add equipment to project
-    console.log('Adding equipment to project:', bookingData);
+async function addEquipmentToProject(bookingData) {
+    try {
+        console.log('Добавление оборудования в проект:', bookingData);
+        if (!bookingData.equipment_id) {
+            throw new Error('ID оборудования обязательно для заполнения');
+        }
+
+        const projectId = getProjectIdFromUrl();
+        if (!projectId) {
+            throw new Error('ID проекта не найден');
+        }
+
+        // Получаем client_id из данных проекта
+        const clientId = window.projectData?.client_id;
+        if (!clientId) {
+            throw new Error('ID клиента не найден в данных проекта');
+        }
+
+        // Подготавливаем даты для сравнения
+        const startDate = bookingData.start_date || getCurrentProjectStartDate();
+        const endDate = bookingData.end_date || getCurrentProjectEndDate();
+        const quantityToAdd = parseInt(bookingData.quantity) || 1;
+
+        // Валидация дат
+        const startDateObj = new Date(startDate);
+        const endDateObj = new Date(endDate);
+
+        if (startDateObj >= endDateObj) {
+            throw new Error('Дата окончания должна быть позже даты начала');
+        }
+
+        // Динамически импортируем API клиент (готовый инстанс)
+        const { api } = await import('./utils/api.js');
+
+        // Проверяем существующие бронирования в проекте для этого оборудования
+        const existingBookings = window.projectData?.bookings || [];
+        const existingBooking = existingBookings.find(booking => {
+            // Проверяем ID оборудования и даты
+            const sameEquipment = booking.equipment_id === parseInt(bookingData.equipment_id);
+            const sameStartDate = booking.start_date === startDate;
+            const sameEndDate = booking.end_date === endDate;
+
+            return sameEquipment && sameStartDate && sameEndDate;
+        });
+
+        let result;
+
+        if (existingBooking) {
+            // Оборудование уже есть в проекте с теми же датами - увеличиваем количество
+            showToast('Увеличение количества существующего оборудования...', 'info');
+
+            const newQuantity = existingBooking.quantity + quantityToAdd;
+
+            // Обновляем бронирование через API
+            const updatedBooking = await api.patch(`/bookings/${existingBooking.id}`, {
+                quantity: newQuantity
+            });
+
+            // Показываем уведомление об успехе
+            const equipmentName = existingBooking.equipment_name || `Оборудование ${bookingData.equipment_id}`;
+            showToast(`Количество "${equipmentName}" увеличено до ${newQuantity}`, 'success');
+
+            result = {
+                success: true,
+                booking: updatedBooking,
+                action: 'quantity_increased',
+                message: `Количество оборудования увеличено до ${newQuantity}`
+            };
+
+        } else {
+            // Оборудования нет в проекте или даты отличаются - создаем новое бронирование
+            showToast('Создание нового бронирования...', 'info');
+
+            // Подготавливаем данные для создания бронирования (БЕЗ project_id)
+            const bookingPayload = {
+                equipment_id: parseInt(bookingData.equipment_id),
+                client_id: parseInt(clientId),
+                start_date: startDate,
+                end_date: endDate,
+                quantity: quantityToAdd,
+                total_amount: parseFloat(bookingData.total_amount) || 0.0
+            };
+
+            // Шаг 1: Создаем бронирование
+            const bookingResponse = await api.post('/bookings/', bookingPayload);
+
+            // Проверяем успешность создания бронирования
+            if (!bookingResponse || !bookingResponse.id) {
+                throw new Error('Некорректный ответ при создании бронирования');
+            }
+
+            // Шаг 2: Добавляем бронирование в проект
+            showToast('Добавление бронирования в проект...', 'info');
+            const projectResponse = await api.post(`/projects/${projectId}/bookings/${bookingResponse.id}`);
+
+            // Проверяем успешность добавления в проект
+            if (!projectResponse) {
+                throw new Error('Ошибка при добавлении бронирования в проект');
+            }
+
+            // Показываем уведомление об успехе
+            const equipmentName = bookingResponse.equipment_name || `Оборудование ${bookingData.equipment_id}`;
+            showToast(`Оборудование "${equipmentName}" успешно добавлено в проект`, 'success');
+
+            result = {
+                success: true,
+                booking: bookingResponse,
+                project: projectResponse,
+                action: 'new_booking_created',
+                message: 'Оборудование успешно добавлено в проект'
+            };
+        }
+
+        // Обновляем данные проекта и UI после изменений
+        showToast('Обновление списка оборудования...', 'info');
+        await refreshProjectData();
+
+        return result;
+
+    } catch (error) {
+        // Логируем ошибку для отладки
+        console.error('Ошибка при добавлении оборудования в проект:', error);
+
+        // Определяем тип ошибки и показываем соответствующее сообщение
+        let errorMessage = 'Произошла ошибка при добавлении оборудования';
+
+        if (error.message) {
+            errorMessage = error.message;
+        } else if (error.response?.data?.detail) {
+            // Обрабатываем ошибки API
+            if (Array.isArray(error.response.data.detail)) {
+                errorMessage = error.response.data.detail
+                    .map(err => `${err.loc ? err.loc.join(' -> ') : 'поле'}: ${err.msg}`)
+                    .join('; ');
+            } else {
+                errorMessage = error.response.data.detail;
+            }
+        }
+
+        // Показываем ошибку пользователю
+        showToast(errorMessage, 'danger');
+
+        // Возвращаем результат с ошибкой
+        return {
+            success: false,
+            error: errorMessage,
+            originalError: error
+        };
+    }
+}
+
+/**
+ * Обновляет данные проекта после изменений
+ */
+async function refreshProjectData() {
+    try {
+        const projectId = getProjectIdFromUrl();
+        if (!projectId) return;
+
+        // Динамически импортируем API клиент (готовый инстанс)
+        const { api } = await import('./utils/api.js');
+
+        // Получаем обновленные данные проекта
+        const updatedProject = await api.get(`/projects/${projectId}`);
+
+        // Обновляем глобальную переменную с данными проекта
+        if (updatedProject) {
+            window.projectData = updatedProject;
+
+            // Импортируем и вызываем функцию обновления UI оборудования
+            try {
+                const { renderEquipmentSection } = await import('./project/equipment/ui.js');
+                renderEquipmentSection(updatedProject);
+            } catch (importError) {
+                console.error('Ошибка импорта renderEquipmentSection:', importError);
+            }
+
+            // Обновляем отображение страницы
+            if (typeof window.toggleEquipmentDatesColumn === 'function') {
+                window.toggleEquipmentDatesColumn();
+            }
+
+            // Вызываем событие обновления данных проекта
+            document.dispatchEvent(new CustomEvent('projectDataUpdated', {
+                detail: { projectData: updatedProject }
+            }));
+        }
+
+    } catch (error) {
+        console.error('Ошибка при обновлении данных проекта:', error);
+        // Не показываем ошибку пользователю, так как это фоновая операция
+    }
 }
