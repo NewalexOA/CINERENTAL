@@ -191,76 +191,66 @@ async function addSelectedEquipmentToCart() {
     if (selectedEquipmentIds.size === 0) return;
 
     try {
-        // Use global UniversalCart class
-        if (typeof UniversalCart === 'undefined') {
-            console.error('UniversalCart not loaded yet');
+        // Use global universalCart instance
+        if (!window.universalCart) {
+            console.error('Universal Cart instance not found');
             showToast('Корзина не загружена', 'danger');
             return;
         }
 
-        // Get cart configuration
-        const ADD_EQUIPMENT_CONFIG = {
-            type: 'equipment_add',
-            maxItems: 100,
-            enableStorage: true,
-            autoSave: true,
-            debug: false
-        };
+        const successfullyAdded = [];
+        const errors = [];
 
-        // Initialize or get existing cart
-        if (!window.universalCart) {
-            window.universalCart = new UniversalCart(ADD_EQUIPMENT_CONFIG);
-        }
-
-        const cart = window.universalCart;
-        let addedCount = 0;
-        let failedCount = 0;
-
-        // Add each selected item to cart
+        // Get all selected equipment from the page
         for (const equipmentId of selectedEquipmentIds) {
-            const equipmentItem = document.querySelector(`[data-equipment-id="${equipmentId}"]`);
-            if (!equipmentItem) continue;
+            const equipmentElement = document.querySelector(`[data-equipment-id="${equipmentId}"]`);
+            if (!equipmentElement) {
+                errors.push(`Оборудование ${equipmentId} не найдено`);
+                continue;
+            }
 
-            const itemData = {
-                id: parseInt(equipmentId),
-                name: equipmentItem.dataset.equipmentName,
-                barcode: equipmentItem.dataset.equipmentBarcode,
-                serial_number: equipmentItem.dataset.equipmentSerial || null,
-                category: equipmentItem.dataset.equipmentCategory,
-                quantity: 1,
-                addedAt: new Date().toISOString()
+            // Extract equipment data from DOM element
+            const equipmentData = {
+                id: equipmentId,
+                name: equipmentElement.dataset.equipmentName || '',
+                barcode: equipmentElement.dataset.equipmentBarcode || '',
+                serial_number: equipmentElement.dataset.equipmentSerial || '',
+                category: equipmentElement.dataset.equipmentCategory || 'Без категории',
+                quantity: 1, // Default quantity
+                available: equipmentElement.dataset.equipmentAvailable === 'true'
             };
 
-            const success = await cart.addItem(itemData);
+            // Check availability
+            if (!equipmentData.available) {
+                errors.push(`${equipmentData.name} недоступно`);
+                continue;
+            }
+
+            // Add to cart
+            const success = await window.universalCart.addItem(equipmentData);
             if (success) {
-                addedCount++;
+                successfullyAdded.push(equipmentData.name);
             } else {
-                failedCount++;
+                errors.push(`Не удалось добавить ${equipmentData.name}`);
             }
         }
 
-        // Show result notification
-        if (failedCount === 0) {
-            showToast(`Добавлено ${addedCount} позиций в корзину`, 'success');
-        } else if (addedCount === 0) {
-            showToast(`Не удалось добавить ни одной позиции`, 'danger');
-        } else {
-            showToast(`Добавлено ${addedCount} из ${selectedEquipmentIds.size} позиций`, 'warning');
+        // Show results
+        if (successfullyAdded.length > 0) {
+            showToast(`Добавлено ${successfullyAdded.length} позиций в корзину`, 'success');
         }
 
-        // Clear selection after successful add
-        if (addedCount > 0) {
-            clearSelection();
+        if (errors.length > 0) {
+            console.warn('Cart addition errors:', errors);
+            showToast(`Ошибки: ${errors.join(', ')}`, 'warning');
         }
 
-        // Show cart UI if available
-        if (cart.ui) {
-            cart.ui.show();
-        }
+        // Clear selection after adding
+        clearSelection();
 
     } catch (error) {
-        console.error('Failed to add selected equipment to cart:', error);
-        showToast('Ошибка при добавлении в корзину', 'danger');
+        console.error('Error adding equipment to cart:', error);
+        showToast('Ошибка добавления в корзину', 'danger');
     }
 }
 
@@ -352,91 +342,129 @@ function toggleEquipmentSelection(checkbox) {
 }
 
 /**
- * Execute cart action (create bookings)
+ * Extract equipment data from table row
+ * @param {HTMLElement} row - Table row element
+ * @returns {Object} Equipment data
+ */
+function extractEquipmentDataFromRow(row) {
+    return {
+        id: row.dataset.equipmentId,
+        name: row.dataset.equipmentName || row.querySelector('a')?.textContent || 'Неизвестное оборудование',
+        barcode: row.dataset.equipmentBarcode || '',
+        serial_number: row.dataset.equipmentSerial || '',
+        category: row.dataset.equipmentCategory || 'Без категории',
+        quantity: 1,
+        available: row.dataset.equipmentAvailable !== 'false'
+    };
+}
+
+/**
+ * Add equipment to cart from selection
+ * @param {Object} equipmentData - Equipment data
+ */
+async function addToCartFromSelection(equipmentData) {
+    if (!window.universalCart) {
+        console.error('Universal Cart not available');
+        return;
+    }
+
+    try {
+        const success = await window.universalCart.addItem(equipmentData);
+        if (!success) {
+            console.warn('Failed to add item to cart:', equipmentData.name);
+        }
+    } catch (error) {
+        console.error('Error adding to cart from selection:', error);
+    }
+}
+
+/**
+ * Remove equipment from cart by ID
+ * @param {number} equipmentId - Equipment ID
+ */
+async function removeFromCartByEquipmentId(equipmentId) {
+    if (!window.universalCart) {
+        console.error('Universal Cart not available');
+        return;
+    }
+
+    try {
+        // Find item key by equipment ID
+        const items = window.universalCart.getItems();
+        const itemToRemove = items.find(item => item.id == equipmentId);
+
+        if (itemToRemove) {
+            // Generate the same key that would be used internally
+            const itemKey = `${itemToRemove.id}_${itemToRemove.barcode || ''}`;
+            await window.universalCart.removeItem(itemKey);
+        }
+    } catch (error) {
+        console.error('Error removing from cart:', error);
+    }
+}
+
+/**
+ * Execute cart action (add items to project/booking)
  * @param {Object} options - Action options
- * @returns {Promise<boolean>}
  */
 async function executeCartAction(options = {}) {
     try {
-        const cart = await getCartInstance();
-        if (!cart) {
-            throw new Error('Cart not available');
+        // Check if Universal Cart is available
+        if (!window.universalCart) {
+            console.error('[CartIntegration] Universal Cart not available');
+            showToast('Корзина не загружена', 'danger');
+            return false;
         }
 
-        if (cart.isEmpty()) {
+        const cart = window.universalCart;
+        const items = cart.getItems();
+
+        if (items.length === 0) {
             showToast('Корзина пуста', 'warning');
             return false;
         }
 
-        // Get project data
+        // Get project and booking data
         const projectData = getProjectDataFromPage();
-        if (!projectData.clientId) {
-            showToast('Не найден клиент проекта', 'danger');
-            return false;
-        }
-
-        // Get booking dates
         const bookingDates = getBookingDatesFromPage();
-        if (!bookingDates.startDate || !bookingDates.endDate) {
-            showToast('Укажите даты бронирования', 'warning');
+
+        if (!projectData.projectId) {
+            showToast('Не удалось найти ID проекта', 'danger');
             return false;
         }
 
-        // Prepare action configuration
+        // Execute cart action using cart's executeAction method
         const actionConfig = {
-            type: 'equipment_add',
+            type: 'add_to_project',
             projectId: projectData.projectId,
             clientId: projectData.clientId,
             startDate: bookingDates.startDate,
             endDate: bookingDates.endDate,
-            showProgress: true,
-            validateAvailability: true,
             ...options
         };
 
-        // Show confirmation dialog
-        const itemCount = cart.getItemCount();
-        const confirmed = await cart.ui.showConfirmDialog({
-            title: 'Создание бронирований',
-            message: `Создать ${itemCount} бронирований в проекте?`,
-            confirmText: 'Создать',
-            cancelText: 'Отмена',
-            type: 'primary'
-        });
-
-        if (!confirmed) {
-            return false;
-        }
-
-        // Execute action
         const result = await cart.executeAction(actionConfig);
 
         if (result.success) {
-            showToast(`Создано ${result.createdCount} бронирований`, 'success');
+            showToast(`Успешно добавлено ${result.processedItems} позиций в проект`, 'success');
 
-            // Handle failed bookings
-            if (result.failedCount > 0) {
-                showToast(`${result.failedCount} позиций не удалось добавить`, 'warning');
-                console.warn('Failed bookings:', result.failedBookings);
-            }
+            // Clear cart after successful action
+            await cart.clear();
 
-            // Refresh project data
-            if (typeof refreshProjectData === 'function') {
-                await refreshProjectData();
-            }
-
-            // Reset search selection
-            clearSearchSelection();
+            // Reload page to show updated equipment list
+            setTimeout(() => {
+                window.location.reload();
+            }, 1000);
 
             return true;
         } else {
-            showToast(result.error || 'Ошибка при создании бронирований', 'danger');
+            showToast(`Ошибка: ${result.error}`, 'danger');
             return false;
         }
 
     } catch (error) {
-        console.error('[CartIntegration] Action execution failed:', error);
-        showToast('Ошибка при выполнении операции', 'danger');
+        console.error('[CartIntegration] Execute action failed:', error);
+        showToast('Ошибка выполнения действия', 'danger');
         return false;
     }
 }
