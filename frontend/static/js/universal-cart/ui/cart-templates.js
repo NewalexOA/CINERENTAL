@@ -19,13 +19,67 @@ class CartTemplates {
      * @returns {string}
      */
     getCartTemplate() {
+        // Return template based on render mode
+        if (this.config.compactView) {
+            return this.getCompactCartTemplate();
+        }
+        return this.getFullCartTemplate();
+    }
+
+    /**
+     * Compact cart container template
+     * @returns {string}
+     */
+    getCompactCartTemplate() {
+        return `
+            <div class="cart-panel-compact bg-white shadow border rounded">
+                <div class="cart-header border-bottom p-2">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h6 class="mb-0">
+                            <i class="fas fa-shopping-cart me-2"></i>
+                            ${this.config.text?.title || 'Корзина'}
+                        </h6>
+                        <button type="button" class="btn-close btn-sm cart-close" aria-label="Закрыть"></button>
+                    </div>
+                </div>
+
+                <div class="cart-body">
+                    <div class="cart-items-list"></div>
+                    ${this.config.showAdvancedControls ? '<div class="cart-summary p-2 border-top"></div>' : ''}
+                </div>
+
+                ${this.config.showAdvancedControls ? `
+                <div class="cart-footer border-top p-2">
+                    <div class="d-grid gap-1">
+                        <button type="button" class="btn btn-primary btn-sm cart-action-primary">
+                            <i class="fas fa-plus me-2"></i>
+                            ${this.config.text?.addButton || 'Добавить'}
+                        </button>
+                        <div class="btn-group btn-group-sm" role="group">
+                            <button type="button" class="btn btn-outline-secondary cart-clear">
+                                <i class="fas fa-trash me-2"></i>
+                                Очистить
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                ` : ''}
+            </div>
+        `;
+    }
+
+    /**
+     * Full cart container template (renamed from getCartTemplate)
+     * @returns {string}
+     */
+    getFullCartTemplate() {
         return `
             <div class="cart-panel bg-white shadow-lg border rounded">
                 <div class="cart-header border-bottom p-3">
                     <div class="d-flex justify-content-between align-items-center">
                         <h5 class="mb-0">
                             <i class="fas fa-shopping-cart me-2"></i>
-                            Корзина оборудования
+                            ${this.config.text?.title || 'Корзина оборудования'}
                         </h5>
                         <button type="button" class="btn-close cart-close" aria-label="Закрыть"></button>
                     </div>
@@ -40,7 +94,7 @@ class CartTemplates {
                     <div class="d-grid gap-2">
                         <button type="button" class="btn btn-primary cart-action-primary">
                             <i class="fas fa-plus me-2"></i>
-                            Добавить в проект
+                            ${this.config.text?.addButton || 'Добавить в проект'}
                         </button>
                         <div class="btn-group" role="group">
                             <button type="button" class="btn btn-outline-secondary cart-clear">
@@ -55,6 +109,106 @@ class CartTemplates {
                     </div>
                 </div>
             </div>
+        `;
+    }
+
+    /**
+     * Table container template for table render mode
+     * @returns {string}
+     */
+    getTableTemplate() {
+        const tableClasses = [
+            'table',
+            this.config.tableSettings?.hover ? 'table-hover' : '',
+            this.config.tableSettings?.striped ? 'table-striped' : '',
+            'table-sm'
+        ].filter(Boolean).join(' ');
+
+        const responsive = this.config.tableSettings?.responsive ? 'table-responsive' : '';
+
+        return `
+            <div class="${responsive}">
+                <table class="${tableClasses}">
+                    ${this.config.tableSettings?.showHeader ? this.getTableHeaderTemplate() : ''}
+                    <tbody class="table-body">
+                        <!-- Table rows will be inserted here -->
+                    </tbody>
+                </table>
+            </div>
+        `;
+    }
+
+    /**
+     * Table header template
+     * @returns {string}
+     */
+    getTableHeaderTemplate() {
+        return `
+            <thead>
+                <tr>
+                    <th>Оборудование</th>
+                    <th>Категория</th>
+                    <th>Период</th>
+                    <th class="text-center" style="width: 70px;">Кол-во</th>
+                    <th class="text-center" style="width: 120px;">Действия</th>
+                </tr>
+            </thead>
+        `;
+    }
+
+    /**
+     * Table row template for equipment items
+     * @returns {string}
+     */
+    getTableRowTemplate() {
+        return `
+            <tr data-item-key="{{itemKey}}" data-booking-id="{{itemKey}}" data-has-serial-number="{{hasSerial}}" data-equipment-id="{{id}}">
+                <td>
+                    <div>{{#id}}<a href="/equipment/{{id}}">{{name}}</a>{{/id}}{{^id}}{{name}}{{/id}}{{#quantityMultiple}} (x{{quantity}}){{/quantityMultiple}}</div>
+                    <small class="text-muted"><i class="fas fa-barcode me-1"></i>{{barcode}}</small>
+                    {{#serial_number}}
+                    <small class="text-muted d-block">S/N: {{serial_number}}</small>
+                    {{/serial_number}}
+                </td>
+                <td>
+                    <div>{{category}}</div>
+                </td>
+                <td>
+                    <input type="text" class="form-control form-control-sm booking-period-input"
+                           data-item-id="{{id}}"
+                           value="{{periodDisplay}}"
+                           placeholder="ДД.ММ.ГГГГ ЧЧ:ММ - ДД.ММ.ГГГГ ЧЧ:ММ">
+                </td>
+                <td class="text-center quantity" style="width: 70px;">
+                    {{quantity}}
+                </td>
+                <td class="text-center" style="width: 120px;">
+                    {{#hasSerial}}
+                    <div class="btn-group btn-group-sm" role="group">
+                        <button class="btn btn-outline-danger remove-booking-btn cart-item-remove" title="Удалить">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    {{/hasSerial}}
+                    {{#noSerial}}
+                    <div class="btn-group btn-group-sm" role="group">
+                        <button class="btn btn-outline-secondary quantity-increase-btn quantity-increase" title="Увеличить кол-во">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                        {{#quantityMultiple}}
+                        <button class="btn btn-outline-secondary quantity-decrease-btn quantity-decrease" title="Уменьшить кол-во">
+                            <i class="fas fa-minus"></i>
+                        </button>
+                        {{/quantityMultiple}}
+                        {{#quantityOne}}
+                        <button class="btn btn-outline-danger remove-booking-btn cart-item-remove" title="Удалить">
+                            <i class="fas fa-times"></i>
+                        </button>
+                        {{/quantityOne}}
+                    </div>
+                    {{/noSerial}}
+                </td>
+            </tr>
         `;
     }
 
@@ -86,6 +240,17 @@ class CartTemplates {
                             <i class="fas fa-ruble-sign me-1"></i>{{replacement_cost}} ₽
                         </div>
                         {{/replacement_cost}}
+                        <!-- Custom dates display -->
+                        <div class="cart-item-dates mt-2">
+                            <div class="date-display {{#use_project_dates}}project-dates{{/use_project_dates}}{{#custom_dates}}custom-dates{{/custom_dates}}"
+                                 data-item-key="{{itemKey}}"
+                                 style="cursor: pointer;"
+                                 title="Кликните для изменения дат">
+                                <i class="fas fa-calendar-alt me-1"></i>
+                                <span class="dates-text">{{dates_display}}</span>
+                                <i class="fas fa-edit ms-1 text-muted edit-icon" style="font-size: 0.75em;"></i>
+                            </div>
+                        </div>
                     </div>
                     <div class="cart-item-controls d-flex align-items-center ms-3">
                         {{#hasSerial}}
@@ -296,22 +461,79 @@ class CartTemplates {
      * @returns {string}
      */
     processTemplate(template, data) {
-        let result = template;
-
-        // Handle conditionals first
-        const conditionals = this._extractConditionals(template);
-
-        conditionals.forEach(conditional => {
-            const { tag, content } = conditional;
-            const pattern = new RegExp(`\\{\\{#${tag}\\}\\}(.*?)\\{\\{\\/${tag}\\}\\}`, 'gs');
-
-            result = result.replace(pattern, data[tag] ? content : '');
+        console.log('[CartTemplates] processTemplate() called:', {
+            templateLength: template.length,
+            templatePreview: template.substring(0, 200) + '...',
+            dataKeys: Object.keys(data),
+            data: data
         });
 
-        // Handle simple value replacements
-        Object.keys(data).forEach(key => {
-            const pattern = new RegExp(`\\{\\{${key}\\}\\}`, 'g');
-            result = result.replace(pattern, data[key] || '');
+        let result = template;
+        let iteration = 0;
+        const maxIterations = 10; // Защита от бесконечного цикла
+
+        // Итеративная обработка для поддержки вложенных условий
+        while (result.includes('{{') && iteration < maxIterations) {
+            iteration++;
+            const previousResult = result;
+
+            // Handle regular conditionals
+            const conditionals = this._extractConditionals(result);
+            if (iteration === 1) {
+                console.log('[CartTemplates] Regular conditionals found:', conditionals.length, conditionals.map(c => c.tag));
+            }
+
+            conditionals.forEach(conditional => {
+                const { tag, content } = conditional;
+                const pattern = new RegExp(`\\{\\{#${tag}\\}\\}(.*?)\\{\\{\\/${tag}\\}\\}`, 'gs');
+                result = result.replace(pattern, data[tag] ? content : '');
+            });
+
+            // Handle inverted conditionals {{^tag}}...{{/tag}}
+            const invertedConditionals = this._extractInvertedConditionals(result);
+            if (iteration === 1) {
+                console.log('[CartTemplates] Inverted conditionals found:', invertedConditionals.length, invertedConditionals.map(c => c.tag));
+            }
+
+            invertedConditionals.forEach(conditional => {
+                const { tag, content } = conditional;
+                const pattern = new RegExp(`\\{\\{\\^${tag}\\}\\}(.*?)\\{\\{\\/${tag}\\}\\}`, 'gs');
+
+                const shouldShow = !data[tag];
+                if (iteration === 1) {
+                    console.log('[CartTemplates] Processing inverted conditional:', {
+                        tag,
+                        dataValue: data[tag],
+                        shouldShow,
+                        contentPreview: content.substring(0, 50) + '...'
+                    });
+                }
+
+                result = result.replace(pattern, shouldShow ? content : '');
+            });
+
+            // Handle simple value replacements
+            Object.keys(data).forEach(key => {
+                const pattern = new RegExp(`\\{\\{${key}\\}\\}`, 'g');
+                result = result.replace(pattern, data[key] || '');
+            });
+
+            // Если результат не изменился, выходим из цикла
+            if (result === previousResult) {
+                break;
+            }
+
+            console.log(`[CartTemplates] Iteration ${iteration} complete:`, {
+                hasUnprocessedTags: result.includes('{{'),
+                resultLength: result.length
+            });
+        }
+
+        console.log('[CartTemplates] Template processing complete:', {
+            originalLength: template.length,
+            resultLength: result.length,
+            hasUnprocessedTags: result.includes('{{'),
+            iterations: iteration
         });
 
         return result;
@@ -326,6 +548,27 @@ class CartTemplates {
     _extractConditionals(template) {
         const conditionals = [];
         const pattern = /\{\{#(\w+)\}\}(.*?)\{\{\/\1\}\}/gs;
+        let match;
+
+        while ((match = pattern.exec(template)) !== null) {
+            conditionals.push({
+                tag: match[1],
+                content: match[2]
+            });
+        }
+
+        return conditionals;
+    }
+
+    /**
+     * Extract inverted conditional blocks from template
+     * @param {string} template - Template string
+     * @returns {Array}
+     * @private
+     */
+    _extractInvertedConditionals(template) {
+        const conditionals = [];
+        const pattern = /\{\{\^(\w+)\}\}(.*?)\{\{\/\1\}\}/gs;
         let match;
 
         while ((match = pattern.exec(template)) !== null) {
