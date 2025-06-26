@@ -203,11 +203,24 @@ export async function addEquipmentBatchToProject(items) {
     // Process each item
     for (const item of items) {
         try {
+            // Determine dates to use for this item
+            let startDate, endDate;
+
+            if (item.use_project_dates === false && item.custom_start_date && item.custom_end_date) {
+                // Use custom dates if available and not explicitly using project dates
+                startDate = item.custom_start_date;
+                endDate = item.custom_end_date;
+            } else {
+                // Use project dates as fallback
+                startDate = getCurrentProjectStartDate();
+                endDate = getCurrentProjectEndDate();
+            }
+
             const bookingData = {
                 equipment_id: item.id,
                 quantity: item.quantity || 1,
-                start_date: getCurrentProjectStartDate(),
-                end_date: getCurrentProjectEndDate(),
+                start_date: startDate,
+                end_date: endDate,
                 total_amount: item.total_amount || 0.0,
                 _skipRefresh: true
             };

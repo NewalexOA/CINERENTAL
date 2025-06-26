@@ -252,7 +252,24 @@ async function addScannedEquipmentToCart(equipment) {
                 console.error('ADD_EQUIPMENT_CONFIG not loaded yet');
                 return false;
             }
-            window.universalCart = new UniversalCart(ADD_EQUIPMENT_CONFIG);
+
+            // Create table-mode cart configuration
+            const tableConfig = {
+                ...ADD_EQUIPMENT_CONFIG,
+                // Switch to table mode like "Оборудование в проекте"
+                renderMode: 'table',
+                compactView: true,
+                showAdvancedControls: false,
+                tableSettings: {
+                    showHeader: true,
+                    sortable: false,
+                    striped: true,
+                    hover: true,
+                    responsive: true
+                }
+            };
+
+            window.universalCart = new UniversalCart(tableConfig);
         }
 
         const cart = window.universalCart;
