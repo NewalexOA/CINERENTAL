@@ -57,11 +57,11 @@ class UniversalCart {
             // Initialize UI if available
             if (typeof CartUI !== 'undefined') {
                 this.ui = new CartUI(this);
+                await this.ui.init();
             }
 
             this.isInitialized = true;
             this._emit('initialized', { config: this.config });
-
             if (this.config.debug) {
                 console.log('[UniversalCart] Initialized successfully');
             }
@@ -114,6 +114,16 @@ class UniversalCart {
             // Auto-save if enabled
             if (this.config.autoSave) {
                 await this._saveToStorage();
+            }
+
+            // Update UI if available
+            if (this.ui) {
+                this.ui.render();
+
+                // Auto-show cart if configured and not yet visible
+                if (this.config.autoShowOnAdd && !this.ui.isVisible) {
+                    this.ui.show();
+                }
             }
 
             return true;

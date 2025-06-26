@@ -188,6 +188,83 @@ const TRANSFER_EQUIPMENT_CONFIG = {
 };
 
 /**
+ * Configuration for project page
+ * Used when adding equipment to projects through search or scanner
+ */
+const PROJECT_VIEW_CONFIG = {
+    type: 'project_view',
+    name: 'Добавить в проект',
+    description: 'Корзина для добавления оборудования в проект',
+
+    // Capacity settings
+    maxItems: 50,
+    maxQuantityPerItem: 10,
+
+    // Storage settings
+    enableStorage: true,
+    autoSave: true,
+    storageKey: 'act_rental_project_cart',
+
+    // UI settings
+    showQuantityControls: true,
+    showRemoveButtons: true,
+    showClearButton: true,
+    showToggleButton: false,  // No toggle button in embedded mode
+
+    // Behavior settings
+    allowDuplicates: false,
+    autoShowOnAdd: true,      // Automatically show cart when item is added
+    hideOnEmpty: false,       // TEMPORARILY DISABLED: Hide cart when empty - show only after adding items
+    confirmBeforeClear: true,
+
+    // Debug settings
+    debug: true,              // Enable debug for troubleshooting
+
+    // Validation rules
+    validation: {
+        required: ['id', 'name'],
+        unique: 'id',
+        maxQuantity: 10
+    },
+
+    // UI text customization
+    text: {
+        title: 'Корзина оборудования',
+        emptyMessage: 'Корзина пуста. Добавьте оборудование из поиска или сканера.',
+        addButton: 'Добавить в проект',
+        clearButton: 'Очистить корзину',
+        removeButton: 'Удалить',
+        quantityLabel: 'Количество',
+        totalLabel: 'Всего позиций'
+    },
+
+    // Embedded UI settings
+    ui: {
+        embedded: true,                    // Use embedded mode
+        containerId: 'universalCartContainer',
+        contentId: 'cartContent'
+    },
+
+    // Feature flags
+    features: {
+        barcode: true,
+        scanner: true,
+        search: true,
+        categories: true,
+        bulk: true
+    },
+
+    // Action callbacks
+    callbacks: {
+        onAdd: null,
+        onRemove: null,
+        onClear: null,
+        onQuantityChange: null,
+        onSubmit: null
+    }
+};
+
+/**
  * Factory function to create cart configuration
  * @param {string} type - Cart type ('equipment_add', 'equipment_return', 'equipment_transfer')
  * @param {Object} overrides - Configuration overrides
@@ -205,6 +282,9 @@ function createCartConfig(type, overrides = {}) {
             break;
         case 'equipment_transfer':
             baseConfig = TRANSFER_EQUIPMENT_CONFIG;
+            break;
+        case 'project_view':
+            baseConfig = PROJECT_VIEW_CONFIG;
             break;
         default:
             throw new Error(`Unknown cart type: ${type}`);
@@ -267,7 +347,8 @@ function getAllCartConfigs() {
     return {
         ADD_EQUIPMENT_CONFIG,
         RETURN_EQUIPMENT_CONFIG,
-        TRANSFER_EQUIPMENT_CONFIG
+        TRANSFER_EQUIPMENT_CONFIG,
+        PROJECT_VIEW_CONFIG
     };
 }
 
@@ -276,6 +357,7 @@ if (typeof window !== 'undefined') {
     window.ADD_EQUIPMENT_CONFIG = ADD_EQUIPMENT_CONFIG;
     window.RETURN_EQUIPMENT_CONFIG = RETURN_EQUIPMENT_CONFIG;
     window.TRANSFER_EQUIPMENT_CONFIG = TRANSFER_EQUIPMENT_CONFIG;
+    window.PROJECT_VIEW_CONFIG = PROJECT_VIEW_CONFIG;
     window.createCartConfig = createCartConfig;
     window.validateCartConfig = validateCartConfig;
     window.getAllCartConfigs = getAllCartConfigs;
@@ -287,6 +369,7 @@ if (typeof module !== 'undefined' && module.exports) {
         ADD_EQUIPMENT_CONFIG,
         RETURN_EQUIPMENT_CONFIG,
         TRANSFER_EQUIPMENT_CONFIG,
+        PROJECT_VIEW_CONFIG,
         createCartConfig,
         validateCartConfig,
         getAllCartConfigs

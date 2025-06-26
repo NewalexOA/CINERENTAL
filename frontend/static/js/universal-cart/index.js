@@ -97,11 +97,30 @@
     /**
      * Initialize Universal Cart when DOM is ready
      */
-    function initialize() {
+    function initialize(cartType = 'add_equipment') {
         if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', loadUniversalCart);
+            document.addEventListener('DOMContentLoaded', () => {
+                loadUniversalCart().then(() => initializeCart(cartType));
+            });
         } else {
-            loadUniversalCart();
+            loadUniversalCart().then(() => initializeCart(cartType));
+        }
+    }
+
+    /**
+     * Initialize cart with specific type
+     */
+    function initializeCart(cartType) {
+        try {
+            if (typeof createCartConfig === 'function') {
+                const config = createCartConfig(cartType);
+                window.universalCart = new UniversalCart(config);
+                console.log(`Universal Cart initialized with type: ${cartType}`);
+            } else {
+                console.error('createCartConfig function not found');
+            }
+        } catch (error) {
+            console.error('Failed to initialize Universal Cart:', error);
         }
     }
 
@@ -113,7 +132,17 @@
             isLoaded: false
         };
 
-        initialize();
+        // Auto-detect cart type based on page
+        let cartType = 'add_equipment'; // default
+
+        // Check if we're on project view page
+        if (window.location.pathname.includes('/projects/') &&
+            window.location.pathname.match(/\/projects\/\d+$/)) {
+            cartType = 'project_view';
+        }
+        // Add other page type detection here as needed
+
+        initialize(cartType);
     }
 
 })();
