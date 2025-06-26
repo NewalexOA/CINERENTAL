@@ -169,7 +169,8 @@ window.addCartToProject = async function() {
                     quantity: item.quantity || 1,
                     start_date: getCurrentProjectStartDate(),
                     end_date: getCurrentProjectEndDate(),
-                    total_amount: item.total_amount || 0.0
+                    total_amount: item.total_amount || 0.0,
+                    _skipRefresh: true // Пропускаем индивидуальное обновление UI
                 };
 
                 // Добавляем в проект с использованием обновленной функции
@@ -186,6 +187,12 @@ window.addCartToProject = async function() {
                 errors.push(`${item.name || item.id}: ${error.message}`);
                 console.error(`Ошибка при добавлении позиции ${item.id}:`, error);
             }
+        }
+
+        // Обновляем UI один раз после всех операций
+        if (successCount > 0) {
+            showToast('Обновление списка оборудования...', 'info');
+            await refreshProjectData();
         }
 
         // Показываем итоговое уведомление
@@ -277,9 +284,9 @@ async function addEquipmentToProject(bookingData) {
 
         let result;
 
-        if (existingBooking) {
+                if (existingBooking) {
             // Оборудование уже есть в проекте с теми же датами - увеличиваем количество
-            showToast('Увеличение количества существующего оборудования...', 'info');
+            console.log('Увеличение количества существующего оборудования:', existingBooking.equipment_name);
 
             const newQuantity = existingBooking.quantity + quantityToAdd;
 
@@ -288,9 +295,9 @@ async function addEquipmentToProject(bookingData) {
                 quantity: newQuantity
             });
 
-            // Показываем уведомление об успехе
+            // Логируем успех без показа toast (будет показан итоговый toast)
             const equipmentName = existingBooking.equipment_name || `Оборудование ${bookingData.equipment_id}`;
-            showToast(`Количество "${equipmentName}" увеличено до ${newQuantity}`, 'success');
+            console.log(`Количество "${equipmentName}" увеличено до ${newQuantity}`);
 
             result = {
                 success: true,
@@ -301,7 +308,7 @@ async function addEquipmentToProject(bookingData) {
 
         } else {
             // Оборудования нет в проекте или даты отличаются - создаем новое бронирование
-            showToast('Создание нового бронирования...', 'info');
+            console.log('Создание нового бронирования для оборудования:', bookingData.equipment_id);
 
             // Подготавливаем данные для создания бронирования (БЕЗ project_id)
             const bookingPayload = {
@@ -322,7 +329,7 @@ async function addEquipmentToProject(bookingData) {
             }
 
             // Шаг 2: Добавляем бронирование в проект
-            showToast('Добавление бронирования в проект...', 'info');
+            console.log('Добавление бронирования в проект:', bookingResponse.id);
             const projectResponse = await api.post(`/projects/${projectId}/bookings/${bookingResponse.id}`);
 
             // Проверяем успешность добавления в проект
@@ -330,9 +337,9 @@ async function addEquipmentToProject(bookingData) {
                 throw new Error('Ошибка при добавлении бронирования в проект');
             }
 
-            // Показываем уведомление об успехе
+            // Логируем успех без показа toast (будет показан итоговый toast)
             const equipmentName = bookingResponse.equipment_name || `Оборудование ${bookingData.equipment_id}`;
-            showToast(`Оборудование "${equipmentName}" успешно добавлено в проект`, 'success');
+            console.log(`Оборудование "${equipmentName}" успешно добавлено в проект`);
 
             result = {
                 success: true,
@@ -343,9 +350,11 @@ async function addEquipmentToProject(bookingData) {
             };
         }
 
-        // Обновляем данные проекта и UI после изменений
-        showToast('Обновление списка оборудования...', 'info');
-        await refreshProjectData();
+        // Обновляем данные проекта и UI после изменений (только при индивидуальном добавлении)
+        if (!bookingData._skipRefresh) {
+            showToast('Обновление списка оборудования...', 'info');
+            await refreshProjectData();
+        }
 
         return result;
 
