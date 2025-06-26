@@ -149,7 +149,16 @@ class CartEventHandler {
      * @private
      */
     _handleCloseClick() {
-        this.cartUI.hide();
+        // In embedded mode, close button should only minimize/collapse, not completely hide
+        if (this.cartUI.isEmbedded) {
+            console.log('[CartEventHandler] Close button clicked in embedded mode - minimizing cart');
+            // For embedded mode, we could implement a minimize/collapse feature
+            // For now, just keep it visible since it's part of the page flow
+            return;
+        } else {
+            console.log('[CartEventHandler] Close button clicked in floating mode - hiding cart');
+            this.cartUI.hide();
+        }
     }
 
     /**
@@ -158,11 +167,14 @@ class CartEventHandler {
      * @private
      */
     _handleOutsideClick(e) {
+        // Only handle outside clicks for floating mode, not embedded mode
         if (this.cartUI.isVisible &&
+            !this.cartUI.isEmbedded && // Don't hide embedded carts on outside click
             this.container &&
             !this.container.contains(e.target) &&
             e.target !== this.toggleButton &&
             !this.toggleButton?.contains(e.target)) {
+            console.log('[CartEventHandler] Hiding cart due to outside click (floating mode)');
             this.cartUI.hide();
         }
     }
@@ -173,7 +185,9 @@ class CartEventHandler {
      * @private
      */
     _handleKeyDown(e) {
-        if (e.key === 'Escape' && this.cartUI.isVisible) {
+        // Only handle Escape key for floating mode, not embedded mode
+        if (e.key === 'Escape' && this.cartUI.isVisible && !this.cartUI.isEmbedded) {
+            console.log('[CartEventHandler] Hiding cart due to Escape key (floating mode)');
             this.cartUI.hide();
         }
     }
