@@ -29,6 +29,9 @@
             'config/cart-configs.js',
             'integration/cart-integration.js',
 
+            // Factory functions for different modes
+            'utils/cart-factory.js',
+
             // Main UI coordinator (last)
             'cart-ui.js'
         ],
@@ -113,9 +116,27 @@
     function initializeCart(cartType) {
         try {
             if (typeof createCartConfig === 'function') {
-                const config = createCartConfig(cartType);
+                let config = createCartConfig(cartType);
+
+                // Force table mode for project view (like "Оборудование в проекте")
+                if (cartType === 'project_view') {
+                    config = {
+                        ...config,
+                        renderMode: 'table',
+                        compactView: true,
+                        showAdvancedControls: false,
+                        tableSettings: {
+                            showHeader: true,
+                            sortable: false,
+                            striped: true,
+                            hover: true,
+                            responsive: true
+                        }
+                    };
+                }
+
                 window.universalCart = new UniversalCart(config);
-                console.log(`Universal Cart initialized with type: ${cartType}`);
+                console.log(`Universal Cart initialized with type: ${cartType} (render mode: ${config.renderMode})`);
             } else {
                 console.error('createCartConfig function not found');
             }
