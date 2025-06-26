@@ -156,6 +156,36 @@
     </div>
 </div>
 
+<!-- Universal Cart Container -->
+<div class="card mb-4 universal-cart-hidden" id="universalCartContainer">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="card-title mb-0">
+            <i class="fas fa-shopping-cart me-2"></i>
+            Корзина оборудования
+        </h5>
+        <div class="d-flex align-items-center">
+            <span class="badge bg-primary me-3" id="cartItemCount">0 позиций</span>
+            <button class="btn-close" id="closeCartBtn" title="Скрыть корзину"></button>
+        </div>
+    </div>
+    <div class="card-body">
+        <!-- Cart content will be inserted here -->
+        <div id="cartContent">
+            <!-- Universal Cart will be inserted here -->
+        </div>
+        <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-3">
+            <button type="button" class="btn btn-outline-secondary" id="clearCartBtn">
+                <i class="fas fa-trash me-1"></i>
+                Очистить корзину
+            </button>
+            <button type="button" class="btn btn-primary" id="addCartToProjectBtn">
+                <i class="fas fa-plus me-1"></i>
+                Добавить в проект
+            </button>
+        </div>
+    </div>
+</div>
+
         <!-- Equipment List -->
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
