@@ -56,7 +56,7 @@ class UniversalCart {
 
             // Initialize UI if available
             if (typeof CartUI !== 'undefined') {
-                this.ui = new CartUI(this);
+                this.ui = new CartUI(this, this.config);
                 await this.ui.init();
             }
 
@@ -237,6 +237,59 @@ class UniversalCart {
     }
 
     /**
+     * Update item dates
+     * @param {string} itemKey - Item key
+     * @param {string|null} startDate - Start date (ISO format) or null for project dates
+     * @param {string|null} endDate - End date (ISO format) or null for project dates
+     * @returns {boolean}
+     */
+    async updateItemDates(itemKey, startDate, endDate) {
+        try {
+            if (!this.items.has(itemKey)) {
+                return false;
+            }
+
+            const item = this.items.get(itemKey);
+
+            // Update date fields
+            if (startDate && endDate) {
+                item.custom_start_date = startDate;
+                item.custom_end_date = endDate;
+                item.use_project_dates = false;
+            } else {
+                // Reset to project dates
+                item.custom_start_date = null;
+                item.custom_end_date = null;
+                item.use_project_dates = true;
+            }
+
+            this._emit('itemDatesUpdated', {
+                key: itemKey,
+                item,
+                startDate,
+                endDate,
+                useProjectDates: item.use_project_dates
+            });
+
+            if (this.config.autoSave) {
+                await this._saveToStorage();
+            }
+
+            // Update UI if available
+            if (this.ui) {
+                this.ui.render();
+            }
+
+            return true;
+
+        } catch (error) {
+            console.error('[UniversalCart] Failed to update item dates:', error);
+            this._emit('error', { operation: 'updateItemDates', error, itemKey, startDate, endDate });
+            return false;
+        }
+    }
+
+    /**
      * Clear cart
      * @returns {Promise<boolean>}
      */
@@ -297,6 +350,10 @@ class UniversalCart {
             quantity: item.quantity || 1,
             is_unique: item.is_unique || false,
             added_at: new Date().toISOString(),
+            // Custom dates support
+            custom_start_date: item.custom_start_date || null,
+            custom_end_date: item.custom_end_date || null,
+            use_project_dates: item.use_project_dates !== false, // default true
             ...item
         };
     }
@@ -586,11 +643,26 @@ class UniversalCart {
      */
     async _prepareBookingsData(config) {
         const items = this.getItems();
-        const rentalDuration = this._calculateDays(config.startDate, config.endDate);
 
         return items.map(item => {
             const quantity = item.quantity || 1;
             const dailyRate = item.daily_rate || 0;
+
+            // Determine dates to use for this item
+            let startDate, endDate;
+
+            if (item.use_project_dates === false && item.custom_start_date && item.custom_end_date) {
+                // Use custom dates if available and explicitly not using project dates
+                startDate = item.custom_start_date;
+                endDate = item.custom_end_date;
+            } else {
+                // Use project dates as fallback
+                startDate = config.startDate;
+                endDate = config.endDate;
+            }
+
+            // Calculate duration for this specific booking
+            const rentalDuration = this._calculateDays(startDate, endDate);
 
             // Calculate total amount based on rental duration
             // For hourly rentals (< 1 day), use fractional day calculation
@@ -599,9 +671,9 @@ class UniversalCart {
 
             return {
                 client_id: config.clientId,
-                equipment_id: item.equipment_id,
-                start_date: config.startDate,
-                end_date: config.endDate,
+                equipment_id: item.equipment_id || item.id, // Support both field names
+                start_date: startDate,
+                end_date: endDate,
                 quantity: quantity,
                 total_amount: Math.round(totalAmount * 100) / 100 // Round to 2 decimal places
             };

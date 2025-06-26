@@ -30,6 +30,19 @@ const ADD_EQUIPMENT_CONFIG = {
     showRemoveButtons: true,
     showClearButton: true,
 
+    // Render mode settings
+    renderMode: 'cards', // 'cards' | 'table' | 'compact'
+    showAdvancedControls: true,
+    showCostInfo: true,
+    compactView: false,
+    tableSettings: {
+        showHeader: true,
+        sortable: false,
+        striped: true,
+        hover: true,
+        responsive: true
+    },
+
     // Behavior settings
     allowDuplicates: false, // Based on equipment ID
     autoShowOnAdd: true,
@@ -89,6 +102,19 @@ const RETURN_EQUIPMENT_CONFIG = {
     showQuantityControls: false, // No quantity changes for returns
     showRemoveButtons: true,
     showClearButton: true,
+
+    // Render mode settings
+    renderMode: 'table', // Table mode for compact returns display
+    showAdvancedControls: false,
+    showCostInfo: false,
+    compactView: true,
+    tableSettings: {
+        showHeader: true,
+        sortable: true,
+        striped: true,
+        hover: true,
+        responsive: true
+    },
 
     // Behavior settings
     allowDuplicates: false,
@@ -150,6 +176,19 @@ const TRANSFER_EQUIPMENT_CONFIG = {
     showRemoveButtons: true,
     showClearButton: true,
 
+    // Render mode settings
+    renderMode: 'compact', // Compact mode for transfers
+    showAdvancedControls: false,
+    showCostInfo: false,
+    compactView: true,
+    tableSettings: {
+        showHeader: false,
+        sortable: false,
+        striped: false,
+        hover: true,
+        responsive: true
+    },
+
     // Behavior settings
     allowDuplicates: false,
     autoShowOnAdd: true,
@@ -188,6 +227,79 @@ const TRANSFER_EQUIPMENT_CONFIG = {
 };
 
 /**
+ * Configuration for project equipment table view
+ * Used to display equipment already in project as a simple table
+ */
+const PROJECT_EQUIPMENT_TABLE_CONFIG = {
+    type: 'project_equipment_table',
+    name: 'Оборудование в проекте',
+    description: 'Табличное отображение оборудования в проекте',
+
+    // Capacity settings
+    maxItems: 200, // Projects can have many items
+    maxQuantityPerItem: 1, // Display only, no quantity changes
+
+    // Storage settings
+    enableStorage: false, // Read-only display, no storage needed
+    autoSave: false,
+    storageKey: null,
+
+    // UI settings
+    showQuantityControls: false, // Read-only display
+    showRemoveButtons: false,
+    showClearButton: false,
+
+    // Table mode optimized for project equipment display
+    renderMode: 'table',
+    showAdvancedControls: false,
+    showCostInfo: false,
+    compactView: true,
+    tableSettings: {
+        showHeader: true,
+        sortable: true,
+        striped: true,
+        hover: true,
+        responsive: true
+    },
+
+    // Behavior settings
+    allowDuplicates: true, // Allow display of all items
+    autoShowOnAdd: false,
+    hideOnEmpty: false,
+    confirmBeforeClear: false,
+
+    // Debug settings
+    debug: false,
+
+    // Validation rules
+    validation: {
+        required: ['id', 'name'],
+        unique: null, // No uniqueness required for display
+        maxQuantity: 1
+    },
+
+    // UI text customization
+    text: {
+        title: 'Оборудование в проекте',
+        emptyMessage: 'В проекте нет оборудования',
+        addButton: null, // No add button for display
+        clearButton: null,
+        removeButton: null,
+        quantityLabel: 'Кол-во',
+        totalLabel: 'Всего единиц'
+    },
+
+    // Action callbacks
+    callbacks: {
+        onAdd: null,
+        onRemove: null,
+        onClear: null,
+        onQuantityChange: null,
+        onSubmit: null
+    }
+};
+
+/**
  * Configuration for project page
  * Used when adding equipment to projects through search or scanner
  */
@@ -206,10 +318,23 @@ const PROJECT_VIEW_CONFIG = {
     storageKey: 'act_rental_project_cart',
 
     // UI settings
-    showQuantityControls: true,
-    showRemoveButtons: true,
+    showQuantityControls: false, // Only show badges, no quantity controls (like "Оборудование в проекте")
+    showRemoveButtons: true,     // Show actions column like in "Оборудование в проекте"
     showClearButton: true,
-    showToggleButton: false,  // No toggle button in embedded mode
+    showToggleButton: false,     // No toggle button in embedded mode
+
+    // Render mode settings - TABLE MODE like "Оборудование в проекте"
+    renderMode: 'table', // Table mode for consistent UI with equipment display
+    showAdvancedControls: false,
+    showCostInfo: false,
+    compactView: true,
+    tableSettings: {
+        showHeader: true,
+        sortable: false,
+        striped: true,
+        hover: true,
+        responsive: true
+    },
 
     // Behavior settings
     allowDuplicates: false,
@@ -286,6 +411,9 @@ function createCartConfig(type, overrides = {}) {
         case 'project_view':
             baseConfig = PROJECT_VIEW_CONFIG;
             break;
+        case 'project_equipment_table':
+            baseConfig = PROJECT_EQUIPMENT_TABLE_CONFIG;
+            break;
         default:
             throw new Error(`Unknown cart type: ${type}`);
     }
@@ -348,7 +476,8 @@ function getAllCartConfigs() {
         ADD_EQUIPMENT_CONFIG,
         RETURN_EQUIPMENT_CONFIG,
         TRANSFER_EQUIPMENT_CONFIG,
-        PROJECT_VIEW_CONFIG
+        PROJECT_VIEW_CONFIG,
+        PROJECT_EQUIPMENT_TABLE_CONFIG
     };
 }
 
@@ -358,6 +487,7 @@ if (typeof window !== 'undefined') {
     window.RETURN_EQUIPMENT_CONFIG = RETURN_EQUIPMENT_CONFIG;
     window.TRANSFER_EQUIPMENT_CONFIG = TRANSFER_EQUIPMENT_CONFIG;
     window.PROJECT_VIEW_CONFIG = PROJECT_VIEW_CONFIG;
+    window.PROJECT_EQUIPMENT_TABLE_CONFIG = PROJECT_EQUIPMENT_TABLE_CONFIG;
     window.createCartConfig = createCartConfig;
     window.validateCartConfig = validateCartConfig;
     window.getAllCartConfigs = getAllCartConfigs;
@@ -370,6 +500,7 @@ if (typeof module !== 'undefined' && module.exports) {
         RETURN_EQUIPMENT_CONFIG,
         TRANSFER_EQUIPMENT_CONFIG,
         PROJECT_VIEW_CONFIG,
+        PROJECT_EQUIPMENT_TABLE_CONFIG,
         createCartConfig,
         validateCartConfig,
         getAllCartConfigs

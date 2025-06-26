@@ -15,8 +15,14 @@ class CartUI {
      */
     constructor(cart, config = {}) {
         console.log('[CartUI] Constructor called with cart:', cart);
+        console.log('[CartUI] Constructor called with config:', config);
         this.cart = cart;
         this.config = this._mergeConfig(config);
+        console.log('[CartUI] Final merged config:', {
+            renderMode: this.config.renderMode,
+            showCostInfo: this.config.showCostInfo,
+            type: this.config.type
+        });
         this.isInitialized = false;
         this.isVisible = false;
         this.isEmbedded = false;  // Will be set during UI creation
@@ -69,7 +75,8 @@ class CartUI {
             maxItems: 50,
             enableNotifications: true,
             autoSave: true,
-            animations: true
+            animations: true,
+            renderMode: 'cards'  // Default rendering mode
         };
 
         return { ...defaultConfig, ...config };
@@ -307,11 +314,19 @@ class CartUI {
                 console.log('[CartUI] Cart content cleared (empty)');
             } else {
                 this.cartContent.className = '';
-                this.cartContent.innerHTML = this._renderEmbeddedItems(items);
-                console.log('[CartUI] Cart content updated with', items.length, 'items');
+                // Use renderer.updateItemsList to respect renderMode configuration
+                this.renderer.updateItemsList(this.cartContent);
+                console.log('[CartUI] Cart content updated with', items.length, 'items using renderer');
             }
         } else {
             console.error('[CartUI] cartContent element not found!');
+        }
+
+        // Setup event listeners for embedded items (including date clicks)
+        if (itemCount > 0) {
+            this._setupEmbeddedEventListeners();
+            // Also update action buttons after rendering
+            this.renderer.updateActionButtons(this.container);
         }
 
         // Show/hide cart container based on content
@@ -370,9 +385,13 @@ class CartUI {
         items.forEach(item => {
             const quantity = item.quantity || 1;
             const hasSerial = !!item.serial_number;
+            const itemKey = this.cart._generateItemKey(item);
+
+            // Get dates display using renderer logic
+            const datesInfo = this.renderer._getItemDatesDisplay(item);
 
             html += `
-                <div class="cart-item-embedded d-flex justify-content-between align-items-center" data-item-id="${item.id}">
+                <div class="cart-item-embedded d-flex justify-content-between align-items-center" data-item-id="${item.id}" data-item-key="${itemKey}">
                     <div class="flex-grow-1">
                         <div class="cart-item-name">${this._escapeHtml(item.name)}</div>
                         <div class="cart-item-details">
@@ -382,6 +401,17 @@ class CartUI {
                             </small>
                             <br>
                             <small class="text-muted">${this._escapeHtml(item.category || 'Без категории')}</small>
+                        </div>
+                        <!-- Custom dates display for embedded mode -->
+                        <div class="cart-item-dates mt-2">
+                            <div class="date-display ${datesInfo.useProjectDates ? 'project-dates' : ''}${datesInfo.customDates ? 'custom-dates' : ''}"
+                                 data-item-key="${itemKey}"
+                                 style="cursor: pointer; font-size: 0.75em;"
+                                 title="Кликните для изменения дат">
+                                <i class="fas fa-calendar-alt me-1"></i>
+                                <span class="dates-text">${datesInfo.display}</span>
+                                <i class="fas fa-edit ms-1 text-muted edit-icon" style="font-size: 0.7em;"></i>
+                            </div>
                         </div>
                     </div>
                     <div class="cart-item-controls">
@@ -406,6 +436,45 @@ class CartUI {
         });
 
         return html;
+    }
+
+    /**
+     * Setup event listeners for embedded mode items
+     * @private
+     */
+    _setupEmbeddedEventListeners() {
+        if (!this.cartContent) return;
+
+        // Remove previous listeners to avoid duplicates
+        const oldDateDisplays = this.cartContent.querySelectorAll('.date-display');
+        oldDateDisplays.forEach(element => {
+            element.removeEventListener('click', this._handleEmbeddedDateClick);
+        });
+
+        // Add click listeners to date displays
+        const dateDisplays = this.cartContent.querySelectorAll('.date-display');
+        dateDisplays.forEach(element => {
+            element.addEventListener('click', (e) => this._handleEmbeddedDateClick(e));
+        });
+
+        console.log('[CartUI] Embedded event listeners setup for', dateDisplays.length, 'date displays');
+    }
+
+    /**
+     * Handle date click in embedded mode
+     * @private
+     */
+    _handleEmbeddedDateClick(e) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        const dateDisplay = e.currentTarget;
+        const itemKey = dateDisplay.getAttribute('data-item-key');
+
+        if (itemKey && this.eventHandler) {
+            console.log('[CartUI] Date clicked for item:', itemKey);
+            this.eventHandler._handleDateEdit(itemKey);
+        }
     }
 
     /**
