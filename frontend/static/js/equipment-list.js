@@ -922,6 +922,12 @@ async function addToScanSession(equipmentId, name, barcode, serialNumber, catego
     const modal = document.getElementById('addToScanSessionModal');
     if (!modal) return;
 
+    // Get or create Bootstrap modal instance
+    let modalInstance = bootstrap.Modal.getInstance(modal);
+    if (!modalInstance) {
+        modalInstance = new bootstrap.Modal(modal);
+    }
+
     const loadingDiv = document.getElementById('addToSessionLoading');
     const contentDiv = document.getElementById('addToSessionContent');
     const noActiveMessage = document.getElementById('noActiveSessionMessage');
@@ -939,7 +945,6 @@ async function addToScanSession(equipmentId, name, barcode, serialNumber, catego
     document.getElementById('equipmentCategoryNameToAdd').value = categoryName || '';
 
     // Show modal and loading state
-    const modalInstance = new bootstrap.Modal(modal);
     modalInstance.show();
 
     loadingDiv.classList.remove('d-none');
@@ -1024,15 +1029,22 @@ function addEquipmentToSession(sessionId) {
         if (typeof showToast === 'function') {
             showToast(`Оборудование добавлено в сессию сканирования`, 'success');
         }
-
-        // Close modal
-        const modal = bootstrap.Modal.getInstance(document.getElementById('addToScanSessionModal'));
-        if (modal) modal.hide();
     } catch (error) {
         console.error('Error adding to session:', error);
         if (typeof showToast === 'function') {
             showToast('Ошибка при добавлении в сессию', 'danger');
         }
+    } finally {
+        // Ensure modal is always closed
+        const modalElement = document.getElementById('addToScanSessionModal');
+        const confirmBtn = document.getElementById('confirmAddToSession'); // Get the button that retains focus
+
+        if (confirmBtn) {
+            confirmBtn.blur(); // Explicitly remove focus from the button
+        }
+
+        const modal = bootstrap.Modal.getInstance(modalElement);
+        if (modal) modal.hide();
     }
 }
 
@@ -1202,6 +1214,13 @@ function initializeScanSessionModal() {
     const confirmAddBtn = document.getElementById('confirmAddToSession');
     if (confirmAddBtn) {
         confirmAddBtn.addEventListener('click', addEquipmentToActiveSession);
+    }
+
+    const modalElement = document.getElementById('addToScanSessionModal');
+    if (modalElement) {
+        modalElement.addEventListener('hidden.bs.modal', function () {
+            document.body.focus();
+        });
     }
 }
 
