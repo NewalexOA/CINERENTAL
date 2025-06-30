@@ -63,6 +63,9 @@ let currentFilters = {
 console.log('🚫 Disabling global equipment search for pagination page');
 window.disableGlobalEquipmentSearch = true;
 
+// Global variable to store the last focused element before opening the modal
+let lastFocusedElementBeforeModal = null;
+
 // Load categories for add form
 async function loadCategories() {
     const formSelect = document.querySelector('select[name="category_id"]');
@@ -944,6 +947,9 @@ async function addToScanSession(equipmentId, name, barcode, serialNumber, catego
     document.getElementById('equipmentCategoryIdToAdd').value = categoryId || '';
     document.getElementById('equipmentCategoryNameToAdd').value = categoryName || '';
 
+    // Save the currently focused element before showing the modal
+    lastFocusedElementBeforeModal = document.activeElement;
+
     // Show modal and loading state
     modalInstance.show();
 
@@ -954,6 +960,10 @@ async function addToScanSession(equipmentId, name, barcode, serialNumber, catego
         // Get equipment details first
         const equipment = await api.get(`/equipment/${equipmentId}`);
         equipmentNameSpan.textContent = equipment.name;
+        // Update hidden fields with accurate data from API response
+        document.getElementById('equipmentBarcodeToAdd').value = equipment.barcode || '';
+        document.getElementById('equipmentSerialNumberToAdd').value = equipment.serial_number || '';
+        document.getElementById('equipmentCategoryNameToAdd').value = equipment.category?.name || '';
 
         // Check for active session
         const activeSession = scanStorage.getActiveSession();
@@ -1025,9 +1035,18 @@ function addEquipmentToSession(sessionId) {
     };
 
     try {
-        scanStorage.addEquipment(sessionId, equipmentData);
+        const operationResult = scanStorage.addEquipment(sessionId, equipmentData);
+
         if (typeof showToast === 'function') {
-            showToast(`Оборудование добавлено в сессию сканирования`, 'success');
+            if (operationResult === 'item_added') {
+                showToast(`Оборудование "${equipmentData.name}" добавлено в сессию сканирования.`, 'success');
+            } else if (operationResult === 'quantity_incremented') {
+                showToast(`Количество оборудования "${equipmentData.name}" в сессии увеличено.`, 'info');
+            } else if (operationResult === 'duplicate_serial_exists') {
+                showToast(`Оборудование "${equipmentData.name}" с серийным номером "${equipmentData.serial_number}" уже есть в текущей сессии.`, 'warning');
+            } else {
+                showToast('Ошибка при добавлении в сессию: неизвестный результат операции.', 'danger');
+            }
         }
     } catch (error) {
         console.error('Error adding to session:', error);
@@ -1037,11 +1056,6 @@ function addEquipmentToSession(sessionId) {
     } finally {
         // Ensure modal is always closed
         const modalElement = document.getElementById('addToScanSessionModal');
-        const confirmBtn = document.getElementById('confirmAddToSession'); // Get the button that retains focus
-
-        if (confirmBtn) {
-            confirmBtn.blur(); // Explicitly remove focus from the button
-        }
 
         const modal = bootstrap.Modal.getInstance(modalElement);
         if (modal) modal.hide();
@@ -1218,8 +1232,23 @@ function initializeScanSessionModal() {
 
     const modalElement = document.getElementById('addToScanSessionModal');
     if (modalElement) {
+        // Move focus to body just before the modal starts hiding
+        modalElement.addEventListener('hide.bs.modal', function () {
+            // Remove focus from any element within the modal before it hides
+            if (document.activeElement && modalElement.contains(document.activeElement)) {
+                document.activeElement.blur();
+            }
+        });
+
+        // Restore focus to the element that had it before the modal was opened
         modalElement.addEventListener('hidden.bs.modal', function () {
-            document.body.focus();
+            if (lastFocusedElementBeforeModal && typeof lastFocusedElementBeforeModal.focus === 'function') {
+                lastFocusedElementBeforeModal.focus();
+            } else {
+                // Fallback to body focus if the original element is not available or not focusable
+                document.body.focus();
+            }
+            lastFocusedElementBeforeModal = null; // Clear the stored element
         });
     }
 }
