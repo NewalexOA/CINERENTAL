@@ -203,17 +203,40 @@ export async function addEquipmentBatchToProject(items) {
     // Process each item
     for (const item of items) {
         try {
+            // Debug: log item processing
+            console.log('[DEBUG] Processing cart item:', {
+                id: item.id,
+                name: item.name,
+                use_project_dates: item.use_project_dates,
+                custom_start_date: item.custom_start_date,
+                custom_end_date: item.custom_end_date,
+                start_date: item.start_date,
+                end_date: item.end_date
+            });
+
             // Determine dates to use for this item
             let startDate, endDate;
 
+            // Check for custom dates first
             if (item.use_project_dates === false && item.custom_start_date && item.custom_end_date) {
                 // Use custom dates if available and not explicitly using project dates
                 startDate = item.custom_start_date;
                 endDate = item.custom_end_date;
-            } else {
-                // Use project dates as fallback
-                startDate = getCurrentProjectStartDate();
-                endDate = getCurrentProjectEndDate();
+                console.log('[DEBUG] Using custom dates:', { startDate, endDate });
+            }
+            // Check for item-level dates (from cart initialization)
+            else if (item.start_date && item.end_date) {
+                startDate = item.start_date;
+                endDate = item.end_date;
+                console.log('[DEBUG] Using item dates:', { startDate, endDate });
+            }
+            // Fallback to project dates
+            else {
+                // Get project dates with proper time formatting
+                const projectDates = _getProjectDatesWithTime();
+                startDate = projectDates.start;
+                endDate = projectDates.end;
+                console.log('[DEBUG] Using project dates as fallback:', { startDate, endDate });
             }
 
             const bookingData = {
@@ -318,6 +341,60 @@ async function refreshEquipmentSearchResults() {
 
     } catch (error) {
         console.error('Equipment search refresh error:', error);
+    }
+}
+
+/**
+ * Get project dates with proper time formatting for bookings
+ * @returns {Object} Object with start and end dates in ISO format
+ * @private
+ */
+function _getProjectDatesWithTime() {
+    if (!window.projectData || !window.projectData.start_date || !window.projectData.end_date) {
+        // Fallback to default dates
+        return {
+            start: new Date().toISOString(),
+            end: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
+        };
+    }
+
+    // Parse project dates and ensure proper time formatting
+    let startDate, endDate;
+
+    if (typeof moment !== 'undefined') {
+        // Use moment for consistent parsing
+        startDate = moment(window.projectData.start_date);
+        endDate = moment(window.projectData.end_date);
+
+        // If dates don't have time, set appropriate default times
+        if (startDate.format('HH:mm') === '00:00') {
+            startDate = startDate.hour(0).minute(0);
+        }
+        if (endDate.format('HH:mm') === '00:00') {
+            endDate = endDate.hour(23).minute(59);
+        }
+
+        return {
+            start: startDate.format('YYYY-MM-DDTHH:mm:ss'),
+            end: endDate.format('YYYY-MM-DDTHH:mm:ss')
+        };
+    } else {
+        // Fallback to native Date
+        startDate = new Date(window.projectData.start_date);
+        endDate = new Date(window.projectData.end_date);
+
+        // If time is midnight, set appropriate default time
+        if (startDate.getHours() === 0 && startDate.getMinutes() === 0) {
+            startDate.setHours(0, 0);
+        }
+        if (endDate.getHours() === 0 && endDate.getMinutes() === 0) {
+            endDate.setHours(23, 59);
+        }
+
+        return {
+            start: startDate.toISOString(),
+            end: endDate.toISOString()
+        };
     }
 }
 

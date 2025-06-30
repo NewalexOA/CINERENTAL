@@ -86,6 +86,36 @@ class CartEventHandler {
             itemsList.addEventListener('click', this._handleItemControlClick);
             itemsList.addEventListener('change', this._handleItemInputChange);
         }
+
+        // Handle cart item date changes from daterangepicker
+        container.addEventListener('cartItemDateChanged', (event) => {
+            const { itemId, startDate, endDate } = event.detail;
+            console.log('[CartEventHandler] Date changed:', { itemId, startDate, endDate });
+
+            // Find cart item by ID (need to search through all items)
+            const items = this.cart.getItems();
+            const item = items.find(item => item.id == itemId);
+
+            if (item) {
+                // Generate item key to identify the item in the cart
+                const itemKey = item.is_unique && item.serial_number
+                    ? `${item.id}_${item.serial_number}`
+                    : `${item.id}`;
+
+                // Update item dates using existing method
+                this.cart.updateItemDates(itemKey, startDate, endDate);
+
+                console.log('[CartEventHandler] Item dates updated:', {
+                    itemId,
+                    itemKey,
+                    startDate,
+                    endDate,
+                    use_project_dates: false
+                });
+            } else {
+                console.warn('[CartEventHandler] Item not found for date update:', itemId);
+            }
+        });
     }
 
     /**
