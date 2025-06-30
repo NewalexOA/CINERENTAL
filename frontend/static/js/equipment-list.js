@@ -1020,7 +1020,7 @@ function addEquipmentToSession(sessionId) {
     };
 
     try {
-        scanStorage.addToSession(sessionId, equipmentData);
+        scanStorage.addEquipment(sessionId, equipmentData);
         if (typeof showToast === 'function') {
             showToast(`Оборудование добавлено в сессию сканирования`, 'success');
         }
@@ -1242,3 +1242,6 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log('📋 DOM ready, starting equipment page initialization');
     setupEventListeners();
 });
+
+// Export function globally for main.js integration
+window.addToScanSession = addToScanSession;
