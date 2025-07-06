@@ -16,6 +16,7 @@ from sqlalchemy.sql import Select
 from backend.exceptions import BusinessError
 from backend.models.booking import Booking, BookingStatus
 from backend.models.equipment import Equipment, EquipmentStatus
+from backend.models.project import Project
 from backend.repositories import BaseRepository
 
 T = TypeVar('T')
@@ -515,3 +516,122 @@ class EquipmentRepository(BaseRepository[Equipment]):
         stmt = stmt.order_by(Equipment.name)
 
         return stmt
+
+    def get_count_query(
+        self,
+        status: Optional[EquipmentStatus] = None,
+        category_id: Optional[int] = None,
+        category_ids: Optional[List[int]] = None,
+        query: Optional[str] = None,
+        available_from: Optional[datetime] = None,
+        available_to: Optional[datetime] = None,
+        include_deleted: bool = False,
+    ) -> Select:
+        """Get a count query for equipment with optional filtering and search.
+
+        This method is similar to get_paginatable_query but without ORDER BY
+        clause to avoid PostgreSQL GROUP BY issues when counting.
+
+        Args:
+            status: Filter by equipment status
+            category_id: Filter by category ID (deprecated, use category_ids)
+            category_ids: Filter by list of category IDs (includes subcategories)
+            query: Search query
+            available_from: Filter by availability start date
+            available_to: Filter by availability end date
+            include_deleted: Whether to include deleted equipment
+
+        Returns:
+            SQLAlchemy Select query object without ORDER BY
+        """
+        stmt = select(Equipment)
+
+        # Filter deleted items if include_deleted=False
+        if not include_deleted:
+            stmt = stmt.where(Equipment.deleted_at.is_(None))
+
+        if status:
+            stmt = stmt.where(Equipment.status == status)
+
+        # Use category_ids if provided, otherwise fall back to category_id
+        if category_ids:
+            stmt = stmt.where(Equipment.category_id.in_(category_ids))
+        elif category_id:
+            stmt = stmt.where(Equipment.category_id == category_id)
+
+        if query:
+            search_pattern = f'%{query}%'
+            stmt = stmt.where(
+                or_(
+                    Equipment.name.ilike(search_pattern),
+                    Equipment.description.ilike(search_pattern),
+                    Equipment.barcode.ilike(search_pattern),
+                    Equipment.serial_number.ilike(search_pattern),
+                )
+            )
+
+        # Add date filtering if both dates are provided
+        if available_from and available_to:
+            # Get equipment IDs that are not booked during the specified period
+            booked_equipment = (
+                select(Booking.equipment_id)
+                .where(
+                    and_(
+                        Booking.start_date < available_to,
+                        Booking.end_date > available_from,
+                        Booking.booking_status.in_(
+                            [
+                                BookingStatus.PENDING,
+                                BookingStatus.CONFIRMED,
+                                BookingStatus.ACTIVE,
+                            ]
+                        ),
+                        Booking.deleted_at.is_(None),
+                    )
+                )
+                .distinct()
+            )
+            stmt = stmt.where(~Equipment.id.in_(booked_equipment))
+
+        return stmt
+
+    async def get_active_projects_for_equipment(
+        self, equipment_ids: List[int]
+    ) -> List[dict]:
+        """Get active projects for given equipment IDs.
+
+        This method retrieves active booking information for the specified equipment
+        items, including project details and booking dates.
+
+        Args:
+            equipment_ids: List of equipment IDs to get projects for
+
+        Returns:
+            List of dictionaries containing:
+                - equipment_id: Equipment ID
+                - project_id: Project ID
+                - project_name: Project name
+                - start_date: Booking start date
+                - end_date: Booking end date
+        """
+        if not equipment_ids:
+            return []
+
+        query = (
+            select(
+                Booking.equipment_id,
+                Project.id.label('project_id'),
+                Project.name.label('project_name'),
+                Booking.start_date,
+                Booking.end_date,
+            )
+            .join(Project, Booking.project_id == Project.id)
+            .where(
+                Booking.equipment_id.in_(equipment_ids),
+                Booking.booking_status == BookingStatus.ACTIVE,
+            )
+            .order_by(Booking.start_date)
+        )
+
+        result = await self.session.execute(query)
+        return [dict(row._mapping) for row in result.fetchall()]
