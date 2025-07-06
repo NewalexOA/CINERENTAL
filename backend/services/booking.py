@@ -56,6 +56,7 @@ class BookingService:
         deposit_amount: float,
         quantity: int = 1,
         notes: Optional[str] = None,
+        project_id: Optional[int] = None,
     ) -> Booking:
         """Create new booking.
 
@@ -68,6 +69,7 @@ class BookingService:
             deposit_amount: Required deposit amount
             quantity: Quantity of equipment items (default: 1)
             notes: Additional notes (optional)
+            project_id: Project ID (optional)
 
         Returns:
             Created booking with related objects loaded
@@ -192,6 +194,7 @@ class BookingService:
                 total_amount=Decimal(str(total_amount)),
                 deposit_amount=Decimal(str(deposit_amount)),
                 notes=notes,
+                project_id=project_id,
             )
             created_booking = await self.repository.create(booking)
 
