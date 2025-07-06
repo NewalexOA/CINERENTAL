@@ -63,6 +63,9 @@ let currentFilters = {
 console.log('🚫 Disabling global equipment search for pagination page');
 window.disableGlobalEquipmentSearch = true;
 
+// Global variable to store the last focused element before opening the modal
+let lastFocusedElementBeforeModal = null;
+
 // Load categories for add form
 async function loadCategories() {
     const formSelect = document.querySelector('select[name="category_id"]');
@@ -922,6 +925,12 @@ async function addToScanSession(equipmentId, name, barcode, serialNumber, catego
     const modal = document.getElementById('addToScanSessionModal');
     if (!modal) return;
 
+    // Get or create Bootstrap modal instance
+    let modalInstance = bootstrap.Modal.getInstance(modal);
+    if (!modalInstance) {
+        modalInstance = new bootstrap.Modal(modal);
+    }
+
     const loadingDiv = document.getElementById('addToSessionLoading');
     const contentDiv = document.getElementById('addToSessionContent');
     const noActiveMessage = document.getElementById('noActiveSessionMessage');
@@ -938,8 +947,10 @@ async function addToScanSession(equipmentId, name, barcode, serialNumber, catego
     document.getElementById('equipmentCategoryIdToAdd').value = categoryId || '';
     document.getElementById('equipmentCategoryNameToAdd').value = categoryName || '';
 
+    // Save the currently focused element before showing the modal
+    lastFocusedElementBeforeModal = document.activeElement;
+
     // Show modal and loading state
-    const modalInstance = new bootstrap.Modal(modal);
     modalInstance.show();
 
     loadingDiv.classList.remove('d-none');
@@ -949,6 +960,10 @@ async function addToScanSession(equipmentId, name, barcode, serialNumber, catego
         // Get equipment details first
         const equipment = await api.get(`/equipment/${equipmentId}`);
         equipmentNameSpan.textContent = equipment.name;
+        // Update hidden fields with accurate data from API response
+        document.getElementById('equipmentBarcodeToAdd').value = equipment.barcode || '';
+        document.getElementById('equipmentSerialNumberToAdd').value = equipment.serial_number || '';
+        document.getElementById('equipmentCategoryNameToAdd').value = equipment.category?.name || '';
 
         // Check for active session
         const activeSession = scanStorage.getActiveSession();
@@ -1020,19 +1035,30 @@ function addEquipmentToSession(sessionId) {
     };
 
     try {
-        scanStorage.addToSession(sessionId, equipmentData);
-        if (typeof showToast === 'function') {
-            showToast(`Оборудование добавлено в сессию сканирования`, 'success');
-        }
+        const operationResult = scanStorage.addEquipment(sessionId, equipmentData);
 
-        // Close modal
-        const modal = bootstrap.Modal.getInstance(document.getElementById('addToScanSessionModal'));
-        if (modal) modal.hide();
+        if (typeof showToast === 'function') {
+            if (operationResult === 'item_added') {
+                showToast(`Оборудование "${equipmentData.name}" добавлено в сессию сканирования.`, 'success');
+            } else if (operationResult === 'quantity_incremented') {
+                showToast(`Количество оборудования "${equipmentData.name}" в сессии увеличено.`, 'info');
+            } else if (operationResult === 'duplicate_serial_exists') {
+                showToast(`Оборудование "${equipmentData.name}" с серийным номером "${equipmentData.serial_number}" уже есть в текущей сессии.`, 'warning');
+            } else {
+                showToast('Ошибка при добавлении в сессию: неизвестный результат операции.', 'danger');
+            }
+        }
     } catch (error) {
         console.error('Error adding to session:', error);
         if (typeof showToast === 'function') {
             showToast('Ошибка при добавлении в сессию', 'danger');
         }
+    } finally {
+        // Ensure modal is always closed
+        const modalElement = document.getElementById('addToScanSessionModal');
+
+        const modal = bootstrap.Modal.getInstance(modalElement);
+        if (modal) modal.hide();
     }
 }
 
@@ -1203,6 +1229,28 @@ function initializeScanSessionModal() {
     if (confirmAddBtn) {
         confirmAddBtn.addEventListener('click', addEquipmentToActiveSession);
     }
+
+    const modalElement = document.getElementById('addToScanSessionModal');
+    if (modalElement) {
+        // Move focus to body just before the modal starts hiding
+        modalElement.addEventListener('hide.bs.modal', function () {
+            // Remove focus from any element within the modal before it hides
+            if (document.activeElement && modalElement.contains(document.activeElement)) {
+                document.activeElement.blur();
+            }
+        });
+
+        // Restore focus to the element that had it before the modal was opened
+        modalElement.addEventListener('hidden.bs.modal', function () {
+            if (lastFocusedElementBeforeModal && typeof lastFocusedElementBeforeModal.focus === 'function') {
+                lastFocusedElementBeforeModal.focus();
+            } else {
+                // Fallback to body focus if the original element is not available or not focusable
+                document.body.focus();
+            }
+            lastFocusedElementBeforeModal = null; // Clear the stored element
+        });
+    }
 }
 
 // Main setup function
@@ -1242,3 +1290,6 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log('📋 DOM ready, starting equipment page initialization');
     setupEventListeners();
 });
+
+// Export function globally for main.js integration
+window.addToScanSession = addToScanSession;
