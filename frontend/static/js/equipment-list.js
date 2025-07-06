@@ -168,6 +168,88 @@ function getStatusBadgeClass(status) {
     }
 }
 
+// Generate rental status badge HTML
+function generateRentalStatusBadge(item) {
+    const rentalStatus = item.rental_status || 'available';
+    const displayText = item.rental_status_display || 'Свободен';
+
+    if (rentalStatus === 'on-project' && item.active_projects && item.active_projects.length > 0) {
+        return `
+            <span class="badge bg-primary rental-status-badge rental-status-interactive"
+                  data-rental-status="on-project"
+                  data-projects='${JSON.stringify(item.active_projects)}'
+                  data-bs-toggle="popover"
+                  data-bs-trigger="hover focus"
+                  data-bs-placement="bottom"
+                  data-bs-html="true"
+                  role="button"
+                  tabindex="0"
+                  aria-label="На проекте. Нажмите для просмотра списка проектов">
+                ${displayText} <i class="fas fa-info-circle ms-1" aria-hidden="true"></i>
+            </span>
+        `;
+    } else if (rentalStatus === 'available') {
+        return `<span class="badge bg-success rental-status-badge">${displayText}</span>`;
+    } else {
+        return `<span class="badge bg-danger rental-status-badge">${displayText}</span>`;
+    }
+}
+
+// Initialize rental status popovers
+function initializeRentalStatusPopovers() {
+    // Dispose of existing popovers first
+    document.querySelectorAll('.rental-status-interactive').forEach(element => {
+        const existingPopover = bootstrap.Popover.getInstance(element);
+        if (existingPopover) {
+            existingPopover.dispose();
+        }
+    });
+
+    // Initialize new popovers
+    const interactiveBadges = document.querySelectorAll('.rental-status-interactive');
+
+    interactiveBadges.forEach(badge => {
+        try {
+            const projects = JSON.parse(badge.dataset.projects || '[]');
+            const popoverContent = generatePopoverContent(projects);
+
+            new bootstrap.Popover(badge, {
+                content: popoverContent,
+                html: true,
+                trigger: 'hover focus',
+                placement: 'bottom',
+                container: 'body',
+                sanitize: false // Allow HTML content
+            });
+        } catch (error) {
+            console.error('Error initializing popover:', error);
+        }
+    });
+}
+
+// Generate popover content for active projects
+function generatePopoverContent(projects) {
+    if (!projects || projects.length === 0) {
+        return '<div class="text-muted">Нет активных проектов</div>';
+    }
+
+    const projectsList = projects.map(project =>
+        `<li class="rental-project-item">
+            <a href="/projects/${project.id}" class="text-decoration-none">
+                <strong>${project.name}</strong><br>
+                <small class="text-muted">${project.dates}</small>
+            </a>
+        </li>`
+    ).join('');
+
+    return `
+        <div class="rental-projects-popover">
+            <div class="fw-bold mb-2">Активные проекты:</div>
+            <ul class="list-unstyled mb-0">${projectsList}</ul>
+        </div>
+    `;
+}
+
 // Function to prevent inline styles from being applied to table elements
 function protectTableStyles() {
     const table = document.querySelector('.table');
@@ -325,8 +407,8 @@ const searchSpinner = document.getElementById('search-spinner');
 
         console.log('🌐 API request parameters:', params.toString());
 
-        // Make API request to paginated endpoint
-        const response = await api.get(`/equipment/paginated?${params.toString()}`);
+        // Make API request to paginated endpoint with rental status
+        const response = await api.get(`/equipment/paginated-with-rental-status?${params.toString()}`);
 
         console.log('📦 API response:', response);
 
@@ -422,10 +504,8 @@ function renderEquipment(items) {
             </td>
             <td class="col-category" title="${item.category_name || ''}">${item.category_name || ''}</td>
             <td class="col-serial" title="${item.serial_number || '-'}">${item.serial_number || '-'}</td>
-            <td class="col-status text-center">
-                <span class="badge bg-${getStatusBadgeClass(item.status)}">
-                    ${item.status || ''}
-                </span>
+            <td class="col-rental-status text-center">
+                ${generateRentalStatusBadge(item)}
             </td>
             <td class="col-actions text-center">
                 <div class="btn-group" role="group">
@@ -450,6 +530,9 @@ function renderEquipment(items) {
 
     // Update tooltips after content change
     setupTableTooltips();
+
+    // Initialize rental status popovers
+    initializeRentalStatusPopovers();
 }
 
 // Initialize pagination
