@@ -5,7 +5,7 @@ including request/response schemas for managing rental items.
 """
 
 from datetime import datetime
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, ConfigDict, Field, computed_field
 
@@ -93,11 +93,43 @@ class EquipmentResponse(BaseModel):
     notes: Optional[str] = None
     category_name: str = Field(description='Category name')
     category: Optional[CategoryInfo] = Field(None, description='Category information')
+    active_projects: List[Dict[str, Any]] = Field(
+        default_factory=list, description='Active projects for this equipment'
+    )
 
     @computed_field
     def is_available(self) -> bool:
         """Check if equipment is available for rent."""
         return self.status == EquipmentStatus.AVAILABLE
+
+    @computed_field
+    def rental_status(self) -> str:
+        """Determine rental status based on equipment status and active projects.
+
+        Returns:
+            - 'available': Equipment is available for rent
+            - 'on-project': Equipment has active bookings
+            - 'unavailable': Equipment is not available (maintenance, broken, etc.)
+        """
+        if self.status != EquipmentStatus.AVAILABLE:
+            return 'unavailable'
+
+        if self.active_projects:
+            return 'on-project'
+
+        return 'available'
+
+    @computed_field
+    def rental_status_display(self) -> str:
+        """Human-readable rental status."""
+        # Duplicate the logic from rental_status to avoid circular reference
+        if self.status != EquipmentStatus.AVAILABLE:
+            return 'Недоступен'
+
+        if self.active_projects:
+            return 'На проекте'
+
+        return 'Свободен'
 
     model_config = ConfigDict(from_attributes=True)
 

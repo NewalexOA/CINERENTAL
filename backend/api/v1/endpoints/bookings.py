@@ -193,6 +193,7 @@ async def create_booking(
             deposit_amount=float(booking.total_amount) * 0.2,
             quantity=booking.quantity,
             notes=None,
+            project_id=booking.project_id,
         )
 
         # Commit transaction after booking creation
@@ -786,6 +787,7 @@ async def create_bookings_batch(
                     deposit_amount=float(booking_data.total_amount) * 0.2,
                     quantity=booking_data.quantity,
                     notes=None,
+                    project_id=booking_data.project_id,
                 )
 
                 booking_response = await _booking_to_response(booking_obj, db)

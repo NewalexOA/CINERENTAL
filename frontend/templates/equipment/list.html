@@ -68,7 +68,7 @@
                             <th class="col-name text-nowrap">Название</th>
                             <th class="col-category text-nowrap">Категория</th>
                             <th class="col-serial text-nowrap">Серийный номер</th>
-                            <th class="col-status text-nowrap text-center">Статус</th>
+                            <th class="col-rental-status text-nowrap text-center">Статус аренды</th>
                             <th class="col-actions text-nowrap text-center">Действия</th>
                         </tr>
                     </thead>
@@ -81,10 +81,9 @@
                             </td>
                             <td class="col-category">{{ item.category_name }}</td>
                             <td class="col-serial">{{ item.serial_number or '' }}</td>
-                            <td class="col-status">
-                                <span class="badge bg-{{ 'success' if item.status == 'AVAILABLE' else 'warning' if item.status == 'RENTED' else 'danger' if item.status in ['MAINTENANCE', 'BROKEN'] else 'secondary' if item.status == 'RETIRED' else 'secondary' }}">
-                                    {{ item.status }}
-                                </span>
+                            <td class="col-rental-status text-center">
+                                <!-- Rental status will be populated by JavaScript -->
+                                <span class="badge bg-secondary">Загрузка...</span>
                             </td>
                             <td class="col-actions">
                                 <div class="btn-group">
