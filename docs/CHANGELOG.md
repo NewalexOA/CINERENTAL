@@ -2,6 +2,41 @@
 
 This document lists notable changes to the ACT-Rental application.
 
+## [0.15.0-beta.1] - 2025-07-11
+
+### Universal Cart System & Equipment Management Transformation
+
+- **Universal Cart Foundation Infrastructure:** Implemented comprehensive cart-based equipment management system with UniversalCart class for item management and validation, CartStorage class with localStorage persistence and data migration, and CartUI class with Bootstrap-based responsive interface. Support for multiple cart configurations and types (add, return, transfer) with event-driven design and comprehensive JSDoc documentation.
+- **Modular Architecture Transformation:** Refactored monolithic 1291-line file into 11 specialized modules following Single Responsibility Principle with 4476 lines across focused modules. Created new modular directory structure with core business logic (UniversalCart, CartStorage), UI components (CartTemplates, CartRenderer, CartDialogs), event handling (CartEventHandler), configuration (cart-configs), and integration modules (cart-integration).
+
+### Scanner Integration & Direct Cart Addition
+
+- **Enhanced Barcode Scanner Workflow:** Implemented direct equipment addition to cart upon scanning for both HID and camera scanners with automatic cart integration and smart fallback to search functionality. Streamlined scanning workflow eliminating search-only limitations with immediate cart addition instead of traditional search-only workflow.
+- **Multi-Selection & Search Integration:** Added cart-integration.js with multi-selection and bulk operations, checkbox-based equipment selection in search results, and "Select All" functionality. Real-time cart controls with dynamic item count display and comprehensive validation with error handling (584 lines across 2 integration modules).
+
+### Dual Rendering Modes & Project Integration
+
+- **Embedded Mode Implementation:** Seamless integration with project view templates through inline cart container between equipment sections, table mode rendering matching project equipment layout, and daterangepicker integration for period inputs with validation. Automatic project context detection and data extraction with date range validation and formatting for booking creation.
+- **Floating Mode & UI Enhancement:** Traditional overlay cart for equipment search pages with Bootstrap modal integration, outside click and Escape key handling, mobile-responsive progress indicators, and confirmation dialog integration with cart UI for seamless workflow integration.
+
+### Batch Operations & API Integration
+
+- **Batch Bookings API:** New `/api/v1/bookings/batch` POST endpoint for mass booking creation supporting up to 100 bookings per request with comprehensive validation. Transactional processing with automatic rollback on failures and graceful degradation for partial failures with detailed response including success/failure counts.
+- **Smart Equipment Addition Logic:** Two-step booking creation process (create booking → add to project) with smart duplicate detection for equipment without serial numbers. Equipment with same ID and matching dates now increases quantity instead of creating duplicates, with automatic UI refresh after equipment addition and comprehensive error handling.
+
+### Equipment Rental Status System
+
+- **Backend Rental Status Implementation:** Added get_active_projects_for_equipment method to EquipmentRepository and get_equipment_list_with_rental_status method to EquipmentService. Implemented proper layered architecture with repository pattern using two-query approach for optimal performance with comprehensive error handling and validation.
+- **Interactive Frontend Status Display:** Updated equipment list template with rental status column, JavaScript functions for rental status badge generation, and interactive popover for on-project status. Color-coded project timeline (gray=past, blue=current, black=future) with chronological sorting by start_date and proper accessibility attributes with keyboard navigation.
+
+### Technical Improvements & Bug Fixes (0.15.0-beta.1)
+
+- Fixed modal handling and focus management in equipment session management with proper Bootstrap modal instance reuse
+- Corrected frontend scan module method calls from `addToSession` to `addEquipment` and exported `addToScanSession` function globally
+- Enhanced date handling and logging in cart operations with detailed debug logging for item processing
+- Optimized resource allocation in docker-compose configuration and set default client status in seed data
+- Fixed project classification in rental status popovers with proper null date handling to prevent Unix epoch dates
+
 ## [0.14.0-beta.1] - 2025-06-19
 
 ### Pagination System Overhaul & API Fixes
@@ -24,7 +59,7 @@ This document lists notable changes to the ACT-Rental application.
 - **Comprehensive Documentation Updates:** Updated pagination documentation to reflect show_all_option removal and added comprehensive English code style guide translated from Russian. Enhanced pagination logging and debugging capabilities with detailed calculation information and consistent logging format.
 - **GitHub Workflow Improvements:** Improved issue auto-closing logic in GitHub Actions with enhanced regex matching, existence validation, and proper error handling for 404 cases.
 
-### Technical Improvements & Bug Fixes
+### Technical Improvements & Bug Fixes (0.14.0-beta.1)
 
 - Fixed equipment count synchronization lag in project filters by passing total count from API responses
 - Resolved pagination calculation errors when itemsPerPage is undefined with proper fallback mechanisms
@@ -63,7 +98,7 @@ This document lists notable changes to the ACT-Rental application.
 - Fixed action button event listeners after pagination and reduced minimum booking duration to 1 hour.
 - Removed excessive logging and legacy code for improved maintainability.
 
-### Technical Improvements & Documentation
+### Technical Improvements & Documentation (0.13.0-beta.1)
 
 - **Comprehensive Documentation:** Added and translated documentation for the universal pagination system, logging, and live search functionality. Updated all code comments and examples to English for international consistency.
 - **Test Coverage:** All booking and project tests updated for new pagination and search features, with 100% pass rate.
