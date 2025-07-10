@@ -710,7 +710,7 @@ async def create_clients(session: AsyncSession) -> None:
             email=client_data['email'],
             phone=client_data['phone'],
             company=client_data['company'],
-            status=getattr(ClientStatus, client_data['status'], ClientStatus.ACTIVE),
+            status=ClientStatus.ACTIVE,  # Set default status for seed data
         )
         await repository.create(client)
         logger.info('Created client: {}', client.name)

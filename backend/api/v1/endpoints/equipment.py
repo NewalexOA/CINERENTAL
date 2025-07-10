@@ -276,6 +276,73 @@ async def get_equipment_list_paginated(
 
 @typed_get(
     equipment_router,
+    '/paginated-with-rental-status',
+    response_model=Page[EquipmentResponse],
+    summary='Get Paginated Equipment List with Rental Status',
+)
+async def get_equipment_list_paginated_with_rental_status(
+    params: Params = Depends(),
+    status: Optional[EquipmentStatus] = Query(None, description='Filter by status'),
+    category_id: Optional[int] = Query(None, description='Filter by category ID'),
+    query: Optional[str] = Query(
+        None, description='Search by name, description, barcode, serial number'
+    ),
+    include_deleted: bool = Query(
+        False, description='Whether to include deleted equipment'
+    ),
+    db: AsyncSession = Depends(get_db),
+) -> Page[EquipmentResponse]:
+    """Get paginated list of equipment with rental status information."""
+    try:
+        if query and len(query) > 255:
+            raise HTTPException(
+                status_code=http_status.HTTP_400_BAD_REQUEST,
+                detail='Search query is too long. Maximum length is 255 characters.',
+            )
+
+        filters = {
+            'status': status,
+            'category_id': category_id,
+            'query': query,
+            'include_deleted': include_deleted,
+        }
+        equipment_service = EquipmentService(db)
+
+        # Calculate skip and limit from params
+        skip = (params.page - 1) * params.size
+        limit = params.size
+
+        # Get paginated data from service
+        equipment_list = await equipment_service.get_equipment_list_with_rental_status(
+            skip=skip, limit=limit, filters=filters
+        )
+
+        total_query = await equipment_service.get_equipment_count_query(
+            status=status,
+            category_id=category_id,
+            query=query,
+            include_deleted=include_deleted,
+        )
+
+        # Execute count query to get total
+        from sqlalchemy import func
+
+        count_query = total_query.with_only_columns(func.count())
+        result = await db.execute(count_query)
+        total = result.scalar()
+
+        # Create page response manually
+        return Page.create(items=equipment_list, total=total, params=params)
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f'An unexpected error occurred: {e}',
+        ) from e
+
+
+@typed_get(
+    equipment_router,
     '/{equipment_id}',
     response_model=EquipmentResponse,
 )

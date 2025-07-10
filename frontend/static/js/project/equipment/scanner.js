@@ -4,6 +4,7 @@
 
 import { showToast } from '../../utils/common.js';
 import { searchEquipmentByBarcode, searchEquipmentInCatalog } from './search.js';
+// ADD_EQUIPMENT_CONFIG will be available globally after cart modules load
 
 let scannerActive = false;
 let hidScanner = null;
@@ -79,20 +80,27 @@ async function handleHIDScanResult(equipment, scanInfo) {
         }, 2000);
     }
 
-    try {
-        await searchEquipmentByBarcode();
-    } catch (error) {
-        // If barcode search failed, try catalog search
-        console.log('Barcode search failed, falling back to catalog search:', error.message);
-        try {
-            await searchEquipmentInCatalog();
-        } catch (catalogError) {
-            console.error('Catalog search also failed:', catalogError);
-            showToast('Ошибка поиска оборудования', 'danger');
-        }
-    }
+    // Add equipment directly to cart instead of just searching
+    const success = await addScannedEquipmentToCart(equipment);
 
-    showToast(`Отсканирован штрих-код: ${equipment.barcode}`, 'success');
+    if (success) {
+        showToast(`Добавлено в корзину: ${equipment.name}`, 'success');
+    } else {
+        // Fallback to search if cart addition fails
+        try {
+            await searchEquipmentByBarcode();
+        } catch (error) {
+            // If barcode search failed, try catalog search
+            console.log('Barcode search failed, falling back to catalog search:', error.message);
+            try {
+                await searchEquipmentInCatalog();
+            } catch (catalogError) {
+                console.error('Catalog search also failed:', catalogError);
+                showToast('Ошибка поиска оборудования', 'danger');
+            }
+        }
+        showToast(`Отсканирован штрих-код: ${equipment.barcode}`, 'info');
+    }
 }
 
 /**
@@ -189,6 +197,17 @@ async function handleScanResult(result) {
         document.getElementById('barcodeInput').value = barcode;
 
         try {
+            // Try to add scanned equipment directly to cart
+            const equipment = await findEquipmentByBarcode(barcode);
+            if (equipment) {
+                const success = await addScannedEquipmentToCart(equipment);
+                if (success) {
+                    showToast(`Добавлено в корзину: ${equipment.name}`, 'success');
+                    return;
+                }
+            }
+
+            // Fallback to search
             await searchEquipmentByBarcode();
         } catch (error) {
             console.error('Barcode search failed in camera scanner:', error);
@@ -197,4 +216,113 @@ async function handleScanResult(result) {
     }
 }
 
-export { scannerActive, hidScanner };
+/**
+ * Find equipment by barcode using API
+ * @param {string} barcode - Equipment barcode
+ * @returns {Object|null} Equipment data or null if not found
+ */
+async function findEquipmentByBarcode(barcode) {
+    try {
+        const { api } = await import('../../utils/api.js');
+        const equipment = await api.get(`/equipment/barcode/${barcode}`);
+        return equipment;
+    } catch (error) {
+        console.error('Error finding equipment by barcode:', error);
+        return null;
+    }
+}
+
+/**
+ * Add scanned equipment to cart
+ * @param {Object} equipment - Equipment data from scanner
+ * @returns {boolean} Success status
+ */
+async function addScannedEquipmentToCart(equipment) {
+    try {
+        // Use global UniversalCart class
+        if (typeof UniversalCart === 'undefined') {
+            console.error('UniversalCart not loaded yet');
+            return false;
+        }
+
+        // Initialize or get existing cart
+        if (!window.universalCart) {
+            // Ensure ADD_EQUIPMENT_CONFIG is available
+            if (typeof ADD_EQUIPMENT_CONFIG === 'undefined') {
+                console.error('ADD_EQUIPMENT_CONFIG not loaded yet');
+                return false;
+            }
+
+            // Create table-mode cart configuration
+            const tableConfig = {
+                ...ADD_EQUIPMENT_CONFIG,
+                // Switch to table mode like "Оборудование в проекте"
+                renderMode: 'table',
+                compactView: true,
+                showAdvancedControls: false,
+                tableSettings: {
+                    showHeader: true,
+                    sortable: false,
+                    striped: true,
+                    hover: true,
+                    responsive: true
+                }
+            };
+
+            window.universalCart = new UniversalCart(tableConfig);
+        }
+
+        const cart = window.universalCart;
+
+        // Prepare equipment data for cart
+        const itemData = {
+            id: equipment.id,
+            name: equipment.name,
+            barcode: equipment.barcode,
+            serial_number: equipment.serial_number || null,
+            category: equipment.category?.name || 'Без категории',
+            quantity: 1,
+            addedAt: new Date().toISOString(),
+            addedBy: 'scanner'
+        };
+
+        // Add to cart
+        const success = await cart.addItem(itemData);
+
+        if (success) {
+            // Show cart UI if available and this is the first item
+            if (cart.ui && cart.getItemCount() === 1) {
+                cart.ui.show();
+            }
+            return true;
+        }
+
+        return false;
+
+    } catch (error) {
+        console.error('Failed to add scanned equipment to cart:', error);
+        return false;
+    }
+}
+
+/**
+ * Get scan feedback message based on cart integration
+ * @param {Object} equipment - Equipment data
+ * @param {boolean} addedToCart - Whether item was added to cart
+ * @returns {Object} Message object with text and type
+ */
+function getScanFeedbackMessage(equipment, addedToCart) {
+    if (addedToCart) {
+        return {
+            text: `✅ ${equipment.name} добавлено в корзину`,
+            type: 'success'
+        };
+    } else {
+        return {
+            text: `📋 ${equipment.name} найдено (см. результаты поиска)`,
+            type: 'info'
+        };
+    }
+}
+
+export { scannerActive, hidScanner, addScannedEquipmentToCart, findEquipmentByBarcode };

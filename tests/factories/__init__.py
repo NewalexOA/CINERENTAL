@@ -3,6 +3,7 @@
 This package contains factory classes for creating test data.
 """
 
+from .booking import BookingFactory
 from .category import CategoryFactory
 from .client import (
     ClientActiveFactory,
@@ -10,6 +11,7 @@ from .client import (
     ClientBlockedFactory,
     ClientFactory,
 )
+from .equipment import EquipmentFactory
 from .project import (
     ProjectActiveFactory,
     ProjectCancelledFactory,
@@ -19,11 +21,13 @@ from .project import (
 )
 
 __all__ = [
+    'BookingFactory',
     'CategoryFactory',
     'ClientFactory',
     'ClientActiveFactory',
     'ClientBlockedFactory',
     'ClientArchivedFactory',
+    'EquipmentFactory',
     'ProjectFactory',
     'ProjectDraftFactory',
     'ProjectActiveFactory',

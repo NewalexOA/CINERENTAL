@@ -5,7 +5,7 @@ including inventory management, availability tracking, and equipment status upda
 """
 
 from datetime import datetime, timezone
-from typing import Any, List, Optional
+from typing import Any, Dict, List, Optional
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -226,6 +226,72 @@ class EquipmentService:
 
         # Get the base query from the repository
         return self.repository.get_paginatable_query(
+            status=status,
+            category_id=category_id,
+            category_ids=category_ids,
+            query=query,
+            available_from=available_from,
+            available_to=available_to,
+            include_deleted=include_deleted,
+        )
+
+    async def get_equipment_count_query(
+        self,
+        status: Optional[EquipmentStatus] = None,
+        category_id: Optional[int] = None,
+        query: Optional[str] = None,
+        available_from: Optional[datetime] = None,
+        available_to: Optional[datetime] = None,
+        include_deleted: bool = False,
+    ) -> Select:
+        """Get a count query for equipment list with optional filtering.
+
+        This method prepares the query for counting without ORDER BY clause
+        to avoid PostgreSQL GROUP BY issues.
+
+        Args:
+            status: Filter by equipment status
+            category_id: Filter by category ID (includes subcategories)
+            query: Search query
+            available_from: Filter by availability start date
+            available_to: Filter by availability end date
+            include_deleted: Whether to include deleted equipment
+
+        Returns:
+            SQLAlchemy Select query object without ORDER BY
+
+        Raises:
+            BusinessError: If validation fails
+            NotFoundError: If category not found
+        """
+        # Validate dates if both are provided
+        if available_from and available_to and available_from >= available_to:
+            raise BusinessError(
+                'Start date must be before end date',
+                details={
+                    'available_from': available_from.isoformat(),
+                    'available_to': available_to.isoformat(),
+                },
+            )
+
+        # Ensure dates are timezone-aware
+        if available_from and available_from.tzinfo is None:
+            available_from = available_from.replace(tzinfo=timezone.utc)
+        if available_to and available_to.tzinfo is None:
+            available_to = available_to.replace(tzinfo=timezone.utc)
+
+        # Get all category IDs including subcategories if category_id is provided
+        category_ids = None
+        if category_id is not None:
+            try:
+                category_ids = await self.category_service.get_all_subcategory_ids(
+                    category_id
+                )
+            except ValueError:
+                raise NotFoundError(f'Category with ID {category_id} not found')
+
+        # Get the count query from the repository
+        return self.repository.get_count_query(
             status=status,
             category_id=category_id,
             category_ids=category_ids,
@@ -978,3 +1044,92 @@ class EquipmentService:
             return updated_equipment
 
         return equipment
+
+    async def get_equipment_list_with_rental_status(
+        self, skip: int = 0, limit: int = 100, filters: Optional[Dict] = None
+    ) -> List[EquipmentResponse]:
+        """Get equipment list with rental status information.
+
+        Uses two-query approach for optimal performance:
+        1. Main query for equipment with pagination
+        2. Separate query for active projects data
+
+        Args:
+            skip: Number of items to skip for pagination
+            limit: Maximum number of items to return
+            filters: Optional filters dictionary
+
+        Returns:
+            List of EquipmentResponse with rental status information
+        """
+        # Use proper pagination parameters
+        equipment_list = await self.get_equipment_list(
+            skip=skip,
+            limit=limit,
+            status=filters.get('status') if filters else None,
+            category_id=filters.get('category_id') if filters else None,
+            query=filters.get('query') if filters else None,
+            include_deleted=filters.get('include_deleted', False) if filters else False,
+        )
+
+        # Get equipment IDs for project lookup
+        equipment_ids = [eq.id for eq in equipment_list]
+
+        # Get active projects for these equipment items
+        active_projects = await self._get_active_projects_for_equipment(equipment_ids)
+
+        # Combine data and create enhanced responses
+        enhanced_items = []
+        for equipment_response in equipment_list:
+            projects = active_projects.get(equipment_response.id, [])
+            # Convert to dict and add active_projects
+            equipment_dict = equipment_response.model_dump()
+            equipment_dict['active_projects'] = projects
+            enhanced_item = EquipmentResponse.model_validate(equipment_dict)
+            enhanced_items.append(enhanced_item)
+
+        return enhanced_items
+
+    async def _get_active_projects_for_equipment(
+        self, equipment_ids: List[int]
+    ) -> Dict[int, List[Dict]]:
+        """Get active projects for given equipment IDs.
+
+        Args:
+            equipment_ids: List of equipment IDs
+
+        Returns:
+            Mapping: equipment_id -> list of project info
+        """
+        if not equipment_ids:
+            return {}
+
+        # Use repository method to get raw data
+        rows = await self.repository.get_active_projects_for_equipment(equipment_ids)
+
+        # Group by equipment_id (business logic stays in service)
+        projects_by_equipment: Dict[int, List[Dict]] = {}
+        for row in rows:
+            equipment_id = row['equipment_id']
+            if equipment_id not in projects_by_equipment:
+                projects_by_equipment[equipment_id] = []
+
+            date_range = (
+                f"{row['start_date'].strftime('%d.%m')} - "
+                f"{row['end_date'].strftime('%d.%m')}"
+            )
+            start_date_iso = (
+                row['start_date'].isoformat() if row['start_date'] else None
+            )
+            end_date_iso = row['end_date'].isoformat() if row['end_date'] else None
+            projects_by_equipment[equipment_id].append(
+                {
+                    'id': row['project_id'],
+                    'name': row['project_name'],
+                    'dates': date_range,
+                    'start_date': start_date_iso,
+                    'end_date': end_date_iso,
+                }
+            )
+
+        return projects_by_equipment

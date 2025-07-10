@@ -63,6 +63,9 @@ let currentFilters = {
 console.log('🚫 Disabling global equipment search for pagination page');
 window.disableGlobalEquipmentSearch = true;
 
+// Global variable to store the last focused element before opening the modal
+let lastFocusedElementBeforeModal = null;
+
 // Load categories for add form
 async function loadCategories() {
     const formSelect = document.querySelector('select[name="category_id"]');
@@ -163,6 +166,112 @@ function getStatusBadgeClass(status) {
         default:
             return 'secondary';
     }
+}
+
+// Generate rental status badge HTML
+function generateRentalStatusBadge(item) {
+    const rentalStatus = item.rental_status || 'available';
+    const displayText = item.rental_status_display || 'Свободен';
+
+    if (rentalStatus === 'on-project' && item.active_projects && item.active_projects.length > 0) {
+        return `
+            <span class="badge bg-primary rental-status-badge rental-status-interactive"
+                  data-rental-status="on-project"
+                  data-projects='${JSON.stringify(item.active_projects)}'
+                  data-bs-toggle="popover"
+                  data-bs-trigger="hover focus"
+                  data-bs-placement="bottom"
+                  data-bs-html="true"
+                  role="button"
+                  tabindex="0"
+                  aria-label="На проекте. Нажмите для просмотра списка проектов">
+                ${displayText} <i class="fas fa-info-circle ms-1" aria-hidden="true"></i>
+            </span>
+        `;
+    } else if (rentalStatus === 'available') {
+        return `<span class="badge bg-success rental-status-badge">${displayText}</span>`;
+    } else {
+        return `<span class="badge bg-danger rental-status-badge">${displayText}</span>`;
+    }
+}
+
+// Initialize rental status popovers
+function initializeRentalStatusPopovers() {
+    // Dispose of existing popovers first
+    document.querySelectorAll('.rental-status-interactive').forEach(element => {
+        const existingPopover = bootstrap.Popover.getInstance(element);
+        if (existingPopover) {
+            existingPopover.dispose();
+        }
+    });
+
+    // Initialize new popovers
+    const interactiveBadges = document.querySelectorAll('.rental-status-interactive');
+
+    interactiveBadges.forEach(badge => {
+        try {
+            const projects = JSON.parse(badge.dataset.projects || '[]');
+            const popoverContent = generatePopoverContent(projects);
+
+            new bootstrap.Popover(badge, {
+                content: popoverContent,
+                html: true,
+                trigger: 'hover focus',
+                placement: 'bottom',
+                container: 'body',
+                sanitize: false // Allow HTML content
+            });
+        } catch (error) {
+            console.error('Error initializing popover:', error);
+        }
+    });
+}
+
+// Generate popover content for active projects
+function generatePopoverContent(projects) {
+    if (!projects || projects.length === 0) {
+        return '<div class="text-muted">Нет активных проектов</div>';
+    }
+
+    // Sort projects by start_date ascending
+    const sortedProjects = [...projects].sort((a, b) => {
+        if (!a.start_date || !b.start_date) return 0;
+        return new Date(a.start_date).getTime() - new Date(b.start_date).getTime();
+    });
+
+    const projectsList = sortedProjects.map(project => {
+        // Get current date for comparison
+        const now = new Date();
+
+        // Safely create Date objects, handling null values
+        const startDate = project.start_date ? new Date(project.start_date) : null;
+        const endDate = project.end_date ? new Date(project.end_date) : null;
+
+        // Determine CSS class based on project dates
+        let cssClass = '';
+
+        if (startDate && startDate > now) {
+            cssClass = 'project-future';
+        } else if (endDate && endDate < now) {
+            cssClass = 'project-past';
+        } else {
+            cssClass = 'project-current';
+        }
+
+        return `<li class="rental-project-item ${cssClass}">
+            <a href="/projects/${project.id}" class="text-decoration-none" ${cssClass === 'project-future' ? 'style="color: #000000 !important; font-weight: 600 !important;"' : cssClass === 'project-past' ? 'style="color: #6c757d !important; opacity: 0.8;"' : cssClass === 'project-current' ? 'style="color: #0d6efd !important; font-weight: 600 !important;"' : ''}>
+                <strong ${cssClass === 'project-future' ? 'style="color: #000000 !important; font-weight: 700 !important;"' : cssClass === 'project-past' ? 'style="color: #6c757d !important;"' : cssClass === 'project-current' ? 'style="color: #0d6efd !important; font-weight: 700 !important;"' : ''}>${project.name}</strong><br>
+                <small class="text-muted" ${cssClass === 'project-future' ? 'style="color: #333333 !important;"' : cssClass === 'project-past' ? 'style="color: #999999 !important;"' : cssClass === 'project-current' ? 'style="color: #0d6efd !important; opacity: 0.8;"' : ''}>${project.dates}</small>
+            </a>
+        </li>`;
+    }).join('');
+
+    return `
+        <div class="rental-projects-popover">
+            <div class="fw-bold mb-2">Активные проекты:</div>
+            <ul class="list-unstyled mb-0">${projectsList}</ul>
+        </div>
+    `;
 }
 
 // Function to prevent inline styles from being applied to table elements
@@ -322,8 +431,8 @@ const searchSpinner = document.getElementById('search-spinner');
 
         console.log('🌐 API request parameters:', params.toString());
 
-        // Make API request to paginated endpoint
-        const response = await api.get(`/equipment/paginated?${params.toString()}`);
+        // Make API request to paginated endpoint with rental status
+        const response = await api.get(`/equipment/paginated-with-rental-status?${params.toString()}`);
 
         console.log('📦 API response:', response);
 
@@ -419,10 +528,8 @@ function renderEquipment(items) {
             </td>
             <td class="col-category" title="${item.category_name || ''}">${item.category_name || ''}</td>
             <td class="col-serial" title="${item.serial_number || '-'}">${item.serial_number || '-'}</td>
-            <td class="col-status text-center">
-                <span class="badge bg-${getStatusBadgeClass(item.status)}">
-                    ${item.status || ''}
-                </span>
+            <td class="col-rental-status text-center">
+                ${generateRentalStatusBadge(item)}
             </td>
             <td class="col-actions text-center">
                 <div class="btn-group" role="group">
@@ -447,6 +554,9 @@ function renderEquipment(items) {
 
     // Update tooltips after content change
     setupTableTooltips();
+
+    // Initialize rental status popovers
+    initializeRentalStatusPopovers();
 }
 
 // Initialize pagination
@@ -922,6 +1032,12 @@ async function addToScanSession(equipmentId, name, barcode, serialNumber, catego
     const modal = document.getElementById('addToScanSessionModal');
     if (!modal) return;
 
+    // Get or create Bootstrap modal instance
+    let modalInstance = bootstrap.Modal.getInstance(modal);
+    if (!modalInstance) {
+        modalInstance = new bootstrap.Modal(modal);
+    }
+
     const loadingDiv = document.getElementById('addToSessionLoading');
     const contentDiv = document.getElementById('addToSessionContent');
     const noActiveMessage = document.getElementById('noActiveSessionMessage');
@@ -938,8 +1054,10 @@ async function addToScanSession(equipmentId, name, barcode, serialNumber, catego
     document.getElementById('equipmentCategoryIdToAdd').value = categoryId || '';
     document.getElementById('equipmentCategoryNameToAdd').value = categoryName || '';
 
+    // Save the currently focused element before showing the modal
+    lastFocusedElementBeforeModal = document.activeElement;
+
     // Show modal and loading state
-    const modalInstance = new bootstrap.Modal(modal);
     modalInstance.show();
 
     loadingDiv.classList.remove('d-none');
@@ -949,6 +1067,10 @@ async function addToScanSession(equipmentId, name, barcode, serialNumber, catego
         // Get equipment details first
         const equipment = await api.get(`/equipment/${equipmentId}`);
         equipmentNameSpan.textContent = equipment.name;
+        // Update hidden fields with accurate data from API response
+        document.getElementById('equipmentBarcodeToAdd').value = equipment.barcode || '';
+        document.getElementById('equipmentSerialNumberToAdd').value = equipment.serial_number || '';
+        document.getElementById('equipmentCategoryNameToAdd').value = equipment.category?.name || '';
 
         // Check for active session
         const activeSession = scanStorage.getActiveSession();
@@ -1020,19 +1142,30 @@ function addEquipmentToSession(sessionId) {
     };
 
     try {
-        scanStorage.addToSession(sessionId, equipmentData);
-        if (typeof showToast === 'function') {
-            showToast(`Оборудование добавлено в сессию сканирования`, 'success');
-        }
+        const operationResult = scanStorage.addEquipment(sessionId, equipmentData);
 
-        // Close modal
-        const modal = bootstrap.Modal.getInstance(document.getElementById('addToScanSessionModal'));
-        if (modal) modal.hide();
+        if (typeof showToast === 'function') {
+            if (operationResult === 'item_added') {
+                showToast(`Оборудование "${equipmentData.name}" добавлено в сессию сканирования.`, 'success');
+            } else if (operationResult === 'quantity_incremented') {
+                showToast(`Количество оборудования "${equipmentData.name}" в сессии увеличено.`, 'info');
+            } else if (operationResult === 'duplicate_serial_exists') {
+                showToast(`Оборудование "${equipmentData.name}" с серийным номером "${equipmentData.serial_number}" уже есть в текущей сессии.`, 'warning');
+            } else {
+                showToast('Ошибка при добавлении в сессию: неизвестный результат операции.', 'danger');
+            }
+        }
     } catch (error) {
         console.error('Error adding to session:', error);
         if (typeof showToast === 'function') {
             showToast('Ошибка при добавлении в сессию', 'danger');
         }
+    } finally {
+        // Ensure modal is always closed
+        const modalElement = document.getElementById('addToScanSessionModal');
+
+        const modal = bootstrap.Modal.getInstance(modalElement);
+        if (modal) modal.hide();
     }
 }
 
@@ -1203,6 +1336,28 @@ function initializeScanSessionModal() {
     if (confirmAddBtn) {
         confirmAddBtn.addEventListener('click', addEquipmentToActiveSession);
     }
+
+    const modalElement = document.getElementById('addToScanSessionModal');
+    if (modalElement) {
+        // Move focus to body just before the modal starts hiding
+        modalElement.addEventListener('hide.bs.modal', function () {
+            // Remove focus from any element within the modal before it hides
+            if (document.activeElement && modalElement.contains(document.activeElement)) {
+                document.activeElement.blur();
+            }
+        });
+
+        // Restore focus to the element that had it before the modal was opened
+        modalElement.addEventListener('hidden.bs.modal', function () {
+            if (lastFocusedElementBeforeModal && typeof lastFocusedElementBeforeModal.focus === 'function') {
+                lastFocusedElementBeforeModal.focus();
+            } else {
+                // Fallback to body focus if the original element is not available or not focusable
+                document.body.focus();
+            }
+            lastFocusedElementBeforeModal = null; // Clear the stored element
+        });
+    }
 }
 
 // Main setup function
@@ -1242,3 +1397,6 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log('📋 DOM ready, starting equipment page initialization');
     setupEventListeners();
 });
+
+// Export function globally for main.js integration
+window.addToScanSession = addToScanSession;
