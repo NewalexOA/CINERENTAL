@@ -242,15 +242,17 @@ function generatePopoverContent(projects) {
     const projectsList = sortedProjects.map(project => {
         // Get current date for comparison
         const now = new Date();
-        const startDate = new Date(project.start_date);
-        const endDate = new Date(project.end_date);
+
+        // Safely create Date objects, handling null values
+        const startDate = project.start_date ? new Date(project.start_date) : null;
+        const endDate = project.end_date ? new Date(project.end_date) : null;
 
         // Determine CSS class based on project dates
         let cssClass = '';
 
-        if (startDate > now) {
+        if (startDate && startDate > now) {
             cssClass = 'project-future';
-        } else if (endDate < now) {
+        } else if (endDate && endDate < now) {
             cssClass = 'project-past';
         } else {
             cssClass = 'project-current';
