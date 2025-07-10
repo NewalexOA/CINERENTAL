@@ -252,27 +252,99 @@ td.col-actions[style] {
 
 /* Popover Styles */
 .rental-projects-popover {
-    max-width: 300px;
+    max-width: 280px;
+    font-size: 0.875rem;
 }
 
 .rental-project-item {
-    padding: 8px 0;
+    margin-bottom: 0.5rem;
+    padding: 0.25rem 0;
     border-bottom: 1px solid #e9ecef;
 }
 
 .rental-project-item:last-child {
     border-bottom: none;
+    margin-bottom: 0;
 }
 
 .rental-project-item a {
     display: block;
-    padding: 4px 8px;
-    border-radius: 4px;
-    transition: background-color 0.2s ease;
+    color: inherit;
 }
 
 .rental-project-item a:hover {
-    background-color: #f8f9fa;
+    color: #0d6efd !important;
+}
+
+/* Project date-based color coding in popovers */
+.rental-project-item.project-past,
+.popover-body .rental-project-item.project-past {
+    color: #6c757d !important;
+    opacity: 0.8;
+}
+
+.rental-project-item.project-past a,
+.popover-body .rental-project-item.project-past a {
+    color: #6c757d !important;
+}
+
+.rental-project-item.project-past strong,
+.popover-body .rental-project-item.project-past strong {
+    color: #6c757d !important;
+    font-weight: 500 !important;
+}
+
+.rental-project-item.project-past small,
+.popover-body .rental-project-item.project-past small {
+    color: #999999 !important;
+}
+
+.rental-project-item.project-future,
+.popover-body .rental-project-item.project-future {
+    color: #000000 !important;
+    font-weight: 600 !important;
+}
+
+.rental-project-item.project-future a,
+.popover-body .rental-project-item.project-future a {
+    color: #000000 !important;
+    font-weight: 600 !important;
+}
+
+.rental-project-item.project-future strong,
+.popover-body .rental-project-item.project-future strong {
+    color: #000000 !important;
+    font-weight: 700 !important;
+}
+
+.rental-project-item.project-future small,
+.popover-body .rental-project-item.project-future small {
+    color: #333333 !important;
+    font-weight: 500 !important;
+}
+
+.rental-project-item.project-current,
+.popover-body .rental-project-item.project-current {
+    color: #0d6efd !important;
+    font-weight: 600 !important;
+}
+
+.rental-project-item.project-current a,
+.popover-body .rental-project-item.project-current a {
+    color: #0d6efd !important;
+    font-weight: 600 !important;
+}
+
+.rental-project-item.project-current strong,
+.popover-body .rental-project-item.project-current strong {
+    color: #0d6efd !important;
+    font-weight: 700 !important;
+}
+
+.rental-project-item.project-current small,
+.popover-body .rental-project-item.project-current small {
+    color: #0d6efd !important;
+    opacity: 0.8;
 }
 
 /* Responsive Adjustments for Rental Status */

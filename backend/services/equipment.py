@@ -1118,11 +1118,17 @@ class EquipmentService:
                 f"{row['start_date'].strftime('%d.%m')} - "
                 f"{row['end_date'].strftime('%d.%m')}"
             )
+            start_date_iso = (
+                row['start_date'].isoformat() if row['start_date'] else None
+            )
+            end_date_iso = row['end_date'].isoformat() if row['end_date'] else None
             projects_by_equipment[equipment_id].append(
                 {
                     'id': row['project_id'],
                     'name': row['project_name'],
                     'dates': date_range,
+                    'start_date': start_date_iso,
+                    'end_date': end_date_iso,
                 }
             )
 

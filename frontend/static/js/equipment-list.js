@@ -233,14 +233,38 @@ function generatePopoverContent(projects) {
         return '<div class="text-muted">Нет активных проектов</div>';
     }
 
-    const projectsList = projects.map(project =>
-        `<li class="rental-project-item">
-            <a href="/projects/${project.id}" class="text-decoration-none">
-                <strong>${project.name}</strong><br>
-                <small class="text-muted">${project.dates}</small>
+    // Sort projects by start_date ascending
+    const sortedProjects = [...projects].sort((a, b) => {
+        if (!a.start_date || !b.start_date) return 0;
+        return new Date(a.start_date).getTime() - new Date(b.start_date).getTime();
+    });
+
+    const projectsList = sortedProjects.map(project => {
+        // Get current date for comparison
+        const now = new Date();
+
+        // Safely create Date objects, handling null values
+        const startDate = project.start_date ? new Date(project.start_date) : null;
+        const endDate = project.end_date ? new Date(project.end_date) : null;
+
+        // Determine CSS class based on project dates
+        let cssClass = '';
+
+        if (startDate && startDate > now) {
+            cssClass = 'project-future';
+        } else if (endDate && endDate < now) {
+            cssClass = 'project-past';
+        } else {
+            cssClass = 'project-current';
+        }
+
+        return `<li class="rental-project-item ${cssClass}">
+            <a href="/projects/${project.id}" class="text-decoration-none" ${cssClass === 'project-future' ? 'style="color: #000000 !important; font-weight: 600 !important;"' : cssClass === 'project-past' ? 'style="color: #6c757d !important; opacity: 0.8;"' : cssClass === 'project-current' ? 'style="color: #0d6efd !important; font-weight: 600 !important;"' : ''}>
+                <strong ${cssClass === 'project-future' ? 'style="color: #000000 !important; font-weight: 700 !important;"' : cssClass === 'project-past' ? 'style="color: #6c757d !important;"' : cssClass === 'project-current' ? 'style="color: #0d6efd !important; font-weight: 700 !important;"' : ''}>${project.name}</strong><br>
+                <small class="text-muted" ${cssClass === 'project-future' ? 'style="color: #333333 !important;"' : cssClass === 'project-past' ? 'style="color: #999999 !important;"' : cssClass === 'project-current' ? 'style="color: #0d6efd !important; opacity: 0.8;"' : ''}>${project.dates}</small>
             </a>
-        </li>`
-    ).join('');
+        </li>`;
+    }).join('');
 
     return `
         <div class="rental-projects-popover">
