@@ -46,20 +46,24 @@ class TestBookingEdgeCases:
         self, services: Dict[str, Any], test_client: Client, test_equipment: Equipment
     ) -> None:
         """Test booking date validation edge cases."""
-        # Past start date
+        # Past start date - now allowed
         past_start = datetime.now(timezone.utc) - timedelta(days=1)
         total_amount = float(300.00)
         deposit_amount = float(200.00)  # 20% of replacement cost
 
-        with pytest.raises(ValueError, match='Start date cannot be in the past'):
-            await services['booking'].create_booking(
-                client_id=test_client.id,
-                equipment_id=test_equipment.id,
-                start_date=past_start,
-                end_date=datetime.now(timezone.utc) + timedelta(days=1),
-                total_amount=total_amount,
-                deposit_amount=deposit_amount,
-            )
+        # Past dates are now allowed, so this should succeed
+        booking = await services['booking'].create_booking(
+            client_id=test_client.id,
+            equipment_id=test_equipment.id,
+            start_date=past_start,
+            end_date=datetime.now(timezone.utc) + timedelta(days=1),
+            total_amount=total_amount,
+            deposit_amount=deposit_amount,
+        )
+        
+        # Verify booking was created successfully
+        assert booking is not None
+        assert booking.start_date == past_start
 
         # End date before start date
         start_date = datetime.now(timezone.utc) + timedelta(days=1)

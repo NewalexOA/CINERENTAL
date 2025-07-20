@@ -53,19 +53,23 @@ class TestBookingErrorHandling:
                 deposit_amount=100.0,
             )
 
-        # Test with start date in the past
+        # Test with start date in the past - now allowed
         start_date = datetime.now(timezone.utc) - timedelta(days=1)
         end_date = datetime.now(timezone.utc) + timedelta(days=3)
 
-        with pytest.raises(ValueError):
-            await booking_service.create_booking(
-                client_id=test_client.id,
-                equipment_id=test_equipment.id,
-                start_date=start_date,
-                end_date=end_date,
-                total_amount=300.0,
-                deposit_amount=100.0,
-            )
+        # Past dates are now allowed, so this should succeed
+        booking = await booking_service.create_booking(
+            client_id=test_client.id,
+            equipment_id=test_equipment.id,
+            start_date=start_date,
+            end_date=end_date,
+            total_amount=300.0,
+            deposit_amount=100.0,
+        )
+        
+        # Verify booking was created successfully
+        assert booking is not None
+        assert booking.start_date == start_date
 
     @async_test
     async def test_booking_nonexistent_equipment(
