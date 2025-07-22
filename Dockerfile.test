@@ -26,8 +26,9 @@ RUN apk add --no-cache \
     glib \
     nss \
     nspr \
-    at-spi2-atk \
     at-spi2-core \
+    libatk-1.0 \
+    libatk-bridge-2.0 \
     libxcomposite \
     libxdamage \
     libxext \
