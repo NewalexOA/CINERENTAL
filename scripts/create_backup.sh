@@ -47,38 +47,38 @@ check_container_running() {
 # Function to get service versions
 get_versions() {
     print_status "Detecting service versions..."
-    
+
     # PostgreSQL version
     PG_FULL_VERSION=$(docker exec ${PROJECT_NAME}-db-1 psql -U postgres -d ${PROJECT_NAME} -t -c "SELECT version();" | head -1 | sed 's/^ *//')
     PG_VERSION=$(echo "$PG_FULL_VERSION" | sed -n 's/.*PostgreSQL \([0-9]*\.[0-9]*\).*/\1/p')
-    
-    # Redis version  
+
+    # Redis version
     REDIS_VERSION=$(docker exec ${PROJECT_NAME}-redis-1 redis-cli INFO server | grep redis_version | cut -d: -f2 | tr -d '\r')
-    
+
     # App version (from git or pyproject.toml)
     if [ -f "pyproject.toml" ]; then
         APP_VERSION=$(grep '^version = ' pyproject.toml | cut -d'"' -f2)
     else
         APP_VERSION="unknown"
     fi
-    
+
     print_success "PostgreSQL: $PG_VERSION"
-    print_success "Redis: $REDIS_VERSION" 
+    print_success "Redis: $REDIS_VERSION"
     print_success "App: $APP_VERSION"
 }
 
 # Function to get database statistics
 get_db_stats() {
     print_status "Collecting database statistics..."
-    
+
     EQUIPMENT_COUNT=$(docker exec ${PROJECT_NAME}-db-1 psql -U postgres -d ${PROJECT_NAME} -t -c "SELECT count(*) FROM equipment;" | tr -d ' ')
     BOOKINGS_COUNT=$(docker exec ${PROJECT_NAME}-db-1 psql -U postgres -d ${PROJECT_NAME} -t -c "SELECT count(*) FROM bookings;" | tr -d ' ')
     CLIENTS_COUNT=$(docker exec ${PROJECT_NAME}-db-1 psql -U postgres -d ${PROJECT_NAME} -t -c "SELECT count(*) FROM clients;" | tr -d ' ')
     PROJECTS_COUNT=$(docker exec ${PROJECT_NAME}-db-1 psql -U postgres -d ${PROJECT_NAME} -t -c "SELECT count(*) FROM projects;" | tr -d ' ')
     ALEMBIC_VERSION=$(docker exec ${PROJECT_NAME}-db-1 psql -U postgres -d ${PROJECT_NAME} -t -c "SELECT version_num FROM alembic_version;" | tr -d ' ')
-    
+
     print_success "Equipment: $EQUIPMENT_COUNT items"
-    print_success "Bookings: $BOOKINGS_COUNT records"  
+    print_success "Bookings: $BOOKINGS_COUNT records"
     print_success "Clients: $CLIENTS_COUNT records"
     print_success "Projects: $PROJECTS_COUNT records"
     print_success "DB Schema: $ALEMBIC_VERSION"
@@ -87,9 +87,9 @@ get_db_stats() {
 # Function to create database backup
 create_database_backup() {
     print_status "Creating PostgreSQL database backup..."
-    
+
     local db_backup_file="$BACKUP_DIR/${PROJECT_NAME}_pg${PG_VERSION}_full_backup_${TIMESTAMP}.sql"
-    
+
     docker exec ${PROJECT_NAME}-db-1 pg_dump \
         -U postgres \
         -d ${PROJECT_NAME} \
@@ -97,7 +97,7 @@ create_database_backup() {
         --create \
         --clean \
         --if-exists > "$db_backup_file"
-    
+
     print_success "Database backup created: $(basename $db_backup_file)"
     print_success "Size: $(du -h "$db_backup_file" | cut -f1)"
 }
@@ -105,7 +105,7 @@ create_database_backup() {
 # Function to create volume backups
 create_volume_backups() {
     print_status "Creating Docker volume backups..."
-    
+
     # PostgreSQL volume
     print_status "Backing up PostgreSQL volume..."
     local pg_volume_backup="$BACKUP_DIR/postgres_volume_pg${PG_VERSION}_backup_${TIMESTAMP}.tar.gz"
@@ -115,7 +115,7 @@ create_volume_backups() {
         postgres:14-alpine \
         tar czf /backup/$(basename $pg_volume_backup) -C /source .
     print_success "PostgreSQL volume backup: $(basename $pg_volume_backup) ($(du -h "$pg_volume_backup" | cut -f1))"
-    
+
     # Redis volume
     print_status "Backing up Redis volume..."
     local redis_volume_backup="$BACKUP_DIR/redis_volume_redis${REDIS_VERSION}_backup_${TIMESTAMP}.tar.gz"
@@ -125,7 +125,7 @@ create_volume_backups() {
         redis:6-alpine \
         tar czf /backup/$(basename $redis_volume_backup) -C /source .
     print_success "Redis volume backup: $(basename $redis_volume_backup) ($(du -h "$redis_volume_backup" | cut -f1))"
-    
+
     # Media volume
     print_status "Backing up Media volume..."
     local media_volume_backup="$BACKUP_DIR/media_volume_backup_${TIMESTAMP}.tar.gz"
@@ -140,7 +140,7 @@ create_volume_backups() {
 # Function to create backup info file
 create_backup_info() {
     print_status "Creating backup information file..."
-    
+
     local info_file="$BACKUP_DIR/backup_info.txt"
     cat > "$info_file" << EOF
 ACT-RENTAL ПОЛНЫЙ БЭКАП
@@ -151,7 +151,7 @@ ACT-RENTAL ПОЛНЫЙ БЭКАП
 
 ВЕРСИИ КОМПОНЕНТОВ:
 - PostgreSQL: $PG_VERSION
-- Redis: $REDIS_VERSION  
+- Redis: $REDIS_VERSION
 - App: $APP_VERSION
 - Docker: $(docker --version | cut -d' ' -f3 | cut -d',' -f1)
 
@@ -167,11 +167,11 @@ ACT-RENTAL ПОЛНЫЙ БЭКАП
    - Последовательности (sequences)
    - Права доступа
    - Расширения (pg_trgm)
-   
+
 2. VOLUME POSTGRESQL:
    Файл: postgres_volume_pg${PG_VERSION}_backup_${TIMESTAMP}.tar.gz
    Описание: Полная копия данных PostgreSQL на уровне файловой системы
-   
+
 3. VOLUME REDIS:
    Файл: redis_volume_redis${REDIS_VERSION}_backup_${TIMESTAMP}.tar.gz
    Описание: Копия кэша Redis включающая:
@@ -195,7 +195,7 @@ ACT-RENTAL ПОЛНЫЙ БЭКАП
 СТАТИСТИКА ДАННЫХ:
 ==================
 - Оборудование: $EQUIPMENT_COUNT единиц
-- Бронирования: $BOOKINGS_COUNT записей  
+- Бронирования: $BOOKINGS_COUNT записей
 - Клиенты: $CLIENTS_COUNT записей
 - Проекты: $PROJECTS_COUNT записей
 - Alembic версия: $ALEMBIC_VERSION
@@ -212,7 +212,7 @@ ACT-RENTAL ПОЛНЫЙ БЭКАП
 ВАРИАНТ 2 - Ручное восстановление из SQL дампа:
 1. Остановить приложение: docker compose down
 2. Очистить базу: docker volume rm ${PROJECT_NAME}_postgres_data
-3. Создать volume: docker volume create ${PROJECT_NAME}_postgres_data  
+3. Создать volume: docker volume create ${PROJECT_NAME}_postgres_data
 4. Запустить только БД: docker compose up -d db
 5. Восстановить данные: docker exec -i ${PROJECT_NAME}-db-1 psql -U postgres < ${PROJECT_NAME}_pg${PG_VERSION}_full_backup_${TIMESTAMP}.sql
 6. Запустить приложение: docker compose up -d
@@ -222,7 +222,7 @@ ACT-RENTAL ПОЛНЫЙ БЭКАП
 2. Удалить старые volumes: docker volume rm ${PROJECT_NAME}_postgres_data ${PROJECT_NAME}_redis_data ${PROJECT_NAME}_media
 3. Создать volumes: docker volume create ${PROJECT_NAME}_postgres_data && docker volume create ${PROJECT_NAME}_redis_data && docker volume create ${PROJECT_NAME}_media
 4. Восстановить PostgreSQL: docker run --rm -v ${PROJECT_NAME}_postgres_data:/target -v \$(pwd):/backup postgres:14-alpine tar xzf /backup/postgres_volume_pg${PG_VERSION}_backup_${TIMESTAMP}.tar.gz -C /target
-5. Восстановить Redis: docker run --rm -v ${PROJECT_NAME}_redis_data:/target -v \$(pwd):/backup redis:6-alpine tar xzf /backup/redis_volume_redis${REDIS_VERSION}_backup_${TIMESTAMP}.tar.gz -C /target  
+5. Восстановить Redis: docker run --rm -v ${PROJECT_NAME}_redis_data:/target -v \$(pwd):/backup redis:6-alpine tar xzf /backup/redis_volume_redis${REDIS_VERSION}_backup_${TIMESTAMP}.tar.gz -C /target
 6. Восстановить Media: docker run --rm -v ${PROJECT_NAME}_media:/target -v \$(pwd):/backup alpine:latest tar xzf /backup/media_volume_backup_${TIMESTAMP}.tar.gz -C /target
 7. Запустить приложение: docker compose up -d
 
@@ -244,7 +244,7 @@ ACT-RENTAL ПОЛНЫЙ БЭКАП
 Скрипт автоматически:
 - Найдёт проект ACT-Rental
 - Остановит сервисы
-- Очистит старые данные  
+- Очистит старые данные
 - Восстановит базу данных
 - Запустит приложение
 - Проверит корректность восстановления
@@ -262,14 +262,14 @@ ACT-RENTAL ПОЛНЫЙ БЭКАП
 ДАТА: $(date)
 КОНТАКТ: Система автоматического резервного копирования
 EOF
-    
+
     print_success "Backup info created: $(basename $info_file)"
 }
 
 # Function to create restore script
 create_restore_script() {
     print_status "Creating restore script..."
-    
+
     local restore_script="$BACKUP_DIR/restore_backup.sh"
     cat > "$restore_script" << 'EOF'
 #!/bin/bash
@@ -291,7 +291,14 @@ print_warning() { echo -e "${YELLOW}[WARNING]${NC} $1"; }
 print_error() { echo -e "${RED}[ERROR]${NC} $1"; }
 
 PROJECT_NAME="act-rental"
-BACKUP_DIR=$(dirname "$0")
+BACKUP_DIR=$(cd "$(dirname "$0")" && pwd)
+PROJECT_DIR="/Users/actrental/Documents/GitHub/CINERENTAL"
+
+# Change to project directory for docker compose commands
+cd "$PROJECT_DIR" || {
+    print_error "Не удалось перейти в директорию проекта: $PROJECT_DIR"
+    exit 1
+}
 
 print_warning "ВНИМАНИЕ! Это полностью удалит текущие данные ACT-Rental!"
 read -p "Продолжить? (yes/no): " confirmation
@@ -303,42 +310,56 @@ fi
 print_status "Остановка приложения..."
 docker compose down || true
 
+print_status "Удаление контейнеров..."
+docker container rm ${PROJECT_NAME}-web-1 ${PROJECT_NAME}-db-1 ${PROJECT_NAME}-redis-1 2>/dev/null || true
+
 print_status "Удаление старых volumes..."
 docker volume rm ${PROJECT_NAME}_postgres_data ${PROJECT_NAME}_redis_data ${PROJECT_NAME}_media 2>/dev/null || true
 
 print_status "Создание новых volumes..."
-docker volume create ${PROJECT_NAME}_postgres_data
-docker volume create ${PROJECT_NAME}_redis_data  
-docker volume create ${PROJECT_NAME}_media
+docker volume create --name ${PROJECT_NAME}_postgres_data
+docker volume create --name ${PROJECT_NAME}_redis_data
+docker volume create --name ${PROJECT_NAME}_media
 
-print_status "Запуск PostgreSQL для восстановления..."
-docker compose up -d db
-sleep 10
+print_status "Восстановление томов из архивов..."
 
-print_status "Восстановление базы данных..."
-BACKUP_DIR=$(dirname "$0")
-SQL_FILE=$(find "$BACKUP_DIR" -name "*_full_backup_*.sql" | head -1)
-if [[ -z "$SQL_FILE" ]]; then
-    print_error "SQL backup file not found!"
+# Восстановление PostgreSQL тома
+PG_ARCHIVE=$(find "$BACKUP_DIR" -name "postgres_volume_*_backup_*.tar.gz" | head -1)
+if [[ -z "$PG_ARCHIVE" ]]; then
+    print_error "PostgreSQL volume backup not found!"
     exit 1
 fi
 
-docker exec -i ${PROJECT_NAME}-db-1 psql -U postgres < "$SQL_FILE"
-print_success "База данных восстановлена"
+print_status "Восстановление PostgreSQL тома..."
+docker run --rm -v ${PROJECT_NAME}_postgres_data:/data -v "$BACKUP_DIR:/backup" alpine:latest \
+    sh -c "cd /data && tar -xzf /backup/$(basename $PG_ARCHIVE)"
+print_success "PostgreSQL том восстановлен"
 
-print_status "Запуск приложения..."
-docker compose up -d
+# Восстановление Redis тома
+REDIS_ARCHIVE=$(find "$BACKUP_DIR" -name "redis_volume_*_backup_*.tar.gz" | head -1)
+if [[ -n "$REDIS_ARCHIVE" ]]; then
+    print_status "Восстановление Redis тома..."
+    docker run --rm -v ${PROJECT_NAME}_redis_data:/data -v "$BACKUP_DIR:/backup" alpine:latest \
+        sh -c "cd /data && tar -xzf /backup/$(basename $REDIS_ARCHIVE)"
+    print_success "Redis том восстановлен"
+fi
 
-print_status "Ожидание готовности приложения..."
-sleep 15
-
-print_status "Проверка восстановления..."
-curl -f http://localhost:8000/api/v1/health > /dev/null && print_success "Приложение работает" || print_error "Приложение не отвечает"
+# Восстановление Media тома
+MEDIA_ARCHIVE=$(find "$BACKUP_DIR" -name "media_volume_backup_*.tar.gz" | head -1)
+if [[ -n "$MEDIA_ARCHIVE" ]]; then
+    print_status "Восстановление Media тома..."
+    docker run --rm -v ${PROJECT_NAME}_media:/data -v "$BACKUP_DIR:/backup" alpine:latest \
+        sh -c "cd /data && tar -xzf /backup/$(basename $MEDIA_ARCHIVE)"
+    print_success "Media том восстановлен"
+fi
 
 print_success "Восстановление завершено!"
-print_status "Проверьте данные в веб-интерфейсе: http://localhost:8000"
+print_status "Данные восстановлены из бэкапа."
+print_status "Для запуска приложения используйте:"
+print_status "  Продакшен: docker compose -f docker-compose.prod.yml up -d"
+print_status "  Разработка: docker compose up -d"
 EOF
-    
+
     chmod +x "$restore_script"
     print_success "Restore script created: $(basename $restore_script)"
 }
@@ -347,27 +368,27 @@ EOF
 main() {
     print_status "Starting ACT-Rental backup process..."
     print_status "Timestamp: $TIMESTAMP"
-    
+
     # Check if containers are running
     check_container_running "${PROJECT_NAME}-db-1"
     check_container_running "${PROJECT_NAME}-redis-1"
-    
+
     # Create backup directory
     mkdir -p "$BACKUP_DIR"
     print_success "Created backup directory: $BACKUP_DIR"
-    
+
     # Get versions and stats
     get_versions
     get_db_stats
-    
+
     # Create backups
     create_database_backup
     create_volume_backups
-    
+
     # Create documentation
     create_backup_info
     create_restore_script
-    
+
     # Final summary
     echo
     print_success "=== BACKUP COMPLETED ==="
@@ -380,4 +401,4 @@ main() {
 }
 
 # Run main function
-main "$@" 
+main "$@"
