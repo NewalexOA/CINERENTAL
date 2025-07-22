@@ -1,4 +1,4 @@
-FROM python:3.12-alpine
+FROM python:3.12-slim
 
 # Set environment variables with default values that can be overridden at build time
 ARG PIP_INDEX_URL=https://pypi.org/simple/
@@ -13,53 +13,54 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PIP_TRUSTED_HOST=${PIP_TRUSTED_HOST} \
     UV_INDEX_URL=${PIP_INDEX_URL}
 
-# Install system dependencies including Playwright requirements
-RUN apk add --no-cache \
-    build-base \
-    curl \
-    postgresql-dev \
-    python3-dev \
-    ghostscript \
-    postgresql-client \
-    netcat-openbsd \
-    # Playwright dependencies
-    glib \
-    nss \
-    nspr \
-    at-spi2-core \
-    libatk-1.0 \
-    libatk-bridge-2.0 \
-    libxcomposite \
-    libxdamage \
-    libxext \
-    libxfixes \
-    libxrandr \
-    mesa-gl \
-    libxkbcommon \
-    alsa-lib
+# Configure apt to use specified mirror
+RUN echo "deb ${APT_MIRROR} bookworm main" > /etc/apt/sources.list && \
+    echo "deb ${APT_MIRROR} bookworm-updates main" >> /etc/apt/sources.list && \
+    echo "deb http://security.debian.org/debian-security bookworm-security main" >> /etc/apt/sources.list
 
 # Set working directory
 WORKDIR /app
 
+# Install system dependencies including Playwright requirements
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    curl \
+    libpq-dev \
+    python3-dev \
+    ghostscript \
+    postgresql-client \
+    netcat-traditional \
+    # Playwright dependencies
+    libglib2.0-0 \
+    libnss3 \
+    libnspr4 \
+    libatk1.0-0 \
+    libatk-bridge2.0-0 \
+    libatspi2.0-0 \
+    libxcomposite1 \
+    libxdamage1 \
+    libxext6 \
+    libxfixes3 \
+    libxrandr2 \
+    libgbm1 \
+    libxkbcommon0 \
+    libasound2 \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
 # Install uv
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh && \
-    echo 'export PATH="/root/.local/bin:$PATH"' >> ~/.bashrc && \
-    export PATH="/root/.local/bin:$PATH"
+    echo 'export PATH="/root/.local/bin:$PATH"' >> ~/.bashrc
 
-# Create all necessary directories
-RUN mkdir -p backend tests docker frontend frontend/static \
-    media static templates alembic && \
-    touch alembic.ini && \
-    chmod -R 777 frontend media static templates alembic
-
-# Copy files individually to avoid errors
+# Copy requirements and source code
+COPY requirements.txt .
 COPY pyproject.toml .
-COPY README.md .
-COPY backend/. backend/
-COPY tests/. tests/
-COPY docker/. docker/
+COPY backend/ ./backend/
+COPY migrations/ ./migrations/
+COPY alembic.ini .
+COPY tests/ ./tests/
 
-# Install test dependencies
+# Install Python dependencies
 RUN export PATH="/root/.local/bin:$PATH" && \
     uv pip install --system . && \
     uv pip install --system \
@@ -78,9 +79,14 @@ RUN export PATH="/root/.local/bin:$PATH" && \
     playwright
 
 # Install Playwright browser
-RUN playwright install chromium
+RUN export PATH="/root/.local/bin:$PATH" && \
+    playwright install chromium
 
 # Make scripts executable
 RUN chmod +x docker/wait-for.sh docker/run-tests.sh
 
-CMD ["./docker/run-tests.sh"]
+# Copy additional scripts
+COPY docker/ ./docker/
+
+# Run tests by default
+CMD ["docker/run-tests.sh"]
