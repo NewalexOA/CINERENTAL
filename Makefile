@@ -1,4 +1,4 @@
-.PHONY: install install-dev install-test lint format clean run migrate pre-commit pre-commit-install
+.PHONY: install install-dev install-test lint format clean run migrate pre-commit pre-commit-install backup backup-info
 
 install:
 	python -m venv .venv
@@ -60,3 +60,10 @@ pre-commit:
 
 pre-commit-check:
 	pre-commit run
+
+backup:
+	./scripts/create_backup.sh
+
+backup-info:
+	@echo "Backup directory: $$HOME/Documents/ACT-Rental-Backups"
+	@ls -la "$$HOME/Documents/ACT-Rental-Backups" 2>/dev/null || echo "No backups found"
