@@ -53,10 +53,10 @@ dev:
 
 pre-commit-install:
 	python3 -m pip install --user pre-commit
-	/Users/$(USER)/Library/Python/3.9/bin/pre-commit install
+	pre-commit install
 
 pre-commit:
-	/Users/$(USER)/Library/Python/3.9/bin/pre-commit run --all-files
+	pre-commit run --all-files
 
 pre-commit-check:
-	/Users/$(USER)/Library/Python/3.9/bin/pre-commit run
+	pre-commit run
