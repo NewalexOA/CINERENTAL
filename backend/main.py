@@ -49,16 +49,17 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     # Initialize resources
     await init_redis()
-    
+
     # Setup scheduler for background tasks (only in non-testing environment)
     if settings.ENVIRONMENT != 'testing':
+
         def get_scan_session_repository() -> ScanSessionRepository:
             db = AsyncSessionLocal()
             return ScanSessionRepository(db)
 
         setup_scheduler(app, get_scan_session_repository)
         logger.info('Scheduled background tasks')
-    
+
     yield
     # Cleanup resources
     await close_redis()

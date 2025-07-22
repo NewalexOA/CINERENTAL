@@ -66,7 +66,7 @@ class TestBookingErrorHandling:
             total_amount=300.0,
             deposit_amount=100.0,
         )
-        
+
         # Verify booking was created successfully
         assert booking is not None
         assert booking.start_date == start_date

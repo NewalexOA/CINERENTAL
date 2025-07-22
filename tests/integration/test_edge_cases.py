@@ -60,7 +60,7 @@ class TestBookingEdgeCases:
             total_amount=total_amount,
             deposit_amount=deposit_amount,
         )
-        
+
         # Verify booking was created successfully
         assert booking is not None
         assert booking.start_date == past_start
