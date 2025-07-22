@@ -1,4 +1,4 @@
-.PHONY: install install-dev install-test lint format clean run migrate
+.PHONY: install install-dev install-test lint format clean run migrate pre-commit pre-commit-install
 
 install:
 	python -m venv .venv
@@ -50,3 +50,13 @@ migrate:
 dev:
 	docker compose build
 	docker compose up -d
+
+pre-commit-install:
+	python3 -m pip install --user pre-commit
+	pre-commit install
+
+pre-commit:
+	pre-commit run --all-files
+
+pre-commit-check:
+	pre-commit run
