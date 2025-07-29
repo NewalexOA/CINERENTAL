@@ -672,13 +672,14 @@ class DockerManager:
     @property
     def backup_manager(self):
         """Get backup manager instance (lazy loading).
-        
+
         Returns:
             BackupManager instance
         """
         if self._backup_manager is None:
             try:
                 from backup import BackupManager
+
                 self._backup_manager = BackupManager(docker_manager=self)
                 self.logger.info('BackupManager инициализирован')
             except ImportError as e:
@@ -687,5 +688,5 @@ class DockerManager:
             except Exception as e:
                 self.logger.error(f'Ошибка инициализации BackupManager: {str(e)}')
                 self._backup_manager = None
-        
+
         return self._backup_manager
