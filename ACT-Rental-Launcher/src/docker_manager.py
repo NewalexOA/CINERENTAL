@@ -35,6 +35,9 @@ class DockerManager:
         self.setup_logger()
         self.app_url = 'http://localhost:8000'
 
+        # Initialize backup manager (lazy loading)
+        self._backup_manager = None
+
         self.logger.info(
             f'DockerManager инициализирован. Путь проекта: {self.project_path}'
         )
@@ -665,3 +668,24 @@ class DockerManager:
             'Образы успешно пересобраны. '
             'Используйте кнопку "Запустить" для запуска контейнеров.'
         )
+
+    @property
+    def backup_manager(self):
+        """Get backup manager instance (lazy loading).
+        
+        Returns:
+            BackupManager instance
+        """
+        if self._backup_manager is None:
+            try:
+                from backup import BackupManager
+                self._backup_manager = BackupManager(docker_manager=self)
+                self.logger.info('BackupManager инициализирован')
+            except ImportError as e:
+                self.logger.error(f'Ошибка импорта BackupManager: {str(e)}')
+                self._backup_manager = None
+            except Exception as e:
+                self.logger.error(f'Ошибка инициализации BackupManager: {str(e)}')
+                self._backup_manager = None
+        
+        return self._backup_manager
