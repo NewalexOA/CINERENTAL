@@ -167,6 +167,17 @@ def run_backup_script() -> Tuple[bool, str, str]:
         # Make script executable
         os.chmod(script_path, 0o755)
 
+        # Setup environment with Docker paths for macOS
+        env = os.environ.copy()
+        docker_paths = [
+            '/usr/local/bin',  # Common Docker path
+            '/opt/homebrew/bin',  # Homebrew Docker path on Apple Silicon
+            '/Applications/Docker.app/Contents/Resources/bin',  # Docker Desktop path
+        ]
+        current_path = env.get('PATH', '')
+        additional_paths = ':'.join(docker_paths)
+        env['PATH'] = f'{additional_paths}:{current_path}'
+
         # Run script from project root directory
         process = subprocess.run(
             ['/bin/bash', script_path],
@@ -177,6 +188,7 @@ def run_backup_script() -> Tuple[bool, str, str]:
             encoding='utf-8',  # Explicitly set UTF-8 encoding
             errors='replace',  # Replace invalid characters instead of failing
             timeout=1800,  # 30 minute timeout
+            env=env,  # Pass enhanced environment
         )
 
         success = process.returncode == 0
@@ -209,6 +221,17 @@ def run_restore_script(backup_path: str) -> Tuple[bool, str, str]:
         # Make script executable
         os.chmod(restore_script, 0o755)
 
+        # Setup environment with Docker paths for macOS
+        env = os.environ.copy()
+        docker_paths = [
+            '/usr/local/bin',  # Common Docker path
+            '/opt/homebrew/bin',  # Homebrew Docker path on Apple Silicon
+            '/Applications/Docker.app/Contents/Resources/bin',  # Docker Desktop path
+        ]
+        current_path = env.get('PATH', '')
+        additional_paths = ':'.join(docker_paths)
+        env['PATH'] = f'{additional_paths}:{current_path}'
+
         # Run restore script with shorter timeout and better error handling
         try:
             logger.info(f'Executing restore script: {restore_script}')
@@ -221,6 +244,7 @@ def run_restore_script(backup_path: str) -> Tuple[bool, str, str]:
                 encoding='utf-8',  # Explicitly set UTF-8 encoding
                 errors='replace',  # Replace invalid characters instead of failing
                 timeout=300,  # 5 minute timeout instead of 30 minutes
+                env=env,  # Pass enhanced environment
             )
 
             success = process.returncode == 0
@@ -368,20 +392,42 @@ def check_docker_available() -> bool:
     """
     try:
         # Try multiple possible docker paths for macOS
-        docker_paths = ['/usr/local/bin/docker', '/opt/homebrew/bin/docker', 'docker']
+        docker_paths = [
+            '/usr/local/bin/docker',
+            '/opt/homebrew/bin/docker',
+            '/Applications/Docker.app/Contents/Resources/bin/docker',
+            'docker',
+        ]
 
         for docker_path in docker_paths:
             try:
+                logger.debug(f'Trying Docker path: {docker_path}')
                 result = subprocess.run(
-                    [docker_path, 'info'], capture_output=True, text=True, timeout=10
+                    [docker_path, 'info'],
+                    capture_output=True,
+                    text=True,
+                    timeout=10,
+                    encoding='utf-8',
+                    errors='replace',
                 )
                 if result.returncode == 0:
+                    logger.info(f'Docker available at: {docker_path}')
                     return True
+                else:
+                    logger.debug(
+                        f'Docker at {docker_path} returned code {result.returncode}'
+                    )
             except FileNotFoundError:
+                logger.debug(f'Docker not found at: {docker_path}')
+                continue
+            except subprocess.TimeoutExpired:
+                logger.warning(f'Docker info command timed out for: {docker_path}')
                 continue
 
+        logger.warning('Docker not available at any known location')
         return False
-    except Exception:
+    except Exception as e:
+        logger.error(f'Error checking Docker availability: {e}')
         return False
 
 
@@ -394,48 +440,180 @@ def check_act_rental_running() -> bool:
     try:
         # Try to find project root
         project_root = get_project_root()
+        logger.info(f'Checking ACT-Rental status from project root: {project_root}')
 
-        # Try multiple docker-compose commands
+        # Setup environment with Docker paths for macOS
+        env = os.environ.copy()
+        docker_paths = [
+            '/usr/local/bin',  # Common Docker path
+            '/opt/homebrew/bin',  # Homebrew Docker path on Apple Silicon
+            '/Applications/Docker.app/Contents/Resources/bin',  # Docker Desktop path
+        ]
+        current_path = env.get('PATH', '')
+        additional_paths = ':'.join(docker_paths)
+        env['PATH'] = f'{additional_paths}:{current_path}'
+
+        # Method 1: Check for running containers with docker compose ps
         compose_commands = [
+            # Modern docker compose (without hyphen)
             [
                 'docker',
                 'compose',
                 '-f',
                 'docker-compose.prod.yml',
                 'ps',
-                '--services',
-                '--filter',
-                'status=running',
+                '--format',
+                'json',
             ],
+            ['docker', 'compose', '-f', 'docker-compose.yml', 'ps', '--format', 'json'],
+            # Legacy docker-compose (with hyphen)
             [
                 'docker-compose',
                 '-f',
                 'docker-compose.prod.yml',
                 'ps',
-                '--services',
-                '--filter',
-                'status=running',
+                '--format',
+                'json',
             ],
+            ['docker-compose', '-f', 'docker-compose.yml', 'ps', '--format', 'json'],
+            # Fallback: simple ps without json format
+            ['docker', 'compose', '-f', 'docker-compose.prod.yml', 'ps'],
+            ['docker', 'compose', '-f', 'docker-compose.yml', 'ps'],
+            ['docker-compose', '-f', 'docker-compose.prod.yml', 'ps'],
+            ['docker-compose', '-f', 'docker-compose.yml', 'ps'],
         ]
 
         for cmd in compose_commands:
             try:
+                logger.debug(f'Trying command: {" ".join(cmd)}')
                 result = subprocess.run(
-                    cmd, cwd=project_root, capture_output=True, text=True, timeout=10
+                    cmd,
+                    cwd=project_root,
+                    capture_output=True,
+                    text=True,
+                    timeout=15,
+                    encoding='utf-8',
+                    errors='replace',
+                    env=env,
                 )
 
-                if result.returncode == 0:
-                    running_services = (
-                        result.stdout.strip().split('\n')
-                        if result.stdout.strip()
-                        else []
-                    )
-                    # Check if web service is running (main indicator)
-                    return 'web' in running_services
+                logger.debug(
+                    f'Command result: returncode={result.returncode}, '
+                    f'stdout length={len(result.stdout)}'
+                )
+
+                if result.returncode == 0 and result.stdout.strip():
+                    output = result.stdout.strip()
+
+                    # Try to parse JSON format first
+                    if '--format' in cmd and 'json' in cmd:
+                        try:
+                            import json
+
+                            # Fix JSON format for multiple objects
+                            fixed_output = output.replace('}\n{', '}, {')
+                            containers = json.loads(f'[{fixed_output}]')
+                            running_containers = [
+                                c for c in containers if c.get('State') == 'running'
+                            ]
+                            web_running = any(
+                                'web' in c.get('Service', '')
+                                for c in running_containers
+                            )
+                            logger.info(
+                                f'JSON format: found {len(running_containers)} '
+                                f'running containers, web running: {web_running}'
+                            )
+                            if web_running:
+                                return True
+                        except (json.JSONDecodeError, ValueError) as e:
+                            logger.debug(f'Failed to parse JSON: {e}')
+                            continue
+                    else:
+                        # Parse simple text format
+                        lines = output.split('\n')
+                        running_lines = [
+                            line
+                            for line in lines
+                            if 'running' in line.lower() or 'up' in line.lower()
+                        ]
+                        web_running = any('web' in line for line in running_lines)
+                        logger.info(
+                            f'Text format: found {len(running_lines)} '
+                            f'running lines, web running: {web_running}'
+                        )
+                        if web_running:
+                            return True
+
             except FileNotFoundError:
+                logger.debug(f'Command not found: {cmd[0]}')
+                continue
+            except subprocess.TimeoutExpired:
+                logger.warning(f'Command timed out: {" ".join(cmd)}')
+                continue
+            except Exception as e:
+                logger.debug(f'Command failed: {e}')
                 continue
 
+        # Method 2: Direct docker ps check
+        logger.info('Trying direct docker ps check')
+        try:
+            result = subprocess.run(
+                ['docker', 'ps', '--format', 'table {{.Names}}\t{{.Status}}'],
+                capture_output=True,
+                text=True,
+                timeout=10,
+                encoding='utf-8',
+                errors='replace',
+                env=env,
+            )
+
+            if result.returncode == 0:
+                output = result.stdout
+                logger.debug(f'Docker ps output: {output[:200]}...')
+
+                # Look for containers with project-related names
+                running_containers = []
+                for line in output.split('\n'):
+                    if 'web' in line and (
+                        'up' in line.lower() or 'running' in line.lower()
+                    ):
+                        running_containers.append(line)
+
+                if running_containers:
+                    logger.info(
+                        f'Found running web containers via docker ps: '
+                        f'{len(running_containers)}'
+                    )
+                    return True
+
+        except Exception as e:
+            logger.debug(f'Docker ps check failed: {e}')
+
+        # Method 3: HTTP health check as last resort
+        logger.info('Trying HTTP health check')
+        try:
+            import urllib.error
+            import urllib.request
+
+            # Try to connect to the web service
+            for port in [8000, 80, 8080]:  # Common ports
+                try:
+                    with urllib.request.urlopen(
+                        f'http://localhost:{port}/api/v1/health', timeout=5
+                    ) as response:
+                        if response.status == 200:
+                            logger.info(f'ACT-Rental responding on port {port}')
+                            return True
+                except urllib.error.URLError:
+                    continue
+
+        except Exception as e:
+            logger.debug(f'HTTP health check failed: {e}')
+
+        logger.warning('ACT-Rental not detected as running by any method')
         return False
 
-    except Exception:
+    except Exception as e:
+        logger.error(f'Error checking ACT-Rental status: {e}')
         return False
