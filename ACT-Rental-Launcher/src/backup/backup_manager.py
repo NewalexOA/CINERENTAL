@@ -24,7 +24,7 @@ class BackupManager:
         """
         self.logger = logging.getLogger(self.__class__.__name__)
         self._docker_manager = docker_manager
-        self._service = BackupService()
+        self._service = BackupService(docker_manager)
 
         # Progress callback for UI updates
         self._progress_callback: Optional[Callable[[str], None]] = None

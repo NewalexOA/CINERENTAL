@@ -5,12 +5,10 @@ import os
 import threading
 import time
 from datetime import datetime, timedelta
-from typing import Callable, List, Optional, Tuple
+from typing import Any, Callable, List, Optional, Tuple
 
 from .backup_models import BackupInfo, BackupStatus
 from .backup_utils import (
-    check_act_rental_running,
-    check_docker_available,
     delete_backup_directory,
     ensure_backup_directory_exists,
     find_existing_backups,
@@ -23,9 +21,14 @@ from .backup_utils import (
 class BackupService:
     """Service class for backup operations."""
 
-    def __init__(self) -> None:
-        """Initialize backup service."""
+    def __init__(self, docker_manager: Optional[Any] = None) -> None:
+        """Initialize backup service.
+
+        Args:
+            docker_manager: Optional DockerManager instance for system checks
+        """
         self.logger = logging.getLogger(self.__class__.__name__)
+        self._docker_manager = docker_manager
         self._backup_cache: Optional[List[BackupInfo]] = None
         self._cache_timestamp: Optional[datetime] = None
         self._cache_lock = threading.Lock()
@@ -123,15 +126,24 @@ class BackupService:
         try:
             self._emit_progress('Проверка готовности системы...')
 
-            # Pre-flight checks
-            if not check_docker_available():
-                return False, 'Docker не запущен или недоступен'
+            # Pre-flight checks using DockerManager if available
+            if self._docker_manager:
+                if not self._docker_manager.is_docker_running():
+                    return False, 'Docker не запущен или недоступен'
 
-            if not check_act_rental_running():
+                if not self._docker_manager.check_act_rental_running():
+                    return (
+                        False,
+                        'ACT-Rental не запущен. Запустите приложение перед '
+                        'созданием резервной копии',
+                    )
+            else:
+                # DockerManager not available
+                # This shouldn't happen in normal operation
+                self.logger.warning('DockerManager not available for system checks')
                 return (
                     False,
-                    'ACT-Rental не запущен. Запустите приложение перед '
-                    'созданием резервной копии',
+                    'Система не готова: отсутствует компонент управления Docker',
                 )
 
             # Ensure backup directory exists
@@ -187,9 +199,16 @@ class BackupService:
             if not os.path.exists(backup_info.path):
                 return False, 'Резервная копия не найдена'
 
-            # Check Docker availability
-            if not check_docker_available():
-                return False, 'Docker не запущен или недоступен'
+            # Check system readiness using DockerManager
+            if self._docker_manager:
+                if not self._docker_manager.is_docker_running():
+                    return False, 'Docker не запущен или недоступен'
+            else:
+                self.logger.warning('DockerManager not available for restore operation')
+                return (
+                    False,
+                    'Система не готова: отсутствует компонент управления Docker',
+                )
 
             self._emit_progress('Запуск процесса восстановления...')
             start_time = time.time()
@@ -374,10 +393,18 @@ class BackupService:
         Returns:
             Tuple of (ready, status_message)
         """
-        if not check_docker_available():
-            return False, 'Docker не запущен'
+        if self._docker_manager:
+            # Use DockerManager for accurate checks
+            if not self._docker_manager.is_docker_running():
+                return False, 'Docker не запущен'
 
-        if not check_act_rental_running():
-            return False, 'ACT-Rental не запущен'
+            if not self._docker_manager.check_act_rental_running():
+                return False, 'ACT-Rental не запущен'
 
-        return True, 'Система готова'
+            return True, 'Система готова'
+        else:
+            # DockerManager not available
+            self.logger.warning(
+                'DockerManager not available for system readiness check'
+            )
+            return False, 'Система не готова: отсутствует компонент управления Docker'
