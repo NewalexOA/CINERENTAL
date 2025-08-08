@@ -1,25 +1,21 @@
 """Backup manager window with full backup management functionality."""
 
 import os
-from typing import List, Optional
+from typing import Any, Callable, List, Optional
 
 from PyQt5.QtCore import Qt, QThread, QTimer, pyqtSignal
-from PyQt5.QtGui import QFont, QIcon
+from PyQt5.QtGui import QFont
 from PyQt5.QtWidgets import (
     QAbstractItemView,
     QDialog,
     QDialogButtonBox,
-    QFrame,
     QGroupBox,
     QHBoxLayout,
-    QHeaderView,
     QLabel,
     QMainWindow,
     QMessageBox,
     QProgressDialog,
     QPushButton,
-    QSizePolicy,
-    QSpacerItem,
     QSplitter,
     QTableWidget,
     QTableWidgetItem,
@@ -37,7 +33,9 @@ class WorkerThread(QThread):
     update_signal = pyqtSignal(str)
     finished_signal = pyqtSignal(bool, str)
 
-    def __init__(self, operation, *args, **kwargs):
+    def __init__(
+        self, operation: Callable[..., Any], *args: Any, **kwargs: Any
+    ) -> None:
         """Initialize worker thread.
 
         Args:
@@ -50,7 +48,7 @@ class WorkerThread(QThread):
         self.args = args
         self.kwargs = kwargs
 
-    def run(self):
+    def run(self) -> None:
         """Execute operation in separate thread."""
         try:
             result = self.operation(*self.args, **self.kwargs)
@@ -66,7 +64,7 @@ class WorkerThread(QThread):
 class BackupDetailsDialog(QDialog):
     """Dialog for displaying detailed backup information."""
 
-    def __init__(self, backup_info: BackupInfo, parent=None):
+    def __init__(self, backup_info: BackupInfo, parent: Optional[Any] = None) -> None:
         """Initialize backup details dialog.
 
         Args:
@@ -77,7 +75,7 @@ class BackupDetailsDialog(QDialog):
         self.backup_info = backup_info
         self.init_ui()
 
-    def init_ui(self):
+    def init_ui(self) -> None:
         """Initialize user interface."""
         self.setWindowTitle(
             f'Детали резервной копии - {self.backup_info.formatted_timestamp}'
@@ -102,7 +100,7 @@ class BackupDetailsDialog(QDialog):
         """Format backup details for display."""
         backup = self.backup_info
 
-        details = f"""ДЕТАЛЬНАЯ ИНФОРМАЦИЯ О РЕЗЕРВНОЙ КОПИИ
+        details = f'''ДЕТАЛЬНАЯ ИНФОРМАЦИЯ О РЕЗЕРВНОЙ КОПИИ
 
 ОСНОВНАЯ ИНФОРМАЦИЯ:
 Путь: {backup.path}
@@ -125,29 +123,29 @@ Docker: {backup.docker_version}
 Версия схемы БД: {backup.alembic_version}
 
 ФАЙЛЫ В РЕЗЕРВНОЙ КОПИИ:
-"""
+'''
 
         if backup.database_file:
-            details += f"SQL дамп: {os.path.basename(backup.database_file)}\n"
+            details += f'SQL дамп: {os.path.basename(backup.database_file)}\n'
 
         if backup.postgres_volume_file:
             details += (
-                f"PostgreSQL volume: {os.path.basename(backup.postgres_volume_file)}\n"
+                f'PostgreSQL volume: {os.path.basename(backup.postgres_volume_file)}\n'
             )
 
         if backup.redis_volume_file:
-            details += f"Redis volume: {os.path.basename(backup.redis_volume_file)}\n"
+            details += f'Redis volume: {os.path.basename(backup.redis_volume_file)}\n'
 
         if backup.media_volume_file:
-            details += f"Media volume: {os.path.basename(backup.media_volume_file)}\n"
+            details += f'Media volume: {os.path.basename(backup.media_volume_file)}\n'
 
         if backup.restore_script:
             details += (
-                f"Скрипт восстановления: {os.path.basename(backup.restore_script)}\n"
+                f'Скрипт восстановления: {os.path.basename(backup.restore_script)}\n'
             )
 
         if backup.error_message:
-            details += f"\nОШИБКИ:\n{backup.error_message}"
+            details += f'\nОШИБКИ:\n{backup.error_message}'
 
         return details
 
@@ -428,13 +426,13 @@ class BackupManagerWindow(QMainWindow):
         try:
             stats = self.backup_manager.get_backup_statistics()
 
-            stats_text = f"""Всего резервных копий: {stats['total_backups']}
-Валидных: {stats['valid_backups']}
-Общий размер: {stats['total_size_formatted']}"""
+            stats_text = f'Всего резервных копий: {stats["total_backups"]}\n'
+            stats_text += f'Валидных: {stats["valid_backups"]}\n'
+            stats_text += f'Общий размер: {stats["total_size_formatted"]}'
 
             if stats['latest_backup']:
                 latest = stats['latest_backup']
-                stats_text += f"\nПоследняя копия: {latest.formatted_timestamp}"
+                stats_text += f'\nПоследняя копия: {latest.formatted_timestamp}'
 
             self.stats_label.setText(stats_text)
 
@@ -457,7 +455,8 @@ class BackupManagerWindow(QMainWindow):
         reply = QMessageBox.question(
             self,
             'Создание резервной копии',
-            'Создать резервную копию базы данных и данных?\n\nЭто может занять несколько минут.',
+            'Создать резервную копию базы данных и данных?\n\n'
+            'Это может занять несколько минут.',
             QMessageBox.Yes | QMessageBox.No,
             QMessageBox.Yes,
         )
@@ -502,7 +501,8 @@ class BackupManagerWindow(QMainWindow):
         reply = QMessageBox.question(
             self,
             'Восстановление',
-            f'Восстановить данные из резервной копии от {self.selected_backup.formatted_timestamp}?\n\n'
+            f'Восстановить данные из резервной копии от '
+            f'{self.selected_backup.formatted_timestamp}?\n\n'
             'ВНИМАНИЕ: Все текущие данные будут заменены!',
             QMessageBox.Yes | QMessageBox.No,
             QMessageBox.No,
@@ -537,6 +537,10 @@ class BackupManagerWindow(QMainWindow):
 
         if success:
             QMessageBox.information(self, 'Успех', message)
+
+            # Update main launcher status after successful restore
+            if self.parent() and hasattr(self.parent(), 'check_status'):
+                self.parent().check_status()
         else:
             QMessageBox.critical(self, 'Ошибка', message)
 
@@ -549,7 +553,8 @@ class BackupManagerWindow(QMainWindow):
         reply = QMessageBox.question(
             self,
             'Удаление резервной копии',
-            f'Удалить резервную копию от {self.selected_backup.formatted_timestamp}?\n\n'
+            f'Удалить резервную копию от '
+            f'{self.selected_backup.formatted_timestamp}?\n\n'
             f'Размер: {self.selected_backup.formatted_size}\n'
             'Это действие нельзя отменить!',
             QMessageBox.Yes | QMessageBox.No,
@@ -605,7 +610,8 @@ class BackupManagerWindow(QMainWindow):
     def showEvent(self, event):
         """Handle window show event."""
         super().showEvent(event)
-        # Start refresh timer when window is shown (30 seconds is fine when window is open)
+        # Start refresh timer when window is shown
+        # (30 seconds is fine when window is open)
         if not self.refresh_timer.isActive():
             self.refresh_timer.start(30000)  # 30 seconds
 

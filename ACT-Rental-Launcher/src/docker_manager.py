@@ -23,7 +23,10 @@ class DockerManager:
             compose_file: Docker compose file name
             log_folder: Path to log folder
         """
-        self.project_path = project_path or os.path.expanduser('~/Github/CINERENTAL')
+        # Use project path if provided, otherwise use correct default path
+        self.project_path = project_path or os.path.expanduser(
+            '~/Documents/GitHub/CINERENTAL'
+        )
         self.compose_file = compose_file
 
         self.log_folder = log_folder or os.path.join(self.project_path, 'logs')

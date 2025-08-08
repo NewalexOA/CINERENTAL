@@ -204,13 +204,13 @@ class MainWindow(QMainWindow):
                 'Использовать путь по умолчанию?',
                 'Вы не выбрали путь к проекту ACT-Rental. '
                 'Хотите использовать путь по умолчанию?\n\n'
-                '~/Github/ACT-Rental',
+                '~/Documents/GitHub/CINERENTAL',
                 QMessageBox.Yes | QMessageBox.No,
                 QMessageBox.Yes,
             )
 
             if reply == QMessageBox.Yes:
-                return os.path.expanduser('~/Github/ACT-Rental')
+                return os.path.expanduser('~/Documents/GitHub/CINERENTAL')
             return None
 
         return project_path
@@ -1121,17 +1121,8 @@ class MainWindow(QMainWindow):
             self.backup_group.update_status('Восстановление завершено успешно')
             QMessageBox.information(self, 'Успех', message)
 
-            # Suggest checking status after restore
-            reply = QMessageBox.question(
-                self,
-                'Восстановление завершено',
-                'Восстановление завершено. Проверить статус приложения?',
-                QMessageBox.Yes | QMessageBox.No,
-                QMessageBox.Yes,
-            )
-
-            if reply == QMessageBox.Yes:
-                self.check_status()
+            # Automatically update status after successful restore
+            self.check_status()
         else:
             self.backup_group.update_status('Ошибка восстановления')
             QMessageBox.critical(self, 'Ошибка', message)
