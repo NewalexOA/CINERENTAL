@@ -7,6 +7,7 @@ import sys
 import time
 from typing import Any, Callable, Optional, cast
 
+from backup.backup_ui import BackupGroup, BackupManagerWindow
 from docker_manager import DockerManager
 from PyQt5.QtCore import QEvent, QSettings, QThread, pyqtSignal
 from PyQt5.QtGui import QFont, QIcon
@@ -36,6 +37,33 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[logging.StreamHandler()],
 )
+
+
+class BackupInfoWorkerThread(QThread):
+    """Worker thread for getting backup information."""
+
+    finished_signal = pyqtSignal(object)  # Emits the backup object directly
+
+    def __init__(self, function: Callable, *args: Any, **kwargs: Any) -> None:
+        """Initialize backup info worker thread.
+
+        Args:
+            function: Function to execute
+            *args: Positional arguments for the function
+            **kwargs: Keyword arguments for the function
+        """
+        super().__init__()
+        self.function = function
+        self.args = args
+        self.kwargs = kwargs
+
+    def run(self) -> None:
+        """Execute the function and return the result object."""
+        try:
+            result = self.function(*self.args, **self.kwargs)
+            self.finished_signal.emit(result)
+        except Exception:
+            self.finished_signal.emit(None)
 
 
 class WorkerThread(QThread):
@@ -134,6 +162,7 @@ class MainWindow(QMainWindow):
 
         # Initialize UI and check status
         self.init_ui()
+        self._initialize_backup_integration()
         self.start_log_monitor()
         self.check_status()  # Check Docker status on startup
 
@@ -175,13 +204,13 @@ class MainWindow(QMainWindow):
                 'Использовать путь по умолчанию?',
                 'Вы не выбрали путь к проекту ACT-Rental. '
                 'Хотите использовать путь по умолчанию?\n\n'
-                '~/Github/ACT-Rental',
+                '~/Documents/GitHub/CINERENTAL',
                 QMessageBox.Yes | QMessageBox.No,
                 QMessageBox.Yes,
             )
 
             if reply == QMessageBox.Yes:
-                return os.path.expanduser('~/Github/ACT-Rental')
+                return os.path.expanduser('~/Documents/GitHub/CINERENTAL')
             return None
 
         return project_path
@@ -208,6 +237,28 @@ class MainWindow(QMainWindow):
         file_menu.addSeparator()
         exit_action = cast(QAction, file_menu.addAction('Выход'))
         exit_action.triggered.connect(self.close_window)
+
+        # Add backup menu
+        backup_menu = cast(QMenu, menubar.addMenu('Резервное копирование'))
+
+        create_backup_action = cast(
+            QAction, backup_menu.addAction('Создать резервную копию')
+        )
+        create_backup_action.setShortcut('Ctrl+B')
+        create_backup_action.triggered.connect(self.create_backup)
+
+        manage_backups_action = cast(
+            QAction, backup_menu.addAction('Управление резервными копиями')
+        )
+        manage_backups_action.setShortcut('Ctrl+Shift+B')
+        manage_backups_action.triggered.connect(self.open_backup_manager)
+
+        backup_menu.addSeparator()
+
+        quick_restore_action = cast(
+            QAction, backup_menu.addAction('Быстрое восстановление')
+        )
+        quick_restore_action.triggered.connect(self.quick_restore_backup)
 
         # Main layout setup
         main_widget = QWidget()
@@ -273,6 +324,13 @@ class MainWindow(QMainWindow):
         control_layout.addWidget(self.progress_bar)
 
         main_layout.addWidget(control_group)
+
+        # Create backup group
+        self.backup_group = BackupGroup(self)
+        self.backup_group.backup_requested.connect(self.create_backup)
+        self.backup_group.manage_requested.connect(self.open_backup_manager)
+        self.backup_group.restore_requested.connect(self.quick_restore_backup)
+        main_layout.addWidget(self.backup_group)
 
         logs_group = QGroupBox('Логи')
         logs_layout = QVBoxLayout()
@@ -836,6 +894,238 @@ class MainWindow(QMainWindow):
     def close_window(self) -> None:
         """Close the application window."""
         self.close()
+
+    def _initialize_backup_integration(self) -> None:
+        """Initialize backup system integration."""
+        try:
+            # Set backup manager for backup group
+            if self.docker.backup_manager:
+                self.backup_group.set_backup_manager(self.docker.backup_manager)
+                self.backup_group.set_status_callback(self._on_backup_status_update)
+
+                # Initial status refresh
+                self.backup_group.refresh_status()
+
+                self.log_text.append('=== Backup система инициализирована ===')
+            else:
+                self.log_text.append('=== Ошибка инициализации backup системы ===')
+        except Exception as e:
+            self.log_text.append(f'=== Ошибка backup интеграции: {str(e)} ===')
+
+    def _on_backup_status_update(self, message: str) -> None:
+        """Handle backup status updates.
+
+        Args:
+            message: Status message from backup system
+        """
+        self.status_bar.showMessage(message)
+
+    def create_backup(self) -> None:
+        """Create a new backup."""
+        try:
+            backup_manager = self.docker.backup_manager
+            if not backup_manager:
+                QMessageBox.warning(
+                    self, 'Ошибка', 'Backup система не инициализирована'
+                )
+                return
+
+            # Check system readiness
+            ready, status = backup_manager.check_system_ready()
+            if not ready:
+                QMessageBox.warning(
+                    self,
+                    'Система не готова',
+                    f'Невозможно создать резервную копию: {status}',
+                )
+                return
+
+            # Confirm operation
+            reply = QMessageBox.question(
+                self,
+                'Создание резервной копии',
+                'Создать резервную копию базы данных и данных?\n\n'
+                'Это может занять несколько минут.',
+                QMessageBox.Yes | QMessageBox.No,
+                QMessageBox.Yes,
+            )
+
+            if reply != QMessageBox.Yes:
+                return
+
+            # Show progress in backup group
+            self.backup_group.show_progress(True)
+            self.backup_group.update_status('Создание резервной копии...')
+
+            # Create backup in worker thread
+            self.backup_worker = WorkerThread(backup_manager.create_backup)
+            self.backup_worker.update_signal.connect(self.update_log)
+            self.backup_worker.finished_signal.connect(self._on_backup_created)
+            self.backup_worker.start()
+
+        except Exception as e:
+            QMessageBox.critical(
+                self, 'Ошибка', f'Ошибка создания резервной копии: {str(e)}'
+            )
+
+    def _on_backup_created(self, success: bool, message: str) -> None:
+        """Handle backup creation completion.
+
+        Args:
+            success: Whether backup was successful
+            message: Result message
+        """
+        # Hide progress
+        self.backup_group.show_progress(False)
+
+        if success:
+            self.backup_group.update_status('Резервная копия создана успешно')
+            self.backup_group.refresh_status()
+            QMessageBox.information(self, 'Успех', message)
+        else:
+            self.backup_group.update_status('Ошибка создания резервной копии')
+            QMessageBox.critical(self, 'Ошибка', message)
+
+    def open_backup_manager(self) -> None:
+        """Open backup manager window."""
+        try:
+            backup_manager = self.docker.backup_manager
+            if not backup_manager:
+                QMessageBox.warning(
+                    self, 'Ошибка', 'Backup система не инициализирована'
+                )
+                return
+
+            # Create and show backup manager window
+            if (
+                not hasattr(self, 'backup_manager_window')
+                or not self.backup_manager_window
+            ):
+                self.backup_manager_window = BackupManagerWindow(backup_manager, self)
+
+            self.backup_manager_window.show()
+            self.backup_manager_window.raise_()
+            self.backup_manager_window.activateWindow()
+
+        except Exception as e:
+            QMessageBox.critical(
+                self, 'Ошибка', f'Ошибка открытия менеджера резервных копий: {str(e)}'
+            )
+
+    def quick_restore_backup(self) -> None:
+        """Quick restore from latest backup."""
+        try:
+            backup_manager = self.docker.backup_manager
+            if not backup_manager:
+                QMessageBox.warning(
+                    self, 'Ошибка', 'Backup система не инициализирована'
+                )
+                return
+
+            # Show initial progress
+            self.backup_group.show_progress(True)
+            self.backup_group.update_status('Поиск последней резервной копии...')
+
+            # Start restore with confirmation handled in separate method
+            self._perform_quick_restore_with_confirmation()
+
+        except Exception as e:
+            self.backup_group.show_progress(False)
+            QMessageBox.critical(self, 'Ошибка', f'Ошибка восстановления: {str(e)}')
+
+    def _perform_quick_restore_with_confirmation(self) -> None:
+        """Perform quick restore with proper confirmation flow."""
+        try:
+            backup_manager = self.docker.backup_manager
+
+            # Worker to get latest backup info (using fast method)
+            def get_latest_backup_info():
+                return backup_manager.get_latest_backup_fast()
+
+            # Start worker to get backup info
+            self.backup_info_worker = BackupInfoWorkerThread(get_latest_backup_info)
+            self.backup_info_worker.finished_signal.connect(
+                self._on_backup_info_received
+            )
+            self.backup_info_worker.start()
+
+        except Exception as e:
+            self.backup_group.show_progress(False)
+            QMessageBox.critical(
+                self,
+                'Ошибка',
+                f'Ошибка получения информации о резервной копии: {str(e)}',
+            )
+
+    def _on_backup_info_received(self, latest_backup) -> None:
+        """Handle backup info retrieval completion."""
+        try:
+            self.backup_group.show_progress(False)
+
+            if not latest_backup:
+                QMessageBox.information(
+                    self, 'Информация', 'Резервные копии не найдены'
+                )
+                return
+
+            if not latest_backup.is_valid:
+                QMessageBox.warning(
+                    self, 'Ошибка', 'Последняя резервная копия повреждена'
+                )
+                return
+
+            # Show confirmation dialog
+            reply = QMessageBox.question(
+                self,
+                'Быстрое восстановление',
+                f'Восстановить данные из резервной копии от '
+                f'{latest_backup.formatted_timestamp}?\n\n'
+                'ВНИМАНИЕ: Все текущие данные будут заменены!',
+                QMessageBox.Yes | QMessageBox.No,
+                QMessageBox.No,
+            )
+
+            if reply != QMessageBox.Yes:
+                return
+
+            # Start actual restore operation
+            self.backup_group.show_progress(True)
+            self.backup_group.update_status('Восстановление из резервной копии...')
+
+            # Restore in worker thread
+            backup_manager = self.docker.backup_manager
+            self.restore_worker = WorkerThread(
+                backup_manager.restore_backup, latest_backup
+            )
+            self.restore_worker.update_signal.connect(self.update_log)
+            self.restore_worker.finished_signal.connect(self._on_backup_restored)
+            self.restore_worker.start()
+
+        except Exception as e:
+            self.backup_group.show_progress(False)
+            QMessageBox.critical(
+                self, 'Ошибка', f'Ошибка запуска восстановления: {str(e)}'
+            )
+
+    def _on_backup_restored(self, success: bool, message: str) -> None:
+        """Handle backup restore completion.
+
+        Args:
+            success: Whether restore was successful
+            message: Result message
+        """
+        # Hide progress
+        self.backup_group.show_progress(False)
+
+        if success:
+            self.backup_group.update_status('Восстановление завершено успешно')
+            QMessageBox.information(self, 'Успех', message)
+
+            # Automatically update status after successful restore
+            self.check_status()
+        else:
+            self.backup_group.update_status('Ошибка восстановления')
+            QMessageBox.critical(self, 'Ошибка', message)
 
 
 if __name__ == '__main__':

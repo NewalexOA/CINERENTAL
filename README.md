@@ -67,6 +67,7 @@ act-rental/
 │   └── factories/   # Test data factories
 ├── docker/          # Docker configuration files
 ├── migrations/       # Alembic migration scripts
+├── scripts/          # Utility scripts (backups, maintenance)
 ├── pyproject.toml    # Project metadata and dependencies definition
 └── requirements.txt  # Python dependencies (potentially generated or for specific use cases)
 ```
