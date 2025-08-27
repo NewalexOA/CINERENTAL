@@ -2,6 +2,35 @@
 
 This document lists notable changes to the ACT-Rental application.
 
+## [0.15.0-beta.2] - 2025-08-27
+
+### Comprehensive Backup and Restore System
+
+- **Automated Backup Infrastructure:** Added `create_backup.sh` script for automated full system backups with PostgreSQL database dumps, version detection, and validation. Docker volume backups (postgres, redis, media) with compression and timestamped backup directories with comprehensive metadata. External storage in `~/Documents/ACT-Rental-Backups/` with configurable retention policies.
+- **Volume-Based Restoration:** Replaced SQL-based restore with Docker volume restoration for improved reliability and eliminated database migration conflicts. Container lifecycle management with proper cleanup procedures, absolute path handling for Docker Compose operation, and exact state restoration preserving Alembic versions.
+- **Desktop Launcher Integration:** BackupManager and BackupService with caching, performance optimizations, and comprehensive validation. BackupInfo dataclass with formatted properties and system readiness checks. Integrated backup UI components in MainWindow with progress tracking, real-time status monitoring, and automated backup operations with confirmation dialogs.
+
+### CI/CD Pipeline Stabilization and Docker Improvements
+
+- **Docker Build Fixes:** Resolved Alpine Linux package compatibility issues for Playwright dependencies with correct accessibility package names (`libatk1.0-0`, `libatk-bridge2.0-0`, `libatspi2.0-0`). Reverted to Debian-based image for better Playwright wheel compatibility and added missing dependencies (`libcairo2`, `libpango-1.0-0`). Enhanced package installation with aptitude for better dependency resolution.
+- **Build Context Improvements:** Added README.md to Docker build context for Poetry compatibility, fixed script execution order and file permissions. Resolved "Readme path does not exist" error during package installation and updated Debian sources to use bookworm (latest stable).
+- **Pre-commit Integration:** Added convenient Makefile targets (`make pre-commit-install`, `make pre-commit`, `make pre-commit-check`) for automated code quality checks. Fixed Black formatting issues across backend and test files, installed and configured pre-commit hooks for enhanced development workflow.
+
+### Enhanced Business Logic and System Integration
+
+- **Flexible Date Validation:** Removed restrictive past date validation to enable retrospective data entry and historical booking creation. Updated booking service to allow past dates while maintaining data integrity and comprehensive test coverage for past date scenarios.
+- **Production Configuration:** Fixed default project path from `~/Github/CINERENTAL` to `~/Documents/GitHub/CINERENTAL` with updated DockerManager initialization and correct fallback paths. Enhanced project path selection dialog with proper defaults and consistent path handling across launcher components.
+- **Docker Compatibility:** Enhanced PATH environment setup for macOS with Docker Desktop integration, added fallback methods (docker ps, HTTP health check) for container detection. Comprehensive logging for Docker detection and **BREAKING CHANGE:** Production apps require Docker in standard macOS locations.
+
+### Technical Improvements & Bug Fixes (0.15.0-beta.2)
+
+- Enhanced error handling with improved JSON parsing and subprocess management with UTF-8 encoding support
+- Automatic status refresh after backup restore operations with timeout and error handling
+- Fixed missing type annotations, unused imports, and standardized quote usage across codebase
+- Updated .gitignore to exclude CLAUDE.md and .claude files from version control
+- Enhanced backup system integration with DockerManager for consistent status checking
+- Improved system reliability with comprehensive validation and monitoring capabilities
+
 ## [0.15.0-beta.1] - 2025-07-11
 
 ### Universal Cart System & Equipment Management Transformation
