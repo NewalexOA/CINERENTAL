@@ -23,8 +23,10 @@ WORKDIR /app
 
 # Install system dependencies including Playwright requirements
 RUN apt-get update && \
-    apt-get install -y --fix-broken && \
-    apt-get install -y --no-install-recommends \
+    # Install aptitude which handles conflicts better than apt-get
+    apt-get install -y aptitude && \
+    # Use aptitude to resolve conflicts automatically
+    aptitude install -y --without-recommends \
     build-essential \
     curl \
     libpq-dev \
