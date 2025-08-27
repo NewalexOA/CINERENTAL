@@ -22,7 +22,9 @@ RUN echo "deb ${APT_MIRROR} bookworm main" > /etc/apt/sources.list && \
 WORKDIR /app
 
 # Install system dependencies including Playwright requirements
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN apt-get update && \
+    apt-get install -y --fix-broken && \
+    apt-get install -y --no-install-recommends \
     build-essential \
     curl \
     libpq-dev \
