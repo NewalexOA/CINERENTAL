@@ -157,7 +157,8 @@ main() {
 
     # Step 3: Restore SQL dump
     log_info "Step 3: Restoring SQL dump to temporary database..."
-    if docker exec -i "$CONTAINER_NAME" psql -U postgres "$TEMP_DB_NAME" < "$SQL_DUMP_FILE"; then
+    # The SQL dump will create its own database called "act-rental", so we connect to postgres first
+    if docker exec -i "$CONTAINER_NAME" psql -U postgres postgres < "$SQL_DUMP_FILE"; then
         log_info "SQL dump restored successfully"
     else
         log_error "Failed to restore SQL dump"
@@ -166,9 +167,24 @@ main() {
 
     # Step 4: Extract data to JSON using our Python script
     log_info "Step 4: Extracting data to JSON..."
-    TEMP_DATABASE_URL="postgresql://postgres:postgres@localhost:$TEMP_DB_PORT/$TEMP_DB_NAME"
+    # Connect to the "act-rental" database that was created by the SQL dump
+    TEMP_DATABASE_URL="postgresql://postgres:postgres@localhost:$TEMP_DB_PORT/act-rental"
 
-    if python backend/scripts/extract_extended_data.py --database-url "$TEMP_DATABASE_URL"; then
+    # Use absolute paths for proper Python imports
+    PROJECT_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
+    SCRIPT_DIR="$PROJECT_ROOT/backend/scripts"
+    cd "$PROJECT_ROOT"
+
+    # Use virtual environment Python if available
+    if [ -f ".venv/bin/python3" ]; then
+        PYTHON_EXECUTABLE=".venv/bin/python3"
+    elif [ -f ".venv/bin/python" ]; then
+        PYTHON_EXECUTABLE=".venv/bin/python"
+    else
+        PYTHON_EXECUTABLE="python3"
+    fi
+
+    if "$PYTHON_EXECUTABLE" "$SCRIPT_DIR/extract_extended_data.py" --database-url "$TEMP_DATABASE_URL"; then
         log_info "Data extraction completed successfully!"
 
         # Check if JSON file was created

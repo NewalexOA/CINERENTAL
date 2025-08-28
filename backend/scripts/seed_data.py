@@ -206,8 +206,8 @@ async def load_clients_from_json(
     id_mapping = {}
 
     for client_data in clients_data:
-        # Check if client already exists by email
-        existing = await repository.get_by_email(client_data['email'])
+        # Check if client already exists by name (more reliable for production data)
+        existing = await repository.get_by_name(client_data['name'])
         if existing:
             logger.info('Client already exists: {}', client_data['name'])
             id_mapping[client_data['id']] = existing.id

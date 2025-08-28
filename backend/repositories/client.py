@@ -160,6 +160,19 @@ class ClientRepository(BaseRepository[Client]):
         result = await self.session.scalar(query)  # type: Optional[Client]
         return result
 
+    async def get_by_name(self, name: str) -> Optional[Client]:
+        """Get client by name.
+
+        Args:
+            name: Client name
+
+        Returns:
+            Client if found, None otherwise
+        """
+        query = select(self.model).where(self.model.name == name)
+        result = await self.session.scalar(query)  # type: Optional[Client]
+        return result
+
     async def get_with_active_bookings(self, client_id: int) -> Optional[Client]:
         """Get client with active bookings.
 
