@@ -256,3 +256,5 @@ docs/Current_task/*
 # Scripts
 backend/scripts/*.json
 backend/scripts/*.sql
+CLAUDE.md
+/.claude

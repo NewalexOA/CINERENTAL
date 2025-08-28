@@ -108,12 +108,13 @@ class BookingService:
             )
 
             # Check if start date is in the past (before the beginning of today)
-            if start_date < today_start:
-                raise DateError(
-                    'Start date cannot be in the past',
-                    start_date=start_date,
-                    details={'today_start': today_start.isoformat()},
-                )
+            # Disabled to allow past dates
+            # if start_date < today_start:
+            #     raise DateError(
+            #         'Start date cannot be in the past',
+            #         start_date=start_date,
+            #         details={'today_start': today_start.isoformat()},
+            #     )
 
             # Log when creating a retroactive booking (if needed for other logic)
             if start_date < now:

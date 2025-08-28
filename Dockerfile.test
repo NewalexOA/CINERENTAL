@@ -14,15 +14,19 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     UV_INDEX_URL=${PIP_INDEX_URL}
 
 # Configure apt to use specified mirror
-RUN echo "deb ${APT_MIRROR} bullseye main" > /etc/apt/sources.list && \
-    echo "deb ${APT_MIRROR} bullseye-updates main" >> /etc/apt/sources.list && \
-    echo "deb http://security.debian.org/debian-security bullseye-security main" >> /etc/apt/sources.list
+RUN echo "deb ${APT_MIRROR} bookworm main" > /etc/apt/sources.list && \
+    echo "deb ${APT_MIRROR} bookworm-updates main" >> /etc/apt/sources.list && \
+    echo "deb http://security.debian.org/debian-security bookworm-security main" >> /etc/apt/sources.list
 
 # Set working directory
 WORKDIR /app
 
 # Install system dependencies including Playwright requirements
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN apt-get update && \
+    # Install aptitude which handles conflicts better than apt-get
+    apt-get install -y aptitude && \
+    # Use aptitude to resolve conflicts automatically
+    aptitude install -y --without-recommends \
     build-essential \
     curl \
     libpq-dev \
@@ -45,28 +49,25 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libgbm1 \
     libxkbcommon0 \
     libasound2 \
+    libcairo2 \
+    libpango-1.0-0 \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
 # Install uv
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh && \
-    echo 'export PATH="/root/.local/bin:$PATH"' >> ~/.bashrc && \
-    export PATH="/root/.local/bin:$PATH"
+    echo 'export PATH="/root/.local/bin:$PATH"' >> ~/.bashrc
 
-# Create all necessary directories
-RUN mkdir -p backend tests docker frontend frontend/static \
-    media static templates alembic && \
-    touch alembic.ini && \
-    chmod -R 777 frontend media static templates alembic
-
-# Copy files individually to avoid errors
+# Copy requirements and source code
+COPY requirements.txt .
 COPY pyproject.toml .
 COPY README.md .
-COPY backend/. backend/
-COPY tests/. tests/
-COPY docker/. docker/
+COPY backend/ ./backend/
+COPY migrations/ ./migrations/
+COPY alembic.ini .
+COPY tests/ ./tests/
 
-# Install test dependencies
+# Install Python dependencies
 RUN export PATH="/root/.local/bin:$PATH" && \
     uv pip install --system . && \
     uv pip install --system \
@@ -84,12 +85,15 @@ RUN export PATH="/root/.local/bin:$PATH" && \
     treepoem \
     playwright
 
+# Copy additional scripts
+COPY docker/ ./docker/
+
 # Install Playwright browser
-RUN playwright install chromium && \
-    mkdir -p /var/lib/apt/lists/partial && \
-    chmod -R 777 /var/lib/apt/lists /var/cache/apt
+RUN export PATH="/root/.local/bin:$PATH" && \
+    playwright install chromium
 
 # Make scripts executable
 RUN chmod +x docker/wait-for.sh docker/run-tests.sh
 
-CMD ["./docker/run-tests.sh"]
+# Run tests by default
+CMD ["docker/run-tests.sh"]
