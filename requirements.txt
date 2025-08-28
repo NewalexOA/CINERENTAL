@@ -93,7 +93,7 @@ sqlalchemy==2.0.25
     # via
     #   act-rental (pyproject.toml)
     #   alembic
-starlette==0.40.0
+starlette==0.47.2
     # via fastapi
 typing-extensions==4.13.0
     # via
