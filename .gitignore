@@ -258,3 +258,5 @@ backend/scripts/*.json
 backend/scripts/*.sql
 CLAUDE.md
 /.claude
+/.gemini
+GEMINI.md
