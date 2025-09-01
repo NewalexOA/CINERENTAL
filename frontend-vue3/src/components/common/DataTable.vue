@@ -1,5 +1,5 @@
 <template>
-  <div class="overflow-x-auto">
+  <div role="region" aria-label="Table" class="overflow-x-auto">
     <table class="min-w-full bg-white">
       <thead class="bg-gray-800 text-white">
         <tr>
