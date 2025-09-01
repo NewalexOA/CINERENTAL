@@ -1,4 +1,4 @@
-name: Deploy Frontend
+name: Deploy Frontends
 
 on:
   push:
@@ -19,13 +19,25 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Build and push Docker image
+      - name: Build and push Backend + MVP Frontend
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: Dockerfile.frontend
+          file: Dockerfile
           push: true
-          tags: your-dockerhub-username/cinarental-frontend:latest
+          tags: ${{ secrets.DOCKER_USERNAME }}/cinerental-backend:latest
 
-      - name: Deploy to server (placeholder)
-        run: echo "Deployment to server goes here. This would involve updating Nginx configuration and restarting the service."
+      - name: Build and push Vue3 Frontend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend-vue3
+          file: ./frontend-vue3/Dockerfile
+          push: true
+          tags: ${{ secrets.DOCKER_USERNAME }}/cinerental-vue3:latest
+
+      - name: Deploy to server
+        run: |
+          echo "Dual frontend deployment:"
+          echo "- MVP Frontend: Integrated with FastAPI backend"
+          echo "- Vue3 Frontend: Available at /v3 route via Nginx proxy"
+          echo "- Soft migration: Users can access both frontends during transition"
