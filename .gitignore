@@ -261,3 +261,4 @@ CLAUDE.md
 /.gemini
 GEMINI.md
 /.playwright-mcp
+/frontend-vue3/.claude
