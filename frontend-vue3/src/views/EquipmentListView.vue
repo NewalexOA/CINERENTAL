@@ -22,13 +22,12 @@
 
     <div v-else>
       <div class="equipment-grid">
-        <!-- TODO: Create and use a dedicated EquipmentCard component -->
-        <div v-for="item in equipmentStore.items" :key="item.id" class="p-4 border rounded shadow">
-          <h2>{{ item.name }}</h2>
-          <p>{{ item.category_name }}</p>
-          <p>Status: {{ item.status }}</p>
-          <BaseButton @click="addToCart(item)">Add to Cart</BaseButton>
-        </div>
+        <EquipmentCard
+          v-for="item in equipmentStore.items"
+          :key="item.id"
+          :equipment="item"
+          @add-to-cart="addToCart"
+        />
       </div>
 
       <!-- TODO: Create and use a dedicated Pagination component -->
@@ -47,7 +46,8 @@ import { useEquipmentStore } from '@/stores/equipment';
 import { useCartStore } from '@/stores/cart';
 import type { EquipmentResponse } from '@/types/equipment';
 import BaseButton from '@/components/common/BaseButton.vue';
-import { debounce } from 'lodash-es'; // Note: lodash-es would need to be installed
+import EquipmentCard from '@/components/equipment/EquipmentCard.vue';
+import { debounce } from 'lodash-es';
 
 const equipmentStore = useEquipmentStore();
 const cartStore = useCartStore();
