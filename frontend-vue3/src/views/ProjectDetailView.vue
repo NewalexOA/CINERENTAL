@@ -12,7 +12,7 @@
 
       <div class="mt-8">
         <h2>Equipment & Bookings</h2>
-        <UniversalCart mode="embedded" />
+        <UniversalCart mode="embedded" data-testid="universal-cart" />
       </div>
     </div>
   </div>
