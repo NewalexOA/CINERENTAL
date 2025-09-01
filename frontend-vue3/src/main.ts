@@ -9,15 +9,8 @@ import { httpClient } from './services/api/http-client'
 import { useAuthStore } from './stores/auth'
 
 async function enableMocking() {
-  if (process.env.NODE_ENV !== 'development') {
-    return
-  }
-
-  const { worker } = await import('./mocks/browser')
-
-  // `worker.start()` returns a Promise that resolves
-  // once the Service Worker is up and running.
-  return worker.start()
+  // Disable MSW for now in development to avoid service worker issues
+  return Promise.resolve()
 }
 
 const app = createApp(App)

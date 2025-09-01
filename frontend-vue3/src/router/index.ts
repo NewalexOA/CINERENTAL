@@ -1,7 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 
 const router = createRouter({
-  history: createWebHistory('/vue/'), // Base path for the Vue3 app
+  history: createWebHistory('/'), // Base path for the Vue3 app in development
   routes: [
     {
       path: '/',
