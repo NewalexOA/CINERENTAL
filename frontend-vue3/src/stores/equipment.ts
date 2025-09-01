@@ -43,22 +43,25 @@ export const useEquipmentStore = defineStore('equipment', () => {
     loading.value = true
     error.value = null
     try {
-      const params = new URLSearchParams({
-        page: pagination.value.page.toString(),
-        size: pagination.value.size.toString(),
-        ...filters.value
-      })
-      // Remove null or empty filters
-      for(let [key, value] of Array.from(params.entries())) {
-        if (!value) {
-          params.delete(key);
-        }
+      const params = new URLSearchParams()
+      params.set('page', pagination.value.page.toString())
+      params.set('size', pagination.value.size.toString())
+
+      // Add filters only if they have values
+      if (filters.value.query && filters.value.query.trim()) {
+        params.set('query', filters.value.query.trim())
+      }
+      if (filters.value.category_id !== null && filters.value.category_id !== undefined) {
+        params.set('category_id', filters.value.category_id.toString())
+      }
+      if (filters.value.status && filters.value.status !== null) {
+        params.set('status', filters.value.status)
       }
 
       const response = await httpClient.get(`/equipment/paginated?${params.toString()}`)
-      items.value = response.items
-      pagination.value.total = response.total
-      pagination.value.totalPages = response.pages
+      items.value = response.items || response.results || []
+      pagination.value.total = response.total || 0
+      pagination.value.totalPages = response.pages || Math.ceil((response.total || 0) / pagination.value.size)
 
     } catch (e) {
       error.value = 'Failed to fetch equipment'
