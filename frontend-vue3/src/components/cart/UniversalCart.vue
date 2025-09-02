@@ -360,7 +360,7 @@ onMounted(() => {
 
 .cart-embedded-enter-from,
 .cart-embedded-leave-to {
-  @apply opacity-0 transform scale-98;
+  @apply opacity-0 transform scale-95;
 }
 
 .backdrop-enter-active,
