@@ -32,4 +32,7 @@ export interface EquipmentResponse {
     end_date: string
   }>
   daily_cost: number // computed field
+  image_url?: string // equipment image
+  quantity?: number // for non-serialized items
+  purchase_date?: string // purchase date
 }

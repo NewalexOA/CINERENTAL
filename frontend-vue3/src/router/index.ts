@@ -22,7 +22,7 @@ const router = createRouter({
     {
       path: '/projects',
       name: 'projects-list',
-      component: () => import('../views/ProjectsListView.vue'),
+      component: () => import('../views/ProjectsView.vue'),
     },
     {
       path: '/projects/:id',
@@ -44,6 +44,24 @@ const router = createRouter({
       path: '/bookings',
       name: 'bookings',
       component: () => import('../views/BookingsView.vue'),
+    },
+    {
+      path: '/demo/virtual-scrolling',
+      name: 'virtual-scrolling-demo',
+      component: () => import('../components/demo/VirtualScrollingDemo.vue'),
+      meta: {
+        title: 'Virtual Scrolling Performance Demo',
+        development: true
+      }
+    },
+    {
+      path: '/demo/cart',
+      name: 'cart-demo',
+      component: () => import('../views/CartDemo.vue'),
+      meta: {
+        title: 'Universal Cart Core Engine Demo',
+        development: true
+      }
     },
   ],
 })

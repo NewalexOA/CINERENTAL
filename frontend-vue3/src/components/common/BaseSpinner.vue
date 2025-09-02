@@ -15,6 +15,8 @@ withDefaults(defineProps<Props>(), {
 <style scoped>
 .spinner {
   @apply animate-spin rounded-full border-t-2 border-b-2 border-transparent;
+  border-top-color: #3b82f6; /* blue-500 */
+  border-bottom-color: #3b82f6; /* blue-500 */
 }
 
 .spinner--sm {

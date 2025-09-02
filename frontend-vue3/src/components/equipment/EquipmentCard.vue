@@ -87,7 +87,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, memo } from 'vue'
 import { useRouter } from 'vue-router'
 import type { EquipmentResponse } from '@/types/equipment'
 import BaseButton from '@/components/common/BaseButton.vue'
@@ -119,18 +119,23 @@ function handleViewDetails() {
   router.push(`/equipment/${props.equipment.id}`)
 }
 
+// Memoized formatters for better performance
+const priceFormatter = new Intl.NumberFormat('en-US', {
+  minimumFractionDigits: 0,
+  maximumFractionDigits: 2,
+})
+
+const dateFormatter = new Intl.DateTimeFormat('en-US', {
+  year: 'numeric',
+  month: 'short',
+})
+
 function formatPrice(price: number): string {
-  return new Intl.NumberFormat('en-US', {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 2,
-  }).format(price)
+  return priceFormatter.format(price)
 }
 
 function formatDate(dateString: string): string {
-  return new Date(dateString).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short',
-  })
+  return dateFormatter.format(new Date(dateString))
 }
 </script>
 

@@ -26,10 +26,10 @@ import BaseIcon from './BaseIcon.vue';
 interface Props {
   /**
    * The visual style of the button.
-   * @type {'primary' | 'secondary' | 'outline' | 'ghost' | 'danger'}
+   * @type {'primary' | 'secondary' | 'outline' | 'ghost' | 'danger' | 'text' | 'success'}
    * @default 'primary'
    */
-  variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger'
+  variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger' | 'text' | 'success'
   /**
    * The size of the button.
    * @type {'xs' | 'sm' | 'md' | 'lg' | 'xl'}
@@ -155,6 +155,14 @@ const handleClick = (event: MouseEvent) => {
 
 .button--danger {
   @apply bg-red-500 text-white hover:bg-red-700 focus:ring-red-500;
+}
+
+.button--success {
+  @apply bg-green-500 text-white hover:bg-green-700 focus:ring-green-500;
+}
+
+.button--text {
+  @apply text-gray-600 hover:text-gray-900 hover:bg-gray-50 focus:ring-gray-500;
 }
 
 .button--disabled {
