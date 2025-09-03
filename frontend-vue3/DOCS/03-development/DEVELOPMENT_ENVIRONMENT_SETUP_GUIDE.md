@@ -918,7 +918,7 @@ After completing this setup guide:
 
 ### Internal Resources
 
-- **Project Charter**: `frontend-vue3/PROJECT_CHARTER.md`
+- **Project Charter**: `frontend-vue3/DOCS/01-strategic/PROJECT_CHARTER.md`
 - **Existing Frontend**: `frontend/static/js/` for reference implementations
 - **Backend API**: `backend/api/v1/endpoints/` for API specifications
 - **Docker Configuration**: `docker-compose.yml` and related files
