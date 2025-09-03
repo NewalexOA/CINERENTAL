@@ -47,7 +47,7 @@ else
     fi
 fi
 
-TEMP_DB_NAME="temp_data_extract_$(date +%s)"
+TEMP_DB_NAME="act-rental"  # Must match the database name in SQL dump
 TEMP_DB_PORT="5433"
 CONTAINER_NAME="temp-postgres-extract"
 
@@ -137,7 +137,6 @@ main() {
     log_info "Step 1: Creating temporary PostgreSQL container..."
     docker run --name "$CONTAINER_NAME" \
         -e POSTGRES_PASSWORD=postgres \
-        -e POSTGRES_DB="$TEMP_DB_NAME" \
         -p "$TEMP_DB_PORT:5432" \
         -d postgres:13
 
@@ -157,7 +156,8 @@ main() {
 
     # Step 3: Restore SQL dump
     log_info "Step 3: Restoring SQL dump to temporary database..."
-    if docker exec -i "$CONTAINER_NAME" psql -U postgres "$TEMP_DB_NAME" < "$SQL_DUMP_FILE"; then
+    # Connect to default 'postgres' database first, then the dump will create the target database
+    if docker exec -i "$CONTAINER_NAME" psql -U postgres postgres < "$SQL_DUMP_FILE"; then
         log_info "SQL dump restored successfully"
     else
         log_error "Failed to restore SQL dump"
@@ -168,18 +168,24 @@ main() {
     log_info "Step 4: Extracting data to JSON..."
     TEMP_DATABASE_URL="postgresql://postgres:postgres@localhost:$TEMP_DB_PORT/$TEMP_DB_NAME"
 
-    if python backend/scripts/extract_extended_data.py --database-url "$TEMP_DATABASE_URL"; then
+    # Verify that the database exists after restore
+    if ! docker exec "$CONTAINER_NAME" psql -U postgres -lqt | cut -d \| -f 1 | grep -qw "$TEMP_DB_NAME"; then
+        log_error "Database '$TEMP_DB_NAME' was not created by the SQL dump"
+        exit 1
+    fi
+
+    if source /Users/anaskin/Github/CINERENTAL/.venv/bin/activate && python extract_extended_data.py --database-url "$TEMP_DATABASE_URL"; then
         log_info "Data extraction completed successfully!"
 
         # Check if JSON file was created
-        if [ -f "backend/scripts/extended_data.json" ]; then
-            JSON_SIZE=$(du -h backend/scripts/extended_data.json | cut -f1)
-            log_info "Created JSON file: backend/scripts/extended_data.json ($JSON_SIZE)"
+        if [ -f "extended_data.json" ]; then
+            JSON_SIZE=$(du -h extended_data.json | cut -f1)
+            log_info "Created JSON file: extended_data.json ($JSON_SIZE)"
 
             # Show summary from JSON
             if command -v jq >/dev/null 2>&1; then
                 log_info "Data summary:"
-                jq -r '.summary | to_entries[] | "  \(.key): \(.value)"' backend/scripts/extended_data.json
+                jq -r '.summary | to_entries[] | "  \(.key): \(.value)"' extended_data.json
             fi
         else
             log_warn "JSON file was not created"
