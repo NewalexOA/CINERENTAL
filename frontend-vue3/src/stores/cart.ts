@@ -1,5 +1,7 @@
 import { defineStore } from 'pinia'
-import { ref, computed, nextTick } from 'vue'
+import { ref, computed, nextTick, shallowRef, watch } from 'vue'
+import { useMemoryOptimization } from '@/composables/useMemoryOptimization'
+import { StorePersistence, createDebouncedSave } from '@/plugins/store-persistence'
 import type { EquipmentResponse } from '@/types/equipment'
 import type {
   CartItem,
@@ -15,27 +17,6 @@ import type { Booking } from './project'
 import { httpClient } from '@/services/api/http-client'
 import { equipmentService } from '@/services/api/equipment'
 
-// Advanced compression using LZ-string algorithm implementation
-const compressData = (data: string): string => {
-  try {
-    // Implement simple LZ-string compression
-    return btoa(unescape(encodeURIComponent(data))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '')
-  } catch {
-    return data
-  }
-}
-
-const decompressData = (data: string): string => {
-  try {
-    // Add padding and decode
-    const padded = data.replace(/-/g, '+').replace(/_/g, '/')
-    const padding = '='.repeat((4 - (padded.length % 4)) % 4)
-    return decodeURIComponent(escape(atob(padded + padding)))
-  } catch {
-    return data
-  }
-}
-
 // Generate compound key for cart items
 const generateItemKey = (equipmentId: number, dateRange?: DateRange, projectContext?: string): string => {
   const dateKey = dateRange ? `${dateRange.startDate}_${dateRange.endDate}` : 'default'
@@ -46,12 +27,110 @@ const generateItemKey = (equipmentId: number, dateRange?: DateRange, projectCont
 const getCartStorageKey = (projectId: number | string) => `cinerental_cart_v2_${projectId}`
 
 export const useCartStore = defineStore('cart', () => {
-  // --- STATE ---
-  const items = ref<Map<string, CartItem>>(new Map())
+  // Memory optimization instance
+  const memoryOpt = useMemoryOptimization()
+
+  // --- PERSISTENCE SETUP ---
+  const persistence = new StorePersistence({
+    key: 'cart',
+    version: 2,
+    ttl: 7 * 24 * 60 * 60 * 1000, // 7 days for cart data
+    compress: true, // Compress cart data since it can be large
+    enableTabSync: true, // Critical for B2B workflows - sync cart across tabs
+    whitelist: ['items', 'config', 'currentProjectId'],
+    beforeRestore: (data: any) => {
+      // Convert items array back to Map and validate data
+      const restoredItems = new Map()
+
+      if (Array.isArray(data.items)) {
+        try {
+          restoredItems.clear()
+          data.items.forEach(([key, item]: [string, any]) => {
+            if (key && item && item.equipment) {
+              restoredItems.set(key, item)
+            }
+          })
+        } catch (error) {
+          console.warn('Failed to restore cart items:', error)
+        }
+      }
+
+      return {
+        items: restoredItems,
+        config: data.config && typeof data.config === 'object' ? {
+          type: data.config.type || 'equipment_add',
+          maxItems: typeof data.config.maxItems === 'number' ? data.config.maxItems : 100,
+          enableStorage: Boolean(data.config.enableStorage ?? true),
+          autoShowOnAdd: Boolean(data.config.autoShowOnAdd ?? true)
+        } : {
+          type: 'equipment_add',
+          maxItems: 100,
+          enableStorage: true,
+          autoShowOnAdd: true
+        },
+        currentProjectId: typeof data.currentProjectId === 'number' ? data.currentProjectId : null
+      }
+    },
+    onError: (error: Error, operation: string) => {
+      console.error(`Cart store persistence ${operation} error:`, error)
+      // Don't break the cart if persistence fails
+    },
+    onTabSync: (syncedState: any) => {
+      // Handle cross-tab synchronization
+      if (syncedState.items && syncedState.items instanceof Map || Array.isArray(syncedState.items)) {
+        const syncedItems = syncedState.items instanceof Map ?
+          syncedState.items : new Map(syncedState.items)
+
+        // Only sync if the project context matches
+        if (syncedState.currentProjectId === currentProjectId.value) {
+          items.value = syncedItems
+
+          // Emit sync event for UI updates
+          _emit('cartSyncedFromOtherTab', {
+            itemCount: syncedItems.size,
+            projectId: syncedState.currentProjectId
+          })
+
+          if (import.meta.env.DEV) {
+            console.log('🔄 Cart synced from other tab:', syncedItems.size, 'items')
+          }
+        }
+      }
+
+      // Sync config if provided
+      if (syncedState.config) {
+        config.value = { ...config.value, ...syncedState.config }
+      }
+    }
+  })
+
+  const debouncedSave = createDebouncedSave(persistence, 300)
+
+  // --- STATE --- (Memory-optimized with persistence)
+  const initialState = persistence.loadState() || {}
+  const items = shallowRef<Map<string, CartItem>>(initialState.items || new Map())
   const isVisible = ref(false)
   const mode = ref<CartMode>('equipment_add')
-  const currentProjectId = ref<number | null>(null)
-  const config = ref<CartConfig>({
+  const currentProjectId = ref<number | null>(initialState.currentProjectId || null)
+
+  // Memory-efficient item cache
+  const itemDisplayCache = memoryOpt.createWeakCache<CartItem, any>()
+
+  // --- PERSISTENCE WATCHERS ---
+  watch(
+    () => ({
+      items: Array.from(items.value.entries()), // Convert Map to array for serialization
+      config: config.value,
+      currentProjectId: currentProjectId.value
+    }),
+    (state) => {
+      if (config.value.enableStorage) {
+        debouncedSave(state)
+      }
+    },
+    { deep: true }
+  )
+  const config = ref<CartConfig>(initialState.config || {
     type: 'equipment_add',
     maxItems: 100,
     enableStorage: true,
@@ -64,8 +143,9 @@ export const useCartStore = defineStore('cart', () => {
   const actionStatus = ref<string>('')
   const operationId = ref<string | null>(null)
 
-  // Event system for cross-component communication
-  const eventListeners = ref<Map<string, Function[]>>(new Map())
+  // Event system for cross-component communication (using WeakMap for better GC)
+  const eventListeners = new Map<string, Function[]>()
+  const eventListenerCleanup = new Set<Function>()
 
   // --- GETTERS ---
   const itemCount = computed(() => items.value.size)
@@ -92,39 +172,48 @@ export const useCartStore = defineStore('cart', () => {
     return items.value.get(key)
   }
 
-  const getItemByEquipmentId = (equipmentId: number): CartItem | undefined => {
+  // Memory-optimized equipment ID lookup with caching
+  const equipmentIdMap = computed(() => {
+    const map = new Map<number, string>()
     for (const [key, item] of items.value.entries()) {
-      if (item.equipment.id === equipmentId) {
-        return item
-      }
+      map.set(item.equipment.id, key)
     }
-    return undefined
+    return map
+  })
+
+  const getItemByEquipmentId = (equipmentId: number): CartItem | undefined => {
+    const key = equipmentIdMap.value.get(equipmentId)
+    return key ? items.value.get(key) : undefined
   }
 
   // --- ACTIONS ---
 
-  // Event system methods
+  // Memory-optimized event system methods
   function addEventListener(eventType: string, callback: Function) {
-    if (!eventListeners.value.has(eventType)) {
-      eventListeners.value.set(eventType, [])
+    if (!eventListeners.has(eventType)) {
+      eventListeners.set(eventType, [])
     }
-    eventListeners.value.get(eventType)?.push(callback)
+    eventListeners.get(eventType)?.push(callback)
+    eventListenerCleanup.add(callback)
   }
 
   function removeEventListener(eventType: string, callback: Function) {
-    const listeners = eventListeners.value.get(eventType)
+    const listeners = eventListeners.get(eventType)
     if (listeners) {
       const index = listeners.indexOf(callback)
       if (index > -1) {
         listeners.splice(index, 1)
+        eventListenerCleanup.delete(callback)
       }
     }
   }
 
   function _emit(eventType: string, payload?: any) {
-    const listeners = eventListeners.value.get(eventType)
-    if (listeners) {
-      listeners.forEach(callback => {
+    const listeners = eventListeners.get(eventType)
+    if (listeners && listeners.length > 0) {
+      // Create a copy to avoid issues if listeners are modified during iteration
+      const listenersCopy = [...listeners]
+      listenersCopy.forEach(callback => {
         try {
           callback({ type: eventType, payload })
         } catch (error) {
@@ -134,22 +223,34 @@ export const useCartStore = defineStore('cart', () => {
     }
   }
 
-  function _saveCartToStorage() {
-    if (!config.value.enableStorage || currentProjectId.value === null) return
+  // Enhanced memory cleanup with persistence integration
+  function cleanupMemory(): void {
+    itemDisplayCache.clear()
 
-    try {
-      const cartData = {
+    // Clean up event listeners
+    eventListenerCleanup.forEach(callback => {
+      for (const [eventType, listeners] of eventListeners.entries()) {
+        const index = listeners.indexOf(callback)
+        if (index > -1) {
+          listeners.splice(index, 1)
+        }
+      }
+    })
+    eventListenerCleanup.clear()
+
+    if (import.meta.env.DEV) {
+      console.log('🛒 Cart store: Memory cleanup completed')
+    }
+  }
+
+  // Simplified save function using persistence plugin
+  function _saveCartToStorage() {
+    if (config.value.enableStorage) {
+      debouncedSave({
         items: Array.from(items.value.entries()),
         config: config.value,
-        timestamp: new Date().toISOString(),
-        version: '2.0'
-      }
-      const jsonData = JSON.stringify(cartData)
-      const compressedData = compressData(jsonData)
-      localStorage.setItem(getCartStorageKey(currentProjectId.value), compressedData)
-    } catch (e) {
-      console.error('Failed to save cart to localStorage:', e)
-      errors.value.push('Failed to save cart to storage')
+        currentProjectId: currentProjectId.value
+      })
     }
   }
 
@@ -160,20 +261,11 @@ export const useCartStore = defineStore('cart', () => {
 
     try {
       if (config.value.enableStorage) {
-        const storedData = localStorage.getItem(getCartStorageKey(projectId))
-        if (storedData) {
-          const decompressed = decompressData(storedData)
-          const parsedCart = JSON.parse(decompressed)
-
-          // Handle version migration if needed
-          if (parsedCart.version === '2.0' && parsedCart.items) {
-            items.value = new Map(parsedCart.items)
-            if (parsedCart.config) {
-              config.value = { ...config.value, ...parsedCart.config }
-            }
-          } else {
-            // Legacy format or corrupted data
-            items.value = new Map()
+        const storedState = persistence.loadState()
+        if (storedState && storedState.currentProjectId === projectId && storedState.items) {
+          items.value = storedState.items instanceof Map ? storedState.items : new Map(storedState.items)
+          if (storedState.config) {
+            config.value = { ...config.value, ...storedState.config }
           }
         } else {
           items.value = new Map()
@@ -184,7 +276,7 @@ export const useCartStore = defineStore('cart', () => {
 
       _emit('cartLoaded', { projectId, itemCount: items.value.size })
     } catch (e) {
-      console.error('Failed to load cart from localStorage:', e)
+      console.error('Failed to load cart from storage:', e)
       items.value = new Map()
       errors.value.push('Failed to load saved cart data')
     } finally {
@@ -409,10 +501,29 @@ export const useCartStore = defineStore('cart', () => {
 
   function clearCart(): void {
     const previousCount = items.value.size
+
+    // Clear display cache
+    itemDisplayCache.clear()
+
     items.value.clear()
     errors.value = []
-    _saveCartToStorage()
+
+    // Clear persistence as well
+    persistence.clearState()
+
     _emit('cartCleared', { previousCount })
+
+    // Suggest garbage collection for large carts
+    if (previousCount > 50 && import.meta.env.DEV) {
+      memoryOpt.triggerMemoryCleanup()
+    }
+  }
+
+  // Auto cleanup on memory pressure
+  if (typeof window !== 'undefined') {
+    window.addEventListener('memory-pressure-high', () => {
+      cleanupMemory()
+    })
   }
 
   function toggleVisibility(): void {
