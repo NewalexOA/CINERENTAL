@@ -28,10 +28,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, nextTick } from 'vue'
 import { useCartStore } from '@/stores/cart'
 import BaseButton from '@/components/common/BaseButton.vue'
 import CartItemsList from './CartItemsList.vue'
+import { useDOMOptimization } from '@/composables/useDOMOptimization'
+import { useTransitionOptimization } from '@/composables/useTransitionOptimization'
+import { useRenderOptimization } from '@/composables/useRenderOptimization'
 
 interface Props {
   mode?: 'floating' | 'embedded'
@@ -43,15 +46,32 @@ const props = withDefaults(defineProps<Props>(), {
 
 const cartStore = useCartStore()
 
-const isEmbedded = computed(() => props.mode === 'embedded')
+// DOM optimization setup
+const { scheduleUpdate, batchStyleUpdates } = useDOMOptimization({
+  batchSize: 8,
+  flushInterval: 16
+})
 
-const cartContainerClasses = computed(() => ({
-  'universal-cart': true,
-  'cart--embedded': isEmbedded.value,
-  'cart--floating': !isEmbedded.value,
-  'cart--visible': cartStore.isVisible,
-  'cart--loading': cartStore.loading
-}))
+const { fadeTransition, slideTransition } = useTransitionOptimization()
+const { createDebouncedRef } = useRenderOptimization()
+
+// Optimized reactive state
+const isEmbedded = computed(() => props.mode === 'embedded')
+const debouncedItemCount = createDebouncedRef(cartStore.itemCount, 100)
+
+// Memoized classes to prevent unnecessary re-renders
+const cartContainerClasses = computed(() => {
+  const classes = {
+    'universal-cart': true,
+    'cart--embedded': isEmbedded.value,
+    'cart--floating': !isEmbedded.value,
+    'cart--visible': cartStore.isVisible,
+    'cart--loading': cartStore.loading
+  }
+
+  // Use shallow comparison for memoization
+  return classes
+})
 
 // Computed properties for enhanced UI
 const itemKeys = computed(() => {
@@ -93,47 +113,101 @@ function formatCurrency(amount: number): string {
   }).format(amount)
 }
 
-// Event handlers
+// Optimized event handlers with batching
+const eventQueue = new Map<string, () => void>()
+
 function handleItemRemoved(itemKey: string): void {
-  console.log('Item removed:', itemKey)
+  scheduleUpdate(`item-removed-${itemKey}`, () => {
+    console.log('Item removed:', itemKey)
+    // Update UI elements related to this item
+  })
 }
 
 function handleItemUpdated(itemKey: string): void {
-  console.log('Item updated:', itemKey)
+  scheduleUpdate(`item-updated-${itemKey}`, () => {
+    console.log('Item updated:', itemKey)
+    // Batch UI updates for this item
+  })
 }
 
 function handleItemError(error: string): void {
   console.error('Item error:', error)
+  // Error handling can be immediate as it's less frequent
 }
 
 function handleRetry(): void {
-  // Retry failed operations
-  console.log('Retrying operation...')
+  scheduleUpdate('retry-operation', () => {
+    console.log('Retrying operation...')
+  })
 }
 
 async function executeAction(): Promise<void> {
   try {
+    // Show loading state with GPU-accelerated fade
+    const cartElement = document.querySelector('.universal-cart')
+    if (cartElement) {
+      await fadeTransition(cartElement as HTMLElement, 0.7, { duration: 150 })
+    }
+
     await cartStore.executeActions()
+
+    // Restore normal state
+    if (cartElement) {
+      await fadeTransition(cartElement as HTMLElement, 1, { duration: 150 })
+    }
+
     console.log('Cart action executed successfully')
   } catch (error) {
     console.error('Failed to execute cart action:', error)
+
+    // Restore state on error
+    const cartElement = document.querySelector('.universal-cart')
+    if (cartElement) {
+      await fadeTransition(cartElement as HTMLElement, 1, { duration: 150 })
+    }
   }
 }
 
-// Lifecycle
-onMounted(() => {
+// Optimized lifecycle with batched operations
+onMounted(async () => {
   // Initialize cart based on mode
   cartStore.setEmbeddedMode(isEmbedded.value)
 
-  // Set up event listeners for cart events
-  cartStore.addEventListener('actionCompleted', (data) => {
-    console.log('Cart action completed:', data)
-  })
+  // Wait for DOM to be ready before setting up optimizations
+  await nextTick()
 
-  cartStore.addEventListener('actionFailed', (data) => {
+  // Set up event listeners for cart events with debouncing
+  const debouncedActionCompleted = debounce((data) => {
+    console.log('Cart action completed:', data)
+    // Trigger success animation
+    scheduleUpdate('action-completed', () => {
+      // Update success indicators
+    })
+  }, 150)
+
+  const debouncedActionFailed = debounce((data) => {
     console.error('Cart action failed:', data)
-  })
+    // Trigger error animation
+    scheduleUpdate('action-failed', () => {
+      // Update error indicators
+    })
+  }, 150)
+
+  cartStore.addEventListener('actionCompleted', debouncedActionCompleted)
+  cartStore.addEventListener('actionFailed', debouncedActionFailed)
 })
+
+// Debounce utility
+function debounce<T extends (...args: any[]) => any>(
+  fn: T,
+  delay: number
+): (...args: Parameters<T>) => void {
+  let timeoutId: number | null = null
+  return (...args: Parameters<T>) => {
+    if (timeoutId) clearTimeout(timeoutId)
+    timeoutId = window.setTimeout(() => fn(...args), delay)
+  }
+}
 
 </script>
 

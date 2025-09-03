@@ -1,11 +1,19 @@
 <template>
-  <div class="equipment-card group">
+  <div
+    v-memo="memoArray"
+    :class="cardClasses"
+    ref="cardElement"
+    @mouseenter="handleMouseEnter"
+    @mouseleave="handleMouseLeave"
+  >
     <div class="aspect-w-16 aspect-h-9 bg-gray-200 rounded-lg overflow-hidden mb-4">
       <img
         v-if="equipment.image_url"
         :src="equipment.image_url"
         :alt="equipment.name"
-        class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+        class="w-full h-full object-cover transition-transform duration-200"
+        :class="{ 'scale-105': isHovered }"
+        loading="lazy"
       />
       <div v-else class="flex items-center justify-center bg-gray-100">
         <svg class="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -87,11 +95,13 @@
 </template>
 
 <script setup lang="ts">
-import { computed, memo } from 'vue'
+import { computed, ref, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import type { EquipmentResponse } from '@/types/equipment'
 import BaseButton from '@/components/common/BaseButton.vue'
 import StatusBadge from '@/components/equipment/StatusBadge.vue'
+import { useComponentMemoization } from '@/composables/useRenderOptimization'
+import { useTransitionOptimization } from '@/composables/useTransitionOptimization'
 
 interface Props {
   equipment: EquipmentResponse
@@ -105,19 +115,68 @@ const props = defineProps<Props>()
 const emit = defineEmits<Emits>()
 const router = useRouter()
 
+// DOM optimization
+const cardElement = ref<HTMLElement | null>(null)
+const isHovered = ref(false)
+const { fadeTransition } = useTransitionOptimization()
+
+// Component memoization for performance
+const { memoArray, shouldRender } = useComponentMemoization(props, {
+  keys: ['equipment.id', 'equipment.status', 'equipment.name', 'equipment.daily_cost'],
+  updateThreshold: 16 // 60fps threshold
+})
+
+// Optimized computed properties with shallow comparison
 const canAddToCart = computed(() => {
   return props.equipment.status === 'AVAILABLE'
 })
 
+const cardClasses = computed(() => ({
+  'equipment-card': true,
+  'group': true,
+  'equipment-card--available': canAddToCart.value,
+  'equipment-card--hovered': isHovered.value
+}))
+
+// Optimized event handlers with debouncing
+let addToCartTimeout: number | null = null
 function handleAddToCart() {
-  if (canAddToCart.value) {
+  if (!canAddToCart.value) return
+
+  // Debounce rapid clicks
+  if (addToCartTimeout) return
+
+  addToCartTimeout = window.setTimeout(() => {
     emit('add-to-cart', props.equipment)
-  }
+    addToCartTimeout = null
+  }, 100)
 }
 
 function handleViewDetails() {
   router.push(`/equipment/${props.equipment.id}`)
 }
+
+// GPU-accelerated hover effects
+function handleMouseEnter() {
+  isHovered.value = true
+  if (cardElement.value) {
+    cardElement.value.style.willChange = 'transform, box-shadow'
+  }
+}
+
+function handleMouseLeave() {
+  isHovered.value = false
+  if (cardElement.value) {
+    cardElement.value.style.willChange = 'auto'
+  }
+}
+
+// Cleanup
+onBeforeUnmount(() => {
+  if (addToCartTimeout) {
+    clearTimeout(addToCartTimeout)
+  }
+})
 
 // Memoized formatters for better performance
 const priceFormatter = new Intl.NumberFormat('en-US', {
@@ -141,7 +200,37 @@ function formatDate(dateString: string): string {
 
 <style scoped>
 .equipment-card {
-  @apply bg-white rounded-lg shadow-sm border border-gray-200 p-4 transition-all duration-200 hover:shadow-lg hover:border-gray-300;
+  @apply bg-white rounded-lg shadow-sm border border-gray-200 p-4;
+  transition: transform 200ms ease-out, box-shadow 200ms ease-out, border-color 200ms ease-out;
+  transform: translateZ(0); /* Force GPU layer */
+}
+
+.equipment-card--hovered {
+  @apply shadow-lg border-gray-300;
+  transform: translateY(-1px) translateZ(0);
+}
+
+.equipment-card--available {
+  @apply cursor-pointer;
+}
+
+/* GPU-optimized transitions */
+.equipment-card img {
+  transition: transform 200ms ease-out;
+  transform: translateZ(0);
+}
+
+/* Reduce layout shift during loading */
+.equipment-card img[loading="lazy"] {
+  min-height: 200px;
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: loading-shimmer 1.5s infinite;
+}
+
+@keyframes loading-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
 }
 
 .aspect-w-16 {

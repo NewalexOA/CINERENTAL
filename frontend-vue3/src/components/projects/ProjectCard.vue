@@ -1,7 +1,11 @@
 <template>
   <div
-    class="project-card bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow duration-200 border border-gray-200 overflow-hidden"
+    v-memo="memoArray"
+    :class="cardClasses"
     :data-testid="`project-card-${project.id}`"
+    ref="cardElement"
+    @mouseenter="handleMouseEnter"
+    @mouseleave="handleMouseLeave"
   >
     <!-- Card Header -->
     <div class="p-4 border-b border-gray-100">
@@ -87,10 +91,11 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import type { ProjectData } from '@/services/api/projects'
 import BaseButton from '@/components/common/BaseButton.vue'
 import StatusBadge from '@/components/common/StatusBadge.vue'
+import { useComponentMemoization } from '@/composables/useRenderOptimization'
 
 interface Props {
   project: ProjectData
@@ -100,18 +105,66 @@ interface Emits {
   (e: 'quick-edit', project: ProjectData): void
 }
 
-defineProps<Props>()
+const props = defineProps<Props>()
 defineEmits<Emits>()
+
+// DOM optimization setup
+const cardElement = ref<HTMLElement | null>(null)
+const isHovered = ref(false)
+
+// Component memoization for performance
+const { memoArray } = useComponentMemoization(props, {
+  keys: ['project.id', 'project.name', 'project.status', 'project.updated_at'],
+  updateThreshold: 16
+})
+
+// Optimized computed classes
+const cardClasses = computed(() => ({
+  'project-card': true,
+  'bg-white': true,
+  'rounded-lg': true,
+  'border': true,
+  'border-gray-200': true,
+  'overflow-hidden': true,
+  'project-card--hovered': isHovered.value,
+  'shadow-md': !isHovered.value,
+  'shadow-lg': isHovered.value
+}))
+
+// GPU-optimized hover handlers
+function handleMouseEnter() {
+  isHovered.value = true
+  if (cardElement.value) {
+    cardElement.value.style.willChange = 'transform, box-shadow'
+  }
+}
+
+function handleMouseLeave() {
+  isHovered.value = false
+  if (cardElement.value) {
+    cardElement.value.style.willChange = 'auto'
+  }
+}
+
+// Memoized date formatters for better performance
+const dateFormatter = new Intl.DateTimeFormat('en-US', {
+  month: 'short',
+  day: 'numeric'
+})
+
+const dateFormatterWithYear = new Intl.DateTimeFormat('en-US', {
+  month: 'short',
+  day: 'numeric',
+  year: 'numeric'
+})
 
 // Utility functions for date formatting
 function formatDate(dateString: string): string {
   try {
     const date = new Date(dateString)
-    return date.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: date.getFullYear() !== new Date().getFullYear() ? 'numeric' : undefined
-    })
+    const currentYear = new Date().getFullYear()
+    const formatter = date.getFullYear() !== currentYear ? dateFormatterWithYear : dateFormatter
+    return formatter.format(date)
   } catch {
     return 'Invalid date'
   }
@@ -149,10 +202,17 @@ function formatDateRange(startDate: string, endDate: string): string {
   height: 280px; /* Fixed height for consistent virtual scrolling */
   display: flex;
   flex-direction: column;
+  transition: transform 200ms ease-out, box-shadow 200ms ease-out;
+  transform: translateZ(0); /* Force GPU layer */
 }
 
-.project-card:hover {
-  transform: translateY(-1px);
+.project-card--hovered {
+  transform: translateY(-1px) translateZ(0);
+}
+
+/* Contain layout changes for better performance */
+.project-card {
+  contain: layout style;
 }
 
 /* Line clamp utility for description */
@@ -168,11 +228,13 @@ function formatDateRange(startDate: string, endDate: string): string {
   flex-shrink: 0;
 }
 
-/* Responsive adjustments */
+/* Performance-optimized responsive adjustments */
 @media (max-width: 640px) {
   .project-card {
     height: auto;
     min-height: 280px;
+    /* Reduce reflows on mobile */
+    contain: layout;
   }
 
   .project-card .flex.items-start {
@@ -187,7 +249,18 @@ function formatDateRange(startDate: string, endDate: string): string {
   }
 }
 
-/* Loading state styles */
+/* Reduce motion for accessibility */
+@media (prefers-reduced-motion: reduce) {
+  .project-card {
+    transition: none;
+  }
+
+  .project-card.loading::before {
+    animation: none;
+  }
+}
+
+/* GPU-accelerated loading state styles */
 .project-card.loading {
   opacity: 0.7;
   pointer-events: none;
@@ -201,11 +274,13 @@ function formatDateRange(startDate: string, endDate: string): string {
   right: 0;
   bottom: 0;
   background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+  background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
+  transform: translateZ(0); /* GPU acceleration */
 }
 
 @keyframes shimmer {
-  0% { transform: translateX(-100%); }
-  100% { transform: translateX(100%); }
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
 }
 </style>

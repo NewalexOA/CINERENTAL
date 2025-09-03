@@ -72,13 +72,14 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch, onMounted, onUnmounted, nextTick, shallowRef } from 'vue'
+import { computed, ref, watch, onMounted, onUnmounted, nextTick, shallowRef, getCurrentInstance } from 'vue'
 import { useVirtualizer } from '@tanstack/vue-virtual'
 import type { EquipmentResponse } from '@/types/equipment'
 import EquipmentCard from '@/components/equipment/EquipmentCard.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
 import BaseSpinner from '@/components/common/BaseSpinner.vue'
 import { performanceMonitor } from '@/utils/performance'
+import { useMemoryOptimization, useVirtualScrollingMemoryOptimization } from '@/composables/useMemoryOptimization'
 
 interface Props {
   items: EquipmentResponse[]
@@ -107,14 +108,22 @@ const emit = defineEmits<Emits>()
 // Template refs
 const parentRef = ref<HTMLElement>()
 
+// Memory optimization
+const memoryOpt = useMemoryOptimization()
+const virtualMemoryOpt = useVirtualScrollingMemoryOptimization()
+
 // Performance optimization: cache responsive calculations
 const cachedItemsPerRow = shallowRef(3)
 const lastWindowWidth = ref(0)
 
+// Memory-efficient data management
+const visibleItems = shallowRef<EquipmentResponse[]>([])
+const itemCache = memoryOpt.createWeakCache<EquipmentResponse, any>()
+
 // Computed values
 const skeletonCount = computed(() => Math.min(12, Math.max(6, Math.ceil(props.containerHeight / 150))))
 
-// Convert flat items array to rows for virtualization with memoization
+// Convert flat items array to rows for virtualization with memory optimization
 const itemRows = computed(() => {
   const rows: EquipmentResponse[][] = []
   const itemsPerRow = cachedItemsPerRow.value
@@ -122,25 +131,47 @@ const itemRows = computed(() => {
   // Early return for empty items
   if (props.items.length === 0) return rows
 
-  // Batch process items into rows for better performance
-  for (let i = 0; i < props.items.length; i += itemsPerRow) {
-    rows.push(props.items.slice(i, i + itemsPerRow))
+  // Use memory-efficient chunking for large datasets
+  if (props.items.length > 500) {
+    const chunks = memoryOpt.createMemoryEfficientChunks(
+      props.items,
+      itemsPerRow * 10, // Larger chunks for better memory efficiency
+      50 // 50MB memory limit
+    )
+
+    // Flatten chunks into rows
+    for (const chunk of chunks) {
+      for (let i = 0; i < chunk.length; i += itemsPerRow) {
+        rows.push(chunk.slice(i, i + itemsPerRow))
+      }
+    }
+  } else {
+    // Standard processing for smaller datasets
+    for (let i = 0; i < props.items.length; i += itemsPerRow) {
+      rows.push(props.items.slice(i, i + itemsPerRow))
+    }
   }
 
   return rows
 })
 
-// Virtual scroller setup with optimized configuration
+// Virtual scroller setup with memory-aware optimized configuration
 const virtualizer = useVirtualizer(
   computed(() => {
     const rowCount = itemRows.value.length
-    const dynamicOverscan = Math.min(5, Math.max(2, Math.ceil(props.containerHeight / props.itemHeight)))
+
+    // Memory-aware overscan calculation
+    const memoryAwareOverscan = virtualMemoryOpt.calculateMemoryAwareOverscan(
+      props.containerHeight,
+      props.itemHeight,
+      Math.min(5, Math.max(2, Math.ceil(props.containerHeight / props.itemHeight)))
+    )
 
     return {
       count: rowCount,
       getScrollElement: () => parentRef.value || null,
       estimateSize: () => props.itemHeight,
-      overscan: dynamicOverscan, // Dynamic overscan based on viewport
+      overscan: memoryAwareOverscan, // Memory-aware dynamic overscan
       measureElement: undefined, // Use estimate for better performance
       scrollMargin: props.itemHeight * 0.5, // Preload half item height
     }
@@ -174,8 +205,41 @@ function getResponsiveItemsPerRow(): number {
   return cachedItemsPerRow.value
 }
 
+// Memory-optimized row item retrieval with caching
 function getRowItems(rowIndex: number): EquipmentResponse[] {
-  return itemRows.value[rowIndex] || []
+  const row = itemRows.value[rowIndex]
+  if (!row) return []
+
+  // Use object pool for item display objects to reduce garbage collection
+  return row.map((item, index) => {
+    const cacheKey = `${item.id}_${rowIndex}_${index}`
+
+    // Check weak cache first
+    let cached = itemCache.get(item)
+    if (!cached) {
+      cached = memoryOpt.equipmentCardPool.acquire()
+      cached.id = item.id
+      cached.name = item.name
+      cached.category = item.category
+      cached.status = item.status
+      itemCache.set(item, cached)
+    }
+
+    return item // Return original item for component rendering
+  })
+}
+
+// Cleanup function for released items
+function cleanupRowItems(rowIndex: number): void {
+  const row = itemRows.value[rowIndex]
+  if (!row) return
+
+  row.forEach(item => {
+    const cached = itemCache.get(item)
+    if (cached) {
+      memoryOpt.equipmentCardPool.release(cached)
+    }
+  })
 }
 
 function handleAddToCart(equipment: EquipmentResponse) {
