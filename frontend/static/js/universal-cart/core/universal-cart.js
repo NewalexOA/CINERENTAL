@@ -120,6 +120,9 @@ class UniversalCart {
             if (this.ui) {
                 this.ui.render();
 
+                // Animate badge for visual feedback
+                this.ui._animateBadge();
+
                 // Auto-show cart if configured and not yet visible
                 if (this.config.autoShowOnAdd && !this.ui.isVisible) {
                     this.ui.show();

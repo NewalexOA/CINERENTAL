@@ -94,6 +94,9 @@ class CartUI {
 
         console.log('[CartUI] Starting initialization...');
 
+        // Add initialization loading state
+        this._showInitializationLoader();
+
         try {
             console.log('[CartUI] Loading CSS...');
             await this._loadCSS();
@@ -102,7 +105,7 @@ class CartUI {
             this._createUI();
 
             console.log('[CartUI] Binding elements... embedded:', this.isEmbedded);
-            this._bindElements();
+            await this._bindElements();
 
             console.log('[CartUI] Setting up event listeners...');
             this._setupEventListeners();
@@ -111,9 +114,15 @@ class CartUI {
             this.render();
 
             this.isInitialized = true;
+
+            // Remove initialization loader
+            this._hideInitializationLoader();
+
             console.log('[CartUI] Initialized successfully');
         } catch (error) {
             console.error('[CartUI] Failed to initialize:', error);
+            this._hideInitializationLoader();
+            this._showInitializationError(error);
             throw error;
         }
     }
@@ -231,28 +240,50 @@ class CartUI {
      * Bind DOM elements
      * @private
      */
-    _bindElements() {
-        if (!this.isEmbedded) {
-            // Only bind elements for floating mode
-            this.container = document.getElementById(this.config.containerId);
-            this.toggleButton = document.getElementById(this.config.toggleButtonId);
-            this.badge = document.getElementById(this.config.badgeId);
+    async _bindElements() {
+        // Retry logic for finding elements
+        const maxRetries = 3;
+        const retryDelay = 100;
 
-            if (this.container) {
-                this.itemsList = this.container.querySelector('.cart-items-list');
-                this.summary = this.container.querySelector('.cart-summary');
+        for (let attempt = 0; attempt < maxRetries; attempt++) {
+            try {
+                if (!this.isEmbedded) {
+                    // Only bind elements for floating mode
+                    this.container = document.getElementById(this.config.containerId);
+                    this.toggleButton = document.getElementById(this.config.toggleButtonId);
+                    this.badge = document.getElementById(this.config.badgeId);
+
+                    if (this.container) {
+                        this.itemsList = this.container.querySelector('.cart-items-list');
+                        this.summary = this.container.querySelector('.cart-summary');
+                    }
+                } else {
+                    // For embedded mode, container is already set in _createUI()
+                    // Just bind toggle button and badge if they exist
+                    this.toggleButton = document.getElementById(this.config.toggleButtonId);
+                    this.badge = document.getElementById(this.config.badgeId);
+
+                    // cartContent is already set in _createUI()
+                }
+
+                if (this.container) {
+                    break; // Success, exit retry loop
+                }
+
+                if (attempt < maxRetries - 1) {
+                    console.warn(`[CartUI] Container not found, retrying... (${attempt + 1}/${maxRetries})`);
+                    await new Promise(resolve => setTimeout(resolve, retryDelay));
+                }
+            } catch (error) {
+                console.error(`[CartUI] Error binding elements (attempt ${attempt + 1}):`, error);
+                if (attempt === maxRetries - 1) {
+                    throw error;
+                }
             }
-        } else {
-            // For embedded mode, container is already set in _createUI()
-            // Just bind toggle button and badge if they exist
-            this.toggleButton = document.getElementById(this.config.toggleButtonId);
-            this.badge = document.getElementById(this.config.badgeId);
-
-            // cartContent is already set in _createUI()
         }
 
         if (!this.container) {
-            throw new Error('Cart container not found');
+            throw new Error('Cart container not found after retries');
         }
     }
 
@@ -327,6 +358,9 @@ class CartUI {
             this._setupEmbeddedEventListeners();
             // Also update action buttons after rendering
             this.renderer.updateActionButtons(this.container);
+
+            // Add animation to newly rendered items
+            this._animateNewItems();
         }
 
         // Show/hide cart container based on content
@@ -461,6 +495,33 @@ class CartUI {
     }
 
     /**
+     * Animate newly added items
+     * @private
+     */
+    _animateNewItems() {
+        if (!this.config.animations) return;
+
+        const items = this.cartContent?.querySelectorAll('.cart-item-embedded') ||
+                     this.itemsList?.querySelectorAll('.cart-item') || [];
+
+        items.forEach((item, index) => {
+            // Check if this is a newly added item (not already animated)
+            if (!item.dataset.animated) {
+                // Add a small delay for staggered animation
+                setTimeout(() => {
+                    item.classList.add('newly-added');
+                    item.dataset.animated = 'true';
+
+                    // Remove animation class after completion
+                    setTimeout(() => {
+                        item.classList.remove('newly-added');
+                    }, 700);
+                }, index * 50);
+            }
+        });
+    }
+
+    /**
      * Handle date click in embedded mode
      * @private
      */
@@ -495,30 +556,40 @@ class CartUI {
 
         if (!this.container) {
             console.error('[CartUI] show() failed - no container');
-            return;
+            return Promise.reject(new Error('No container found'));
         }
 
-        console.log('[CartUI] Before show - hidden class:', this.container.classList.contains('universal-cart-hidden'), 'isEmbedded:', this.isEmbedded);
+        return new Promise((resolve) => {
+            console.log('[CartUI] Before show - hidden class:', this.container.classList.contains('universal-cart-hidden'), 'isEmbedded:', this.isEmbedded);
 
-        if (this.isEmbedded) {
-            // Embedded mode - remove hidden class and add show class
-            this.container.classList.remove('universal-cart-hidden');
-            this.container.classList.add('show');
-            console.log('[CartUI] After show - hidden class:', this.container.classList.contains('universal-cart-hidden'), 'has show class:', this.container.classList.contains('show'));
-        } else {
-            // Floating mode - show the overlay
-            this.container.classList.add('show');
-        }
+            if (this.isEmbedded) {
+                // Embedded mode - remove hidden class and add show class
+                this.container.classList.remove('universal-cart-hidden');
+                this.container.classList.add('show');
+                console.log('[CartUI] After show - hidden class:', this.container.classList.contains('universal-cart-hidden'), 'has show class:', this.container.classList.contains('show'));
+            } else {
+                // Floating mode - show the overlay
+                this.container.style.display = 'block';
+                // Trigger reflow to ensure display change is applied
+                this.container.offsetHeight;
+                this.container.classList.add('show');
+            }
 
-        this.isVisible = true;
+            this.isVisible = true;
 
-        // Focus management
-        const firstFocusable = this.container.querySelector('button, input, [tabindex]');
-        if (firstFocusable) {
-            setTimeout(() => firstFocusable.focus(), 100);
-        }
+            // Wait for transition to complete
+            const transitionDuration = this.isEmbedded ? 400 : 300;
+            setTimeout(() => {
+                // Focus management after transition
+                const firstFocusable = this.container.querySelector('button, input, [tabindex]');
+                if (firstFocusable) {
+                    firstFocusable.focus();
+                }
+                resolve();
+            }, transitionDuration);
 
-        console.log('[CartUI] show() completed. isVisible:', this.isVisible);
+            console.log('[CartUI] show() completed. isVisible:', this.isVisible);
+        });
     }
 
     /**
@@ -526,37 +597,51 @@ class CartUI {
      */
     hide() {
         console.log('[CartUI] hide() called. Container:', this.container);
-        console.log('[CartUI] hide() call stack:', new Error().stack);
 
         if (!this.container) {
             console.error('[CartUI] hide() failed - no container');
-            return;
+            return Promise.reject(new Error('No container found'));
         }
 
-        console.log('[CartUI] Before hide - hidden class:', this.container.classList.contains('universal-cart-hidden'), 'isEmbedded:', this.isEmbedded);
+        return new Promise((resolve) => {
+            console.log('[CartUI] Before hide - hidden class:', this.container.classList.contains('universal-cart-hidden'), 'isEmbedded:', this.isEmbedded);
 
-        if (this.isEmbedded) {
-            // Embedded mode - add hidden class and remove show class
-            this.container.classList.add('universal-cart-hidden');
-            this.container.classList.remove('show');
-            console.log('[CartUI] After hide - hidden class:', this.container.classList.contains('universal-cart-hidden'), 'has show class:', this.container.classList.contains('show'));
-        } else {
-            // Floating mode - hide the overlay
-            this.container.classList.remove('show');
-        }
+            if (this.isEmbedded) {
+                // Embedded mode - add hidden class and remove show class
+                this.container.classList.add('universal-cart-hidden');
+                this.container.classList.remove('show');
+            } else {
+                // Floating mode - hide the overlay
+                this.container.classList.remove('show');
+            }
 
-        this.isVisible = false;
-        console.log('[CartUI] hide() completed. isVisible:', this.isVisible);
+            this.isVisible = false;
+
+            // Wait for transition to complete before hiding display
+            const transitionDuration = this.isEmbedded ? 400 : 300;
+            setTimeout(() => {
+                if (!this.isEmbedded && !this.isVisible) {
+                    this.container.style.display = 'none';
+                }
+                resolve();
+            }, transitionDuration);
+
+            console.log('[CartUI] hide() completed. isVisible:', this.isVisible);
+        });
     }
 
     /**
      * Toggle cart visibility
      */
-    toggle() {
-        if (this.isVisible) {
-            this.hide();
-        } else {
-            this.show();
+    async toggle() {
+        try {
+            if (this.isVisible) {
+                await this.hide();
+            } else {
+                await this.show();
+            }
+        } catch (error) {
+            console.error('[CartUI] Toggle failed:', error);
         }
     }
 
@@ -587,10 +672,69 @@ class CartUI {
     _animateBadge() {
         if (!this.badge || !this.config.animations) return;
 
+        // Remove any existing animation class
+        this.badge.classList.remove('cart-badge-pulse');
+
+        // Trigger reflow to reset animation
+        this.badge.offsetHeight;
+
         this.badge.classList.add('cart-badge-pulse');
         setTimeout(() => {
             this.badge.classList.remove('cart-badge-pulse');
-        }, 600);
+        }, 800); // Match updated animation duration
+    }
+
+    /**
+     * Show initialization loader
+     * @private
+     */
+    _showInitializationLoader() {
+        // Add loading class to body or specific container
+        const targetElement = document.getElementById('universalCartContainer') || document.body;
+        targetElement.classList.add('cart-initializing');
+    }
+
+    /**
+     * Hide initialization loader
+     * @private
+     */
+    _hideInitializationLoader() {
+        const targetElement = document.getElementById('universalCartContainer') || document.body;
+        targetElement.classList.remove('cart-initializing');
+    }
+
+    /**
+     * Show initialization error
+     * @private
+     */
+    _showInitializationError(error) {
+        console.error('[CartUI] Initialization error:', error);
+
+        // Show a user-friendly error message
+        const errorMessage = document.createElement('div');
+        errorMessage.className = 'alert alert-danger cart-init-error';
+        errorMessage.innerHTML = `
+            <strong>Ошибка загрузки корзины:</strong>
+            <p>${error.message || 'Неизвестная ошибка'}</p>
+            <button class="btn btn-sm btn-outline-secondary" onclick="window.location.reload()">
+                Перезагрузить страницу
+            </button>
+        `;
+
+        // Insert error message
+        const targetContainer = document.getElementById('universalCartContainer');
+        if (targetContainer) {
+            targetContainer.appendChild(errorMessage);
+        } else {
+            document.body.appendChild(errorMessage);
+        }
+
+        // Auto-remove error after 10 seconds
+        setTimeout(() => {
+            if (errorMessage.parentNode) {
+                errorMessage.parentNode.removeChild(errorMessage);
+            }
+        }, 10000);
     }
 
     /**
@@ -600,6 +744,68 @@ class CartUI {
      */
     showLoadingDialog(message) {
         return this.dialogs.showLoadingDialog(message);
+    }
+
+    /**
+     * Show progress overlay with smooth transitions
+     * @param {string} message
+     * @param {number} progress
+     */
+    showProgress(message, progress = 0) {
+        if (!this.container) return;
+
+        let overlay = this.container.querySelector('.cart-progress-overlay');
+        if (!overlay) {
+            overlay = document.createElement('div');
+            overlay.className = 'cart-progress-overlay';
+            overlay.innerHTML = `
+                <div class="progress-content">
+                    <div class="progress-spinner"></div>
+                    <div class="progress-message">${message}</div>
+                </div>
+            `;
+            this.container.appendChild(overlay);
+        }
+
+        // Update message and show
+        const messageElement = overlay.querySelector('.progress-message');
+        if (messageElement) {
+            messageElement.textContent = message;
+        }
+
+        overlay.classList.add('show');
+    }
+
+    /**
+     * Update progress overlay
+     * @param {string} message
+     * @param {number} progress
+     */
+    updateProgress(message, progress) {
+        const overlay = this.container?.querySelector('.cart-progress-overlay');
+        if (!overlay) return;
+
+        const messageElement = overlay.querySelector('.progress-message');
+        if (messageElement) {
+            messageElement.textContent = message;
+        }
+    }
+
+    /**
+     * Hide progress overlay with smooth transitions
+     */
+    hideProgress() {
+        const overlay = this.container?.querySelector('.cart-progress-overlay');
+        if (!overlay) return;
+
+        overlay.classList.remove('show');
+
+        // Remove overlay after transition
+        setTimeout(() => {
+            if (overlay.parentNode) {
+                overlay.parentNode.removeChild(overlay);
+            }
+        }, 300);
     }
 
     /**

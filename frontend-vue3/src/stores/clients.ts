@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { clientsService, type ClientData, type ClientCreateData, type ClientUpdateData, type BookingData } from '@/services/api/clients'
+import { StorePersistence, createDebouncedSave } from '@/plugins/store-persistence'
 
 export interface ClientFilters {
   query?: string
@@ -16,6 +17,36 @@ export interface PaginationState {
 }
 
 export const useClientsStore = defineStore('clients', () => {
+  // --- PERSISTENCE SETUP ---
+  const persistence = new StorePersistence({
+    key: 'clients',
+    version: 1,
+    ttl: 60 * 60 * 1000, // 1 hour cache for clients
+    compress: true,
+    whitelist: ['clients', 'filters', 'pagination', 'lastFetch'],
+    beforeRestore: (data: any) => {
+      // Validate restored data structure
+      return {
+        clients: Array.isArray(data.clients) ? data.clients : [],
+        filters: data.filters && typeof data.filters === 'object' ? data.filters : {
+          query: '',
+          sort_by: 'name',
+          sort_order: 'asc'
+        },
+        pagination: data.pagination && typeof data.pagination === 'object' ? data.pagination : {
+          page: 1,
+          size: 50,
+          total: 0,
+          totalPages: 1
+        },
+        lastFetch: data.lastFetch || null
+      }
+    },
+    onError: (error: Error, operation: string) => {
+      console.error(`Clients store persistence ${operation} error:`, error)
+    }
+  })
+
   // --- STATE ---
   const clients = ref<ClientData[]>([])
   const currentClient = ref<ClientData | null>(null)
@@ -33,6 +64,37 @@ export const useClientsStore = defineStore('clients', () => {
     total: 0,
     totalPages: 1
   })
+  const lastFetch = ref<number | null>(null)
+  const cacheExpiry = 30 * 60 * 1000 // 30 minutes cache for client lists
+
+  // --- PERSISTENCE HELPERS ---
+  const debouncedSave = createDebouncedSave(persistence, 500)
+
+  function saveToStorage() {
+    const stateToSave = {
+      clients: clients.value,
+      filters: filters.value,
+      pagination: pagination.value,
+      lastFetch: lastFetch.value
+    }
+    debouncedSave(stateToSave)
+  }
+
+  function loadFromStorage() {
+    const restored = persistence.loadState()
+    if (restored) {
+      clients.value = restored.clients || []
+      filters.value = { ...filters.value, ...restored.filters }
+      pagination.value = { ...pagination.value, ...restored.pagination }
+      lastFetch.value = restored.lastFetch
+      console.log(`👥 Clients store: Restored ${clients.value.length} cached clients`)
+    }
+  }
+
+  function shouldRefreshCache(): boolean {
+    if (!lastFetch.value) return true
+    return (Date.now() - lastFetch.value) > cacheExpiry
+  }
 
   // --- COMPUTED ---
   const filteredClients = computed(() => {
@@ -49,8 +111,27 @@ export const useClientsStore = defineStore('clients', () => {
 
   const totalClients = computed(() => clients.value.length)
 
+  const isDataStale = computed(() => shouldRefreshCache())
+
+  const cacheInfo = computed(() => {
+    const metadata = persistence.getMetadata()
+    return {
+      hasCache: !!metadata,
+      lastUpdate: lastFetch.value ? new Date(lastFetch.value).toLocaleString() : null,
+      isStale: isDataStale.value,
+      clientCount: clients.value.length,
+      ...metadata
+    }
+  })
+
   // --- ACTIONS ---
-  async function fetchClients() {
+  async function fetchClients(force = false) {
+    // Use cached data if available and not stale (unless forced)
+    if (!force && !shouldRefreshCache() && clients.value.length > 0) {
+      console.log('👥 Clients store: Using cached data')
+      return
+    }
+
     loading.value = true
     error.value = null
 
@@ -67,6 +148,10 @@ export const useClientsStore = defineStore('clients', () => {
       clients.value = response
       pagination.value.total = response.length
       pagination.value.totalPages = Math.ceil(response.length / pagination.value.size)
+      lastFetch.value = Date.now()
+
+      // Save to storage after successful fetch
+      saveToStorage()
     } catch (err) {
       console.error('Failed to fetch clients:', err)
       error.value = 'Failed to load clients. Please try again.'
@@ -176,24 +261,53 @@ export const useClientsStore = defineStore('clients', () => {
   function setFilters(newFilters: Partial<ClientFilters>) {
     filters.value = { ...filters.value, ...newFilters }
     pagination.value.page = 1
-    fetchClients()
+    fetchClients(true) // Force refresh when filters change
+    saveToStorage() // Save filter changes
   }
 
   function setPage(page: number) {
     pagination.value.page = page
     fetchClients()
+    saveToStorage() // Save pagination changes
   }
 
   function setSorting(field: string, order: 'asc' | 'desc') {
     filters.value.sort_by = field
     filters.value.sort_order = order
     pagination.value.page = 1
-    fetchClients()
+    fetchClients(true) // Force refresh when sorting changes
+    saveToStorage() // Save sorting changes
   }
 
   function clearError() {
     error.value = null
   }
+
+  function clearCache() {
+    persistence.clearState()
+    clients.value = []
+    currentClient.value = null
+    clientBookings.value = []
+    lastFetch.value = null
+    console.log('🗑️ Clients store: Cache cleared')
+  }
+
+  function refreshData() {
+    return fetchClients(true) // Force refresh
+  }
+
+  // --- INITIALIZATION ---
+  // Load persisted state on store creation
+  loadFromStorage()
+
+  // Watch for state changes to save automatically
+  watch(
+    [filters, pagination],
+    () => {
+      saveToStorage()
+    },
+    { deep: true }
+  )
 
   return {
     // State
@@ -204,10 +318,13 @@ export const useClientsStore = defineStore('clients', () => {
     error,
     filters,
     pagination,
+    lastFetch,
 
     // Computed
     filteredClients,
     totalClients,
+    isDataStale,
+    cacheInfo,
 
     // Actions
     fetchClients,
@@ -220,5 +337,7 @@ export const useClientsStore = defineStore('clients', () => {
     setPage,
     setSorting,
     clearError,
+    refreshData,
+    clearCache
   }
 })

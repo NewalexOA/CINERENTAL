@@ -132,10 +132,13 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useCartStore } from '@/stores/cart'
-import UniversalCart from '@/components/cart/UniversalCart.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import type { CartMode } from '@/types/cart'
 import type { EquipmentResponse, EquipmentStatus } from '@/types/equipment'
+import { useAsyncComponents } from '@/composables/useAsyncComponents'
+
+// Use async component for UniversalCart to improve initial bundle size
+const { UniversalCart } = useAsyncComponents()
 
 // Demo state
 const cartStore = useCartStore()

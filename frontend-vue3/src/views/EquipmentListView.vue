@@ -85,12 +85,13 @@
           />
         </div>
 
-        <div v-else-if="equipmentStore.items.length > 0">
+        <div v-else-if="equipmentStore.items.length > 0" ref="listContainer">
           <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
             <EquipmentCard
-              v-for="item in equipmentStore.items"
-              :key="item.id"
+              v-for="(item, index) in (viewMode === 'virtual' ? visibleItems : equipmentStore.items)"
+              :key="keys[index] || item.id"
               :equipment="item"
+              :data-equipment-id="item.id"
               @add-to-cart="addToCart"
             />
           </div>
@@ -157,20 +158,47 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { useEquipmentStore } from '@/stores/equipment'
 import { useCartStore } from '@/stores/cart'
 import type { EquipmentResponse } from '@/types/equipment'
 import BaseButton from '@/components/common/BaseButton.vue'
 import EquipmentCard from '@/components/equipment/EquipmentCard.vue'
-import VirtualEquipmentList from '@/components/equipment/VirtualEquipmentList.vue'
 import SkeletonLoader from '@/components/common/SkeletonLoader.vue'
+import LoadingSkeleton from '@/components/common/LoadingSkeleton.vue'
 import { debounce } from 'lodash-es'
 import { performanceMonitor } from '@/utils/performance'
+import { useAsyncComponents } from '@/composables/useAsyncComponents'
+import { useDOMOptimization } from '@/composables/useDOMOptimization'
+import { useOptimizedListRendering } from '@/composables/useRenderOptimization'
+import { useListTransitions } from '@/composables/useTransitionOptimization'
+
+// Use async component for VirtualEquipmentList to improve initial bundle size
+const { VirtualEquipmentList } = useAsyncComponents()
 
 // Stores
 const equipmentStore = useEquipmentStore()
 const cartStore = useCartStore()
+
+// DOM optimization setup
+const { scheduleUpdate, updateList, measureDOMOperation } = useDOMOptimization({
+  batchSize: 15,
+  flushInterval: 8, // Higher frequency for smooth scrolling
+  enablePriority: true
+})
+
+const { animateListChange } = useListTransitions()
+
+// Optimized list rendering
+const { visibleItems, keys, handleScroll, clearKeyCache } = useOptimizedListRendering(
+  computed(() => equipmentStore.items),
+  {
+    keyExtractor: (item: EquipmentResponse) => item.id,
+    virtualScrolling: true,
+    windowSize: 20,
+    itemHeight: 380
+  }
+)
 
 // Local state
 const searchQuery = ref('')
@@ -178,6 +206,7 @@ const viewMode = ref<'virtual' | 'standard'>('virtual')
 const containerHeight = ref(800)
 const showPerformanceStats = ref(process.env.NODE_ENV === 'development')
 const performanceData = ref(performanceMonitor.getLatestMetrics())
+const listContainer = ref<HTMLElement | null>(null)
 
 // Debounced search handler
 const debouncedSearch = debounce((query: string) => {
@@ -185,14 +214,10 @@ const debouncedSearch = debounce((query: string) => {
 }, 400) // Slightly longer debounce for better performance
 
 // Computed properties
+// Optimized computed properties with memoization
 const renderedItemsCount = computed(() => {
   if (viewMode.value === 'virtual') {
-    // More accurate estimation based on virtual scrolling
-    const itemsPerRow = getEstimatedItemsPerRow()
-    const itemHeight = 380 // Match VirtualEquipmentList itemHeight
-    const visibleRows = Math.ceil(containerHeight.value / itemHeight)
-    const overscanRows = Math.min(5, Math.max(2, Math.ceil(containerHeight.value / itemHeight)))
-    return Math.min((visibleRows + overscanRows) * itemsPerRow, equipmentStore.items.length)
+    return visibleItems.value.length
   }
   return equipmentStore.items.length
 })
@@ -216,10 +241,17 @@ function getEstimatedItemsPerRow(): number {
   return 3 // desktop
 }
 
+// Optimized search with DOM batching
 function handleSearchInput(event: Event) {
   const target = event.target as HTMLInputElement
-  searchQuery.value = target.value
-  debouncedSearch(target.value)
+  const newValue = target.value
+
+  // Batch the state update
+  scheduleUpdate('search-input', () => {
+    searchQuery.value = newValue
+  }, 'high')
+
+  debouncedSearch(newValue)
 }
 
 function handleViewModeChange() {
@@ -247,6 +279,7 @@ function getEmptyMessage(): string {
   return 'No equipment available. Contact your administrator if this seems incorrect.'
 }
 
+// Optimized cart operations with visual feedback
 function addToCart(item: EquipmentResponse) {
   const cartItem = {
     equipment: item,
@@ -256,10 +289,25 @@ function addToCart(item: EquipmentResponse) {
     dailyCost: item.daily_cost,
     totalCost: item.daily_cost, // Will be calculated based on dates
   }
-  cartStore.addItem(cartItem)
 
-  // Show success feedback (could be a toast notification)
-  console.log(`Added ${item.name} to cart`)
+  // Batch the cart update with visual feedback
+  measureDOMOperation('add-to-cart', async () => {
+    await cartStore.addItem(cartItem)
+
+    // Find the equipment card element for visual feedback
+    const cardElement = document.querySelector(`[data-equipment-id="${item.id}"]`)
+    if (cardElement) {
+      // Provide immediate visual feedback
+      scheduleUpdate(`cart-feedback-${item.id}`, () => {
+        cardElement.classList.add('item-added-feedback')
+        setTimeout(() => {
+          cardElement.classList.remove('item-added-feedback')
+        }, 1000)
+      }, 'high')
+    }
+
+    console.log(`Added ${item.name} to cart`)
+  })
 }
 
 function loadMore() {
@@ -306,32 +354,65 @@ function updateContainerHeight() {
   }
 }
 
-// Lifecycle
+// Optimized lifecycle with DOM measurements
 onMounted(async () => {
-  // Load saved view preference
-  const savedViewMode = localStorage.getItem('equipment-list-view-mode') as 'virtual' | 'standard' | null
-  if (savedViewMode && ['virtual', 'standard'].includes(savedViewMode)) {
-    viewMode.value = savedViewMode
-  }
+  await measureDOMOperation('component-mount', async () => {
+    // Load saved view preference
+    const savedViewMode = localStorage.getItem('equipment-list-view-mode') as 'virtual' | 'standard' | null
+    if (savedViewMode && ['virtual', 'standard'].includes(savedViewMode)) {
+      viewMode.value = savedViewMode
+    }
 
-  // Calculate container height
-  updateContainerHeight()
+    // Calculate container height
+    updateContainerHeight()
 
-  // Add resize listener
-  window.addEventListener('resize', updateContainerHeight)
+    // Add resize listener
+    window.addEventListener('resize', updateContainerHeight)
 
-  // Load initial data
-  await equipmentStore.fetchEquipment(false)
+    // Load initial data with performance tracking
+    await equipmentStore.fetchEquipment(false)
 
-  // Wait for DOM update and update performance data
-  await nextTick()
-  performanceData.value = performanceMonitor.getLatestMetrics()
+    // Wait for DOM update and update performance data
+    await nextTick()
+    performanceData.value = performanceMonitor.getLatestMetrics()
+  })
 })
+
+// Watch for equipment items changes and animate transitions
+watch(
+  () => equipmentStore.items.length,
+  (newCount, oldCount) => {
+    if (listContainer.value && oldCount > 0) {
+      // Animate list changes when items are added/removed
+      const addedCount = Math.max(0, newCount - oldCount)
+      const removedCount = Math.max(0, oldCount - newCount)
+
+      if (addedCount > 0 || removedCount > 0) {
+        scheduleUpdate('list-change-animation', () => {
+          // Simple fade-in for new items
+          const newItems = listContainer.value?.querySelectorAll('.equipment-card:nth-last-child(-n+' + addedCount + ')')
+          newItems?.forEach((item, index) => {
+            const element = item as HTMLElement
+            element.style.opacity = '0'
+            element.style.transform = 'translateY(20px)'
+
+            setTimeout(() => {
+              element.style.transition = 'opacity 300ms ease-out, transform 300ms ease-out'
+              element.style.opacity = '1'
+              element.style.transform = 'translateY(0)'
+            }, index * 50)
+          })
+        }, 'medium')
+      }
+    }
+  }
+)
 
 onUnmounted(() => {
   // Comprehensive cleanup
   window.removeEventListener('resize', updateContainerHeight)
   debouncedSearch.cancel()
+  clearKeyCache()
 
   if (heightUpdateTimeout) {
     clearTimeout(heightUpdateTimeout)
@@ -364,9 +445,35 @@ onUnmounted(() => {
   @apply bg-gray-400;
 }
 
-/* Smooth transitions */
+/* Performance optimizations */
+.equipment-list-view {
+  /* Enable GPU acceleration for smooth scrolling */
+  transform: translateZ(0);
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Cart feedback animation */
+@keyframes item-added-pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+
+.item-added-feedback {
+  animation: item-added-pulse 0.6s ease-out;
+  background-color: rgba(34, 197, 94, 0.1);
+  border-color: rgba(34, 197, 94, 0.3);
+}
+
+/* GPU-accelerated transitions */
 .equipment-grid {
   transition: opacity 0.2s ease-in-out;
+  transform: translateZ(0); /* Force GPU layer */
+}
+
+/* Optimize list rendering performance */
+.equipment-list-view .grid {
+  contain: layout style; /* CSS containment for better performance */
 }
 
 /* Focus states for accessibility */
