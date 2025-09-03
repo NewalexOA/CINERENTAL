@@ -1,0 +1,37 @@
+[
+  {
+    "path": "./dist/js/index-*.js",
+    "maxSize": "200kb",
+    "compression": "gzip"
+  },
+  {
+    "path": "./dist/js/vue-vendor-*.js",
+    "maxSize": "150kb",
+    "compression": "gzip"
+  },
+  {
+    "path": "./dist/js/utils-vendor-*.js",
+    "maxSize": "50kb",
+    "compression": "gzip"
+  },
+  {
+    "path": "./dist/js/equipment-chunk-*.js",
+    "maxSize": "100kb",
+    "compression": "gzip"
+  },
+  {
+    "path": "./dist/js/cart-chunk-*.js",
+    "maxSize": "75kb",
+    "compression": "gzip"
+  },
+  {
+    "path": "./dist/js/virtual-scrolling-chunk-*.js",
+    "maxSize": "50kb",
+    "compression": "gzip"
+  },
+  {
+    "path": "./dist/css/index-*.css",
+    "maxSize": "30kb",
+    "compression": "gzip"
+  }
+]

@@ -4,11 +4,13 @@
   "private": true,
   "type": "module",
   "engines": {
-    "node": "^20.19.0 || >=22.12.0"
+    "node": ">=20.19.0"
   },
   "scripts": {
     "dev": "vite",
     "build": "run-p type-check \"build-only {@}\" --",
+    "build:analyze": "VITE_BUNDLE_ANALYZER=true vite build",
+    "build:size": "npm run build && npx bundlesize",
     "preview": "vite preview",
     "test:unit": "vitest",
     "test:e2e": "playwright test",
@@ -28,6 +30,7 @@
   "devDependencies": {
     "@playwright/test": "^1.54.1",
     "@tsconfig/node22": "^22.0.2",
+    "bundlesize": "^0.18.1",
     "@types/jsdom": "^21.1.7",
     "@types/lodash-es": "^4.17.12",
     "@types/node": "^22.16.5",
@@ -48,6 +51,7 @@
     "npm-run-all2": "^8.0.4",
     "postcss": "^8.5.6",
     "prettier": "3.6.2",
+    "rollup-plugin-visualizer": "^5.12.0",
     "tailwindcss": "^3.4.17",
     "typescript": "~5.8.0",
     "vite": "^7.0.6",
@@ -55,5 +59,43 @@
     "vitest": "^3.2.4",
     "vitest-axe": "^0.1.0",
     "vue-tsc": "^3.0.4"
-  }
+  },
+  "bundlesize": [
+    {
+      "path": "./dist/js/main-*.js",
+      "maxSize": "10 kB"
+    },
+    {
+      "path": "./dist/js/vendor-misc-*.js",
+      "maxSize": "85 kB"
+    },
+    {
+      "path": "./dist/js/vue-ecosystem-*.js",
+      "maxSize": "35 kB"
+    },
+    {
+      "path": "./dist/js/http-client-*.js",
+      "maxSize": "40 kB"
+    },
+    {
+      "path": "./dist/js/equipment-module-*.js",
+      "maxSize": "25 kB"
+    },
+    {
+      "path": "./dist/js/cart-system-*.js",
+      "maxSize": "20 kB"
+    },
+    {
+      "path": "./dist/js/projects-module-*.js",
+      "maxSize": "35 kB"
+    },
+    {
+      "path": "./dist/js/performance-utils-*.js",
+      "maxSize": "20 kB"
+    },
+    {
+      "path": "./dist/css/main-*.css",
+      "maxSize": "40 kB"
+    }
+  ]
 }
