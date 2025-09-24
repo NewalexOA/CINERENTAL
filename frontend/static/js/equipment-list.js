@@ -913,27 +913,58 @@ function printBarcode(equipmentId, barcode) {
     barcodeModal.show();
 }
 
-function loadBarcodePreviews(barcode) {
+async function loadBarcodePreviews(barcode) {
     const baseUrl = '/api/v1/barcodes/';
     const code128Preview = document.getElementById('code128-preview');
     const code128Text = document.getElementById('code128-text');
     const datamatrixPreview = document.getElementById('datamatrix-preview');
     const datamatrixText = document.getElementById('datamatrix-text');
+    const equipmentId = document.getElementById('print-barcode-equipment-id')?.value;
 
     if(code128Preview) code128Preview.src = `${baseUrl}${barcode}/image?barcode_type=code128`;
     if(code128Text) code128Text.textContent = barcode;
     if(datamatrixPreview) datamatrixPreview.src = `${baseUrl}${barcode}/image?barcode_type=datamatrix`;
-    if(datamatrixText) datamatrixText.textContent = barcode;
+
+    // Compose two-line text for DataMatrix preview (barcode value + serial number value)
+    if (datamatrixText) {
+        let sn = '';
+        try {
+            if (equipmentId) {
+                const equipment = await api.get(`/equipment/${equipmentId}`);
+                sn = equipment?.serial_number || '';
+            }
+        } catch (e) {
+            console.warn('Preview: unable to fetch serial number', e);
+        }
+
+        if (sn && sn !== barcode) {
+            datamatrixText.innerHTML = `<div>${barcode}</div><div>${sn}</div>`;
+        } else {
+            datamatrixText.textContent = barcode;
+        }
+    }
 }
 
 // Function to print selected barcode type
 async function doPrintBarcode(barcodeType) {
     const barcodeModalEl = document.getElementById('barcodePrintModal');
     const barcodeValue = document.getElementById('print-barcode-value').value;
+    const equipmentIdValue = document.getElementById('print-barcode-equipment-id')?.value;
 
     if (!barcodeValue) {
         if (typeof showToast === 'function') showToast('Ошибка: значение штрих-кода недоступно', 'danger');
         return;
+    }
+
+    // Try to get serial number for label (optional)
+    let serialNumberForPrint = '';
+    try {
+        if (equipmentIdValue) {
+            const equipmentDetails = await api.get(`/equipment/${equipmentIdValue}`);
+            serialNumberForPrint = equipmentDetails?.serial_number || '';
+        }
+    } catch (e) {
+        console.warn('Unable to fetch equipment details for print label:', e);
     }
 
     // Direct URL to the barcode image endpoint
@@ -956,7 +987,12 @@ async function doPrintBarcode(barcodeType) {
         const containerStyleClass = barcodeType === 'datamatrix' ? 'barcode-container-datamatrix' : 'barcode-container-linear';
         const imageMaxWidth = barcodeType === 'datamatrix' ? '9mm' : '28mm';
         const imageHeight = barcodeType === 'datamatrix' ? '9mm' : '7mm';
-        const textStyle = barcodeType === 'datamatrix' ? 'margin-left: 1mm;' : 'margin-top: 0.5mm;';
+        const textMarginRule = barcodeType === 'datamatrix' ? 'margin-left: 1mm;' : 'margin-top: 0.5mm;';
+        // Adaptive font-size to avoid wrapping: shrink if string is long
+        const baseDmFont = 8; // px
+        const dmAdaptedFont = Math.max(6, Math.min(baseDmFont, Math.floor(120 / Math.max(10, barcodeValue.length)))) + 'px';
+        const textFontSize = barcodeType === 'datamatrix' ? dmAdaptedFont : '6px';
+        const subTextFontSize = barcodeType === 'datamatrix' ? dmAdaptedFont : '6px';
 
         const printContent = `
             <!DOCTYPE html>
@@ -970,13 +1006,22 @@ async function doPrintBarcode(barcodeType) {
                     .barcode-container-linear { width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; box-sizing: border-box; }
                     .barcode-container-datamatrix { width: 100%; height: 100%; display: flex; flex-direction: row; align-items: center; justify-content: flex-start; padding-left: 1mm; box-sizing: border-box; }
                     .barcode-image { max-width: ${imageMaxWidth}; height: ${imageHeight}; object-fit: contain; display: block; }
-                    .barcode-text { font-size: 6px; font-family: monospace; word-break: break-all; line-height: 1; ${textStyle} }
+                    .barcode-text { font-size: ${textFontSize}; font-family: monospace; white-space: nowrap; word-break: normal; overflow: hidden; line-height: 1; }
+                    .barcode-extra { font-size: ${subTextFontSize}; font-family: monospace; white-space: nowrap; word-break: normal; overflow: hidden; line-height: 1; }
+                    .dm-text-block { display: flex; flex-direction: column; align-items: flex-start; ${textMarginRule} }
                 </style>
             </head>
             <body>
                 <div class="${containerStyleClass}">
                     <img class="barcode-image" src="${imageUrl}" alt="Штрих-код ${barcodeValue}">
-                    <div class="barcode-text">${barcodeValue}</div>
+                    ${barcodeType === 'datamatrix' ? `
+                        <div class=\"dm-text-block\">
+                            <div class=\"barcode-text\">${barcodeValue}</div>
+                            ${serialNumberForPrint && serialNumberForPrint !== barcodeValue ? `<div class=\"barcode-extra\">${serialNumberForPrint}</div>` : ''}
+                        </div>
+                    ` : `
+                        <div class=\"barcode-text\" style=\"${textMarginRule}\">${barcodeValue}</div>
+                    `}
                 </div>
             </body>
             </html>
