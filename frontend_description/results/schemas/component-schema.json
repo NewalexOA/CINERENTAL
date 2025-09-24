@@ -1,0 +1,385 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "UI Component Analysis Schema",
+  "description": "Schema for Level 4 UI component analysis results",
+  "type": "object",
+  "properties": {
+    "componentOverview": {
+      "type": "object",
+      "properties": {
+        "componentName": {
+          "type": "string",
+          "description": "Name of the UI component"
+        },
+        "componentType": {
+          "type": "string",
+          "description": "Type of component (input, button, table, modal, etc.)"
+        },
+        "parentSection": {
+          "type": "string",
+          "description": "Parent section containing this component"
+        },
+        "parentPage": {
+          "type": "string",
+          "description": "Parent page containing this component"
+        },
+        "purpose": {
+          "type": "string",
+          "description": "Functional purpose and business value"
+        }
+      },
+      "required": ["componentName", "componentType", "parentSection", "parentPage", "purpose"]
+    },
+    "componentFunctionality": {
+      "type": "object",
+      "properties": {
+        "primaryOperations": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Main operations this component performs"
+        },
+        "userInteractions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "interaction": {
+                "type": "string"
+              },
+              "trigger": {
+                "type": "string"
+              },
+              "response": {
+                "type": "string"
+              },
+              "timing": {
+                "type": "string"
+              }
+            },
+            "required": ["interaction", "trigger", "response"]
+          },
+          "description": "User interaction patterns and responses"
+        },
+        "dataHandling": {
+          "type": "object",
+          "properties": {
+            "inputData": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "dataType": {
+                    "type": "string"
+                  },
+                  "format": {
+                    "type": "string"
+                  },
+                  "validation": {
+                    "type": "string"
+                  }
+                },
+                "required": ["dataType", "format"]
+              }
+            },
+            "outputData": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "dataType": {
+                    "type": "string"
+                  },
+                  "destination": {
+                    "type": "string"
+                  },
+                  "transformation": {
+                    "type": "string"
+                  }
+                },
+                "required": ["dataType", "destination"]
+              }
+            }
+          },
+          "required": ["inputData", "outputData"]
+        }
+      },
+      "required": ["primaryOperations", "userInteractions", "dataHandling"]
+    },
+    "componentBehavior": {
+      "type": "object",
+      "properties": {
+        "states": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "stateName": {
+                "type": "string"
+              },
+              "description": {
+                "type": "string"
+              },
+              "visualIndicators": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "triggers": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": ["stateName", "description", "triggers"]
+          },
+          "description": "Different states of the component"
+        },
+        "events": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "eventName": {
+                "type": "string"
+              },
+              "trigger": {
+                "type": "string"
+              },
+              "handler": {
+                "type": "string"
+              },
+              "propagation": {
+                "type": "string"
+              }
+            },
+            "required": ["eventName", "trigger", "handler"]
+          },
+          "description": "Events handled by the component"
+        },
+        "validationRules": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "field": {
+                "type": "string"
+              },
+              "rule": {
+                "type": "string"
+              },
+              "errorMessage": {
+                "type": "string"
+              },
+              "realTimeValidation": {
+                "type": "boolean"
+              }
+            },
+            "required": ["field", "rule", "errorMessage"]
+          },
+          "description": "Validation rules for component inputs"
+        }
+      },
+      "required": ["states", "events", "validationRules"]
+    },
+    "apiIntegration": {
+      "type": "object",
+      "properties": {
+        "endpoints": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "url": {
+                "type": "string"
+              },
+              "method": {
+                "type": "string"
+              },
+              "purpose": {
+                "type": "string"
+              },
+              "triggerAction": {
+                "type": "string"
+              },
+              "requestFormat": {
+                "type": "string"
+              },
+              "responseFormat": {
+                "type": "string"
+              },
+              "errorHandling": {
+                "type": "string"
+              }
+            },
+            "required": ["url", "method", "purpose", "triggerAction"]
+          },
+          "description": "API endpoints used by this component"
+        },
+        "requestPatterns": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "pattern": {
+                "type": "string"
+              },
+              "timing": {
+                "type": "string"
+              },
+              "debouncing": {
+                "type": "string"
+              }
+            },
+            "required": ["pattern", "timing"]
+          },
+          "description": "Request patterns (debouncing, caching, etc.)"
+        }
+      },
+      "required": ["endpoints", "requestPatterns"]
+    },
+    "dependencies": {
+      "type": "object",
+      "properties": {
+        "componentDependencies": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "componentName": {
+                "type": "string"
+              },
+              "relationship": {
+                "type": "string"
+              },
+              "dataExchange": {
+                "type": "string"
+              }
+            },
+            "required": ["componentName", "relationship"]
+          },
+          "description": "Dependencies on other components"
+        },
+        "externalDependencies": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "dependencyName": {
+                "type": "string"
+              },
+              "type": {
+                "type": "string"
+              },
+              "purpose": {
+                "type": "string"
+              }
+            },
+            "required": ["dependencyName", "type", "purpose"]
+          },
+          "description": "External library/service dependencies"
+        }
+      },
+      "required": ["componentDependencies", "externalDependencies"]
+    },
+    "playwrightResearch": {
+      "type": "object",
+      "properties": {
+        "interactionTesting": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "testScenario": {
+                "type": "string"
+              },
+              "steps": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "observedBehavior": {
+                "type": "string"
+              },
+              "networkActivity": {
+                "type": "string"
+              },
+              "timing": {
+                "type": "string"
+              }
+            },
+            "required": ["testScenario", "steps", "observedBehavior"]
+          },
+          "description": "Interactive testing scenarios and results"
+        },
+        "stateValidation": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "state": {
+                "type": "string"
+              },
+              "howToTrigger": {
+                "type": "string"
+              },
+              "verification": {
+                "type": "string"
+              },
+              "screenshot": {
+                "type": "string"
+              }
+            },
+            "required": ["state", "howToTrigger", "verification"]
+          },
+          "description": "Validation of component states"
+        },
+        "errorScenarios": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "scenario": {
+                "type": "string"
+              },
+              "steps": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "errorResponse": {
+                "type": "string"
+              },
+              "userFeedback": {
+                "type": "string"
+              }
+            },
+            "required": ["scenario", "steps", "errorResponse", "userFeedback"]
+          },
+          "description": "Error scenarios and handling"
+        },
+        "keyFindings": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Key discoveries from Playwright research"
+        }
+      },
+      "required": ["interactionTesting", "stateValidation", "errorScenarios", "keyFindings"]
+    }
+  },
+  "required": [
+    "componentOverview",
+    "componentFunctionality",
+    "componentBehavior",
+    "apiIntegration",
+    "dependencies",
+    "playwrightResearch"
+  ]
+}

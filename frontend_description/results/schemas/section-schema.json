@@ -1,0 +1,256 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Page Section Analysis Schema",
+  "description": "Schema for Level 3 page section analysis results",
+  "type": "object",
+  "properties": {
+    "sectionOverview": {
+      "type": "object",
+      "properties": {
+        "sectionName": {
+          "type": "string",
+          "description": "Name of the page section"
+        },
+        "parentPage": {
+          "type": "string",
+          "description": "Parent page containing this section"
+        },
+        "purpose": {
+          "type": "string",
+          "description": "Functional purpose of this section"
+        },
+        "businessValue": {
+          "type": "string",
+          "description": "Business value and importance"
+        }
+      },
+      "required": ["sectionName", "parentPage", "purpose", "businessValue"]
+    },
+    "sectionFunctionality": {
+      "type": "object",
+      "properties": {
+        "primaryOperations": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Main operations this section handles"
+        },
+        "userInteractions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "action": {
+                "type": "string"
+              },
+              "trigger": {
+                "type": "string"
+              },
+              "result": {
+                "type": "string"
+              }
+            },
+            "required": ["action", "trigger", "result"]
+          },
+          "description": "User interactions within this section"
+        },
+        "dataOperations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "operation": {
+                "type": "string"
+              },
+              "dataType": {
+                "type": "string"
+              },
+              "source": {
+                "type": "string"
+              }
+            },
+            "required": ["operation", "dataType", "source"]
+          },
+          "description": "Data operations performed in this section"
+        }
+      },
+      "required": ["primaryOperations", "userInteractions", "dataOperations"]
+    },
+    "components": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "componentName": {
+            "type": "string"
+          },
+          "componentType": {
+            "type": "string"
+          },
+          "functionality": {
+            "type": "string"
+          },
+          "interactions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": ["componentName", "componentType", "functionality"]
+      },
+      "description": "UI components within this section"
+    },
+    "apiIntegrations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "endpoint": {
+            "type": "string"
+          },
+          "method": {
+            "type": "string"
+          },
+          "purpose": {
+            "type": "string"
+          },
+          "triggerAction": {
+            "type": "string"
+          },
+          "responseHandling": {
+            "type": "string"
+          }
+        },
+        "required": ["endpoint", "method", "purpose", "triggerAction"]
+      },
+      "description": "API integrations specific to this section"
+    },
+    "sectionBehavior": {
+      "type": "object",
+      "properties": {
+        "states": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "stateName": {
+                "type": "string"
+              },
+              "description": {
+                "type": "string"
+              },
+              "triggers": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": ["stateName", "description", "triggers"]
+          },
+          "description": "Different states this section can be in"
+        },
+        "validationRules": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "field": {
+                "type": "string"
+              },
+              "rule": {
+                "type": "string"
+              },
+              "errorMessage": {
+                "type": "string"
+              }
+            },
+            "required": ["field", "rule"]
+          },
+          "description": "Validation rules within this section"
+        },
+        "errorHandling": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "errorType": {
+                "type": "string"
+              },
+              "handling": {
+                "type": "string"
+              },
+              "userFeedback": {
+                "type": "string"
+              }
+            },
+            "required": ["errorType", "handling", "userFeedback"]
+          },
+          "description": "Error handling patterns in this section"
+        }
+      },
+      "required": ["states", "validationRules", "errorHandling"]
+    },
+    "playwrightResearch": {
+      "type": "object",
+      "properties": {
+        "interactionTesting": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "testAction": {
+                "type": "string"
+              },
+              "observedBehavior": {
+                "type": "string"
+              },
+              "networkActivity": {
+                "type": "string"
+              }
+            },
+            "required": ["testAction", "observedBehavior"]
+          },
+          "description": "Results from interactive testing via Playwright"
+        },
+        "stateValidation": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "state": {
+                "type": "string"
+              },
+              "verification": {
+                "type": "string"
+              },
+              "screenshot": {
+                "type": "string"
+              }
+            },
+            "required": ["state", "verification"]
+          },
+          "description": "Validation of different section states"
+        },
+        "keyFindings": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Key discoveries from Playwright research"
+        }
+      },
+      "required": ["interactionTesting", "stateValidation", "keyFindings"]
+    }
+  },
+  "required": [
+    "sectionOverview",
+    "sectionFunctionality",
+    "components",
+    "apiIntegrations",
+    "sectionBehavior",
+    "playwrightResearch"
+  ]
+}

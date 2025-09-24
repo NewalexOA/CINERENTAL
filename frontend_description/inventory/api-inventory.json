@@ -1,0 +1,167 @@
+{
+  "api_inventory": {
+    "total_endpoints": 35,
+    "base_url": "/api/v1",
+    "categories": {
+      "equipment": {
+        "count": 11,
+        "endpoints": [
+          "GET /api/v1/equipment/",
+          "POST /api/v1/equipment/",
+          "GET /api/v1/equipment/paginated",
+          "GET /api/v1/equipment/{equipment_id}",
+          "PUT /api/v1/equipment/{equipment_id}",
+          "DELETE /api/v1/equipment/{equipment_id}",
+          "GET /api/v1/equipment/barcode/{barcode}",
+          "PUT /api/v1/equipment/{equipment_id}/status",
+          "POST /api/v1/equipment/{equipment_id}/regenerate-barcode",
+          "GET /api/v1/equipment/{equipment_id}/bookings",
+          "GET /api/v1/equipment/{equipment_id}/timeline",
+          "PATCH /api/v1/equipment/{equipment_id}/notes",
+          "GET /api/v1/equipment/{equipment_id}/availability"
+        ]
+      },
+      "categories": {
+        "count": 5,
+        "endpoints": [
+          "GET /api/v1/categories/",
+          "POST /api/v1/categories/",
+          "GET /api/v1/categories/with-equipment-count",
+          "GET /api/v1/categories/{category_id}",
+          "PUT /api/v1/categories/{category_id}",
+          "DELETE /api/v1/categories/{category_id}",
+          "GET /api/v1/categories/search/{query}",
+          "GET /api/v1/categories/{category_id}/subcategories"
+        ]
+      },
+      "clients": {
+        "count": 3,
+        "endpoints": [
+          "GET /api/v1/clients/",
+          "POST /api/v1/clients/",
+          "GET /api/v1/clients/{client_id}/",
+          "PUT /api/v1/clients/{client_id}/",
+          "DELETE /api/v1/clients/{client_id}/",
+          "GET /api/v1/clients/{client_id}/bookings/"
+        ]
+      },
+      "projects": {
+        "count": 5,
+        "endpoints": [
+          "GET /api/v1/projects/",
+          "POST /api/v1/projects/",
+          "GET /api/v1/projects/{project_id}",
+          "PUT /api/v1/projects/{project_id}",
+          "DELETE /api/v1/projects/{project_id}",
+          "GET /api/v1/projects/{project_id}/bookings",
+          "POST /api/v1/projects/{project_id}/bookings/{booking_id}",
+          "GET /api/v1/projects/{project_id}/print"
+        ]
+      },
+      "bookings": {
+        "count": 4,
+        "endpoints": [
+          "GET /api/v1/bookings/",
+          "POST /api/v1/bookings/",
+          "GET /api/v1/bookings/{booking_id}",
+          "PUT /api/v1/bookings/{booking_id}",
+          "DELETE /api/v1/bookings/{booking_id}",
+          "PATCH /api/v1/bookings/{booking_id}/payment",
+          "PUT /api/v1/bookings/{booking_id}/status"
+        ]
+      },
+      "barcodes": {
+        "count": 4,
+        "endpoints": [
+          "GET /api/v1/barcodes/{barcode}/image",
+          "POST /api/v1/barcodes/generate",
+          "GET /api/v1/barcodes/next",
+          "POST /api/v1/barcodes/validate"
+        ]
+      },
+      "documents": {
+        "count": 5,
+        "endpoints": [
+          "GET /api/v1/documents/",
+          "POST /api/v1/documents/",
+          "GET /api/v1/documents/{document_id}/",
+          "PUT /api/v1/documents/{document_id}/",
+          "DELETE /api/v1/documents/{document_id}/",
+          "PATCH /api/v1/documents/{document_id}/status/",
+          "GET /api/v1/documents/booking/{booking_id}/",
+          "GET /api/v1/documents/client/{client_id}/"
+        ]
+      },
+      "scanner": {
+        "count": 3,
+        "endpoints": [
+          "GET /api/v1/scan-sessions/",
+          "POST /api/v1/scan-sessions/",
+          "GET /api/v1/scan-sessions/{session_id}",
+          "PUT /api/v1/scan-sessions/{session_id}",
+          "DELETE /api/v1/scan-sessions/{session_id}",
+          "POST /api/v1/scan-sessions/clean-expired"
+        ]
+      },
+      "system": {
+        "count": 1,
+        "endpoints": [
+          "GET /api/v1/health"
+        ]
+      }
+    },
+    "common_patterns": {
+      "crud_operations": "Most entities support full CRUD (GET, POST, PUT, DELETE)",
+      "pagination": "GET endpoints support pagination parameters",
+      "search": "Search endpoints use path parameters and query filters",
+      "status_management": "Equipment and bookings have dedicated status endpoints",
+      "relationship_access": "Related data accessible through nested endpoints"
+    },
+    "authentication": {
+      "type": "Session-based",
+      "headers": ["Authorization", "Content-Type"],
+      "session_management": "Frontend manages session state"
+    },
+    "error_handling": {
+      "standard_codes": ["400", "401", "404", "422", "500"],
+      "validation_errors": "422 with field-specific details",
+      "not_found_errors": "404 for resource not found",
+      "server_errors": "500 with error details"
+    }
+  },
+  "frontend_integration_patterns": {
+    "api_client": "Centralized API client in /frontend/static/js/utils/api.js",
+    "request_patterns": "Async/await with error handling",
+    "loading_states": "UI loading indicators during API calls",
+    "error_feedback": "User-friendly error messages",
+    "data_caching": "Client-side caching for frequently accessed data"
+  },
+  "recommended_api_tasks": {
+    "high_priority": [
+      "Equipment List API Integration",
+      "Equipment Search API Integration",
+      "Equipment CRUD API Integration",
+      "Equipment Availability Check API Integration",
+      "Project CRUD API Integration",
+      "Project Booking API Integration",
+      "Client Management API Integration",
+      "Category Management API Integration",
+      "Barcode Operations API Integration",
+      "Scanner Session API Integration"
+    ],
+    "medium_priority": [
+      "Equipment Status Management API Integration",
+      "Equipment Timeline API Integration",
+      "Project Document Generation API Integration",
+      "Booking Status Management API Integration",
+      "Document Management API Integration",
+      "Category Search API Integration"
+    ],
+    "specialized": [
+      "Barcode Generation API Integration",
+      "Equipment Barcode Regeneration API Integration",
+      "Scan Session Cleanup API Integration",
+      "Health Check API Integration"
+    ]
+  }
+}

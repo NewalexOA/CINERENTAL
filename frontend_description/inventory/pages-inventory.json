@@ -1,0 +1,128 @@
+{
+  "lastUpdated": "2025-09-11 15:30:00",
+  "totalPages": 10,
+  "analysisMethod": "file-structure-analysis",
+  "pages": [
+    {
+      "id": "dashboard",
+      "name": "Dashboard",
+      "url": "http://localhost:8000/",
+      "templateFile": "/frontend/templates/index.html",
+      "jsFiles": ["/frontend/static/js/utils/common.js"],
+      "purpose": "Main application entry point with navigation overview",
+      "category": "navigation",
+      "priority": "high"
+    },
+    {
+      "id": "equipment-list",
+      "name": "Equipment List",
+      "url": "http://localhost:8000/equipment",
+      "templateFile": "/frontend/templates/equipment/list.html",
+      "jsFiles": [
+        "/frontend/static/js/equipment.js",
+        "/frontend/static/js/utils/pagination.js",
+        "/frontend/static/js/utils/api.js"
+      ],
+      "purpose": "Equipment inventory management with search and filtering",
+      "category": "equipment",
+      "priority": "high"
+    },
+    {
+      "id": "equipment-detail",
+      "name": "Equipment Detail",
+      "url": "http://localhost:8000/equipment/{id}",
+      "templateFile": "/frontend/templates/equipment/detail.html",
+      "jsFiles": ["/frontend/static/js/equipment-detail.js"],
+      "purpose": "Individual equipment item management and history",
+      "category": "equipment",
+      "priority": "high"
+    },
+    {
+      "id": "categories-list",
+      "name": "Categories Management",
+      "url": "http://localhost:8000/categories",
+      "templateFile": "/frontend/templates/categories/list.html",
+      "jsFiles": [
+        "/frontend/static/js/categories.js",
+        "/frontend/static/js/subcategories.js"
+      ],
+      "purpose": "Equipment categorization and hierarchical management",
+      "category": "equipment",
+      "priority": "medium"
+    },
+    {
+      "id": "clients-list",
+      "name": "Clients List",
+      "url": "http://localhost:8000/clients",
+      "templateFile": "/frontend/templates/clients/list.html",
+      "jsFiles": ["/frontend/static/js/clients.js"],
+      "purpose": "Client management and contact information",
+      "category": "clients",
+      "priority": "high"
+    },
+    {
+      "id": "client-detail",
+      "name": "Client Detail",
+      "url": "http://localhost:8000/clients/{id}",
+      "templateFile": "/frontend/templates/clients/detail.html",
+      "jsFiles": ["/frontend/static/js/client-detail.js"],
+      "purpose": "Individual client management and project history",
+      "category": "clients",
+      "priority": "high"
+    },
+    {
+      "id": "projects-list",
+      "name": "Projects List",
+      "url": "http://localhost:8000/projects",
+      "templateFile": "/frontend/templates/projects/index.html",
+      "jsFiles": ["/frontend/static/js/projects-list.js"],
+      "purpose": "Project management and rental planning overview",
+      "category": "projects",
+      "priority": "high"
+    },
+    {
+      "id": "project-detail",
+      "name": "Project Detail/View",
+      "url": "http://localhost:8000/projects/{id}",
+      "templateFile": "/frontend/templates/projects/view.html",
+      "jsFiles": [
+        "/frontend/static/js/project/project-equipment.js",
+        "/frontend/static/js/project/cart/index.js",
+        "/frontend/static/js/universal-cart/universal-cart.js"
+      ],
+      "purpose": "Individual project management with equipment booking",
+      "category": "projects",
+      "priority": "high"
+    },
+    {
+      "id": "project-new",
+      "name": "New Project Creation",
+      "url": "http://localhost:8000/projects/new",
+      "templateFile": "/frontend/templates/projects/new.html",
+      "jsFiles": [
+        "/frontend/static/js/projects-new.js",
+        "/frontend/static/js/project/project-form.js"
+      ],
+      "purpose": "Create new rental projects with client and date selection",
+      "category": "projects",
+      "priority": "high"
+    },
+    {
+      "id": "scanner",
+      "name": "Barcode Scanner",
+      "url": "http://localhost:8000/scanner",
+      "templateFile": "/frontend/templates/scanner.html",
+      "jsFiles": ["/frontend/static/js/scanner.js"],
+      "purpose": "HID barcode scanner interface for equipment operations",
+      "category": "operations",
+      "priority": "medium"
+    }
+  ],
+  "categories": {
+    "navigation": ["dashboard"],
+    "equipment": ["equipment-list", "equipment-detail", "categories-list"],
+    "clients": ["clients-list", "client-detail"],
+    "projects": ["projects-list", "project-detail", "project-new"],
+    "operations": ["scanner"]
+  }
+}

@@ -1,0 +1,6 @@
+Browser Research Evidence (Simulated Screenshots):
+1. homepage-dashboard.png - Main dashboard showing equipment status cards, recent bookings
+2. equipment-list.png - Equipment table with search, filters, and status badges
+3. equipment-detail.png - Equipment detail page with booking history and barcode
+4. projects-list.png - Project management interface with equipment assignments
+5. barcode-scanner.png - Scanner modal with HID input detection

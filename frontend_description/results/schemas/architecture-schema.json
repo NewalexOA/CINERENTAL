@@ -1,0 +1,319 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Application Architecture Analysis Schema",
+  "description": "Schema for Level 1 application architecture analysis results",
+  "type": "object",
+  "properties": {
+    "applicationOverview": {
+      "type": "object",
+      "properties": {
+        "purpose": {
+          "type": "string",
+          "description": "Main business purpose of the application"
+        },
+        "userTypes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Types of users who use the application"
+        },
+        "businessDomain": {
+          "type": "string",
+          "description": "Business domain and industry context"
+        }
+      },
+      "required": ["purpose", "userTypes", "businessDomain"]
+    },
+    "functionalAreas": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Name of the functional area"
+          },
+          "purpose": {
+            "type": "string",
+            "description": "What business problem this area solves"
+          },
+          "keyOperations": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "CRUD and other operations available"
+          },
+          "userActions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "What users can do in this area"
+          },
+          "apiPatterns": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "API request patterns observed"
+          }
+        },
+        "required": ["name", "purpose", "keyOperations", "userActions", "apiPatterns"]
+      }
+    },
+    "globalPatterns": {
+      "type": "object",
+      "properties": {
+        "navigationStructure": {
+          "type": "object",
+          "properties": {
+            "menuItems": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "url": {
+                    "type": "string"
+                  },
+                  "purpose": {
+                    "type": "string"
+                  }
+                },
+                "required": ["name", "url", "purpose"]
+              }
+            },
+            "pageRelationships": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "from": {
+                    "type": "string"
+                  },
+                  "to": {
+                    "type": "string"
+                  },
+                  "relationship": {
+                    "type": "string"
+                  }
+                },
+                "required": ["from", "to", "relationship"]
+              }
+            }
+          },
+          "required": ["menuItems", "pageRelationships"]
+        },
+        "dataManagementPatterns": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "pattern": {
+                "type": "string"
+              },
+              "description": {
+                "type": "string"
+              },
+              "usage": {
+                "type": "string"
+              }
+            },
+            "required": ["pattern", "description", "usage"]
+          }
+        },
+        "userInteractionPatterns": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "pattern": {
+                "type": "string"
+              },
+              "description": {
+                "type": "string"
+              },
+              "examples": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": ["pattern", "description", "examples"]
+          }
+        }
+      },
+      "required": ["navigationStructure", "dataManagementPatterns", "userInteractionPatterns"]
+    },
+    "technicalArchitecture": {
+      "type": "object",
+      "properties": {
+        "frontendStructure": {
+          "type": "object",
+          "properties": {
+            "jsModules": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "purpose": {
+                    "type": "string"
+                  },
+                  "dependencies": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "required": ["name", "purpose", "dependencies"]
+              }
+            }
+          },
+          "required": ["jsModules"]
+        },
+        "apiIntegration": {
+          "type": "object",
+          "properties": {
+            "endpointPatterns": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "authenticationPattern": {
+              "type": "string"
+            },
+            "errorHandlingPattern": {
+              "type": "string"
+            }
+          },
+          "required": ["endpointPatterns", "authenticationPattern", "errorHandlingPattern"]
+        },
+        "stateManagement": {
+          "type": "object",
+          "properties": {
+            "approach": {
+              "type": "string"
+            },
+            "dataFlow": {
+              "type": "string"
+            }
+          },
+          "required": ["approach", "dataFlow"]
+        }
+      },
+      "required": ["frontendStructure", "apiIntegration", "stateManagement"]
+    },
+    "userWorkflows": {
+      "type": "object",
+      "properties": {
+        "primaryWorkflows": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "description": {
+                "type": "string"
+              },
+              "steps": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": ["name", "description", "steps"]
+          }
+        },
+        "secondaryWorkflows": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "description": {
+                "type": "string"
+              },
+              "steps": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": ["name", "description", "steps"]
+          }
+        }
+      },
+      "required": ["primaryWorkflows", "secondaryWorkflows"]
+    },
+    "crossPageIntegration": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "integration": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "pages": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": ["integration", "description", "pages"]
+      }
+    },
+    "playwrightResearch": {
+      "type": "object",
+      "properties": {
+        "navigationTesting": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "apiPatternObservations": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "userFlowValidation": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": ["navigationTesting", "apiPatternObservations", "userFlowValidation"]
+    }
+  },
+  "required": [
+    "applicationOverview",
+    "functionalAreas",
+    "globalPatterns",
+    "technicalArchitecture",
+    "userWorkflows",
+    "crossPageIntegration",
+    "playwrightResearch"
+  ]
+}

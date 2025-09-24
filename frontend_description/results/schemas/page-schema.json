@@ -1,0 +1,271 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Page Analysis Schema",
+  "description": "Schema for Level 2 page analysis results",
+  "type": "object",
+  "properties": {
+    "pageOverview": {
+      "type": "object",
+      "properties": {
+        "businessPurpose": {
+          "type": "string",
+          "description": "What business need this page serves"
+        },
+        "targetUsers": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Who uses this page and why"
+        },
+        "pageUrl": {
+          "type": "string",
+          "description": "URL path for this page"
+        },
+        "templateFile": {
+          "type": "string",
+          "description": "Path to the template file"
+        },
+        "jsFile": {
+          "type": "string",
+          "description": "Path to the JavaScript file"
+        }
+      },
+      "required": ["businessPurpose", "targetUsers", "pageUrl", "templateFile", "jsFile"]
+    },
+    "coreFunctionality": {
+      "type": "object",
+      "properties": {
+        "dataDisplay": {
+          "type": "object",
+          "properties": {
+            "primaryData": {
+              "type": "string",
+              "description": "What main data is shown"
+            },
+            "dataSource": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "API endpoints or data sources"
+            },
+            "dataStructure": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Key data fields and relationships"
+            }
+          },
+          "required": ["primaryData", "dataSource", "dataStructure"]
+        },
+        "userOperations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "purpose": {
+                "type": "string"
+              },
+              "userActions": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "apiIntegration": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "validation": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "successState": {
+                "type": "string"
+              },
+              "errorHandling": {
+                "type": "string"
+              }
+            },
+            "required": ["name", "purpose", "userActions", "apiIntegration", "validation", "successState", "errorHandling"]
+          }
+        },
+        "interactiveElements": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "functionality": {
+                "type": "string"
+              },
+              "behavior": {
+                "type": "string"
+              },
+              "apiCalls": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "states": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": ["name", "functionality", "behavior", "apiCalls", "states"]
+          }
+        }
+      },
+      "required": ["dataDisplay", "userOperations", "interactiveElements"]
+    },
+    "pageStates": {
+      "type": "object",
+      "properties": {
+        "loadingStates": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "errorStates": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "emptyStates": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "successStates": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": ["loadingStates", "errorStates", "emptyStates", "successStates"]
+    },
+    "apiIntegration": {
+      "type": "object",
+      "properties": {
+        "endpointsUsed": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "method": {
+                "type": "string"
+              },
+              "endpoint": {
+                "type": "string"
+              },
+              "purpose": {
+                "type": "string"
+              },
+              "parameters": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "response": {
+                "type": "string"
+              },
+              "errorHandling": {
+                "type": "string"
+              }
+            },
+            "required": ["method", "endpoint", "purpose", "parameters", "response", "errorHandling"]
+          }
+        },
+        "dataFlow": {
+          "type": "string",
+          "description": "How data moves through the page"
+        }
+      },
+      "required": ["endpointsUsed", "dataFlow"]
+    },
+    "navigationAndIntegration": {
+      "type": "object",
+      "properties": {
+        "entryPoints": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "How users arrive at this page"
+        },
+        "exitPoints": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Where users can navigate from this page"
+        },
+        "integrationWithComponents": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "How this page works with other system parts"
+        }
+      },
+      "required": ["entryPoints", "exitPoints", "integrationWithComponents"]
+    },
+    "playwrightResearch": {
+      "type": "object",
+      "properties": {
+        "interactiveTestingNotes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "apiMonitoringResults": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "userFlowValidation": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "screenshotReferences": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": ["interactiveTestingNotes", "apiMonitoringResults", "userFlowValidation", "screenshotReferences"]
+    }
+  },
+  "required": [
+    "pageOverview",
+    "coreFunctionality",
+    "pageStates",
+    "apiIntegration",
+    "navigationAndIntegration",
+    "playwrightResearch"
+  ]
+}

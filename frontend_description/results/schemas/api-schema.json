@@ -1,0 +1,408 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "API Integration Analysis Schema",
+  "description": "Schema for Level 5 API integration analysis results",
+  "type": "object",
+  "properties": {
+    "apiOverview": {
+      "type": "object",
+      "properties": {
+        "endpointUrl": {
+          "type": "string",
+          "description": "Full API endpoint URL"
+        },
+        "httpMethod": {
+          "type": "string",
+          "enum": ["GET", "POST", "PUT", "PATCH", "DELETE"],
+          "description": "HTTP method used"
+        },
+        "purpose": {
+          "type": "string",
+          "description": "Business purpose of this API integration"
+        },
+        "functionalContext": {
+          "type": "string",
+          "description": "Where and why this API is used"
+        },
+        "frequency": {
+          "type": "string",
+          "description": "How often this API is called"
+        }
+      },
+      "required": ["endpointUrl", "httpMethod", "purpose", "functionalContext"]
+    },
+    "requestSpecification": {
+      "type": "object",
+      "properties": {
+        "requestFormat": {
+          "type": "string",
+          "description": "Request format (JSON, form-data, etc.)"
+        },
+        "headers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "value": {
+                "type": "string"
+              },
+              "required": {
+                "type": "boolean"
+              }
+            },
+            "required": ["name", "required"]
+          },
+          "description": "Required headers for the request"
+        },
+        "parameters": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "type": {
+                "type": "string"
+              },
+              "location": {
+                "type": "string",
+                "enum": ["query", "path", "body", "header"]
+              },
+              "required": {
+                "type": "boolean"
+              },
+              "description": {
+                "type": "string"
+              },
+              "validation": {
+                "type": "string"
+              }
+            },
+            "required": ["name", "type", "location", "required"]
+          },
+          "description": "Request parameters and their specifications"
+        },
+        "requestBody": {
+          "type": "object",
+          "properties": {
+            "structure": {
+              "type": "string",
+              "description": "Structure of the request body"
+            },
+            "example": {
+              "type": "string",
+              "description": "Example request payload"
+            },
+            "validation": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Validation rules for request body"
+            }
+          }
+        }
+      },
+      "required": ["requestFormat", "headers", "parameters"]
+    },
+    "responseSpecification": {
+      "type": "object",
+      "properties": {
+        "successResponses": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "statusCode": {
+                "type": "integer"
+              },
+              "description": {
+                "type": "string"
+              },
+              "structure": {
+                "type": "string"
+              },
+              "example": {
+                "type": "string"
+              },
+              "dataProcessing": {
+                "type": "string"
+              }
+            },
+            "required": ["statusCode", "description", "structure"]
+          },
+          "description": "Successful response formats"
+        },
+        "errorResponses": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "statusCode": {
+                "type": "integer"
+              },
+              "errorType": {
+                "type": "string"
+              },
+              "description": {
+                "type": "string"
+              },
+              "structure": {
+                "type": "string"
+              },
+              "handling": {
+                "type": "string"
+              },
+              "userFeedback": {
+                "type": "string"
+              }
+            },
+            "required": ["statusCode", "errorType", "description", "handling"]
+          },
+          "description": "Error response formats and handling"
+        }
+      },
+      "required": ["successResponses", "errorResponses"]
+    },
+    "integrationBehavior": {
+      "type": "object",
+      "properties": {
+        "triggerConditions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "condition": {
+                "type": "string"
+              },
+              "trigger": {
+                "type": "string"
+              },
+              "timing": {
+                "type": "string"
+              }
+            },
+            "required": ["condition", "trigger"]
+          },
+          "description": "When and why this API is called"
+        },
+        "requestPatterns": {
+          "type": "object",
+          "properties": {
+            "caching": {
+              "type": "string",
+              "description": "Caching strategy (if any)"
+            },
+            "debouncing": {
+              "type": "string",
+              "description": "Debouncing configuration"
+            },
+            "retryLogic": {
+              "type": "string",
+              "description": "Retry mechanism"
+            },
+            "timeout": {
+              "type": "string",
+              "description": "Timeout configuration"
+            }
+          }
+        },
+        "stateManagement": {
+          "type": "object",
+          "properties": {
+            "loadingStates": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Loading states during API calls"
+            },
+            "errorStates": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Error states and their handling"
+            },
+            "dataStorage": {
+              "type": "string",
+              "description": "How response data is stored/managed"
+            }
+          },
+          "required": ["loadingStates", "errorStates"]
+        }
+      },
+      "required": ["triggerConditions", "requestPatterns", "stateManagement"]
+    },
+    "frontendIntegration": {
+      "type": "object",
+      "properties": {
+        "callingComponents": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "componentName": {
+                "type": "string"
+              },
+              "callContext": {
+                "type": "string"
+              },
+              "dataUsage": {
+                "type": "string"
+              }
+            },
+            "required": ["componentName", "callContext", "dataUsage"]
+          },
+          "description": "Frontend components that call this API"
+        },
+        "dataFlow": {
+          "type": "object",
+          "properties": {
+            "inputSource": {
+              "type": "string",
+              "description": "Where request data comes from"
+            },
+            "outputDestination": {
+              "type": "string",
+              "description": "Where response data goes"
+            },
+            "dataTransformation": {
+              "type": "string",
+              "description": "How data is transformed before/after API call"
+            }
+          },
+          "required": ["inputSource", "outputDestination"]
+        },
+        "userExperience": {
+          "type": "object",
+          "properties": {
+            "feedbackMechanisms": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "How users receive feedback during API operations"
+            },
+            "loadingIndicators": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Loading indicators shown to users"
+            },
+            "errorPresentation": {
+              "type": "string",
+              "description": "How errors are presented to users"
+            }
+          },
+          "required": ["feedbackMechanisms", "loadingIndicators", "errorPresentation"]
+        }
+      },
+      "required": ["callingComponents", "dataFlow", "userExperience"]
+    },
+    "playwrightResearch": {
+      "type": "object",
+      "properties": {
+        "apiTesting": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "testScenario": {
+                "type": "string"
+              },
+              "triggerSteps": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "observedRequest": {
+                "type": "string"
+              },
+              "observedResponse": {
+                "type": "string"
+              },
+              "timing": {
+                "type": "string"
+              },
+              "userFeedback": {
+                "type": "string"
+              }
+            },
+            "required": ["testScenario", "triggerSteps", "observedRequest", "observedResponse"]
+          },
+          "description": "API testing via browser interactions"
+        },
+        "errorScenarios": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "scenario": {
+                "type": "string"
+              },
+              "howToTrigger": {
+                "type": "string"
+              },
+              "observedError": {
+                "type": "string"
+              },
+              "errorHandling": {
+                "type": "string"
+              },
+              "userExperience": {
+                "type": "string"
+              }
+            },
+            "required": ["scenario", "howToTrigger", "observedError", "errorHandling"]
+          },
+          "description": "Error scenarios and their handling"
+        },
+        "performanceTesting": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "testType": {
+                "type": "string"
+              },
+              "conditions": {
+                "type": "string"
+              },
+              "responseTime": {
+                "type": "string"
+              },
+              "userExperience": {
+                "type": "string"
+              }
+            },
+            "required": ["testType", "conditions", "responseTime", "userExperience"]
+          },
+          "description": "Performance testing results"
+        },
+        "keyFindings": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Key discoveries from API testing"
+        }
+      },
+      "required": ["apiTesting", "errorScenarios", "performanceTesting", "keyFindings"]
+    }
+  },
+  "required": [
+    "apiOverview",
+    "requestSpecification",
+    "responseSpecification",
+    "integrationBehavior",
+    "frontendIntegration",
+    "playwrightResearch"
+  ]
+}

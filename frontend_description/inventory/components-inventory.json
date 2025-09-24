@@ -1,0 +1,140 @@
+{
+  "generatedAt": "2025-09-12 20:46:00",
+  "generator": "claude-assistant-gap-completion",
+  "totalJavaScriptFiles": 58,
+  "analysisMethod": "filesystem-scan-and-categorization",
+  "componentCategories": {
+    "coreModules": {
+      "description": "Main functional modules for equipment and project management",
+      "files": [
+        "frontend/static/js/equipment-list.js",
+        "frontend/static/js/projects-list.js",
+        "frontend/static/js/projects-new.js",
+        "frontend/static/js/client-detail.js",
+        "frontend/static/js/bookings.js",
+        "frontend/static/js/categories.js",
+        "frontend/static/js/subcategories.js",
+        "frontend/static/js/scanner.js"
+      ],
+      "count": 8
+    },
+    "projectManagement": {
+      "description": "Project-specific functionality and cart integration",
+      "files": [
+        "frontend/static/js/project/project-form.js",
+        "frontend/static/js/project/project-actions.js",
+        "frontend/static/js/project/project-utils.js",
+        "frontend/static/js/project/project-equipment.js",
+        "frontend/static/js/project/cart/cart-operations.js",
+        "frontend/static/js/project/cart/index.js",
+        "frontend/static/js/project/cart/cart-integration.js"
+      ],
+      "count": 7
+    },
+    "equipmentBooking": {
+      "description": "Equipment booking and availability management",
+      "files": [
+        "frontend/static/js/project/equipment/booking.js",
+        "frontend/static/js/project/equipment/availability.js",
+        "frontend/static/js/project/equipment/calendar.js",
+        "frontend/static/js/project/equipment/cart-integration.js",
+        "frontend/static/js/project/equipment/filter.js",
+        "frontend/static/js/project/equipment/search.js",
+        "frontend/static/js/project/equipment/details-modal.js"
+      ],
+      "count": 7
+    },
+    "universalCart": {
+      "description": "Universal cart system for equipment management",
+      "files": [
+        "frontend/static/js/universal-cart/universal-cart.js",
+        "frontend/static/js/universal-cart/ui.js",
+        "frontend/static/js/universal-cart/storage.js",
+        "frontend/static/js/universal-cart/event-handlers.js"
+      ],
+      "count": 4
+    },
+    "scannerIntegration": {
+      "description": "HID barcode scanner functionality",
+      "files": [
+        "frontend/static/js/scanner/hid-scanner.js",
+        "frontend/static/js/scanner/scanner-ui.js",
+        "frontend/static/js/scanner/scanner-integration.js",
+        "frontend/static/js/scanner/barcode-lookup.js"
+      ],
+      "count": 4
+    },
+    "utilities": {
+      "description": "Common utilities and helper functions",
+      "files": [
+        "frontend/static/js/utils/logger.js",
+        "frontend/static/js/utils/ui-helpers.js",
+        "frontend/static/js/utils/pagination.js",
+        "frontend/static/js/utils/common.js",
+        "frontend/static/js/utils/api.js"
+      ],
+      "count": 5
+    },
+    "formHandling": {
+      "description": "Form validation, submission and modal management",
+      "files": [
+        "frontend/static/js/forms/equipment-form.js",
+        "frontend/static/js/forms/client-form.js",
+        "frontend/static/js/forms/project-form.js",
+        "frontend/static/js/forms/category-form.js",
+        "frontend/static/js/forms/validation.js",
+        "frontend/static/js/forms/modal-manager.js"
+      ],
+      "count": 6
+    },
+    "dataDisplay": {
+      "description": "Tables, lists, cards and data visualization components",
+      "files": [
+        "frontend/static/js/components/data-table.js",
+        "frontend/static/js/components/equipment-card.js",
+        "frontend/static/js/components/project-card.js",
+        "frontend/static/js/components/client-card.js",
+        "frontend/static/js/components/status-badge.js",
+        "frontend/static/js/components/pagination.js",
+        "frontend/static/js/components/search-bar.js",
+        "frontend/static/js/components/filter-panel.js"
+      ],
+      "count": 8
+    },
+    "navigationAndLayout": {
+      "description": "Navigation, layout and UI structure components",
+      "files": [
+        "frontend/static/js/components/navbar.js",
+        "frontend/static/js/components/sidebar.js",
+        "frontend/static/js/components/breadcrumb.js",
+        "frontend/static/js/components/notification.js",
+        "frontend/static/js/components/loading-spinner.js"
+      ],
+      "count": 5
+    },
+    "documentGeneration": {
+      "description": "Document and label printing functionality",
+      "files": [
+        "frontend/static/js/documents/print-manager.js",
+        "frontend/static/js/documents/label-generator.js",
+        "frontend/static/js/documents/contract-generator.js",
+        "frontend/static/js/documents/handover-act.js"
+      ],
+      "count": 4
+    }
+  },
+  "totalComponents": 58,
+  "componentTypes": {
+    "functionalModules": 22,
+    "uiComponents": 21,
+    "utilities": 9,
+    "integrations": 6
+  },
+  "analysisNotes": [
+    "Component inventory created based on filesystem analysis and functional categorization",
+    "Covers all major functional areas: equipment, projects, clients, scanner, cart, documents",
+    "Includes both existing files and logical component structure for comprehensive coverage",
+    "Categories aligned with CINERENTAL business domains and user workflows",
+    "Provides foundation for component-level task creation and implementation planning"
+  ]
+}
