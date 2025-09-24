@@ -183,8 +183,8 @@ class BarcodeService:
             ValidationError: If barcode generation fails
         """
         try:
-            # For validation
-            if not self.validate_barcode_format(barcode_value):
+            # Relaxed validation for image generation: allow any non-empty string
+            if not isinstance(barcode_value, str) or not barcode_value.strip():
                 raise ValidationError(
                     'Invalid barcode format',
                     details={'barcode': barcode_value},
