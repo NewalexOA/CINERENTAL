@@ -2,6 +2,44 @@
 
 This document lists notable changes to the ACT-Rental application.
 
+## [0.15.1-beta.1] - 2025-09-24
+
+### Barcode System UI/UX Enhancements & Validation Flexibility
+
+### Enhanced Print & Preview System
+
+- **Responsive Modal Design:** Increased barcode preview modal width by ~30% (650px max-width) with proper mobile compatibility and responsive breakpoints. Enhanced preview container dimensions (225px width) for improved visibility and user experience.
+- **Professional Print Typography:** Implemented adaptive font sizing to prevent text wrapping in print layouts, with dynamic font adaptation based on barcode length. Added consistent typography across Code128 and DataMatrix formats with proper spacing and alignment.
+- **Dual-Content DataMatrix Labels:** Enhanced DataMatrix print system to display both barcode value and serial number on separate lines when available. Implemented intelligent content composition with fallback to single-line display for equipment without serial numbers.
+- **Overflow Prevention:** Added nowrap/ellipsis handling for long barcode values in preview displays, preventing layout breaks and maintaining clean visual appearance across all barcode formats.
+
+### Equipment Detail Page Stability
+
+- **Runtime Error Resolution:** Fixed critical undefined 'barcode' reference errors by implementing data source prioritization (EQUIPMENT_DATA.barcode over DOM content) with robust fallback mechanisms. Eliminated page crashes during barcode operations and equipment detail navigation.
+- **State Synchronization:** Enhanced barcode regeneration workflow to update both DOM display and in-memory data structures, preventing inconsistent state after barcode updates. Fixed booking history pagination initialization to prevent crashes on equipment detail pages.
+- **Event Handler Optimization:** Cleaned up duplicate event listeners and removed references to undefined functions, improving page load performance and reducing memory usage. Streamlined event management for better maintainability.
+
+### Flexible Backend Validation
+
+- **Enhanced String Support:** Relaxed validation in barcode image generation endpoints to accept any non-empty string, enabling support for complex barcode formats like "K2.0000071-7114" with dots and extended character sets.
+- **API Consistency:** Maintained strict validation for core generation/validation APIs while providing flexibility for image generation use cases. Enhanced type safety with proper string validation and trimming throughout the barcode service layer.
+- **Pattern Recognition:** Updated frontend barcode scanner validation to support alphanumeric characters, hyphens, and dots, expanding compatibility with various barcode format standards used in equipment management.
+
+### UI/UX Improvements
+
+- **Mobile Responsiveness:** Implemented responsive design patterns for barcode modals maintaining functionality across all device sizes with proper margin handling and viewport optimization.
+- **Visual Consistency:** Standardized spacing, typography, and layout elements across all barcode-related interfaces for cohesive user experience. Enhanced preview boxes with improved dimensions and professional appearance.
+- **Error Prevention:** Added comprehensive fallback mechanisms throughout the barcode system to prevent runtime errors and ensure graceful degradation when data is unavailable or incomplete.
+
+### Technical Improvements & Bug Fixes (0.15.1-beta.1)
+
+- Enhanced barcode pattern validation regex to support dot characters in complex equipment identifiers
+- Improved print system with adaptive font sizing preventing overflow in various barcode formats
+- Fixed equipment detail page barcode handling with proper data source prioritization and fallbacks
+- Streamlined event listener management removing duplicate handlers and undefined function references
+- Updated CSS for responsive modal sizing and improved mobile compatibility across barcode interfaces
+- Enhanced API validation flexibility while maintaining backward compatibility for existing integrations
+
 ## [0.15.0-beta.2] - 2025-08-27
 
 ### Comprehensive Backup and Restore System
