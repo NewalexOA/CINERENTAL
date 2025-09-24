@@ -461,13 +461,15 @@ function setupButtonHandlers() {
 
 // Function to load barcode info
 async function loadBarcodeInfo() {
-    if (!barcode) return;
+    // Prefer value from EQUIPMENT_DATA, fallback to DOM text
+    const currentBarcode = EQUIPMENT_DATA.barcode || document.getElementById('barcodeDisplay')?.textContent?.trim();
+    if (!currentBarcode) return;
 
     const barcodeInfoElement = document.getElementById('barcodeInfo');
     if (!barcodeInfoElement) return;
 
     try {
-        const info = await api.get(`/barcodes/info/${barcode}`);
+        const info = await api.get(`/barcodes/info/${currentBarcode}`);
         barcodeInfoElement.textContent = `${info.type} - ${info.generated_at}`;
     } catch (error) {
         console.error('Error loading barcode info:', error);
@@ -504,8 +506,9 @@ async function regenerateBarcode() {
         // Call API for barcode regeneration without subcategory parameter
         const response = await api.post(`/equipment/${EQUIPMENT_DATA.id}/regenerate-barcode`, {});
 
-        // Update barcode on the page
+        // Update barcode on the page and in in-memory data
         document.getElementById('barcodeDisplay').textContent = response.barcode;
+        EQUIPMENT_DATA.barcode = response.barcode;
 
         // Load information about the new barcode
         await loadBarcodeInfo();
@@ -552,31 +555,13 @@ document.addEventListener('DOMContentLoaded', function() {
     // Loading barcode info
     loadBarcodeInfo();
 
-    // Handle notes form submission
-    const notesForm = document.getElementById('notesForm');
-    if (notesForm) {
-        notesForm.addEventListener('submit', function(e) {
-            e.preventDefault();
-            saveNotes();
-        });
-    }
+    // Handlers for notes/update/delete are already attached above in this file.
+    // Avoid duplicating listeners or referencing undefined functions.
 
     // Handle barcode regeneration
     const regenerateBtn = document.getElementById('regenerateBarcodeBtn');
     if (regenerateBtn) {
         regenerateBtn.addEventListener('click', regenerateBarcode);
-    }
-
-    // Handle equipment update
-    const updateBtn = document.getElementById('updateEquipment');
-    if (updateBtn) {
-        updateBtn.addEventListener('click', updateEquipment);
-    }
-
-    // Handle equipment deletion
-    const deleteBtn = document.getElementById('deleteEquipment');
-    if (deleteBtn) {
-        deleteBtn.addEventListener('click', deleteEquipment);
     }
 });
 

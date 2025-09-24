@@ -203,7 +203,8 @@ class BarcodeScanner {
      * @returns {boolean} True if valid
      */
     isValidBarcode(barcode) {
-        return barcode && barcode.length >= 3 && /^[A-Za-z0-9\-]+$/.test(barcode);
+        // Allow alphanumeric, hyphen and dot (e.g., "K2.0000071-7114")
+        return barcode && barcode.length >= 3 && /^[A-Za-z0-9.\-]+$/.test(barcode);
     }
 
     /**
