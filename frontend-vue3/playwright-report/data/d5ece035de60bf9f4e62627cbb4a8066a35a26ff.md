@@ -1,0 +1,134 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - navigation [ref=e2]:
+    - generic [ref=e3]:
+      - link "ACT-Rental" [ref=e4] [cursor=pointer]:
+        - /url: /
+      - generic [ref=e5]:
+        - list [ref=e6]:
+          - listitem [ref=e7]:
+            - link " Оборудование" [ref=e8] [cursor=pointer]:
+              - /url: /equipment
+              - generic [ref=e9] [cursor=pointer]: 
+              - text: Оборудование
+          - listitem [ref=e10]:
+            - link " Категории" [ref=e11] [cursor=pointer]:
+              - /url: /categories
+              - generic [ref=e12] [cursor=pointer]: 
+              - text: Категории
+          - listitem [ref=e13]:
+            - link " Клиенты" [ref=e14] [cursor=pointer]:
+              - /url: /clients
+              - generic [ref=e15] [cursor=pointer]: 
+              - text: Клиенты
+          - listitem [ref=e16]:
+            - link " Бронирования" [ref=e17] [cursor=pointer]:
+              - /url: /bookings
+              - generic [ref=e18] [cursor=pointer]: 
+              - text: Бронирования
+          - listitem [ref=e19]:
+            - link " Проекты" [ref=e20] [cursor=pointer]:
+              - /url: /projects
+              - generic [ref=e21] [cursor=pointer]: 
+              - text: Проекты
+          - listitem [ref=e22]:
+            - link " Сканер" [ref=e23] [cursor=pointer]:
+              - /url: /scanner
+              - generic [ref=e24] [cursor=pointer]: 
+              - text: Сканер
+        - button " Быстрое сканирование" [ref=e26] [cursor=pointer]:
+          - generic [ref=e27] [cursor=pointer]: 
+          - text: Быстрое сканирование
+  - main [ref=e28]:
+    - generic [ref=e29]:
+      - generic [ref=e30]:
+        - heading "Оборудование" [level=1] [ref=e31]
+        - button "+ Добавить оборудование" [ref=e32] [cursor=pointer]:
+          - generic [ref=e33] [cursor=pointer]: +
+          - text: Добавить оборудование
+      - generic [ref=e36]:
+        - textbox "Поиск по названию, описанию, штрих-коду или серийному номеру..." [ref=e39]
+        - combobox [ref=e41]:
+          - option "Все категории" [selected]
+        - combobox [ref=e43]:
+          - option "Все статусы" [selected]
+          - option "Доступно"
+          - option "В аренде"
+          - option "В ремонте"
+          - option "Неисправно"
+          - option "Списано"
+      - generic [ref=e44]:
+        - generic [ref=e45]:
+          - text: Показано
+          - generic [ref=e46]: "0"
+          - text: "-"
+          - generic [ref=e47]: "0"
+          - text: из
+          - generic [ref=e48]: "0"
+          - text: (Всего
+          - generic [ref=e49]: "1"
+          - text: стр.)
+        - generic [ref=e50]:
+          - combobox [ref=e52]:
+            - option "20" [selected]
+            - option "50"
+            - option "100"
+          - navigation "equipmentTop pagination" [ref=e53]:
+            - list [ref=e54]:
+              - listitem [ref=e55]:
+                - link "Previous":
+                  - /url: "#"
+                  - generic: «
+              - listitem [ref=e56]:
+                - generic [ref=e57]: "1"
+              - listitem [ref=e58]:
+                - link "Next":
+                  - /url: "#"
+                  - generic: »
+      - table [ref=e62]:
+        - rowgroup [ref=e63]:
+          - row "Название Категория Серийный номер Статус аренды Действия" [ref=e64]:
+            - cell "Название" [ref=e65]
+            - cell "Категория" [ref=e66]
+            - cell "Серийный номер" [ref=e67]
+            - cell "Статус аренды" [ref=e68]
+            - cell "Действия" [ref=e69]
+        - rowgroup [ref=e70]:
+          - row " Оборудование не найдено" [ref=e71]:
+            - cell " Оборудование не найдено" [ref=e72]:
+              - generic [ref=e73]: 
+              - text: Оборудование не найдено
+      - generic [ref=e74]:
+        - generic [ref=e75]:
+          - text: Показано
+          - generic [ref=e76]: "0"
+          - text: "-"
+          - generic [ref=e77]: "0"
+          - text: из
+          - generic [ref=e78]: "0"
+          - text: (Всего
+          - generic [ref=e79]: "1"
+          - text: стр.)
+        - generic [ref=e80]:
+          - combobox [ref=e82]:
+            - option "20" [selected]
+            - option "50"
+            - option "100"
+          - navigation "equipmentBottom pagination" [ref=e83]:
+            - list [ref=e84]:
+              - listitem [ref=e85]:
+                - link "Previous":
+                  - /url: "#"
+                  - generic: «
+              - listitem [ref=e86]:
+                - generic [ref=e87]: "1"
+              - listitem [ref=e88]:
+                - link "Next":
+                  - /url: "#"
+                  - generic: »
+    - text:  
+  - contentinfo [ref=e89]:
+    - generic [ref=e91]: © 2024 "ACT" FILM FACILITIES AGENCY LIMITED. Все права защищены.
+```

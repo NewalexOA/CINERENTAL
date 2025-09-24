@@ -1,0 +1,165 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - navigation [ref=e2]:
+    - generic [ref=e3]:
+      - link "ACT-Rental" [ref=e4] [cursor=pointer]:
+        - /url: /
+      - generic [ref=e5]:
+        - list [ref=e6]:
+          - listitem [ref=e7]:
+            - link " Оборудование" [ref=e8] [cursor=pointer]:
+              - /url: /equipment
+              - generic [ref=e9] [cursor=pointer]: 
+              - text: Оборудование
+          - listitem [ref=e10]:
+            - link " Категории" [ref=e11] [cursor=pointer]:
+              - /url: /categories
+              - generic [ref=e12] [cursor=pointer]: 
+              - text: Категории
+          - listitem [ref=e13]:
+            - link " Клиенты" [ref=e14] [cursor=pointer]:
+              - /url: /clients
+              - generic [ref=e15] [cursor=pointer]: 
+              - text: Клиенты
+          - listitem [ref=e16]:
+            - link " Бронирования" [ref=e17] [cursor=pointer]:
+              - /url: /bookings
+              - generic [ref=e18] [cursor=pointer]: 
+              - text: Бронирования
+          - listitem [ref=e19]:
+            - link " Проекты" [ref=e20] [cursor=pointer]:
+              - /url: /projects
+              - generic [ref=e21] [cursor=pointer]: 
+              - text: Проекты
+          - listitem [ref=e22]:
+            - link " Сканер" [ref=e23] [cursor=pointer]:
+              - /url: /scanner
+              - generic [ref=e24] [cursor=pointer]: 
+              - text: Сканер
+        - button " Быстрое сканирование" [ref=e26] [cursor=pointer]:
+          - generic [ref=e27] [cursor=pointer]: 
+          - text: Быстрое сканирование
+  - main [ref=e28]:
+    - generic [ref=e29]:
+      - generic [ref=e30]:
+        - heading "Проекты" [level=1] [ref=e31]
+        - paragraph [ref=e32]: Управление проектами и связанными бронированиями
+      - link " Сканировать оборудование" [ref=e34] [cursor=pointer]:
+        - /url: /scanner
+        - generic [ref=e35] [cursor=pointer]: 
+        - text: Сканировать оборудование
+    - generic [ref=e38]:
+      - generic [ref=e40]:
+        - textbox "Поиск проектов по названию" [ref=e41]
+        - text: 
+      - generic [ref=e42]:
+        - combobox [ref=e43]
+        - combobox "Выберите клиента" [ref=e46] [cursor=pointer]:
+          - textbox "Выберите клиента" [ref=e47] [cursor=pointer]:
+            - generic [ref=e48] [cursor=pointer]: Выберите клиента
+      - combobox [ref=e50]:
+        - option "Все статусы" [selected]
+        - option "Черновик"
+        - option "Активный"
+        - option "Завершенный"
+        - option "Отмененный"
+      - textbox "Период" [ref=e52]
+      - group "Переключение режима просмотра" [ref=e54]:
+        - button "" [ref=e55] [cursor=pointer]:
+          - generic [ref=e56] [cursor=pointer]: 
+        - button "" [ref=e57] [cursor=pointer]:
+          - generic [ref=e58] [cursor=pointer]: 
+    - generic [ref=e59]:
+      - generic [ref=e60]:
+        - generic [ref=e61]:
+          - text: Показано
+          - generic [ref=e62]: "1"
+          - text: "-"
+          - generic [ref=e63]: "2"
+          - text: из
+          - generic [ref=e64]: "2"
+          - text: (Всего
+          - generic [ref=e65]: "1"
+          - text: стр.)
+        - generic [ref=e66]:
+          - combobox [ref=e68]:
+            - option "20" [selected]
+            - option "50"
+            - option "100"
+          - navigation "projectsTop pagination" [ref=e69]:
+            - list [ref=e70]:
+              - listitem [ref=e71]:
+                - link "Previous":
+                  - /url: "#"
+                  - generic: «
+              - listitem [ref=e72]:
+                - generic [ref=e73]: "1"
+              - listitem [ref=e74]:
+                - link "Next":
+                  - /url: "#"
+                  - generic: »
+      - table [ref=e76]:
+        - rowgroup [ref=e77]:
+          - row "Проект Клиент Период Статус Действия" [ref=e78]:
+            - cell "Проект" [ref=e79]
+            - cell "Клиент" [ref=e80]
+            - cell "Период" [ref=e81]
+            - cell "Статус" [ref=e82]
+            - cell "Действия" [ref=e83]
+        - rowgroup [ref=e84]:
+          - row "Test Project 1 Client A Invalid Date - Invalid Date In Progress  Просмотр" [ref=e85] [cursor=pointer]:
+            - cell "Test Project 1" [ref=e86] [cursor=pointer]:
+              - strong [ref=e87] [cursor=pointer]: Test Project 1
+            - cell "Client A" [ref=e88] [cursor=pointer]
+            - cell "Invalid Date - Invalid Date" [ref=e89] [cursor=pointer]
+            - cell "In Progress" [ref=e90] [cursor=pointer]:
+              - generic [ref=e91] [cursor=pointer]: In Progress
+            - cell " Просмотр" [ref=e92] [cursor=pointer]:
+              - button " Просмотр" [ref=e93] [cursor=pointer]:
+                - generic [ref=e94] [cursor=pointer]: 
+                - text: Просмотр
+          - row "Test Project 2 Client B Invalid Date - Invalid Date Completed  Просмотр" [ref=e95] [cursor=pointer]:
+            - cell "Test Project 2" [ref=e96] [cursor=pointer]:
+              - strong [ref=e97] [cursor=pointer]: Test Project 2
+            - cell "Client B" [ref=e98] [cursor=pointer]
+            - cell "Invalid Date - Invalid Date" [ref=e99] [cursor=pointer]
+            - cell "Completed" [ref=e100] [cursor=pointer]:
+              - generic [ref=e101] [cursor=pointer]: Completed
+            - cell " Просмотр" [ref=e102] [cursor=pointer]:
+              - button " Просмотр" [ref=e103] [cursor=pointer]:
+                - generic [ref=e104] [cursor=pointer]: 
+                - text: Просмотр
+      - generic [ref=e105]:
+        - generic [ref=e106]:
+          - text: Показано
+          - generic [ref=e107]: "1"
+          - text: "-"
+          - generic [ref=e108]: "2"
+          - text: из
+          - generic [ref=e109]: "2"
+          - text: (Всего
+          - generic [ref=e110]: "1"
+          - text: стр.)
+        - generic [ref=e111]:
+          - combobox [ref=e113]:
+            - option "20" [selected]
+            - option "50"
+            - option "100"
+          - navigation "projectsBottom pagination" [ref=e114]:
+            - list [ref=e115]:
+              - listitem [ref=e116]:
+                - link "Previous":
+                  - /url: "#"
+                  - generic: «
+              - listitem [ref=e117]:
+                - generic [ref=e118]: "1"
+              - listitem [ref=e119]:
+                - link "Next":
+                  - /url: "#"
+                  - generic: »
+    - text:             
+  - contentinfo [ref=e120]:
+    - generic [ref=e122]: © 2024 "ACT" FILM FACILITIES AGENCY LIMITED. Все права защищены.
+```
