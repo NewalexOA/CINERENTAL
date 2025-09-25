@@ -2,6 +2,32 @@
 
 This document lists notable changes to the ACT-Rental application.
 
+## [0.15.2-beta.1] - 2025-09-25
+
+### Equipment Booking History - Complete Rental Lifecycle Visibility
+
+### Soft-Delete Support Implementation
+
+- **Complete Booking History:** Implemented comprehensive soft-delete support across repository, service, and API layers to resolve critical production issue where completed equipment rentals were missing from booking history. Added configurable `include_deleted` parameter with optimized default behavior to show complete rental lifecycle.
+- **Repository Layer Enhancement:** Added `include_deleted: bool = False` parameter to `get_by_equipment` and `get_paginatable_query` methods with conditional WHERE clause construction. Maintained backward compatibility while enabling flexible data access patterns and preserving query performance for standard use cases.
+- **Service Layer Integration:** Enhanced `get_filtered_bookings_query` and `get_by_equipment` service methods with parameter propagation architecture. Implemented consistent parameter passing through service layer to repository methods while preserving existing business logic and validation patterns.
+- **API Endpoint Enhancement:** Modified equipment booking endpoints to include soft-deleted records by default (`include_deleted=True`), resolving missing booking data for equipment ID 45 and similar production cases. Enhanced user experience through comprehensive information display while maintaining existing API response format and pagination structure.
+
+### Production Issue Resolution
+
+- **Missing Data Recovery:** Fixed critical production issue where completed equipment rentals were not displayed in booking history, affecting operational decision-making and equipment utilization analysis. Restored complete audit trail visibility for all equipment rental operations.
+- **Performance Optimization:** Implemented conditional filtering with efficient WHERE clause construction to optimize database query performance. Added pagination support with soft-delete awareness while maintaining query execution efficiency across all booking-related operations.
+- **Operational Insights:** Enabled comprehensive equipment rental history tracking supporting maintenance planning, usage optimization, and compliance requirements. Enhanced decision support through complete equipment performance data and rental lifecycle visibility.
+
+### Technical Improvements & Architecture (0.15.2-beta.1)
+
+- Enhanced booking repository with configurable soft-delete filtering maintaining backward compatibility
+- Implemented three-layer parameter propagation (API → Service → Repository) for consistent behavior
+- Added conditional query optimization preventing unnecessary filtering overhead when soft-deleted records not needed
+- Fixed equipment booking history completeness resolving critical production data visibility gaps
+- Maintained existing API contracts while defaulting to comprehensive data display for improved user experience
+- Enhanced audit trail preservation supporting compliance and operational analysis requirements
+
 ## [0.15.1-beta.1] - 2025-09-24
 
 ### Barcode System UI/UX Enhancements & Validation Flexibility
