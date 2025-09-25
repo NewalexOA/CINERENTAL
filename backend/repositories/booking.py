@@ -204,23 +204,21 @@ class BookingRepository(BaseRepository[Booking]):
 
         Args:
             equipment_id: Equipment ID
-            include_deleted: Whether to include soft-deleted bookings
 
         Returns:
-            List of bookings
+            List of bookings (includes soft-deleted when include_deleted=True)
         """
-        conditions = [self.model.equipment_id == equipment_id]
-        if not include_deleted:
-            conditions.append(self.model.deleted_at.is_(None))
         stmt = (
             select(self.model)
-            .where(*conditions)
+            .where(self.model.equipment_id == equipment_id)
             .options(
                 joinedload(self.model.client),
                 joinedload(self.model.project),
                 joinedload(self.model.equipment),
             )
         )
+        if not include_deleted:
+            stmt = stmt.where(self.model.deleted_at.is_(None))
         result = await self.session.execute(stmt)
         return list(result.unique().scalars().all())
 
@@ -763,9 +761,6 @@ class BookingRepository(BaseRepository[Booking]):
             SQLAlchemy Select query object
         """
         # Base query with relationships
-        conditions = []
-        if not include_deleted:
-            conditions.append(Booking.deleted_at.is_(None))
         stmt = (
             select(Booking)
             .options(
@@ -775,9 +770,8 @@ class BookingRepository(BaseRepository[Booking]):
             )
             .order_by(Booking.created_at.desc())
         )
-
-        if conditions:
-            stmt = stmt.where(*conditions)
+        if not include_deleted:
+            stmt = stmt.where(Booking.deleted_at.is_(None))
 
         # Apply filters conditionally
         if query:

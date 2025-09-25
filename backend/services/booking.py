@@ -386,21 +386,26 @@ class BookingService:
             raise ValidationError('Client ID must be positive')
         return await self.repository.get_by_client(client_id)
 
-    async def get_by_equipment(self, equipment_id: int) -> List[Booking]:
+    async def get_by_equipment(
+        self, equipment_id: int, include_deleted: bool = False
+    ) -> List[Booking]:
         """Get bookings by equipment.
 
         Args:
             equipment_id: Equipment ID
 
         Returns:
-            List of equipment's bookings
+            List of equipment's bookings (includes soft-deleted when
+            include_deleted=True)
 
         Raises:
             ValidationError: If equipment_id is not positive
         """
         if equipment_id <= 0:
             raise ValidationError('Equipment ID must be positive')
-        return await self.repository.get_by_equipment(equipment_id)
+        return await self.repository.get_by_equipment(
+            equipment_id, include_deleted=include_deleted
+        )
 
     async def get_active_for_period(
         self, start_date: datetime, end_date: datetime
