@@ -153,6 +153,7 @@ export { fetchEquipment, MAX_ITEMS };
 3. **Use Jinja2 templates** for reusable components.
 4. **Name templates** according to their purpose.
 
+{% raw %}
 ```html
 {# equipment/detail.html #}
 {% extends "base.html" %}
@@ -167,6 +168,7 @@ export { fetchEquipment, MAX_ITEMS };
   </section>
 {% endblock %}
 ```
+{% endraw %}
 
 ## CSS
 
