@@ -1,0 +1,2958 @@
+{
+  "timestamp": "2025-09-25T16:10:28.860015",
+  "url_tested": "http://localhost:8000/equipment",
+  "total_screenshots": 2,
+  "total_interactions": 0,
+  "total_api_calls": 49,
+  "findings": {
+    "interactions": [],
+    "screenshots": [
+      {
+        "filename": "01-initial-load.png",
+        "path": "/Users/anaskin/Github/CINERENTAL/frontend_description/results/screenshots/TASK-003/01-initial-load.png",
+        "description": "Equipment page initial load",
+        "timestamp": "2025-09-25T16:10:28.578239",
+        "viewport": {
+          "width": 1920,
+          "height": 1080
+        }
+      },
+      {
+        "filename": "error-state.png",
+        "path": "/Users/anaskin/Github/CINERENTAL/frontend_description/results/screenshots/TASK-003/error-state.png",
+        "description": "Error occurred: Locator.is_enabled: Error: strict mode violation: locator(\"a[aria-label=\\\"Next\\\"], .pagination .next, .page-link:has-text(\\\"Next\\\")\") resolved to 2 elements:\n    1) <a href=\"#\" class=\"page-link\" aria-label=\"Next\" id=\"equipmentTopNextPage\">\u2026</a> aka get_by_role(\"navigation\", name=\"equipmentTop pagination\").get_by_label(\"Next\")\n    2) <a href=\"#\" class=\"page-link\" aria-label=\"Next\" id=\"equipmentBottomNextPage\">\u2026</a> aka get_by_role(\"navigation\", name=\"equipmentBottom pagination\").get_by_label(\"Next\")\n\nCall log:\n  - waiting for locator(\"a[aria-label=\\\"Next\\\"], .pagination .next, .page-link:has-text(\\\"Next\\\")\")\n",
+        "timestamp": "2025-09-25T16:10:28.729465",
+        "viewport": {
+          "width": 1920,
+          "height": 1080
+        }
+      }
+    ],
+    "api_calls": [
+      {
+        "url": "http://localhost:8000/equipment",
+        "status": 307,
+        "status_text": "Temporary Redirect",
+        "headers": {
+          "content-length": "0",
+          "date": "Thu, 25 Sep 2025 13:10:25 GMT",
+          "location": "http://localhost:8000/equipment/",
+          "server": "uvicorn"
+        },
+        "timestamp": "2025-09-25T16:10:25.680930"
+      },
+      {
+        "url": "http://localhost:8000/equipment/",
+        "status": 200,
+        "status_text": "OK",
+        "headers": {
+          "content-length": "220209",
+          "content-type": "text/html; charset=utf-8",
+          "date": "Thu, 25 Sep 2025 13:10:25 GMT",
+          "server": "uvicorn"
+        },
+        "timestamp": "2025-09-25T16:10:25.746819"
+      },
+      {
+        "url": "http://localhost:8000/static/css/lib/bootstrap.min.css",
+        "status": 200,
+        "status_text": "OK",
+        "headers": {
+          "accept-ranges": "bytes",
+          "content-length": "232949",
+          "date": "Thu, 25 Sep 2025 13:10:25 GMT",
+          "etag": "\"1c9c78d627a676f8d00f451cd525f08d\"",
+          "content-type": "text/css; charset=utf-8",
+          "last-modified": "Wed, 23 Apr 2025 11:05:55 GMT",
+          "server": "uvicorn"
+        },
+        "timestamp": "2025-09-25T16:10:25.774665"
+      },
+      {
+        "url": "http://localhost:8000/static/css/main.css",
+        "status": 200,
+        "status_text": "OK",
+        "headers": {
+          "accept-ranges": "bytes",
+          "content-length": "7204",
+          "date": "Thu, 25 Sep 2025 13:10:25 GMT",
+          "etag": "\"7ba4c410aa0ddbba09771525ff798504\"",
+          "content-type": "text/css; charset=utf-8",
+          "last-modified": "Thu, 12 Jun 2025 18:39:04 GMT",
+          "server": "uvicorn"
+        },
+        "timestamp": "2025-09-25T16:10:25.774995"
+      },
+      {
+        "url": "http://localhost:8000/static/css/lib/all.min.css",
+        "status": 200,
+        "status_text": "OK",
+        "headers": {
+          "accept-ranges": "bytes",
+          "content-length": "89221",
+          "date": "Thu, 25 Sep 2025 13:10:25 GMT",
+          "etag": "\"a9f4be2d50b5f90b54a42760479d2186\"",
+          "content-type": "text/css; charset=utf-8",
+          "last-modified": "Wed, 23 Apr 2025 11:05:55 GMT",
+          "server": "uvicorn"
+        },
+        "timestamp": "2025-09-25T16:10:25.775165"
+      },
+      {
+        "url": "http://localhost:8000/static/css/equipment-table.css",
+        "status": 200,
+        "status_text": "OK",
+        "headers": {
+          "accept-ranges": "bytes",
+          "content-length": "1579",
+          "date": "Thu, 25 Sep 2025 13:10:25 GMT",
+          "etag": "\"9902c778724834a7d87da0acaa3198e3\"",
+          "content-type": "text/css; charset=utf-8",
+          "last-modified": "Thu, 12 Jun 2025 20:23:08 GMT",
+          "server": "uvicorn"
+        },
+        "timestamp": "2025-09-25T16:10:25.775296"
+      },
+      {
+        "url": "http://localhost:8000/static/css/lib/daterangepicker.css",
+        "status": 200,
+        "status_text": "OK",
+        "headers": {
+          "accept-ranges": "bytes",
+          "content-length": "7659",
+          "date": "Thu, 25 Sep 2025 13:10:25 GMT",
+          "etag": "\"e5b63e8dd6183f65e479ac1b7165e06a\"",
+          "content-type": "text/css; charset=utf-8",
+          "last-modified": "Wed, 23 Apr 2025 11:05:55 GMT",
+          "server": "uvicorn"
+        },
+        "timestamp": "2025-09-25T16:10:25.775424"
+      },
+      {
+        "url": "http://localhost:8000/static/css/lib/inter.css",
+        "status": 200,
+        "status_text": "OK",
+        "headers": {
+          "accept-ranges": "bytes",
+          "content-length": "847",
+          "date": "Thu, 25 Sep 2025 13:10:25 GMT",
+          "etag": "\"9d5e41bc7d9a32cc64a05bf8e6f84b8a\"",
+          "content-type": "text/css; charset=utf-8",
+          "last-modified": "Wed, 23 Apr 2025 11:05:55 GMT",
+          "server": "uvicorn"
+        },
+        "timestamp": "2025-09-25T16:10:25.776611"
+      },
+      {
+        "url": "http://localhost:8000/static/css/lib/select2.min.css",
+        "status": 200,
+        "status_text": "OK",
+        "headers": {
+          "accept-ranges": "bytes",
+          "content-length": "16264",
+          "date": "Thu, 25 Sep 2025 13:10:25 GMT",
+          "etag": "\"18165d830ca7723b2e3fdbc9196a47ef\"",
+          "content-type": "text/css; charset=utf-8",
+          "last-modified": "Wed, 23 Apr 2025 11:05:55 GMT",
+          "server": "uvicorn"
+        },
+        "timestamp": "2025-09-25T16:10:25.779832"
+      },
+      {
+        "url": "http://localhost:8000/static/css/universal-cart.css",
+        "status": 200,
+        "status_text": "OK",
+        "headers": {
+          "accept-ranges": "bytes",
+          "content-length": "23198",
+          "date": "Thu, 25 Sep 2025 13:10:25 GMT",
+          "etag": "\"1f64bc20a1a64a4b5989a081ad76db7a\"",
+          "content-type": "text/css; charset=utf-8",
+          "last-modified": "Wed, 10 Sep 2025 14:39:30 GMT",
+          "server": "uvicorn"
+        },
+        "timestamp": "2025-09-25T16:10:25.780250"
+      },
+      {
+        "url": "http://localhost:8000/static/css/select2-bootstrap-fix.css",
+        "status": 200,
+        "status_text": "OK",
+        "headers": {
+          "accept-ranges": "bytes",
+          "content-length": "1360",
+          "date": "Thu, 25 Sep 2025 13:10:25 GMT",
+          "etag": "\"19dc9094bc416be0c6e077e9465b5273\"",
+          "content-type": "text/css; charset=utf-8",
+          "last-modified": "Wed, 16 Apr 2025 19:57:37 GMT",
+          "server": "uvicorn"
+        },
+        "timestamp": "2025-09-25T16:10:25.781285"
+      },
+      {
+        "url": "http://localhost:8000/static/css/equipment.css",
+        "status": 200,
+        "status_text": "OK",
+        "headers": {
+          "accept-ranges": "bytes",
+          "content-length": "8488",
+          "date": "Thu, 25 Sep 2025 13:10:25 GMT",
+          "etag": "\"1cea229231b5f81d13b5454cb5e5903a\"",
+          "content-type": "text/css; charset=utf-8",
+          "last-modified": "Thu, 25 Sep 2025 12:30:02 GMT",
+          "server": "uvicorn"
+        },
+        "timestamp": "2025-09-25T16:10:25.781640"
+      },
+      {
+        "url": "http://localhost:8000/static/js/lib/ru.js",
+        "status": 200,
+        "status_text": "OK",
+        "headers": {
+          "accept-ranges": "bytes",
+          "content-length": "9442",
+          "date": "Thu, 25 Sep 2025 13:10:25 GMT",
+          "etag": "\"cb95ba0cfc34dedcfe4ba27493964cca\"",
+          "content-type": "text/javascript; charset=utf-8",
+          "last-modified": "Wed, 23 Apr 2025 11:05:55 GMT",
+          "server": "uvicorn"
+        },
+        "timestamp": "2025-09-25T16:10:25.821857"
+      },
+      {
+        "url": "http://localhost:8000/static/js/lib/jquery-3.7.1.min.js",
+        "status": 200,
+        "status_text": "OK",
+        "headers": {
+          "accept-ranges": "bytes",
+          "content-length": "87533",
+          "date": "Thu, 25 Sep 2025 13:10:25 GMT",
+          "etag": "\"b117a7726b1e7443d32f38fd536043d5\"",
+          "content-type": "text/javascript; charset=utf-8",
+          "last-modified": "Wed, 23 Apr 2025 11:05:55 GMT",
+          "server": "uvicorn"
+        },
+        "timestamp": "2025-09-25T16:10:25.822069"
+      },
+      {
+        "url": "http://localhost:8000/static/css/webfonts/fa-solid-900.woff2",
+        "status": 200,
+        "status_text": "OK",
+        "headers": {
+          "etag": "\"626295d63f1eb3b2212826ef71aef0c8\"",
+          "access-control-allow-credentials": "true",
+          "accept-ranges": "bytes",
+          "content-length": "126828",
+          "date": "Thu, 25 Sep 2025 13:10:25 GMT",
+          "content-type": "text/plain; charset=utf-8",
+          "last-modified": "Wed, 23 Apr 2025 11:05:55 GMT",
+          "server": "uvicorn"
+        },
+        "timestamp": "2025-09-25T16:10:25.832126"
+      },
+      {
+        "url": "http://localhost:8000/static/fonts/Inter-Regular.woff2",
+        "status": 200,
+        "status_text": "OK",
+        "headers": {
+          "etag": "\"0e1e05a2e101092774e2c6b072bc78e9\"",
+          "access-control-allow-credentials": "true",
+          "accept-ranges": "bytes",
+          "content-length": "111268",
+          "date": "Thu, 25 Sep 2025 13:10:25 GMT",
+          "content-type": "text/plain; charset=utf-8",
+          "last-modified": "Wed, 23 Apr 2025 11:05:55 GMT",
+          "server": "uvicorn"
+        },
+        "timestamp": "2025-09-25T16:10:25.832523"
+      },
+      {
+        "url": "http://localhost:8000/static/fonts/Inter-SemiBold.woff2",
+        "status": 200,
+        "status_text": "OK",
+        "headers": {
+          "etag": "\"5980526c85646b4cc4aae42b4f33bf3b\"",
+          "access-control-allow-credentials": "true",
+          "accept-ranges": "bytes",
+          "content-length": "114812",
+          "date": "Thu, 25 Sep 2025 13:10:25 GMT",
+          "content-type": "text/plain; charset=utf-8",
+          "last-modified": "Wed, 23 Apr 2025 11:05:55 GMT",
+          "server": "uvicorn"
+        },
+        "timestamp": "2025-09-25T16:10:25.832732"
+      },
+      {
+        "url": "http://localhost:8000/static/fonts/Inter-Bold.woff2",
+        "status": 200,
+        "status_text": "OK",
+        "headers": {
+          "etag": "\"61c76efd4d13d4b0917931e37763f993\"",
+          "access-control-allow-credentials": "true",
+          "accept-ranges": "bytes",
+          "content-length": "114840",
+          "date": "Thu, 25 Sep 2025 13:10:25 GMT",
+          "content-type": "text/plain; charset=utf-8",
+          "last-modified": "Wed, 23 Apr 2025 11:05:55 GMT",
+          "server": "uvicorn"
+        },
+        "timestamp": "2025-09-25T16:10:25.832949"
+      },
+      {
+        "url": "http://localhost:8000/static/fonts/Inter-Medium.woff2",
+        "status": 200,
+        "status_text": "OK",
+        "headers": {
+          "etag": "\"3ebe027191f0aef3e7d65c2763c064a1\"",
+          "access-control-allow-credentials": "true",
+          "accept-ranges": "bytes",
+          "content-length": "114348",
+          "date": "Thu, 25 Sep 2025 13:10:25 GMT",
+          "content-type": "text/plain; charset=utf-8",
+          "last-modified": "Wed, 23 Apr 2025 11:05:55 GMT",
+          "server": "uvicorn"
+        },
+        "timestamp": "2025-09-25T16:10:25.833109"
+      },
+      {
+        "url": "http://localhost:8000/static/js/lib/moment.min.js",
+        "status": 200,
+        "status_text": "OK",
+        "headers": {
+          "accept-ranges": "bytes",
+          "content-length": "58863",
+          "date": "Thu, 25 Sep 2025 13:10:25 GMT",
+          "etag": "\"38b61ee50c420411d73517ec8fd8349c\"",
+          "content-type": "text/javascript; charset=utf-8",
+          "last-modified": "Wed, 23 Apr 2025 10:57:39 GMT",
+          "server": "uvicorn"
+        },
+        "timestamp": "2025-09-25T16:10:25.833217"
+      },
+      {
+        "url": "http://localhost:8000/static/js/lib/daterangepicker.min.js",
+        "status": 200,
+        "status_text": "OK",
+        "headers": {
+          "accept-ranges": "bytes",
+          "content-length": "32609",
+          "date": "Thu, 25 Sep 2025 13:10:25 GMT",
+          "etag": "\"256ae575d19295736c702a2069002b79\"",
+          "content-type": "text/javascript; charset=utf-8",
+          "last-modified": "Wed, 23 Apr 2025 11:05:55 GMT",
+          "server": "uvicorn"
+        },
+        "timestamp": "2025-09-25T16:10:25.833321"
+      },
+      {
+        "url": "http://localhost:8000/static/js/lib/bootstrap.bundle.min.js",
+        "status": 200,
+        "status_text": "OK",
+        "headers": {
+          "accept-ranges": "bytes",
+          "content-length": "80664",
+          "date": "Thu, 25 Sep 2025 13:10:25 GMT",
+          "etag": "\"7c2fa88d8cc27fa907a986d63f744031\"",
+          "content-type": "text/javascript; charset=utf-8",
+          "last-modified": "Wed, 23 Apr 2025 11:05:55 GMT",
+          "server": "uvicorn"
+        },
+        "timestamp": "2025-09-25T16:10:25.833483"
+      },
+      {
+        "url": "http://localhost:8000/static/js/notifications.js",
+        "status": 200,
+        "status_text": "OK",
+        "headers": {
+          "accept-ranges": "bytes",
+          "content-length": "1226",
+          "date": "Thu, 25 Sep 2025 13:10:25 GMT",
+          "etag": "\"c80c8d5c7e847c89de3d6b273d61757d\"",
+          "content-type": "text/javascript; charset=utf-8",
+          "last-modified": "Wed, 23 Apr 2025 11:05:55 GMT",
+          "server": "uvicorn"
+        },
+        "timestamp": "2025-09-25T16:10:25.833665"
+      },
+      {
+        "url": "http://localhost:8000/static/js/datepicker.js",
+        "status": 200,
+        "status_text": "OK",
+        "headers": {
+          "accept-ranges": "bytes",
+          "content-length": "355",
+          "date": "Thu, 25 Sep 2025 13:10:25 GMT",
+          "etag": "\"088cbac4b339783330809bc70d531d49\"",
+          "content-type": "text/javascript; charset=utf-8",
+          "last-modified": "Fri, 06 Jun 2025 13:22:09 GMT",
+          "server": "uvicorn"
+        },
+        "timestamp": "2025-09-25T16:10:25.833791"
+      },
+      {
+        "url": "http://localhost:8000/static/js/lib/select2.min.js",
+        "status": 200,
+        "status_text": "OK",
+        "headers": {
+          "accept-ranges": "bytes",
+          "content-length": "73164",
+          "date": "Thu, 25 Sep 2025 13:10:25 GMT",
+          "etag": "\"343d1ef02aa0d07b6b5dd120368eab0c\"",
+          "content-type": "text/javascript; charset=utf-8",
+          "last-modified": "Wed, 23 Apr 2025 10:57:39 GMT",
+          "server": "uvicorn"
+        },
+        "timestamp": "2025-09-25T16:10:25.833905"
+      },
+      {
+        "url": "http://localhost:8000/static/js/main.js",
+        "status": 200,
+        "status_text": "OK",
+        "headers": {
+          "etag": "\"b6cb56f034c674ba5fe7a9862979a946\"",
+          "access-control-allow-credentials": "true",
+          "accept-ranges": "bytes",
+          "content-length": "27488",
+          "date": "Thu, 25 Sep 2025 13:10:25 GMT",
+          "content-type": "text/javascript; charset=utf-8",
+          "last-modified": "Thu, 25 Sep 2025 12:30:02 GMT",
+          "server": "uvicorn"
+        },
+        "timestamp": "2025-09-25T16:10:25.834016"
+      },
+      {
+        "url": "http://localhost:8000/static/js/lib/quagga.min.js",
+        "status": 200,
+        "status_text": "OK",
+        "headers": {
+          "accept-ranges": "bytes",
+          "content-length": "93305",
+          "date": "Thu, 25 Sep 2025 13:10:25 GMT",
+          "etag": "\"0eabfda05844650823d197c5cc6c25a2\"",
+          "content-type": "text/javascript; charset=utf-8",
+          "last-modified": "Wed, 23 Apr 2025 11:05:55 GMT",
+          "server": "uvicorn"
+        },
+        "timestamp": "2025-09-25T16:10:25.834128"
+      },
+      {
+        "url": "http://localhost:8000/static/js/universal-cart/index.js",
+        "status": 200,
+        "status_text": "OK",
+        "headers": {
+          "accept-ranges": "bytes",
+          "content-length": "5269",
+          "date": "Thu, 25 Sep 2025 13:10:25 GMT",
+          "etag": "\"d3c3505563193d9be99ff440f228e1aa\"",
+          "content-type": "text/javascript; charset=utf-8",
+          "last-modified": "Thu, 26 Jun 2025 19:02:28 GMT",
+          "server": "uvicorn"
+        },
+        "timestamp": "2025-09-25T16:10:25.834234"
+      },
+      {
+        "url": "http://localhost:8000/static/js/utils/api.js",
+        "status": 200,
+        "status_text": "OK",
+        "headers": {
+          "etag": "\"a707da6a53f8980194fd46d020b2824c\"",
+          "access-control-allow-credentials": "true",
+          "accept-ranges": "bytes",
+          "content-length": "11692",
+          "date": "Thu, 25 Sep 2025 13:10:25 GMT",
+          "content-type": "text/javascript; charset=utf-8",
+          "last-modified": "Thu, 12 Jun 2025 20:23:08 GMT",
+          "server": "uvicorn"
+        },
+        "timestamp": "2025-09-25T16:10:25.834338"
+      },
+      {
+        "url": "http://localhost:8000/static/js/utils/logger.js",
+        "status": 200,
+        "status_text": "OK",
+        "headers": {
+          "etag": "\"f84ddfab9c3ba2c568e4964cf6ef4c34\"",
+          "access-control-allow-credentials": "true",
+          "accept-ranges": "bytes",
+          "content-length": "3236",
+          "date": "Thu, 25 Sep 2025 13:10:25 GMT",
+          "content-type": "text/javascript; charset=utf-8",
+          "last-modified": "Thu, 12 Jun 2025 20:23:08 GMT",
+          "server": "uvicorn"
+        },
+        "timestamp": "2025-09-25T16:10:25.834447"
+      },
+      {
+        "url": "http://localhost:8000/static/js/utils/pagination.js",
+        "status": 200,
+        "status_text": "OK",
+        "headers": {
+          "etag": "\"d2a0edc3196063932e6208128b3363b5\"",
+          "access-control-allow-credentials": "true",
+          "accept-ranges": "bytes",
+          "content-length": "35685",
+          "date": "Thu, 25 Sep 2025 13:10:25 GMT",
+          "content-type": "text/javascript; charset=utf-8",
+          "last-modified": "Wed, 18 Jun 2025 12:59:44 GMT",
+          "server": "uvicorn"
+        },
+        "timestamp": "2025-09-25T16:10:25.834556"
+      },
+      {
+        "url": "http://localhost:8000/static/js/scan-storage.js",
+        "status": 200,
+        "status_text": "OK",
+        "headers": {
+          "etag": "\"2051d30028dce290f080c9ba12af0fb1\"",
+          "access-control-allow-credentials": "true",
+          "accept-ranges": "bytes",
+          "content-length": "23604",
+          "date": "Thu, 25 Sep 2025 13:10:25 GMT",
+          "content-type": "text/javascript; charset=utf-8",
+          "last-modified": "Tue, 20 May 2025 10:40:14 GMT",
+          "server": "uvicorn"
+        },
+        "timestamp": "2025-09-25T16:10:25.834664"
+      },
+      {
+        "url": "http://localhost:8000/static/js/equipment-list.js",
+        "status": 200,
+        "status_text": "OK",
+        "headers": {
+          "etag": "\"353f1f6c3937a69c4112e3fbc5a5c992\"",
+          "access-control-allow-credentials": "true",
+          "accept-ranges": "bytes",
+          "content-length": "57554",
+          "date": "Thu, 25 Sep 2025 13:10:25 GMT",
+          "content-type": "text/javascript; charset=utf-8",
+          "last-modified": "Thu, 25 Sep 2025 12:30:02 GMT",
+          "server": "uvicorn"
+        },
+        "timestamp": "2025-09-25T16:10:25.834766"
+      },
+      {
+        "url": "http://localhost:8000/static/js/utils/common.js",
+        "status": 200,
+        "status_text": "OK",
+        "headers": {
+          "etag": "\"8300c7f3f758ee8c0454d50b295ba102\"",
+          "access-control-allow-credentials": "true",
+          "accept-ranges": "bytes",
+          "content-length": "6065",
+          "date": "Thu, 25 Sep 2025 13:10:25 GMT",
+          "content-type": "text/javascript; charset=utf-8",
+          "last-modified": "Fri, 06 Jun 2025 13:22:09 GMT",
+          "server": "uvicorn"
+        },
+        "timestamp": "2025-09-25T16:10:25.873227"
+      },
+      {
+        "url": "http://localhost:8000/static/js/utils/ui-helpers.js",
+        "status": 200,
+        "status_text": "OK",
+        "headers": {
+          "etag": "\"bc834b1a95f0d494aba705ff33d2f9f3\"",
+          "access-control-allow-credentials": "true",
+          "accept-ranges": "bytes",
+          "content-length": "5272",
+          "date": "Thu, 25 Sep 2025 13:10:25 GMT",
+          "content-type": "text/javascript; charset=utf-8",
+          "last-modified": "Wed, 07 May 2025 16:27:39 GMT",
+          "server": "uvicorn"
+        },
+        "timestamp": "2025-09-25T16:10:25.873506"
+      },
+      {
+        "url": "http://localhost:8000/static/js/universal-cart/core/universal-cart.js",
+        "status": 200,
+        "status_text": "OK",
+        "headers": {
+          "accept-ranges": "bytes",
+          "content-length": "22679",
+          "date": "Thu, 25 Sep 2025 13:10:25 GMT",
+          "etag": "\"faeeb47c87a1b787660debed0ac80e61\"",
+          "content-type": "text/javascript; charset=utf-8",
+          "last-modified": "Wed, 10 Sep 2025 14:39:30 GMT",
+          "server": "uvicorn"
+        },
+        "timestamp": "2025-09-25T16:10:25.883624"
+      },
+      {
+        "url": "http://localhost:8000/api/v1/categories",
+        "status": 307,
+        "status_text": "Temporary Redirect",
+        "headers": {
+          "location": "http://localhost:8000/api/v1/categories/",
+          "content-length": "0",
+          "date": "Thu, 25 Sep 2025 13:10:25 GMT",
+          "server": "uvicorn"
+        },
+        "timestamp": "2025-09-25T16:10:25.884197"
+      },
+      {
+        "url": "http://localhost:8000/static/js/universal-cart/core/cart-storage.js",
+        "status": 200,
+        "status_text": "OK",
+        "headers": {
+          "accept-ranges": "bytes",
+          "content-length": "13408",
+          "date": "Thu, 25 Sep 2025 13:10:25 GMT",
+          "etag": "\"fe588d6540e305db89e1c6888294e1c1\"",
+          "content-type": "text/javascript; charset=utf-8",
+          "last-modified": "Thu, 26 Jun 2025 10:42:42 GMT",
+          "server": "uvicorn"
+        },
+        "timestamp": "2025-09-25T16:10:25.888751"
+      },
+      {
+        "url": "http://localhost:8000/static/js/universal-cart/ui/cart-templates.js",
+        "status": 200,
+        "status_text": "OK",
+        "headers": {
+          "accept-ranges": "bytes",
+          "content-length": "25376",
+          "date": "Thu, 25 Sep 2025 13:10:25 GMT",
+          "etag": "\"a87a490814bcfe68bb0c9cfecb6715c2\"",
+          "content-type": "text/javascript; charset=utf-8",
+          "last-modified": "Thu, 26 Jun 2025 19:00:50 GMT",
+          "server": "uvicorn"
+        },
+        "timestamp": "2025-09-25T16:10:25.897150"
+      },
+      {
+        "url": "http://localhost:8000/api/v1/categories/",
+        "status": 200,
+        "status_text": "OK",
+        "headers": {
+          "content-length": "20803",
+          "date": "Thu, 25 Sep 2025 13:10:25 GMT",
+          "content-type": "application/json",
+          "server": "uvicorn"
+        },
+        "timestamp": "2025-09-25T16:10:25.890856",
+        "json_body": [
+          {
+            "name": "\u041a\u0430\u043c\u0435\u0440\u044b/Cameras",
+            "description": "Cinema cameras",
+            "parent_id": null,
+            "show_in_print_overview": true,
+            "id": 1,
+            "created_at": "2025-09-24T15:20:25.232039Z",
+            "updated_at": "2025-09-24T15:20:25.232039Z"
+          },
+          {
+            "name": "\u041e\u043f\u0442\u0438\u043a\u0430/Lenses",
+            "description": "",
+            "parent_id": null,
+            "show_in_print_overview": true,
+            "id": 2,
+            "created_at": "2025-09-24T15:20:25.235802Z",
+            "updated_at": "2025-09-24T15:20:25.235802Z"
+          },
+          {
+            "name": "\u0428\u0442\u0430\u0442\u0438\u0432\u043d\u044b\u0435 \u0433\u043e\u043b\u043e\u0432\u044b/Heads",
+            "description": "",
+            "parent_id": null,
+            "show_in_print_overview": true,
+            "id": 3,
+            "created_at": "2025-09-24T15:20:25.237035Z",
+            "updated_at": "2025-09-24T15:20:25.237035Z"
+          },
+          {
+            "name": "\u0428\u0442\u0430\u0442\u0438\u0432\u044b, \u043f\u043b\u0435\u0447\u0435\u0432\u044b\u0435 \u0443\u043f\u043e\u0440\u044b/Tripods, Rigs",
+            "description": "",
+            "parent_id": null,
+            "show_in_print_overview": true,
+            "id": 4,
+            "created_at": "2025-09-24T15:20:25.238157Z",
+            "updated_at": "2025-09-24T15:20:25.238157Z"
+          },
+          {
+            "name": "\u041a\u043e\u043c\u043f\u0435\u043d\u0434\u0438\u0443\u043c\u044b/Matte Box",
+            "description": "",
+            "parent_id": null,
+            "show_in_print_overview": true,
+            "id": 5,
+            "created_at": "2025-09-24T15:20:25.239142Z",
+            "updated_at": "2025-09-24T15:20:25.239142Z"
+          },
+          {
+            "name": "\u0424\u043e\u043a\u0443\u0441\u0430/Focus",
+            "description": "",
+            "parent_id": null,
+            "show_in_print_overview": true,
+            "id": 6,
+            "created_at": "2025-09-24T15:20:25.240153Z",
+            "updated_at": "2025-09-24T15:20:25.240153Z"
+          },
+          {
+            "name": "\u0412\u0438\u0434\u0435\u043e\u043a\u043e\u043d\u0442\u0440\u043e\u043b\u044c/Monitors",
+            "description": "",
+            "parent_id": null,
+            "show_in_print_overview": true,
+            "id": 7,
+            "created_at": "2025-09-24T15:20:25.241089Z",
+            "updated_at": "2025-09-24T15:20:25.241089Z"
+          },
+          {
+            "name": "\u0421\u0435\u043d\u0434\u0435\u0440\u0430/Senders",
+            "description": "",
+            "parent_id": null,
+            "show_in_print_overview": true,
+            "id": 8,
+            "created_at": "2025-09-24T15:20:25.242932Z",
+            "updated_at": "2025-09-24T15:20:25.242932Z"
+          },
+          {
+            "name": "\u0424\u0438\u043b\u044c\u0442\u0440\u044b/Filters",
+            "description": "",
+            "parent_id": null,
+            "show_in_print_overview": true,
+            "id": 9,
+            "created_at": "2025-09-24T15:20:25.244205Z",
+            "updated_at": "2025-09-24T15:20:25.244205Z"
+          },
+          {
+            "name": "\u0410\u043a\u043a\u0443\u043c\u0443\u043b\u044f\u0442\u043e\u0440\u044b/Batteries",
+            "description": "",
+            "parent_id": null,
+            "show_in_print_overview": true,
+            "id": 10,
+            "created_at": "2025-09-24T15:20:25.245617Z",
+            "updated_at": "2025-09-24T15:20:25.245617Z"
+          },
+          {
+            "name": "\u041d\u043e\u0443\u0442\u0431\u0443\u043a\u0438/Laptops",
+            "description": "",
+            "parent_id": null,
+            "show_in_print_overview": true,
+            "id": 11,
+            "created_at": "2025-09-24T15:20:25.246780Z",
+            "updated_at": "2025-09-24T15:20:25.246780Z"
+          },
+          {
+            "name": "\u0421\u0442\u043e\u0439\u043a\u0438/",
+            "description": "",
+            "parent_id": null,
+            "show_in_print_overview": true,
+            "id": 12,
+            "created_at": "2025-09-24T15:20:25.247723Z",
+            "updated_at": "2025-09-24T15:20:25.247723Z"
+          },
+          {
+            "name": "Cables",
+            "description": "",
+            "parent_id": null,
+            "show_in_print_overview": true,
+            "id": 13,
+            "created_at": "2025-09-24T15:20:25.248673Z",
+            "updated_at": "2025-09-24T15:20:25.248673Z"
+          },
+          {
+            "name": "Accessories",
+            "description": "",
+            "parent_id": null,
+            "show_in_print_overview": true,
+            "id": 14,
+            "created_at": "2025-09-24T15:20:25.249663Z",
+            "updated_at": "2025-09-24T15:20:25.249663Z"
+          },
+          {
+            "name": "\u041e\u0441\u0442\u0430\u043b\u044c\u043d\u043e\u0435/Others",
+            "description": "",
+            "parent_id": null,
+            "show_in_print_overview": true,
+            "id": 15,
+            "created_at": "2025-09-24T15:20:25.250570Z",
+            "updated_at": "2025-09-24T15:20:25.250570Z"
+          },
+          {
+            "name": "\u0421\u0438\u0441\u0442\u0435\u043c\u044b \u0441\u0442\u0430\u0431\u0438\u043b\u0438\u0437\u0430\u0446\u0438\u0438",
+            "description": "",
+            "parent_id": null,
+            "show_in_print_overview": true,
+            "id": 16,
+            "created_at": "2025-09-24T15:20:25.251480Z",
+            "updated_at": "2025-09-24T15:20:25.251480Z"
+          },
+          {
+            "name": "\u041f\u043b\u0435\u043d\u043e\u0447\u043d\u044b\u0435",
+            "description": "",
+            "parent_id": 1,
+            "show_in_print_overview": true,
+            "id": 17,
+            "created_at": "2025-09-24T15:20:25.252417Z",
+            "updated_at": "2025-09-24T15:20:25.252417Z"
+          },
+          {
+            "name": "16mm",
+            "description": "",
+            "parent_id": 2,
+            "show_in_print_overview": true,
+            "id": 18,
+            "created_at": "2025-09-24T15:20:25.253519Z",
+            "updated_at": "2025-09-24T15:20:25.253519Z"
+          },
+          {
+            "name": "35mm",
+            "description": "",
+            "parent_id": 2,
+            "show_in_print_overview": true,
+            "id": 19,
+            "created_at": "2025-09-24T15:20:25.254549Z",
+            "updated_at": "2025-09-24T15:20:25.254549Z"
+          },
+          {
+            "name": "Zoom lenses",
+            "description": "",
+            "parent_id": 2,
+            "show_in_print_overview": true,
+            "id": 20,
+            "created_at": "2025-09-24T15:20:25.255563Z",
+            "updated_at": "2025-09-24T15:20:25.255563Z"
+          },
+          {
+            "name": "\u0414\u0438\u043e\u043f\u0442\u0440\u0438\u0438",
+            "description": "",
+            "parent_id": 2,
+            "show_in_print_overview": true,
+            "id": 21,
+            "created_at": "2025-09-24T15:20:25.256564Z",
+            "updated_at": "2025-09-24T15:20:25.256564Z"
+          },
+          {
+            "name": "Hi-Hat",
+            "description": "",
+            "parent_id": 4,
+            "show_in_print_overview": true,
+            "id": 22,
+            "created_at": "2025-09-24T15:20:25.257654Z",
+            "updated_at": "2025-09-24T15:20:25.257654Z"
+          },
+          {
+            "name": "\u041f\u043b\u0435\u0447\u0435\u0432\u044b\u0435 \u0443\u043f\u043e\u0440\u044b",
+            "description": "",
+            "parent_id": 4,
+            "show_in_print_overview": true,
+            "id": 23,
+            "created_at": "2025-09-24T15:20:25.258701Z",
+            "updated_at": "2025-09-24T15:20:25.258701Z"
+          },
+          {
+            "name": "LMB",
+            "description": "",
+            "parent_id": 5,
+            "show_in_print_overview": true,
+            "id": 24,
+            "created_at": "2025-09-24T15:20:25.259654Z",
+            "updated_at": "2025-09-24T15:20:25.259654Z"
+          },
+          {
+            "name": "MB",
+            "description": "",
+            "parent_id": 5,
+            "show_in_print_overview": true,
+            "id": 25,
+            "created_at": "2025-09-24T15:20:25.260635Z",
+            "updated_at": "2025-09-24T15:20:25.260635Z"
+          },
+          {
+            "name": "FF",
+            "description": "",
+            "parent_id": 6,
+            "show_in_print_overview": true,
+            "id": 26,
+            "created_at": "2025-09-24T15:20:25.261609Z",
+            "updated_at": "2025-09-24T15:20:25.261609Z"
+          },
+          {
+            "name": "Monitors",
+            "description": "",
+            "parent_id": 7,
+            "show_in_print_overview": true,
+            "id": 27,
+            "created_at": "2025-09-24T15:20:25.262697Z",
+            "updated_at": "2025-09-24T15:20:25.262697Z"
+          },
+          {
+            "name": "Monitors/Recorders",
+            "description": "",
+            "parent_id": 7,
+            "show_in_print_overview": true,
+            "id": 28,
+            "created_at": "2025-09-24T15:20:25.263687Z",
+            "updated_at": "2025-09-24T15:20:25.263687Z"
+          },
+          {
+            "name": "Playback",
+            "description": "",
+            "parent_id": 7,
+            "show_in_print_overview": true,
+            "id": 29,
+            "created_at": "2025-09-24T15:20:25.264623Z",
+            "updated_at": "2025-09-24T15:20:25.264623Z"
+          },
+          {
+            "name": "ND/IRND",
+            "description": "",
+            "parent_id": 9,
+            "show_in_print_overview": true,
+            "id": 30,
+            "created_at": "2025-09-24T15:20:25.265563Z",
+            "updated_at": "2025-09-24T15:20:25.265563Z"
+          },
+          {
+            "name": "POL",
+            "description": "",
+            "parent_id": 9,
+            "show_in_print_overview": true,
+            "id": 31,
+            "created_at": "2025-09-24T15:20:25.266501Z",
+            "updated_at": "2025-09-24T15:20:25.266501Z"
+          },
+          {
+            "name": "Effects",
+            "description": "",
+            "parent_id": 9,
+            "show_in_print_overview": true,
+            "id": 32,
+            "created_at": "2025-09-24T15:20:25.267449Z",
+            "updated_at": "2025-09-24T15:20:25.267449Z"
+          },
+          {
+            "name": "Clear",
+            "description": "",
+            "parent_id": 9,
+            "show_in_print_overview": true,
+            "id": 33,
+            "created_at": "2025-09-24T15:20:25.268372Z",
+            "updated_at": "2025-09-24T15:20:25.268372Z"
+          },
+          {
+            "name": "B-mount",
+            "description": "",
+            "parent_id": 10,
+            "show_in_print_overview": true,
+            "id": 34,
+            "created_at": "2025-09-24T15:20:25.269310Z",
+            "updated_at": "2025-09-24T15:20:25.269310Z"
+          },
+          {
+            "name": "V-mount",
+            "description": "",
+            "parent_id": 10,
+            "show_in_print_overview": true,
+            "id": 35,
+            "created_at": "2025-09-24T15:20:25.270402Z",
+            "updated_at": "2025-09-24T15:20:25.270402Z"
+          },
+          {
+            "name": "BP",
+            "description": "",
+            "parent_id": 10,
+            "show_in_print_overview": true,
+            "id": 36,
+            "created_at": "2025-09-24T15:20:25.271345Z",
+            "updated_at": "2025-09-24T15:20:25.271345Z"
+          },
+          {
+            "name": "Sony npf",
+            "description": "",
+            "parent_id": 10,
+            "show_in_print_overview": true,
+            "id": 37,
+            "created_at": "2025-09-24T15:20:25.272247Z",
+            "updated_at": "2025-09-24T15:20:25.272247Z"
+          },
+          {
+            "name": "\u0417\u0430\u0440\u044f\u0434\u043d\u044b\u0435 \u0441\u0442\u0430\u043d\u0446\u0438\u0438",
+            "description": "",
+            "parent_id": 10,
+            "show_in_print_overview": true,
+            "id": 38,
+            "created_at": "2025-09-24T15:20:25.273070Z",
+            "updated_at": "2025-09-24T15:20:25.273070Z"
+          },
+          {
+            "name": "Matte Box Accessories ",
+            "description": "",
+            "parent_id": 5,
+            "show_in_print_overview": true,
+            "id": 39,
+            "created_at": "2025-09-24T15:20:25.273924Z",
+            "updated_at": "2025-09-24T15:20:25.273924Z"
+          },
+          {
+            "name": "NP-F",
+            "description": "",
+            "parent_id": 10,
+            "show_in_print_overview": true,
+            "id": 40,
+            "created_at": "2025-09-24T15:20:25.274807Z",
+            "updated_at": "2025-09-24T15:20:25.274807Z"
+          },
+          {
+            "name": "Monitors Accessories",
+            "description": "",
+            "parent_id": 7,
+            "show_in_print_overview": true,
+            "id": 41,
+            "created_at": "2025-09-24T15:20:25.275630Z",
+            "updated_at": "2025-09-24T15:20:25.275630Z"
+          },
+          {
+            "name": "Camera Accessories",
+            "description": "",
+            "parent_id": 1,
+            "show_in_print_overview": true,
+            "id": 42,
+            "created_at": "2025-09-24T15:20:25.276535Z",
+            "updated_at": "2025-09-24T15:20:25.276535Z"
+          },
+          {
+            "name": "Combo stand",
+            "description": "",
+            "parent_id": 12,
+            "show_in_print_overview": false,
+            "id": 43,
+            "created_at": "2025-09-24T15:20:25.277440Z",
+            "updated_at": "2025-09-24T15:20:25.277440Z"
+          },
+          {
+            "name": "C-stand",
+            "description": "",
+            "parent_id": 12,
+            "show_in_print_overview": false,
+            "id": 44,
+            "created_at": "2025-09-24T15:20:25.278436Z",
+            "updated_at": "2025-09-24T15:20:25.278436Z"
+          },
+          {
+            "name": "Lens Accessories",
+            "description": "",
+            "parent_id": 2,
+            "show_in_print_overview": true,
+            "id": 45,
+            "created_at": "2025-09-24T15:20:25.279386Z",
+            "updated_at": "2025-09-24T15:20:25.279386Z"
+          },
+          {
+            "name": "Hollyland #2",
+            "description": "",
+            "parent_id": 8,
+            "show_in_print_overview": false,
+            "id": 46,
+            "created_at": "2025-09-24T15:20:25.280308Z",
+            "updated_at": "2025-09-24T15:20:25.280308Z"
+          },
+          {
+            "name": "LensBaby",
+            "description": "",
+            "parent_id": 2,
+            "show_in_print_overview": true,
+            "id": 47,
+            "created_at": "2025-09-24T15:20:25.281238Z",
+            "updated_at": "2025-09-24T15:20:25.281238Z"
+          },
+          {
+            "name": "\u0426\u0438\u0444\u0440\u043e\u0432\u044b\u0435",
+            "description": "",
+            "parent_id": 1,
+            "show_in_print_overview": false,
+            "id": 48,
+            "created_at": "2025-09-24T15:20:25.282135Z",
+            "updated_at": "2025-09-24T15:20:25.282135Z"
+          },
+          {
+            "name": "Action cam",
+            "description": "",
+            "parent_id": 1,
+            "show_in_print_overview": false,
+            "id": 49,
+            "created_at": "2025-09-24T15:20:25.283057Z",
+            "updated_at": "2025-09-24T15:20:25.283057Z"
+          },
+          {
+            "name": "Other",
+            "description": "",
+            "parent_id": 7,
+            "show_in_print_overview": true,
+            "id": 50,
+            "created_at": "2025-09-24T15:20:25.283963Z",
+            "updated_at": "2025-09-24T15:20:25.283963Z"
+          },
+          {
+            "name": "ARRI Alexa 35 #3",
+            "description": "",
+            "parent_id": 48,
+            "show_in_print_overview": true,
+            "id": 51,
+            "created_at": "2025-09-24T15:20:25.284934Z",
+            "updated_at": "2025-09-24T15:20:25.284934Z"
+          },
+          {
+            "name": "\u0423\u043d\u0438\u0432\u0435\u0440\u0441\u0430\u043b\u044c\u043d\u044b\u0435 \u0428\u0442\u0430\u0442\u0438\u0432\u044b",
+            "description": "",
+            "parent_id": 4,
+            "show_in_print_overview": false,
+            "id": 52,
+            "created_at": "2025-09-24T15:20:25.285833Z",
+            "updated_at": "2025-09-24T15:20:25.285833Z"
+          },
+          {
+            "name": "Clamp",
+            "description": "",
+            "parent_id": 24,
+            "show_in_print_overview": false,
+            "id": 53,
+            "created_at": "2025-09-24T15:20:25.286775Z",
+            "updated_at": "2025-09-24T15:20:25.286775Z"
+          },
+          {
+            "name": "Focus",
+            "description": "",
+            "parent_id": 6,
+            "show_in_print_overview": false,
+            "id": 54,
+            "created_at": "2025-09-24T15:20:25.287735Z",
+            "updated_at": "2025-09-24T15:20:25.287735Z"
+          },
+          {
+            "name": "\u0428\u0442\u0430\u0442\u0438\u0432 \u041a\u043e\u0440\u043e\u0442\u043a\u0438\u0439",
+            "description": "",
+            "parent_id": 4,
+            "show_in_print_overview": false,
+            "id": 55,
+            "created_at": "2025-09-24T15:20:25.288653Z",
+            "updated_at": "2025-09-24T15:20:25.288653Z"
+          },
+          {
+            "name": "\u0428\u0442\u0430\u0442\u0438\u0432 \u0421\u0440\u0435\u0434\u043d\u0438\u0439",
+            "description": "",
+            "parent_id": 4,
+            "show_in_print_overview": false,
+            "id": 56,
+            "created_at": "2025-09-24T15:20:25.289597Z",
+            "updated_at": "2025-09-24T15:20:25.289597Z"
+          },
+          {
+            "name": "\u0428\u0442\u0430\u0442\u0438\u0432 \u0412\u044b\u0441\u043e\u043a\u0438\u0439",
+            "description": "",
+            "parent_id": 4,
+            "show_in_print_overview": false,
+            "id": 57,
+            "created_at": "2025-09-24T15:20:25.290561Z",
+            "updated_at": "2025-09-24T15:20:25.290561Z"
+          },
+          {
+            "name": "ARRI",
+            "description": "",
+            "parent_id": 54,
+            "show_in_print_overview": false,
+            "id": 58,
+            "created_at": "2025-09-24T15:20:25.291489Z",
+            "updated_at": "2025-09-24T15:20:25.291489Z"
+          },
+          {
+            "name": "SXU",
+            "description": "",
+            "parent_id": 58,
+            "show_in_print_overview": true,
+            "id": 59,
+            "created_at": "2025-09-24T15:20:25.292416Z",
+            "updated_at": "2025-09-24T15:20:25.292416Z"
+          },
+          {
+            "name": "WCU-4",
+            "description": "",
+            "parent_id": 58,
+            "show_in_print_overview": true,
+            "id": 60,
+            "created_at": "2025-09-24T15:20:25.293343Z",
+            "updated_at": "2025-09-24T15:20:25.293343Z"
+          },
+          {
+            "name": "WCU-3",
+            "description": "",
+            "parent_id": 58,
+            "show_in_print_overview": true,
+            "id": 61,
+            "created_at": "2025-09-24T15:20:25.294331Z",
+            "updated_at": "2025-09-24T15:20:25.294331Z"
+          },
+          {
+            "name": "HI-5",
+            "description": "",
+            "parent_id": 58,
+            "show_in_print_overview": true,
+            "id": 62,
+            "created_at": "2025-09-24T15:20:25.295259Z",
+            "updated_at": "2025-09-24T15:20:25.295259Z"
+          },
+          {
+            "name": "HI-5 SX",
+            "description": "",
+            "parent_id": 58,
+            "show_in_print_overview": true,
+            "id": 63,
+            "created_at": "2025-09-24T15:20:25.296282Z",
+            "updated_at": "2025-09-24T15:20:25.296282Z"
+          },
+          {
+            "name": "#01",
+            "description": "",
+            "parent_id": 58,
+            "show_in_print_overview": true,
+            "id": 64,
+            "created_at": "2025-09-24T15:20:25.297323Z",
+            "updated_at": "2025-09-24T15:20:25.297323Z"
+          },
+          {
+            "name": "ARRI Hi-5 SX",
+            "description": "",
+            "parent_id": 58,
+            "show_in_print_overview": true,
+            "id": 65,
+            "created_at": "2025-09-24T15:20:25.298467Z",
+            "updated_at": "2025-09-24T15:20:25.298467Z"
+          },
+          {
+            "name": "Sony Venice",
+            "description": "",
+            "parent_id": 48,
+            "show_in_print_overview": true,
+            "id": 66,
+            "created_at": "2025-09-24T15:20:25.299532Z",
+            "updated_at": "2025-09-24T15:20:25.299532Z"
+          },
+          {
+            "name": "Full Frame",
+            "description": "",
+            "parent_id": 2,
+            "show_in_print_overview": true,
+            "id": 67,
+            "created_at": "2025-09-24T15:20:25.300469Z",
+            "updated_at": "2025-09-24T15:20:25.300469Z"
+          },
+          {
+            "name": "RED GEMINI 5K",
+            "description": "",
+            "parent_id": 48,
+            "show_in_print_overview": true,
+            "id": 68,
+            "created_at": "2025-09-24T15:20:25.301422Z",
+            "updated_at": "2025-09-24T15:20:25.301422Z"
+          },
+          {
+            "name": "RED Accessories",
+            "description": "",
+            "parent_id": 48,
+            "show_in_print_overview": true,
+            "id": 69,
+            "created_at": "2025-09-24T15:20:25.302356Z",
+            "updated_at": "2025-09-24T15:20:25.302356Z"
+          },
+          {
+            "name": "Stand Accessories",
+            "description": "",
+            "parent_id": 43,
+            "show_in_print_overview": false,
+            "id": 70,
+            "created_at": "2025-09-24T15:20:25.303280Z",
+            "updated_at": "2025-09-24T15:20:25.303280Z"
+          },
+          {
+            "name": "Focus Accessories",
+            "description": "",
+            "parent_id": 58,
+            "show_in_print_overview": true,
+            "id": 71,
+            "created_at": "2025-09-24T15:20:25.304388Z",
+            "updated_at": "2025-09-24T15:20:25.304388Z"
+          },
+          {
+            "name": "DSLR",
+            "description": "",
+            "parent_id": 1,
+            "show_in_print_overview": false,
+            "id": 72,
+            "created_at": "2025-09-24T15:20:25.305303Z",
+            "updated_at": "2025-09-24T15:20:25.305303Z"
+          },
+          {
+            "name": "Accessories for DSLR",
+            "description": "",
+            "parent_id": 72,
+            "show_in_print_overview": false,
+            "id": 73,
+            "created_at": "2025-09-24T15:20:25.306212Z",
+            "updated_at": "2025-09-24T15:20:25.306212Z"
+          },
+          {
+            "name": "Blackmagic 6k Pro",
+            "description": "",
+            "parent_id": 48,
+            "show_in_print_overview": false,
+            "id": 74,
+            "created_at": "2025-09-24T15:20:25.307148Z",
+            "updated_at": "2025-09-24T15:20:25.307148Z"
+          },
+          {
+            "name": "Vaxis",
+            "description": "",
+            "parent_id": 8,
+            "show_in_print_overview": true,
+            "id": 75,
+            "created_at": "2025-09-24T15:20:25.308038Z",
+            "updated_at": "2025-09-24T15:20:25.308038Z"
+          },
+          {
+            "name": "RED EPIC",
+            "description": "",
+            "parent_id": 48,
+            "show_in_print_overview": true,
+            "id": 76,
+            "created_at": "2025-09-24T15:20:25.309046Z",
+            "updated_at": "2025-09-24T15:20:25.309046Z"
+          },
+          {
+            "name": "Nucleus-M2",
+            "description": "",
+            "parent_id": 54,
+            "show_in_print_overview": true,
+            "id": 77,
+            "created_at": "2025-09-24T15:20:25.309935Z",
+            "updated_at": "2025-09-24T15:20:25.309935Z"
+          },
+          {
+            "name": "Nucleus-M2 Set # 01",
+            "description": "",
+            "parent_id": 77,
+            "show_in_print_overview": true,
+            "id": 78,
+            "created_at": "2025-09-24T15:20:25.310762Z",
+            "updated_at": "2025-09-24T15:20:25.310762Z"
+          },
+          {
+            "name": "ARRI Alexa Classic",
+            "description": "",
+            "parent_id": 48,
+            "show_in_print_overview": true,
+            "id": 79,
+            "created_at": "2025-09-24T15:20:25.311584Z",
+            "updated_at": "2025-09-24T15:20:25.311584Z"
+          },
+          {
+            "name": "RED GEMINI 5K #2",
+            "description": "",
+            "parent_id": 48,
+            "show_in_print_overview": true,
+            "id": 80,
+            "created_at": "2025-09-24T15:20:25.312494Z",
+            "updated_at": "2025-09-24T15:20:25.312494Z"
+          },
+          {
+            "name": "ARRI Alexa",
+            "description": "",
+            "parent_id": 48,
+            "show_in_print_overview": false,
+            "id": 81,
+            "created_at": "2025-09-24T15:20:25.313407Z",
+            "updated_at": "2025-09-24T15:20:25.313407Z"
+          },
+          {
+            "name": "ARRI Alexa 35",
+            "description": "",
+            "parent_id": 81,
+            "show_in_print_overview": true,
+            "id": 82,
+            "created_at": "2025-09-24T15:20:25.314313Z",
+            "updated_at": "2025-09-24T15:20:25.314313Z"
+          },
+          {
+            "name": "ARRI Alexa Mini",
+            "description": "",
+            "parent_id": 81,
+            "show_in_print_overview": false,
+            "id": 83,
+            "created_at": "2025-09-24T15:20:25.315245Z",
+            "updated_at": "2025-09-24T15:20:25.315245Z"
+          },
+          {
+            "name": "ARRI Alexa Mini set #01",
+            "description": "",
+            "parent_id": 83,
+            "show_in_print_overview": true,
+            "id": 84,
+            "created_at": "2025-09-24T15:20:25.316225Z",
+            "updated_at": "2025-09-24T15:20:25.316225Z"
+          },
+          {
+            "name": "ARRI Alexa Mini 0#",
+            "description": "",
+            "parent_id": 48,
+            "show_in_print_overview": true,
+            "id": 85,
+            "created_at": "2025-09-24T15:20:25.317143Z",
+            "updated_at": "2025-09-24T15:20:25.317143Z"
+          },
+          {
+            "name": "Nucleus-M",
+            "description": "",
+            "parent_id": 54,
+            "show_in_print_overview": true,
+            "id": 86,
+            "created_at": "2025-09-24T15:20:25.318070Z",
+            "updated_at": "2025-09-24T15:20:25.318070Z"
+          },
+          {
+            "name": "#3",
+            "description": "",
+            "parent_id": 86,
+            "show_in_print_overview": false,
+            "id": 87,
+            "created_at": "2025-09-24T15:20:25.318988Z",
+            "updated_at": "2025-09-24T15:20:25.318988Z"
+          },
+          {
+            "name": "#1",
+            "description": "",
+            "parent_id": 86,
+            "show_in_print_overview": false,
+            "id": 88,
+            "created_at": "2025-09-24T15:20:25.319923Z",
+            "updated_at": "2025-09-24T15:20:25.319923Z"
+          },
+          {
+            "name": "#6",
+            "description": "",
+            "parent_id": 86,
+            "show_in_print_overview": false,
+            "id": 89,
+            "created_at": "2025-09-24T15:20:25.320856Z",
+            "updated_at": "2025-09-24T15:20:25.320856Z"
+          },
+          {
+            "name": "#2",
+            "description": "",
+            "parent_id": 86,
+            "show_in_print_overview": false,
+            "id": 90,
+            "created_at": "2025-09-24T15:20:25.321766Z",
+            "updated_at": "2025-09-24T15:20:25.321766Z"
+          },
+          {
+            "name": "#4",
+            "description": "",
+            "parent_id": 86,
+            "show_in_print_overview": false,
+            "id": 91,
+            "created_at": "2025-09-24T15:20:25.322683Z",
+            "updated_at": "2025-09-24T15:20:25.322683Z"
+          },
+          {
+            "name": "#5",
+            "description": "",
+            "parent_id": 86,
+            "show_in_print_overview": false,
+            "id": 92,
+            "created_at": "2025-09-24T15:20:25.323604Z",
+            "updated_at": "2025-09-24T15:20:25.323604Z"
+          },
+          {
+            "name": "Sony FX-3",
+            "description": "",
+            "parent_id": 72,
+            "show_in_print_overview": false,
+            "id": 93,
+            "created_at": "2025-09-24T15:20:25.324538Z",
+            "updated_at": "2025-09-24T15:20:25.324538Z"
+          },
+          {
+            "name": "ARRI Alexa 35 #1",
+            "description": "",
+            "parent_id": 48,
+            "show_in_print_overview": true,
+            "id": 94,
+            "created_at": "2025-09-24T15:20:25.325455Z",
+            "updated_at": "2025-09-24T15:20:25.325455Z"
+          },
+          {
+            "name": "ARRI Alexa 35 #2",
+            "description": "",
+            "parent_id": 48,
+            "show_in_print_overview": true,
+            "id": 95,
+            "created_at": "2025-09-24T15:20:25.326388Z",
+            "updated_at": "2025-09-24T15:20:25.326388Z"
+          },
+          {
+            "name": "Nucleus-M Accessories",
+            "description": "",
+            "parent_id": 86,
+            "show_in_print_overview": false,
+            "id": 96,
+            "created_at": "2025-09-24T15:20:25.327302Z",
+            "updated_at": "2025-09-24T15:20:25.327302Z"
+          },
+          {
+            "name": "GoPro Hero 13 Black",
+            "description": "",
+            "parent_id": 49,
+            "show_in_print_overview": true,
+            "id": 97,
+            "created_at": "2025-09-24T15:20:25.328213Z",
+            "updated_at": "2025-09-24T15:20:25.328213Z"
+          },
+          {
+            "name": "Action cam Accessories",
+            "description": "",
+            "parent_id": 49,
+            "show_in_print_overview": true,
+            "id": 98,
+            "created_at": "2025-09-24T15:20:25.329137Z",
+            "updated_at": "2025-09-24T15:20:25.329137Z"
+          },
+          {
+            "name": "Blackmagic Accessories",
+            "description": "",
+            "parent_id": 74,
+            "show_in_print_overview": false,
+            "id": 99,
+            "created_at": "2025-09-24T15:20:25.330064Z",
+            "updated_at": "2025-09-24T15:20:25.330064Z"
+          },
+          {
+            "name": "# 01",
+            "description": "",
+            "parent_id": 65,
+            "show_in_print_overview": true,
+            "id": 100,
+            "created_at": "2025-09-24T15:20:25.330988Z",
+            "updated_at": "2025-09-24T15:20:25.330988Z"
+          },
+          {
+            "name": "Accessories for Sony FX3",
+            "description": "",
+            "parent_id": 93,
+            "show_in_print_overview": false,
+            "id": 101,
+            "created_at": "2025-09-24T15:20:25.331937Z",
+            "updated_at": "2025-09-24T15:20:25.331937Z"
+          },
+          {
+            "name": "ARRI Alexa Classic #01",
+            "description": "",
+            "parent_id": 79,
+            "show_in_print_overview": true,
+            "id": 102,
+            "created_at": "2025-09-24T15:20:25.332850Z",
+            "updated_at": "2025-09-24T15:20:25.332850Z"
+          },
+          {
+            "name": "ARRI Alexa Accessories",
+            "description": "",
+            "parent_id": 81,
+            "show_in_print_overview": true,
+            "id": 103,
+            "created_at": "2025-09-24T15:20:25.333777Z",
+            "updated_at": "2025-09-24T15:20:25.333777Z"
+          },
+          {
+            "name": "Cameras",
+            "description": "Video and photo cameras",
+            "parent_id": null,
+            "show_in_print_overview": true,
+            "id": 104,
+            "created_at": "2025-09-25T12:51:36.829198Z",
+            "updated_at": "2025-09-25T12:51:36.829198Z"
+          },
+          {
+            "name": "Lenses",
+            "description": "Camera lenses",
+            "parent_id": null,
+            "show_in_print_overview": true,
+            "id": 105,
+            "created_at": "2025-09-25T12:51:36.835248Z",
+            "updated_at": "2025-09-25T12:51:36.835248Z"
+          },
+          {
+            "name": "Lighting",
+            "description": "Lighting equipment",
+            "parent_id": null,
+            "show_in_print_overview": true,
+            "id": 106,
+            "created_at": "2025-09-25T12:51:36.836658Z",
+            "updated_at": "2025-09-25T12:51:36.836658Z"
+          },
+          {
+            "name": "Audio",
+            "description": "Audio equipment",
+            "parent_id": null,
+            "show_in_print_overview": true,
+            "id": 107,
+            "created_at": "2025-09-25T12:51:36.838119Z",
+            "updated_at": "2025-09-25T12:51:36.838119Z"
+          },
+          {
+            "name": "DSLR Cameras",
+            "description": "Digital SLR cameras",
+            "parent_id": 104,
+            "show_in_print_overview": true,
+            "id": 108,
+            "created_at": "2025-09-25T12:51:36.839134Z",
+            "updated_at": "2025-09-25T12:51:36.839134Z"
+          },
+          {
+            "name": "Cinema Cameras",
+            "description": "Professional cinema cameras",
+            "parent_id": 104,
+            "show_in_print_overview": true,
+            "id": 109,
+            "created_at": "2025-09-25T12:51:36.841231Z",
+            "updated_at": "2025-09-25T12:51:36.841231Z"
+          },
+          {
+            "name": "Prime Lenses",
+            "description": "Fixed focal length lenses",
+            "parent_id": 105,
+            "show_in_print_overview": true,
+            "id": 110,
+            "created_at": "2025-09-25T12:51:36.842263Z",
+            "updated_at": "2025-09-25T12:51:36.842263Z"
+          },
+          {
+            "name": "Zoom Lenses",
+            "description": "Variable focal length lenses",
+            "parent_id": 105,
+            "show_in_print_overview": true,
+            "id": 111,
+            "created_at": "2025-09-25T12:51:36.843305Z",
+            "updated_at": "2025-09-25T12:51:36.843305Z"
+          },
+          {
+            "name": "LED Panels",
+            "description": "LED lighting panels",
+            "parent_id": 106,
+            "show_in_print_overview": true,
+            "id": 112,
+            "created_at": "2025-09-25T12:51:36.844559Z",
+            "updated_at": "2025-09-25T12:51:36.844559Z"
+          },
+          {
+            "name": "Microphones",
+            "description": "Various microphones",
+            "parent_id": 107,
+            "show_in_print_overview": true,
+            "id": 113,
+            "created_at": "2025-09-25T12:51:36.846546Z",
+            "updated_at": "2025-09-25T12:51:36.846546Z"
+          }
+        ]
+      },
+      {
+        "url": "http://localhost:8000/static/js/universal-cart/ui/cart-renderer.js",
+        "status": 200,
+        "status_text": "OK",
+        "headers": {
+          "accept-ranges": "bytes",
+          "content-length": "24241",
+          "date": "Thu, 25 Sep 2025 13:10:25 GMT",
+          "etag": "\"cb96d3895c441b6cc25b70fd712e5599\"",
+          "content-type": "text/javascript; charset=utf-8",
+          "last-modified": "Thu, 26 Jun 2025 19:01:22 GMT",
+          "server": "uvicorn"
+        },
+        "timestamp": "2025-09-25T16:10:25.901628"
+      },
+      {
+        "url": "http://localhost:8000/static/js/universal-cart/ui/cart-dialogs.js",
+        "status": 200,
+        "status_text": "OK",
+        "headers": {
+          "accept-ranges": "bytes",
+          "content-length": "12396",
+          "date": "Thu, 25 Sep 2025 13:10:25 GMT",
+          "etag": "\"84f6b915d7e89dd664c5ec9316b8b255\"",
+          "content-type": "text/javascript; charset=utf-8",
+          "last-modified": "Thu, 26 Jun 2025 10:42:42 GMT",
+          "server": "uvicorn"
+        },
+        "timestamp": "2025-09-25T16:10:25.908185"
+      },
+      {
+        "url": "http://localhost:8000/static/js/universal-cart/handlers/cart-event-handler.js",
+        "status": 200,
+        "status_text": "OK",
+        "headers": {
+          "accept-ranges": "bytes",
+          "content-length": "32772",
+          "date": "Thu, 25 Sep 2025 13:10:25 GMT",
+          "etag": "\"ddb8b00c4f3df41c595dce0c54a245af\"",
+          "content-type": "text/javascript; charset=utf-8",
+          "last-modified": "Mon, 30 Jun 2025 12:10:01 GMT",
+          "server": "uvicorn"
+        },
+        "timestamp": "2025-09-25T16:10:25.910953"
+      },
+      {
+        "url": "http://localhost:8000/static/js/universal-cart/config/cart-configs.js",
+        "status": 200,
+        "status_text": "OK",
+        "headers": {
+          "accept-ranges": "bytes",
+          "content-length": "14270",
+          "date": "Thu, 25 Sep 2025 13:10:25 GMT",
+          "etag": "\"3cf3d630b3aaa450ed5a5fe7da525004\"",
+          "content-type": "text/javascript; charset=utf-8",
+          "last-modified": "Thu, 26 Jun 2025 19:01:56 GMT",
+          "server": "uvicorn"
+        },
+        "timestamp": "2025-09-25T16:10:25.913160"
+      },
+      {
+        "url": "http://localhost:8000/static/js/universal-cart/integration/cart-integration.js",
+        "status": 200,
+        "status_text": "OK",
+        "headers": {
+          "accept-ranges": "bytes",
+          "content-length": "23276",
+          "date": "Thu, 25 Sep 2025 13:10:25 GMT",
+          "etag": "\"9d3f101fc1da9fc2002c6c2baf671303\"",
+          "content-type": "text/javascript; charset=utf-8",
+          "last-modified": "Thu, 26 Jun 2025 12:10:22 GMT",
+          "server": "uvicorn"
+        },
+        "timestamp": "2025-09-25T16:10:25.915419"
+      },
+      {
+        "url": "http://localhost:8000/static/js/universal-cart/utils/cart-factory.js",
+        "status": 200,
+        "status_text": "OK",
+        "headers": {
+          "accept-ranges": "bytes",
+          "content-length": "6394",
+          "date": "Thu, 25 Sep 2025 13:10:25 GMT",
+          "etag": "\"3dad55afb705a98206622fbbc9b83369\"",
+          "content-type": "text/javascript; charset=utf-8",
+          "last-modified": "Thu, 26 Jun 2025 19:00:07 GMT",
+          "server": "uvicorn"
+        },
+        "timestamp": "2025-09-25T16:10:25.950091"
+      },
+      {
+        "url": "http://localhost:8000/api/v1/equipment/paginated-with-rental-status?page=1&size=20",
+        "status": 200,
+        "status_text": "OK",
+        "headers": {
+          "content-length": "11594",
+          "date": "Thu, 25 Sep 2025 13:10:25 GMT",
+          "content-type": "application/json",
+          "server": "uvicorn"
+        },
+        "timestamp": "2025-09-25T16:10:25.919484",
+        "json_body": {
+          "items": [
+            {
+              "id": 1,
+              "name": "\u041a\u0430\u0431\u0435\u043b\u044c BNC 0.5\u043c",
+              "description": "",
+              "replacement_cost": 0,
+              "barcode": "00000031574",
+              "serial_number": "",
+              "category_id": 13,
+              "status": "AVAILABLE",
+              "created_at": "2025-09-24T15:20:25.351922Z",
+              "updated_at": "2025-09-24T15:20:25.351922Z",
+              "notes": null,
+              "category_name": "Cables",
+              "category": null,
+              "active_projects": [
+                {
+                  "id": 54,
+                  "name": "\u0422\u0430\u043c\u0431\u043e\u0432\u0441\u043a\u0438\u0439 \u0412\u043e\u043b\u043a \u043a1",
+                  "dates": "21.05 - 30.09",
+                  "start_date": "2025-05-21T00:00:00+00:00",
+                  "end_date": "2025-09-30T00:00:00+00:00"
+                },
+                {
+                  "id": 50,
+                  "name": "\u041a\u043e\u043c\u0438\u0441\u0441\u0430\u0440 \u043f\u043e\u043b\u0438\u0446\u0438\u0438",
+                  "dates": "03.08 - 30.09",
+                  "start_date": "2025-08-03T21:00:00+00:00",
+                  "end_date": "2025-09-30T20:59:00+00:00"
+                },
+                {
+                  "id": 63,
+                  "name": "\u041d\u0435\u041a\u0441\u044e\u0448\u0430",
+                  "dates": "21.08 - 21.08",
+                  "start_date": "2025-08-21T07:00:00+00:00",
+                  "end_date": "2025-08-21T20:59:00+00:00"
+                }
+              ],
+              "is_available": true,
+              "rental_status": "on-project",
+              "rental_status_display": "\u041d\u0430 \u043f\u0440\u043e\u0435\u043a\u0442\u0435"
+            },
+            {
+              "id": 2,
+              "name": "\u0428\u0442\u0430\u0442\u0438\u0432 \u043a\u043e\u0440\u043e\u0442\u043a\u0438\u0439 DA 150S",
+              "description": "",
+              "replacement_cost": 0,
+              "barcode": "00000034271",
+              "serial_number": "00000034271",
+              "category_id": 55,
+              "status": "AVAILABLE",
+              "created_at": "2025-09-24T15:20:25.426612Z",
+              "updated_at": "2025-09-24T15:20:25.426612Z",
+              "notes": null,
+              "category_name": "\u0428\u0442\u0430\u0442\u0438\u0432 \u041a\u043e\u0440\u043e\u0442\u043a\u0438\u0439",
+              "category": null,
+              "active_projects": [
+                {
+                  "id": 54,
+                  "name": "\u0422\u0430\u043c\u0431\u043e\u0432\u0441\u043a\u0438\u0439 \u0412\u043e\u043b\u043a \u043a1",
+                  "dates": "21.05 - 30.09",
+                  "start_date": "2025-05-21T00:00:00+00:00",
+                  "end_date": "2025-09-30T00:00:00+00:00"
+                }
+              ],
+              "is_available": true,
+              "rental_status": "on-project",
+              "rental_status_display": "\u041d\u0430 \u043f\u0440\u043e\u0435\u043a\u0442\u0435"
+            },
+            {
+              "id": 3,
+              "name": "Filter Frames 4x4",
+              "description": "",
+              "replacement_cost": 0,
+              "barcode": "00000033045",
+              "serial_number": "00000033045",
+              "category_id": 39,
+              "status": "AVAILABLE",
+              "created_at": "2025-09-24T15:20:25.428114Z",
+              "updated_at": "2025-09-24T15:20:25.428114Z",
+              "notes": null,
+              "category_name": "Matte Box Accessories ",
+              "category": null,
+              "active_projects": [
+                {
+                  "id": 54,
+                  "name": "\u0422\u0430\u043c\u0431\u043e\u0432\u0441\u043a\u0438\u0439 \u0412\u043e\u043b\u043a \u043a1",
+                  "dates": "21.05 - 30.09",
+                  "start_date": "2025-05-21T00:00:00+00:00",
+                  "end_date": "2025-09-30T00:00:00+00:00"
+                }
+              ],
+              "is_available": true,
+              "rental_status": "on-project",
+              "rental_status_display": "\u041d\u0430 \u043f\u0440\u043e\u0435\u043a\u0442\u0435"
+            },
+            {
+              "id": 4,
+              "name": "\u041a\u043e\u043c\u043f\u0435\u043d\u0434\u0438\u0443\u043c LMB-5",
+              "description": "\u0420\u0430\u043c\u043a\u0430 4x5,6 2x\nTop Flag\n\u041a\u0430\u0448\u0435\u0442\u043a\u0438 5x",
+              "replacement_cost": 0,
+              "barcode": "00000035509",
+              "serial_number": "00000035509",
+              "category_id": 24,
+              "status": "AVAILABLE",
+              "created_at": "2025-09-24T15:20:25.429099Z",
+              "updated_at": "2025-09-24T15:20:25.429099Z",
+              "notes": null,
+              "category_name": "LMB",
+              "category": null,
+              "active_projects": [],
+              "is_available": true,
+              "rental_status": "available",
+              "rental_status_display": "\u0421\u0432\u043e\u0431\u043e\u0434\u0435\u043d"
+            },
+            {
+              "id": 5,
+              "name": "\u041f\u043b\u0435\u0447\u0435\u0432\u043e\u0439 \u0443\u043f\u043e\u0440 ARRI",
+              "description": "",
+              "replacement_cost": 0,
+              "barcode": "00000033711",
+              "serial_number": "00000033711",
+              "category_id": 4,
+              "status": "AVAILABLE",
+              "created_at": "2025-09-24T15:20:25.430132Z",
+              "updated_at": "2025-09-24T15:20:25.430132Z",
+              "notes": null,
+              "category_name": "\u0428\u0442\u0430\u0442\u0438\u0432\u044b, \u043f\u043b\u0435\u0447\u0435\u0432\u044b\u0435 \u0443\u043f\u043e\u0440\u044b/Tripods, Rigs",
+              "category": null,
+              "active_projects": [
+                {
+                  "id": 54,
+                  "name": "\u0422\u0430\u043c\u0431\u043e\u0432\u0441\u043a\u0438\u0439 \u0412\u043e\u043b\u043a \u043a1",
+                  "dates": "21.05 - 30.09",
+                  "start_date": "2025-05-21T00:00:00+00:00",
+                  "end_date": "2025-09-30T00:00:00+00:00"
+                }
+              ],
+              "is_available": true,
+              "rental_status": "on-project",
+              "rental_status_display": "\u041d\u0430 \u043f\u0440\u043e\u0435\u043a\u0442\u0435"
+            },
+            {
+              "id": 6,
+              "name": "\u0428\u0442\u0430\u0442\u0438\u0432\u043d\u0430\u044f \u0433\u043e\u043b\u043e\u0432\u0430 Sachtler 7+7",
+              "description": null,
+              "replacement_cost": 0,
+              "barcode": "00000034053",
+              "serial_number": "4S3928",
+              "category_id": 3,
+              "status": "AVAILABLE",
+              "created_at": "2025-09-24T15:20:25.431063Z",
+              "updated_at": "2025-09-24T15:20:25.431063Z",
+              "notes": null,
+              "category_name": "\u0428\u0442\u0430\u0442\u0438\u0432\u043d\u044b\u0435 \u0433\u043e\u043b\u043e\u0432\u044b/Heads",
+              "category": null,
+              "active_projects": [],
+              "is_available": true,
+              "rental_status": "available",
+              "rental_status_display": "\u0421\u0432\u043e\u0431\u043e\u0434\u0435\u043d"
+            },
+            {
+              "id": 7,
+              "name": "Clamp \u00d8 114mm",
+              "description": "",
+              "replacement_cost": 0,
+              "barcode": "00000024712",
+              "serial_number": "00000024712",
+              "category_id": 53,
+              "status": "AVAILABLE",
+              "created_at": "2025-09-24T15:20:25.432050Z",
+              "updated_at": "2025-09-24T15:20:25.432050Z",
+              "notes": null,
+              "category_name": "Clamp",
+              "category": null,
+              "active_projects": [],
+              "is_available": true,
+              "rental_status": "available",
+              "rental_status_display": "\u0421\u0432\u043e\u0431\u043e\u0434\u0435\u043d"
+            },
+            {
+              "id": 8,
+              "name": "C-stand 20\"",
+              "description": null,
+              "replacement_cost": 0,
+              "barcode": "00000035945",
+              "serial_number": null,
+              "category_id": 44,
+              "status": "AVAILABLE",
+              "created_at": "2025-09-24T15:20:25.432942Z",
+              "updated_at": "2025-09-24T15:20:25.432942Z",
+              "notes": null,
+              "category_name": "C-stand",
+              "category": null,
+              "active_projects": [
+                {
+                  "id": 54,
+                  "name": "\u0422\u0430\u043c\u0431\u043e\u0432\u0441\u043a\u0438\u0439 \u0412\u043e\u043b\u043a \u043a1",
+                  "dates": "21.05 - 30.09",
+                  "start_date": "2025-05-21T00:00:00+00:00",
+                  "end_date": "2025-09-30T00:00:00+00:00"
+                },
+                {
+                  "id": 50,
+                  "name": "\u041a\u043e\u043c\u0438\u0441\u0441\u0430\u0440 \u043f\u043e\u043b\u0438\u0446\u0438\u0438",
+                  "dates": "03.08 - 30.09",
+                  "start_date": "2025-08-03T21:00:00+00:00",
+                  "end_date": "2025-09-30T20:59:00+00:00"
+                },
+                {
+                  "id": 62,
+                  "name": "\u0422\u0421\u0416 \u041b\u044e\u0431\u0430",
+                  "dates": "22.08 - 06.09",
+                  "start_date": "2025-08-22T07:00:00+00:00",
+                  "end_date": "2025-09-06T20:59:00+00:00"
+                },
+                {
+                  "id": 67,
+                  "name": "\u041f\u043e\u043a\u0430 \u043d\u0435\u0431\u043e \u0441\u043c\u043e\u0442\u0440\u0438\u0442",
+                  "dates": "22.08 - 14.09",
+                  "start_date": "2025-08-22T21:00:00+00:00",
+                  "end_date": "2025-09-14T20:59:00+00:00"
+                },
+                {
+                  "id": 71,
+                  "name": "\u041a\u043e\u043c\u0438\u0441\u0441\u0430\u0440 \u043f\u043e\u043b\u0438\u0446\u0438\u0438 2 \u044e\u043d\u0438\u0442 23-25 \u0430\u0432\u0433\u0443\u0441\u0442\u0430",
+                  "dates": "23.08 - 25.08",
+                  "start_date": "2025-08-23T00:00:00+00:00",
+                  "end_date": "2025-08-25T23:59:00+00:00"
+                }
+              ],
+              "is_available": true,
+              "rental_status": "on-project",
+              "rental_status_display": "\u041d\u0430 \u043f\u0440\u043e\u0435\u043a\u0442\u0435"
+            },
+            {
+              "id": 9,
+              "name": "\u0424\u0438\u043b\u044c\u0442\u0440 NISI 4x5.6 IRND 1.5",
+              "description": "",
+              "replacement_cost": 0,
+              "barcode": "00000050035",
+              "serial_number": "00000050035",
+              "category_id": 30,
+              "status": "AVAILABLE",
+              "created_at": "2025-09-24T15:20:25.433977Z",
+              "updated_at": "2025-09-24T15:20:25.433977Z",
+              "notes": null,
+              "category_name": "ND/IRND",
+              "category": null,
+              "active_projects": [
+                {
+                  "id": 62,
+                  "name": "\u0422\u0421\u0416 \u041b\u044e\u0431\u0430",
+                  "dates": "22.08 - 06.09",
+                  "start_date": "2025-08-22T07:00:00+00:00",
+                  "end_date": "2025-09-06T20:59:00+00:00"
+                }
+              ],
+              "is_available": true,
+              "rental_status": "on-project",
+              "rental_status_display": "\u041d\u0430 \u043f\u0440\u043e\u0435\u043a\u0442\u0435"
+            },
+            {
+              "id": 10,
+              "name": "NP-F",
+              "description": "",
+              "replacement_cost": 0,
+              "barcode": "00000038860",
+              "serial_number": "00000038860",
+              "category_id": 40,
+              "status": "AVAILABLE",
+              "created_at": "2025-09-24T15:20:25.434949Z",
+              "updated_at": "2025-09-24T15:20:25.434949Z",
+              "notes": null,
+              "category_name": "NP-F",
+              "category": null,
+              "active_projects": [],
+              "is_available": true,
+              "rental_status": "available",
+              "rental_status_display": "\u0421\u0432\u043e\u0431\u043e\u0434\u0435\u043d"
+            },
+            {
+              "id": 11,
+              "name": "\u041f\u043b\u0435\u0447\u0435\u0432\u043e\u0439 \u0443\u043f\u043e\u0440 RED",
+              "description": "\u0420\u0443\u0447\u043a\u0438 (2x)\nDogbone B (2x)\n\u0411\u0430\u0440\u0430\u0448\u0435\u043a 1/4-20 (4x)\n\u041a\u0440\u0435\u043f\u043b\u0435\u043d\u0438\u0435 \u043d\u0430 \u0441\u0443\u043f\u043f\u043e\u0440\u0442\u0430\n\u041a\u0440\u0435\u043f\u043b\u0435\u043d\u0438\u0435 \u0434\u043b\u044f \u0440\u0443\u0447\u0435\u043a",
+              "replacement_cost": 0,
+              "barcode": "00000039214",
+              "serial_number": "00000039214",
+              "category_id": 4,
+              "status": "AVAILABLE",
+              "created_at": "2025-09-24T15:20:25.435939Z",
+              "updated_at": "2025-09-24T15:20:25.435939Z",
+              "notes": null,
+              "category_name": "\u0428\u0442\u0430\u0442\u0438\u0432\u044b, \u043f\u043b\u0435\u0447\u0435\u0432\u044b\u0435 \u0443\u043f\u043e\u0440\u044b/Tripods, Rigs",
+              "category": null,
+              "active_projects": [],
+              "is_available": true,
+              "rental_status": "available",
+              "rental_status_display": "\u0421\u0432\u043e\u0431\u043e\u0434\u0435\u043d"
+            },
+            {
+              "id": 12,
+              "name": "Magic Arm L",
+              "description": null,
+              "replacement_cost": 0,
+              "barcode": "00000039541",
+              "serial_number": null,
+              "category_id": 14,
+              "status": "AVAILABLE",
+              "created_at": "2025-09-24T15:20:25.436957Z",
+              "updated_at": "2025-09-24T15:20:25.436957Z",
+              "notes": null,
+              "category_name": "Accessories",
+              "category": null,
+              "active_projects": [
+                {
+                  "id": 63,
+                  "name": "\u041d\u0435\u041a\u0441\u044e\u0448\u0430",
+                  "dates": "21.08 - 21.08",
+                  "start_date": "2025-08-21T07:00:00+00:00",
+                  "end_date": "2025-08-21T20:59:00+00:00"
+                }
+              ],
+              "is_available": true,
+              "rental_status": "on-project",
+              "rental_status_display": "\u041d\u0430 \u043f\u0440\u043e\u0435\u043a\u0442\u0435"
+            },
+            {
+              "id": 13,
+              "name": "\u0424\u0438\u043b\u044c\u0442\u0440 NISI 4x5.6 IRND 1.8",
+              "description": "",
+              "replacement_cost": 0,
+              "barcode": "00000050253",
+              "serial_number": "00000050253",
+              "category_id": 30,
+              "status": "AVAILABLE",
+              "created_at": "2025-09-24T15:20:25.437873Z",
+              "updated_at": "2025-09-24T15:20:25.437873Z",
+              "notes": null,
+              "category_name": "ND/IRND",
+              "category": null,
+              "active_projects": [
+                {
+                  "id": 67,
+                  "name": "\u041f\u043e\u043a\u0430 \u043d\u0435\u0431\u043e \u0441\u043c\u043e\u0442\u0440\u0438\u0442",
+                  "dates": "22.08 - 14.09",
+                  "start_date": "2025-08-22T21:00:00+00:00",
+                  "end_date": "2025-09-14T20:59:00+00:00"
+                }
+              ],
+              "is_available": true,
+              "rental_status": "on-project",
+              "rental_status_display": "\u041d\u0430 \u043f\u0440\u043e\u0435\u043a\u0442\u0435"
+            },
+            {
+              "id": 14,
+              "name": "\u0410\u043a\u043a\u0443\u043c\u0443\u043b\u044f\u0442\u043e\u0440 KingMa 95W",
+              "description": "",
+              "replacement_cost": 0,
+              "barcode": "00000041690",
+              "serial_number": "00000041690",
+              "category_id": 35,
+              "status": "AVAILABLE",
+              "created_at": "2025-09-24T15:20:25.438786Z",
+              "updated_at": "2025-09-24T15:20:25.438786Z",
+              "notes": null,
+              "category_name": "V-mount",
+              "category": null,
+              "active_projects": [],
+              "is_available": true,
+              "rental_status": "available",
+              "rental_status_display": "\u0421\u0432\u043e\u0431\u043e\u0434\u0435\u043d"
+            },
+            {
+              "id": 15,
+              "name": "\u0410\u043a\u043a\u0443\u043c\u0443\u043b\u044f\u0442\u043e\u0440 KingMa 95W",
+              "description": "",
+              "replacement_cost": 0,
+              "barcode": "00000041702",
+              "serial_number": "00000041702",
+              "category_id": 35,
+              "status": "AVAILABLE",
+              "created_at": "2025-09-24T15:20:25.439700Z",
+              "updated_at": "2025-09-24T15:20:25.439700Z",
+              "notes": null,
+              "category_name": "V-mount",
+              "category": null,
+              "active_projects": [],
+              "is_available": true,
+              "rental_status": "available",
+              "rental_status_display": "\u0421\u0432\u043e\u0431\u043e\u0434\u0435\u043d"
+            },
+            {
+              "id": 16,
+              "name": "\u0424\u0438\u043b\u044c\u0442\u0440 NISI 4x5.6 IRND 1.8",
+              "description": "",
+              "replacement_cost": 0,
+              "barcode": "00000050362",
+              "serial_number": "00000050362",
+              "category_id": 30,
+              "status": "AVAILABLE",
+              "created_at": "2025-09-24T15:20:25.440595Z",
+              "updated_at": "2025-09-24T15:20:25.440595Z",
+              "notes": null,
+              "category_name": "ND/IRND",
+              "category": null,
+              "active_projects": [],
+              "is_available": true,
+              "rental_status": "available",
+              "rental_status_display": "\u0421\u0432\u043e\u0431\u043e\u0434\u0435\u043d"
+            },
+            {
+              "id": 17,
+              "name": "V-mount 300W",
+              "description": "",
+              "replacement_cost": 0,
+              "barcode": "00000046294",
+              "serial_number": "00000046294",
+              "category_id": 35,
+              "status": "AVAILABLE",
+              "created_at": "2025-09-24T15:20:25.441493Z",
+              "updated_at": "2025-09-24T15:20:25.441493Z",
+              "notes": null,
+              "category_name": "V-mount",
+              "category": null,
+              "active_projects": [
+                {
+                  "id": 62,
+                  "name": "\u0422\u0421\u0416 \u041b\u044e\u0431\u0430",
+                  "dates": "22.08 - 06.09",
+                  "start_date": "2025-08-22T07:00:00+00:00",
+                  "end_date": "2025-09-06T20:59:00+00:00"
+                }
+              ],
+              "is_available": true,
+              "rental_status": "on-project",
+              "rental_status_display": "\u041d\u0430 \u043f\u0440\u043e\u0435\u043a\u0442\u0435"
+            },
+            {
+              "id": 18,
+              "name": "\u0424\u0438\u043b\u044c\u0442\u0440 NISI Clear 4x5.6",
+              "description": "",
+              "replacement_cost": 0,
+              "barcode": "00000046633",
+              "serial_number": "00000046633",
+              "category_id": 33,
+              "status": "AVAILABLE",
+              "created_at": "2025-09-24T15:20:25.442575Z",
+              "updated_at": "2025-09-24T15:20:25.442575Z",
+              "notes": null,
+              "category_name": "Clear",
+              "category": null,
+              "active_projects": [
+                {
+                  "id": 67,
+                  "name": "\u041f\u043e\u043a\u0430 \u043d\u0435\u0431\u043e \u0441\u043c\u043e\u0442\u0440\u0438\u0442",
+                  "dates": "22.08 - 14.09",
+                  "start_date": "2025-08-22T21:00:00+00:00",
+                  "end_date": "2025-09-14T20:59:00+00:00"
+                }
+              ],
+              "is_available": true,
+              "rental_status": "on-project",
+              "rental_status_display": "\u041d\u0430 \u043f\u0440\u043e\u0435\u043a\u0442\u0435"
+            },
+            {
+              "id": 19,
+              "name": "\u0410\u043a\u043a\u0443\u043c\u0443\u043b\u044f\u0442\u043e\u0440 Sony NP-FZ100",
+              "description": "",
+              "replacement_cost": 0,
+              "barcode": "00000057212",
+              "serial_number": "49945556\u041f\u041824110102810140185360532",
+              "category_id": 93,
+              "status": "AVAILABLE",
+              "created_at": "2025-09-24T15:20:25.443503Z",
+              "updated_at": "2025-09-24T15:20:25.443503Z",
+              "notes": null,
+              "category_name": "Sony FX-3",
+              "category": null,
+              "active_projects": [],
+              "is_available": true,
+              "rental_status": "available",
+              "rental_status_display": "\u0421\u0432\u043e\u0431\u043e\u0434\u0435\u043d"
+            },
+            {
+              "id": 20,
+              "name": "\u0424\u0438\u043b\u044c\u0442\u0440 NISI 4x5.6 IRND 2.1",
+              "description": "",
+              "replacement_cost": 0,
+              "barcode": "00000050471",
+              "serial_number": "00000050471",
+              "category_id": 30,
+              "status": "AVAILABLE",
+              "created_at": "2025-09-24T15:20:25.444473Z",
+              "updated_at": "2025-09-24T15:20:25.444473Z",
+              "notes": null,
+              "category_name": "ND/IRND",
+              "category": null,
+              "active_projects": [
+                {
+                  "id": 67,
+                  "name": "\u041f\u043e\u043a\u0430 \u043d\u0435\u0431\u043e \u0441\u043c\u043e\u0442\u0440\u0438\u0442",
+                  "dates": "22.08 - 14.09",
+                  "start_date": "2025-08-22T21:00:00+00:00",
+                  "end_date": "2025-09-14T20:59:00+00:00"
+                }
+              ],
+              "is_available": true,
+              "rental_status": "on-project",
+              "rental_status_display": "\u041d\u0430 \u043f\u0440\u043e\u0435\u043a\u0442\u0435"
+            }
+          ],
+          "total": 846,
+          "page": 1,
+          "size": 20,
+          "pages": 43
+        }
+      },
+      {
+        "url": "http://localhost:8000/static/js/universal-cart/cart-ui.js",
+        "status": 200,
+        "status_text": "OK",
+        "headers": {
+          "accept-ranges": "bytes",
+          "content-length": "22677",
+          "date": "Thu, 25 Sep 2025 13:10:25 GMT",
+          "etag": "\"61d3f614815c7098e50e23f307c61c2c\"",
+          "content-type": "text/javascript; charset=utf-8",
+          "last-modified": "Wed, 10 Sep 2025 14:39:30 GMT",
+          "server": "uvicorn"
+        },
+        "timestamp": "2025-09-25T16:10:25.950894"
+      },
+      {
+        "url": "http://localhost:8000/static/img/favicon.png",
+        "status": 200,
+        "status_text": "OK",
+        "headers": {
+          "accept-ranges": "bytes",
+          "content-length": "10919",
+          "date": "Thu, 25 Sep 2025 13:10:25 GMT",
+          "etag": "\"b0139b892b9bd53bd72534b92e4177c9\"",
+          "content-type": "image/png",
+          "last-modified": "Sat, 22 Mar 2025 12:01:20 GMT",
+          "server": "uvicorn"
+        },
+        "timestamp": "2025-09-25T16:10:25.953074"
+      }
+    ],
+    "functional_discoveries": [
+      "No search input found on equipment page"
+    ],
+    "component_behaviors": {},
+    "state_transitions": {}
+  },
+  "network_requests": [
+    {
+      "timestamp": "2025-09-25T16:10:25.667573",
+      "method": "GET",
+      "url": "http://localhost:8000/equipment",
+      "headers": {
+        "upgrade-insecure-requests": "1",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+        "sec-ch-ua": "\"Not.A/Brand\";v=\"99\", \"Chromium\";v=\"136\"",
+        "sec-ch-ua-mobile": "?0",
+        "sec-ch-ua-platform": "\"macOS\""
+      },
+      "resource_type": "document"
+    },
+    {
+      "timestamp": "2025-09-25T16:10:25.681271",
+      "method": "GET",
+      "url": "http://localhost:8000/equipment/",
+      "headers": {
+        "upgrade-insecure-requests": "1",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+        "sec-ch-ua": "\"Not.A/Brand\";v=\"99\", \"Chromium\";v=\"136\"",
+        "sec-ch-ua-mobile": "?0",
+        "sec-ch-ua-platform": "\"macOS\""
+      },
+      "resource_type": "document"
+    },
+    {
+      "timestamp": "2025-09-25T16:10:25.755122",
+      "method": "GET",
+      "url": "http://localhost:8000/static/css/lib/bootstrap.min.css",
+      "headers": {
+        "sec-ch-ua-platform": "\"macOS\"",
+        "referer": "http://localhost:8000/equipment/",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+        "sec-ch-ua": "\"Not.A/Brand\";v=\"99\", \"Chromium\";v=\"136\"",
+        "sec-ch-ua-mobile": "?0"
+      },
+      "resource_type": "stylesheet"
+    },
+    {
+      "timestamp": "2025-09-25T16:10:25.755307",
+      "method": "GET",
+      "url": "http://localhost:8000/static/css/lib/inter.css",
+      "headers": {
+        "sec-ch-ua-platform": "\"macOS\"",
+        "referer": "http://localhost:8000/equipment/",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+        "sec-ch-ua": "\"Not.A/Brand\";v=\"99\", \"Chromium\";v=\"136\"",
+        "sec-ch-ua-mobile": "?0"
+      },
+      "resource_type": "stylesheet"
+    },
+    {
+      "timestamp": "2025-09-25T16:10:25.755576",
+      "method": "GET",
+      "url": "http://localhost:8000/static/css/lib/all.min.css",
+      "headers": {
+        "sec-ch-ua-platform": "\"macOS\"",
+        "referer": "http://localhost:8000/equipment/",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+        "sec-ch-ua": "\"Not.A/Brand\";v=\"99\", \"Chromium\";v=\"136\"",
+        "sec-ch-ua-mobile": "?0"
+      },
+      "resource_type": "stylesheet"
+    },
+    {
+      "timestamp": "2025-09-25T16:10:25.755717",
+      "method": "GET",
+      "url": "http://localhost:8000/static/css/lib/daterangepicker.css",
+      "headers": {
+        "sec-ch-ua-platform": "\"macOS\"",
+        "referer": "http://localhost:8000/equipment/",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+        "sec-ch-ua": "\"Not.A/Brand\";v=\"99\", \"Chromium\";v=\"136\"",
+        "sec-ch-ua-mobile": "?0"
+      },
+      "resource_type": "stylesheet"
+    },
+    {
+      "timestamp": "2025-09-25T16:10:25.755805",
+      "method": "GET",
+      "url": "http://localhost:8000/static/css/main.css",
+      "headers": {
+        "sec-ch-ua-platform": "\"macOS\"",
+        "referer": "http://localhost:8000/equipment/",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+        "sec-ch-ua": "\"Not.A/Brand\";v=\"99\", \"Chromium\";v=\"136\"",
+        "sec-ch-ua-mobile": "?0"
+      },
+      "resource_type": "stylesheet"
+    },
+    {
+      "timestamp": "2025-09-25T16:10:25.755881",
+      "method": "GET",
+      "url": "http://localhost:8000/static/css/equipment-table.css",
+      "headers": {
+        "sec-ch-ua-platform": "\"macOS\"",
+        "referer": "http://localhost:8000/equipment/",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+        "sec-ch-ua": "\"Not.A/Brand\";v=\"99\", \"Chromium\";v=\"136\"",
+        "sec-ch-ua-mobile": "?0"
+      },
+      "resource_type": "stylesheet"
+    },
+    {
+      "timestamp": "2025-09-25T16:10:25.755955",
+      "method": "GET",
+      "url": "http://localhost:8000/static/css/universal-cart.css",
+      "headers": {
+        "sec-ch-ua-platform": "\"macOS\"",
+        "referer": "http://localhost:8000/equipment/",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+        "sec-ch-ua": "\"Not.A/Brand\";v=\"99\", \"Chromium\";v=\"136\"",
+        "sec-ch-ua-mobile": "?0"
+      },
+      "resource_type": "stylesheet"
+    },
+    {
+      "timestamp": "2025-09-25T16:10:25.756059",
+      "method": "GET",
+      "url": "http://localhost:8000/static/css/lib/select2.min.css",
+      "headers": {
+        "sec-ch-ua-platform": "\"macOS\"",
+        "referer": "http://localhost:8000/equipment/",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+        "sec-ch-ua": "\"Not.A/Brand\";v=\"99\", \"Chromium\";v=\"136\"",
+        "sec-ch-ua-mobile": "?0"
+      },
+      "resource_type": "stylesheet"
+    },
+    {
+      "timestamp": "2025-09-25T16:10:25.756511",
+      "method": "GET",
+      "url": "http://localhost:8000/static/css/select2-bootstrap-fix.css",
+      "headers": {
+        "sec-ch-ua-platform": "\"macOS\"",
+        "referer": "http://localhost:8000/equipment/",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+        "sec-ch-ua": "\"Not.A/Brand\";v=\"99\", \"Chromium\";v=\"136\"",
+        "sec-ch-ua-mobile": "?0"
+      },
+      "resource_type": "stylesheet"
+    },
+    {
+      "timestamp": "2025-09-25T16:10:25.756722",
+      "method": "GET",
+      "url": "http://localhost:8000/static/css/equipment.css",
+      "headers": {
+        "sec-ch-ua-platform": "\"macOS\"",
+        "referer": "http://localhost:8000/equipment/",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+        "sec-ch-ua": "\"Not.A/Brand\";v=\"99\", \"Chromium\";v=\"136\"",
+        "sec-ch-ua-mobile": "?0"
+      },
+      "resource_type": "stylesheet"
+    },
+    {
+      "timestamp": "2025-09-25T16:10:25.757080",
+      "method": "GET",
+      "url": "http://localhost:8000/static/js/lib/jquery-3.7.1.min.js",
+      "headers": {
+        "sec-ch-ua-platform": "\"macOS\"",
+        "referer": "http://localhost:8000/equipment/",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+        "sec-ch-ua": "\"Not.A/Brand\";v=\"99\", \"Chromium\";v=\"136\"",
+        "sec-ch-ua-mobile": "?0"
+      },
+      "resource_type": "script"
+    },
+    {
+      "timestamp": "2025-09-25T16:10:25.757253",
+      "method": "GET",
+      "url": "http://localhost:8000/static/js/lib/bootstrap.bundle.min.js",
+      "headers": {
+        "sec-ch-ua-platform": "\"macOS\"",
+        "referer": "http://localhost:8000/equipment/",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+        "sec-ch-ua": "\"Not.A/Brand\";v=\"99\", \"Chromium\";v=\"136\"",
+        "sec-ch-ua-mobile": "?0"
+      },
+      "resource_type": "script"
+    },
+    {
+      "timestamp": "2025-09-25T16:10:25.757473",
+      "method": "GET",
+      "url": "http://localhost:8000/static/js/lib/moment.min.js",
+      "headers": {
+        "sec-ch-ua-platform": "\"macOS\"",
+        "referer": "http://localhost:8000/equipment/",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+        "sec-ch-ua": "\"Not.A/Brand\";v=\"99\", \"Chromium\";v=\"136\"",
+        "sec-ch-ua-mobile": "?0"
+      },
+      "resource_type": "script"
+    },
+    {
+      "timestamp": "2025-09-25T16:10:25.757585",
+      "method": "GET",
+      "url": "http://localhost:8000/static/js/lib/ru.js",
+      "headers": {
+        "sec-ch-ua-platform": "\"macOS\"",
+        "referer": "http://localhost:8000/equipment/",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+        "sec-ch-ua": "\"Not.A/Brand\";v=\"99\", \"Chromium\";v=\"136\"",
+        "sec-ch-ua-mobile": "?0"
+      },
+      "resource_type": "script"
+    },
+    {
+      "timestamp": "2025-09-25T16:10:25.757753",
+      "method": "GET",
+      "url": "http://localhost:8000/static/js/lib/daterangepicker.min.js",
+      "headers": {
+        "sec-ch-ua-platform": "\"macOS\"",
+        "referer": "http://localhost:8000/equipment/",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+        "sec-ch-ua": "\"Not.A/Brand\";v=\"99\", \"Chromium\";v=\"136\"",
+        "sec-ch-ua-mobile": "?0"
+      },
+      "resource_type": "script"
+    },
+    {
+      "timestamp": "2025-09-25T16:10:25.757973",
+      "method": "GET",
+      "url": "http://localhost:8000/static/js/lib/select2.min.js",
+      "headers": {
+        "sec-ch-ua-platform": "\"macOS\"",
+        "referer": "http://localhost:8000/equipment/",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+        "sec-ch-ua": "\"Not.A/Brand\";v=\"99\", \"Chromium\";v=\"136\"",
+        "sec-ch-ua-mobile": "?0"
+      },
+      "resource_type": "script"
+    },
+    {
+      "timestamp": "2025-09-25T16:10:25.758113",
+      "method": "GET",
+      "url": "http://localhost:8000/static/js/lib/quagga.min.js",
+      "headers": {
+        "sec-ch-ua-platform": "\"macOS\"",
+        "referer": "http://localhost:8000/equipment/",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+        "sec-ch-ua": "\"Not.A/Brand\";v=\"99\", \"Chromium\";v=\"136\"",
+        "sec-ch-ua-mobile": "?0"
+      },
+      "resource_type": "script"
+    },
+    {
+      "timestamp": "2025-09-25T16:10:25.758261",
+      "method": "GET",
+      "url": "http://localhost:8000/static/js/main.js",
+      "headers": {
+        "origin": "http://localhost:8000",
+        "sec-ch-ua-platform": "\"macOS\"",
+        "referer": "http://localhost:8000/equipment/",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+        "sec-ch-ua": "\"Not.A/Brand\";v=\"99\", \"Chromium\";v=\"136\"",
+        "sec-ch-ua-mobile": "?0"
+      },
+      "resource_type": "script"
+    },
+    {
+      "timestamp": "2025-09-25T16:10:25.758368",
+      "method": "GET",
+      "url": "http://localhost:8000/static/js/notifications.js",
+      "headers": {
+        "sec-ch-ua-platform": "\"macOS\"",
+        "referer": "http://localhost:8000/equipment/",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+        "sec-ch-ua": "\"Not.A/Brand\";v=\"99\", \"Chromium\";v=\"136\"",
+        "sec-ch-ua-mobile": "?0"
+      },
+      "resource_type": "script"
+    },
+    {
+      "timestamp": "2025-09-25T16:10:25.758452",
+      "method": "GET",
+      "url": "http://localhost:8000/static/js/datepicker.js",
+      "headers": {
+        "sec-ch-ua-platform": "\"macOS\"",
+        "referer": "http://localhost:8000/equipment/",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+        "sec-ch-ua": "\"Not.A/Brand\";v=\"99\", \"Chromium\";v=\"136\"",
+        "sec-ch-ua-mobile": "?0"
+      },
+      "resource_type": "script"
+    },
+    {
+      "timestamp": "2025-09-25T16:10:25.758554",
+      "method": "GET",
+      "url": "http://localhost:8000/static/js/universal-cart/index.js",
+      "headers": {
+        "sec-ch-ua-platform": "\"macOS\"",
+        "referer": "http://localhost:8000/equipment/",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+        "sec-ch-ua": "\"Not.A/Brand\";v=\"99\", \"Chromium\";v=\"136\"",
+        "sec-ch-ua-mobile": "?0"
+      },
+      "resource_type": "script"
+    },
+    {
+      "timestamp": "2025-09-25T16:10:25.758664",
+      "method": "GET",
+      "url": "http://localhost:8000/static/js/utils/logger.js",
+      "headers": {
+        "origin": "http://localhost:8000",
+        "sec-ch-ua-platform": "\"macOS\"",
+        "referer": "http://localhost:8000/equipment/",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+        "sec-ch-ua": "\"Not.A/Brand\";v=\"99\", \"Chromium\";v=\"136\"",
+        "sec-ch-ua-mobile": "?0"
+      },
+      "resource_type": "script"
+    },
+    {
+      "timestamp": "2025-09-25T16:10:25.758817",
+      "method": "GET",
+      "url": "http://localhost:8000/static/js/utils/api.js",
+      "headers": {
+        "origin": "http://localhost:8000",
+        "sec-ch-ua-platform": "\"macOS\"",
+        "referer": "http://localhost:8000/equipment/",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+        "sec-ch-ua": "\"Not.A/Brand\";v=\"99\", \"Chromium\";v=\"136\"",
+        "sec-ch-ua-mobile": "?0"
+      },
+      "resource_type": "script"
+    },
+    {
+      "timestamp": "2025-09-25T16:10:25.758925",
+      "method": "GET",
+      "url": "http://localhost:8000/static/js/utils/pagination.js",
+      "headers": {
+        "origin": "http://localhost:8000",
+        "sec-ch-ua-platform": "\"macOS\"",
+        "referer": "http://localhost:8000/equipment/",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+        "sec-ch-ua": "\"Not.A/Brand\";v=\"99\", \"Chromium\";v=\"136\"",
+        "sec-ch-ua-mobile": "?0"
+      },
+      "resource_type": "script"
+    },
+    {
+      "timestamp": "2025-09-25T16:10:25.759021",
+      "method": "GET",
+      "url": "http://localhost:8000/static/js/scan-storage.js",
+      "headers": {
+        "origin": "http://localhost:8000",
+        "sec-ch-ua-platform": "\"macOS\"",
+        "referer": "http://localhost:8000/equipment/",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+        "sec-ch-ua": "\"Not.A/Brand\";v=\"99\", \"Chromium\";v=\"136\"",
+        "sec-ch-ua-mobile": "?0"
+      },
+      "resource_type": "script"
+    },
+    {
+      "timestamp": "2025-09-25T16:10:25.759106",
+      "method": "GET",
+      "url": "http://localhost:8000/static/js/equipment-list.js",
+      "headers": {
+        "origin": "http://localhost:8000",
+        "sec-ch-ua-platform": "\"macOS\"",
+        "referer": "http://localhost:8000/equipment/",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+        "sec-ch-ua": "\"Not.A/Brand\";v=\"99\", \"Chromium\";v=\"136\"",
+        "sec-ch-ua-mobile": "?0"
+      },
+      "resource_type": "script"
+    },
+    {
+      "timestamp": "2025-09-25T16:10:25.820459",
+      "method": "GET",
+      "url": "http://localhost:8000/static/fonts/Inter-SemiBold.woff2",
+      "headers": {
+        "origin": "http://localhost:8000",
+        "sec-ch-ua-platform": "\"macOS\"",
+        "referer": "http://localhost:8000/static/css/lib/inter.css",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+        "sec-ch-ua": "\"Not.A/Brand\";v=\"99\", \"Chromium\";v=\"136\"",
+        "sec-ch-ua-mobile": "?0"
+      },
+      "resource_type": "font"
+    },
+    {
+      "timestamp": "2025-09-25T16:10:25.820965",
+      "method": "GET",
+      "url": "http://localhost:8000/static/css/webfonts/fa-solid-900.woff2",
+      "headers": {
+        "origin": "http://localhost:8000",
+        "sec-ch-ua-platform": "\"macOS\"",
+        "referer": "http://localhost:8000/static/css/lib/all.min.css",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+        "sec-ch-ua": "\"Not.A/Brand\";v=\"99\", \"Chromium\";v=\"136\"",
+        "sec-ch-ua-mobile": "?0"
+      },
+      "resource_type": "font"
+    },
+    {
+      "timestamp": "2025-09-25T16:10:25.821221",
+      "method": "GET",
+      "url": "http://localhost:8000/static/fonts/Inter-Medium.woff2",
+      "headers": {
+        "origin": "http://localhost:8000",
+        "sec-ch-ua-platform": "\"macOS\"",
+        "referer": "http://localhost:8000/static/css/lib/inter.css",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+        "sec-ch-ua": "\"Not.A/Brand\";v=\"99\", \"Chromium\";v=\"136\"",
+        "sec-ch-ua-mobile": "?0"
+      },
+      "resource_type": "font"
+    },
+    {
+      "timestamp": "2025-09-25T16:10:25.821465",
+      "method": "GET",
+      "url": "http://localhost:8000/static/fonts/Inter-Regular.woff2",
+      "headers": {
+        "origin": "http://localhost:8000",
+        "sec-ch-ua-platform": "\"macOS\"",
+        "referer": "http://localhost:8000/static/css/lib/inter.css",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+        "sec-ch-ua": "\"Not.A/Brand\";v=\"99\", \"Chromium\";v=\"136\"",
+        "sec-ch-ua-mobile": "?0"
+      },
+      "resource_type": "font"
+    },
+    {
+      "timestamp": "2025-09-25T16:10:25.821672",
+      "method": "GET",
+      "url": "http://localhost:8000/static/fonts/Inter-Bold.woff2",
+      "headers": {
+        "origin": "http://localhost:8000",
+        "sec-ch-ua-platform": "\"macOS\"",
+        "referer": "http://localhost:8000/static/css/lib/inter.css",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+        "sec-ch-ua": "\"Not.A/Brand\";v=\"99\", \"Chromium\";v=\"136\"",
+        "sec-ch-ua-mobile": "?0"
+      },
+      "resource_type": "font"
+    },
+    {
+      "timestamp": "2025-09-25T16:10:25.870428",
+      "method": "GET",
+      "url": "http://localhost:8000/static/js/utils/common.js",
+      "headers": {
+        "origin": "http://localhost:8000",
+        "sec-ch-ua-platform": "\"macOS\"",
+        "referer": "http://localhost:8000/static/js/main.js",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+        "sec-ch-ua": "\"Not.A/Brand\";v=\"99\", \"Chromium\";v=\"136\"",
+        "sec-ch-ua-mobile": "?0"
+      },
+      "resource_type": "script"
+    },
+    {
+      "timestamp": "2025-09-25T16:10:25.870569",
+      "method": "GET",
+      "url": "http://localhost:8000/static/js/utils/ui-helpers.js",
+      "headers": {
+        "origin": "http://localhost:8000",
+        "sec-ch-ua-platform": "\"macOS\"",
+        "referer": "http://localhost:8000/static/js/equipment-list.js",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+        "sec-ch-ua": "\"Not.A/Brand\";v=\"99\", \"Chromium\";v=\"136\"",
+        "sec-ch-ua-mobile": "?0"
+      },
+      "resource_type": "script"
+    },
+    {
+      "timestamp": "2025-09-25T16:10:25.877026",
+      "method": "GET",
+      "url": "http://localhost:8000/static/js/universal-cart/core/universal-cart.js",
+      "headers": {
+        "sec-ch-ua-platform": "\"macOS\"",
+        "referer": "http://localhost:8000/equipment/",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+        "sec-ch-ua": "\"Not.A/Brand\";v=\"99\", \"Chromium\";v=\"136\"",
+        "sec-ch-ua-mobile": "?0"
+      },
+      "resource_type": "script"
+    },
+    {
+      "timestamp": "2025-09-25T16:10:25.880017",
+      "method": "GET",
+      "url": "http://localhost:8000/api/v1/categories",
+      "headers": {
+        "sec-ch-ua-platform": "\"macOS\"",
+        "referer": "http://localhost:8000/equipment/",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+        "sec-ch-ua": "\"Not.A/Brand\";v=\"99\", \"Chromium\";v=\"136\"",
+        "sec-ch-ua-mobile": "?0"
+      },
+      "resource_type": "fetch"
+    },
+    {
+      "timestamp": "2025-09-25T16:10:25.885356",
+      "method": "GET",
+      "url": "http://localhost:8000/api/v1/categories/",
+      "headers": {
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+        "referer": "http://localhost:8000/equipment/"
+      },
+      "resource_type": "fetch"
+    },
+    {
+      "timestamp": "2025-09-25T16:10:25.886236",
+      "method": "GET",
+      "url": "http://localhost:8000/static/js/universal-cart/core/cart-storage.js",
+      "headers": {
+        "sec-ch-ua-platform": "\"macOS\"",
+        "referer": "http://localhost:8000/equipment/",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+        "sec-ch-ua": "\"Not.A/Brand\";v=\"99\", \"Chromium\";v=\"136\"",
+        "sec-ch-ua-mobile": "?0"
+      },
+      "resource_type": "script"
+    },
+    {
+      "timestamp": "2025-09-25T16:10:25.889007",
+      "method": "GET",
+      "url": "http://localhost:8000/static/js/universal-cart/ui/cart-templates.js",
+      "headers": {
+        "sec-ch-ua-platform": "\"macOS\"",
+        "referer": "http://localhost:8000/equipment/",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+        "sec-ch-ua": "\"Not.A/Brand\";v=\"99\", \"Chromium\";v=\"136\"",
+        "sec-ch-ua-mobile": "?0"
+      },
+      "resource_type": "script"
+    },
+    {
+      "timestamp": "2025-09-25T16:10:25.894087",
+      "method": "GET",
+      "url": "http://localhost:8000/api/v1/equipment/paginated-with-rental-status?page=1&size=20",
+      "headers": {
+        "sec-ch-ua-platform": "\"macOS\"",
+        "referer": "http://localhost:8000/equipment/",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+        "sec-ch-ua": "\"Not.A/Brand\";v=\"99\", \"Chromium\";v=\"136\"",
+        "sec-ch-ua-mobile": "?0"
+      },
+      "resource_type": "fetch"
+    },
+    {
+      "timestamp": "2025-09-25T16:10:25.898445",
+      "method": "GET",
+      "url": "http://localhost:8000/static/js/universal-cart/ui/cart-renderer.js",
+      "headers": {
+        "sec-ch-ua-platform": "\"macOS\"",
+        "referer": "http://localhost:8000/equipment/",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+        "sec-ch-ua": "\"Not.A/Brand\";v=\"99\", \"Chromium\";v=\"136\"",
+        "sec-ch-ua-mobile": "?0"
+      },
+      "resource_type": "script"
+    },
+    {
+      "timestamp": "2025-09-25T16:10:25.901812",
+      "method": "GET",
+      "url": "http://localhost:8000/static/js/universal-cart/ui/cart-dialogs.js",
+      "headers": {
+        "sec-ch-ua-platform": "\"macOS\"",
+        "referer": "http://localhost:8000/equipment/",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+        "sec-ch-ua": "\"Not.A/Brand\";v=\"99\", \"Chromium\";v=\"136\"",
+        "sec-ch-ua-mobile": "?0"
+      },
+      "resource_type": "script"
+    },
+    {
+      "timestamp": "2025-09-25T16:10:25.908374",
+      "method": "GET",
+      "url": "http://localhost:8000/static/js/universal-cart/handlers/cart-event-handler.js",
+      "headers": {
+        "sec-ch-ua-platform": "\"macOS\"",
+        "referer": "http://localhost:8000/equipment/",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+        "sec-ch-ua": "\"Not.A/Brand\";v=\"99\", \"Chromium\";v=\"136\"",
+        "sec-ch-ua-mobile": "?0"
+      },
+      "resource_type": "script"
+    },
+    {
+      "timestamp": "2025-09-25T16:10:25.911169",
+      "method": "GET",
+      "url": "http://localhost:8000/static/js/universal-cart/config/cart-configs.js",
+      "headers": {
+        "sec-ch-ua-platform": "\"macOS\"",
+        "referer": "http://localhost:8000/equipment/",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+        "sec-ch-ua": "\"Not.A/Brand\";v=\"99\", \"Chromium\";v=\"136\"",
+        "sec-ch-ua-mobile": "?0"
+      },
+      "resource_type": "script"
+    },
+    {
+      "timestamp": "2025-09-25T16:10:25.913449",
+      "method": "GET",
+      "url": "http://localhost:8000/static/js/universal-cart/integration/cart-integration.js",
+      "headers": {
+        "sec-ch-ua-platform": "\"macOS\"",
+        "referer": "http://localhost:8000/equipment/",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+        "sec-ch-ua": "\"Not.A/Brand\";v=\"99\", \"Chromium\";v=\"136\"",
+        "sec-ch-ua-mobile": "?0"
+      },
+      "resource_type": "script"
+    },
+    {
+      "timestamp": "2025-09-25T16:10:25.915850",
+      "method": "GET",
+      "url": "http://localhost:8000/static/js/universal-cart/utils/cart-factory.js",
+      "headers": {
+        "sec-ch-ua-platform": "\"macOS\"",
+        "referer": "http://localhost:8000/equipment/",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+        "sec-ch-ua": "\"Not.A/Brand\";v=\"99\", \"Chromium\";v=\"136\"",
+        "sec-ch-ua-mobile": "?0"
+      },
+      "resource_type": "script"
+    },
+    {
+      "timestamp": "2025-09-25T16:10:25.950685",
+      "method": "GET",
+      "url": "http://localhost:8000/static/js/universal-cart/cart-ui.js",
+      "headers": {
+        "sec-ch-ua-platform": "\"macOS\"",
+        "referer": "http://localhost:8000/equipment/?page=1&size=20",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+        "sec-ch-ua": "\"Not.A/Brand\";v=\"99\", \"Chromium\";v=\"136\"",
+        "sec-ch-ua-mobile": "?0"
+      },
+      "resource_type": "script"
+    },
+    {
+      "timestamp": "2025-09-25T16:10:25.951652",
+      "method": "GET",
+      "url": "http://localhost:8000/static/img/favicon.png",
+      "headers": {
+        "sec-ch-ua-platform": "\"macOS\"",
+        "referer": "http://localhost:8000/equipment/?page=1&size=20",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+        "sec-ch-ua": "\"Not.A/Brand\";v=\"99\", \"Chromium\";v=\"136\"",
+        "sec-ch-ua-mobile": "?0"
+      },
+      "resource_type": "other"
+    }
+  ]
+}
