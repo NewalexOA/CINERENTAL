@@ -724,6 +724,7 @@ class BookingService:
         start_date: Optional[datetime] = None,
         end_date: Optional[datetime] = None,
         active_only: bool = False,
+        include_deleted: bool = False,
     ) -> Any:
         """Get bookings query for pagination support.
 
@@ -752,6 +753,7 @@ class BookingService:
             payment_status=payment_status,
             start_date=start_date,
             end_date=end_date,
+            include_deleted=include_deleted,
         )
 
         # Apply active_only filter if needed

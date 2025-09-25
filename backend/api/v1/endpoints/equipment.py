@@ -738,6 +738,9 @@ async def get_equipment_bookings(
 async def get_equipment_bookings_paginated(
     equipment_id: int,
     params: Params = Depends(),
+    include_deleted: bool = Query(
+        True, description='Whether to include completed (soft-deleted) bookings'
+    ),
     db: AsyncSession = Depends(get_db),
 ) -> Page[BookingResponse]:
     """Get paginated bookings for a specific equipment item.
@@ -766,7 +769,7 @@ async def get_equipment_bookings_paginated(
         # Get paginated query for equipment bookings
         booking_service = BookingService(db)
         bookings_query = await booking_service.get_filtered_bookings_query(
-            equipment_id=equipment_id
+            equipment_id=equipment_id, include_deleted=include_deleted
         )
 
         # Apply pagination using fastapi-pagination with transformer
