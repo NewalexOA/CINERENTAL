@@ -17,6 +17,8 @@ Full-featured pagination macro with page size selector.
 
 #### Parameters
 
+{% raw %}
+
 ```jinja2
 {% from "macros.jinja2" import pagination %}
 
@@ -36,11 +38,17 @@ Full-featured pagination macro with page size selector.
 ) }}
 ```
 
+{% endraw %}
+
 #### Usage Example
+
+{% raw %}
 
 ```jinja2
 {{ pagination("equipment", default_page_size=20) }}
 ```
+
+{% endraw %}
 
 #### Generated IDs
 
@@ -62,6 +70,8 @@ Simplified pagination macro without page size selector (for catalogs).
 
 #### Configuration
 
+{% raw %}
+
 ```jinja2
 {% from "macros.jinja2" import simple_pagination %}
 
@@ -77,11 +87,17 @@ Simplified pagination macro without page size selector (for catalogs).
 ) }}
 ```
 
+{% endraw %}
+
 #### Usage
+
+{% raw %}
 
 ```jinja2
 {{ simple_pagination("catalog") }}
 ```
+
+{% endraw %}
 
 #### Created Elements
 
@@ -127,18 +143,28 @@ To use in other templates:
 
 1. Add import:
 
+    {% raw %}
+
     ```jinja2
     {% from "macros.jinja2" import pagination, simple_pagination %}
     ```
 
+    {% endraw %}
+
 2. Use macro with unique prefix:
+
+    {% raw %}
 
     ```jinja2
     {{ pagination("clients", default_page_size=50) }}
     {{ simple_pagination("search") }}
     ```
 
+    {% endraw %}
+
 ## Examples for Different Sections
+
+{% raw %}
 
 ```jinja2
 {# Clients #}
@@ -160,6 +186,8 @@ To use in other templates:
 {# Bookings #}
 {{ pagination("bookings", default_page_size=30) }}
 ```
+
+{% endraw %}
 
 ## Page Size Persistence (Version 1.1.0)
 
