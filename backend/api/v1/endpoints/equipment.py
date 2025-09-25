@@ -512,7 +512,9 @@ async def delete_equipment(
     try:
         # Check if equipment has active bookings
         booking_service = BookingService(db)
-        bookings = await booking_service.get_by_equipment(equipment_id)
+        bookings = await booking_service.get_by_equipment(
+            equipment_id, include_deleted=True
+        )
 
         # Filter for active, pending, or confirmed bookings
         active_bookings = [
@@ -766,7 +768,7 @@ async def get_equipment_bookings_paginated(
         # Get paginated query for equipment bookings
         booking_service = BookingService(db)
         bookings_query = await booking_service.get_filtered_bookings_query(
-            equipment_id=equipment_id
+            equipment_id=equipment_id, include_deleted=True
         )
 
         # Apply pagination using fastapi-pagination with transformer
