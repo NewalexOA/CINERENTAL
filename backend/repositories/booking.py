@@ -197,26 +197,28 @@ class BookingRepository(BaseRepository[Booking]):
         result = await self.session.execute(stmt)
         return list(result.unique().scalars().all())
 
-    async def get_by_equipment(self, equipment_id: int) -> List[Booking]:
-        """Get all bookings for equipment (excluding soft-deleted).
+    async def get_by_equipment(
+        self, equipment_id: int, include_deleted: bool = False
+    ) -> List[Booking]:
+        """Get all bookings for equipment.
 
         Args:
             equipment_id: Equipment ID
 
         Returns:
-            List of bookings
+            List of bookings (includes soft-deleted when include_deleted=True)
         """
         stmt = (
             select(self.model)
-            .where(
-                self.model.equipment_id == equipment_id, self.model.deleted_at.is_(None)
-            )
+            .where(self.model.equipment_id == equipment_id)
             .options(
                 joinedload(self.model.client),
                 joinedload(self.model.project),
                 joinedload(self.model.equipment),
             )
         )
+        if not include_deleted:
+            stmt = stmt.where(self.model.deleted_at.is_(None))
         result = await self.session.execute(stmt)
         return list(result.unique().scalars().all())
 
@@ -739,6 +741,7 @@ class BookingRepository(BaseRepository[Booking]):
         payment_status: Optional[PaymentStatus] = None,
         start_date: Optional[datetime] = None,
         end_date: Optional[datetime] = None,
+        include_deleted: bool = False,
     ) -> Select:
         """Get a paginatable query for bookings with optional filtering.
 
@@ -760,7 +763,6 @@ class BookingRepository(BaseRepository[Booking]):
         # Base query with relationships
         stmt = (
             select(Booking)
-            .where(Booking.deleted_at.is_(None))
             .options(
                 joinedload(Booking.equipment).joinedload(Equipment.category),
                 joinedload(Booking.client),
@@ -768,6 +770,8 @@ class BookingRepository(BaseRepository[Booking]):
             )
             .order_by(Booking.created_at.desc())
         )
+        if not include_deleted:
+            stmt = stmt.where(Booking.deleted_at.is_(None))
 
         # Apply filters conditionally
         if query:
