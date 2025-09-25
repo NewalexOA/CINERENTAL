@@ -1,0 +1,1390 @@
+{
+  "network_requests": [
+    {
+      "url": "http://localhost:8000/",
+      "method": "GET",
+      "resource_type": "document",
+      "timestamp": "2025-09-25T15:46:14.823898"
+    },
+    {
+      "url": "http://localhost:8000/static/css/lib/bootstrap.min.css",
+      "method": "GET",
+      "resource_type": "stylesheet",
+      "timestamp": "2025-09-25T15:46:14.869804"
+    },
+    {
+      "url": "http://localhost:8000/static/css/lib/inter.css",
+      "method": "GET",
+      "resource_type": "stylesheet",
+      "timestamp": "2025-09-25T15:46:14.869901"
+    },
+    {
+      "url": "http://localhost:8000/static/css/lib/all.min.css",
+      "method": "GET",
+      "resource_type": "stylesheet",
+      "timestamp": "2025-09-25T15:46:14.869969"
+    },
+    {
+      "url": "http://localhost:8000/static/css/lib/daterangepicker.css",
+      "method": "GET",
+      "resource_type": "stylesheet",
+      "timestamp": "2025-09-25T15:46:14.870043"
+    },
+    {
+      "url": "http://localhost:8000/static/css/main.css",
+      "method": "GET",
+      "resource_type": "stylesheet",
+      "timestamp": "2025-09-25T15:46:14.870129"
+    },
+    {
+      "url": "http://localhost:8000/static/css/equipment-table.css",
+      "method": "GET",
+      "resource_type": "stylesheet",
+      "timestamp": "2025-09-25T15:46:14.870266"
+    },
+    {
+      "url": "http://localhost:8000/static/css/universal-cart.css",
+      "method": "GET",
+      "resource_type": "stylesheet",
+      "timestamp": "2025-09-25T15:46:14.870394"
+    },
+    {
+      "url": "http://localhost:8000/static/css/lib/select2.min.css",
+      "method": "GET",
+      "resource_type": "stylesheet",
+      "timestamp": "2025-09-25T15:46:14.870454"
+    },
+    {
+      "url": "http://localhost:8000/static/css/select2-bootstrap-fix.css",
+      "method": "GET",
+      "resource_type": "stylesheet",
+      "timestamp": "2025-09-25T15:46:14.870514"
+    },
+    {
+      "url": "http://localhost:8000/static/js/lib/jquery-3.7.1.min.js",
+      "method": "GET",
+      "resource_type": "script",
+      "timestamp": "2025-09-25T15:46:14.870572"
+    },
+    {
+      "url": "http://localhost:8000/static/js/lib/bootstrap.bundle.min.js",
+      "method": "GET",
+      "resource_type": "script",
+      "timestamp": "2025-09-25T15:46:14.870633"
+    },
+    {
+      "url": "http://localhost:8000/static/js/lib/moment.min.js",
+      "method": "GET",
+      "resource_type": "script",
+      "timestamp": "2025-09-25T15:46:14.870693"
+    },
+    {
+      "url": "http://localhost:8000/static/js/lib/ru.js",
+      "method": "GET",
+      "resource_type": "script",
+      "timestamp": "2025-09-25T15:46:14.870753"
+    },
+    {
+      "url": "http://localhost:8000/static/js/lib/daterangepicker.min.js",
+      "method": "GET",
+      "resource_type": "script",
+      "timestamp": "2025-09-25T15:46:14.870811"
+    },
+    {
+      "url": "http://localhost:8000/static/js/lib/select2.min.js",
+      "method": "GET",
+      "resource_type": "script",
+      "timestamp": "2025-09-25T15:46:14.871798"
+    },
+    {
+      "url": "http://localhost:8000/static/js/lib/quagga.min.js",
+      "method": "GET",
+      "resource_type": "script",
+      "timestamp": "2025-09-25T15:46:14.871952"
+    },
+    {
+      "url": "http://localhost:8000/static/js/main.js",
+      "method": "GET",
+      "resource_type": "script",
+      "timestamp": "2025-09-25T15:46:14.872115"
+    },
+    {
+      "url": "http://localhost:8000/static/js/notifications.js",
+      "method": "GET",
+      "resource_type": "script",
+      "timestamp": "2025-09-25T15:46:14.872228"
+    },
+    {
+      "url": "http://localhost:8000/static/js/datepicker.js",
+      "method": "GET",
+      "resource_type": "script",
+      "timestamp": "2025-09-25T15:46:14.872310"
+    },
+    {
+      "url": "http://localhost:8000/static/js/universal-cart/index.js",
+      "method": "GET",
+      "resource_type": "script",
+      "timestamp": "2025-09-25T15:46:14.872423"
+    },
+    {
+      "url": "http://localhost:8000/static/fonts/Inter-SemiBold.woff2",
+      "method": "GET",
+      "resource_type": "font",
+      "timestamp": "2025-09-25T15:46:14.906140"
+    },
+    {
+      "url": "http://localhost:8000/static/css/webfonts/fa-solid-900.woff2",
+      "method": "GET",
+      "resource_type": "font",
+      "timestamp": "2025-09-25T15:46:14.906471"
+    },
+    {
+      "url": "http://localhost:8000/static/fonts/Inter-Medium.woff2",
+      "method": "GET",
+      "resource_type": "font",
+      "timestamp": "2025-09-25T15:46:14.906644"
+    },
+    {
+      "url": "http://localhost:8000/static/fonts/Inter-Regular.woff2",
+      "method": "GET",
+      "resource_type": "font",
+      "timestamp": "2025-09-25T15:46:14.906793"
+    },
+    {
+      "url": "http://localhost:8000/static/js/utils/common.js",
+      "method": "GET",
+      "resource_type": "script",
+      "timestamp": "2025-09-25T15:46:14.935327"
+    },
+    {
+      "url": "http://localhost:8000/static/js/utils/api.js",
+      "method": "GET",
+      "resource_type": "script",
+      "timestamp": "2025-09-25T15:46:14.935427"
+    },
+    {
+      "url": "http://localhost:8000/static/js/utils/logger.js",
+      "method": "GET",
+      "resource_type": "script",
+      "timestamp": "2025-09-25T15:46:14.935541"
+    },
+    {
+      "url": "http://localhost:8000/static/js/universal-cart/core/universal-cart.js",
+      "method": "GET",
+      "resource_type": "script",
+      "timestamp": "2025-09-25T15:46:14.939945"
+    },
+    {
+      "url": "http://localhost:8000/static/js/universal-cart/core/cart-storage.js",
+      "method": "GET",
+      "resource_type": "script",
+      "timestamp": "2025-09-25T15:46:14.942257"
+    },
+    {
+      "url": "http://localhost:8000/static/js/universal-cart/ui/cart-templates.js",
+      "method": "GET",
+      "resource_type": "script",
+      "timestamp": "2025-09-25T15:46:14.944397"
+    },
+    {
+      "url": "http://localhost:8000/static/js/universal-cart/ui/cart-renderer.js",
+      "method": "GET",
+      "resource_type": "script",
+      "timestamp": "2025-09-25T15:46:14.946295"
+    },
+    {
+      "url": "http://localhost:8000/static/js/universal-cart/ui/cart-dialogs.js",
+      "method": "GET",
+      "resource_type": "script",
+      "timestamp": "2025-09-25T15:46:14.948120"
+    },
+    {
+      "url": "http://localhost:8000/static/js/universal-cart/handlers/cart-event-handler.js",
+      "method": "GET",
+      "resource_type": "script",
+      "timestamp": "2025-09-25T15:46:14.950184"
+    },
+    {
+      "url": "http://localhost:8000/static/js/universal-cart/config/cart-configs.js",
+      "method": "GET",
+      "resource_type": "script",
+      "timestamp": "2025-09-25T15:46:14.952297"
+    },
+    {
+      "url": "http://localhost:8000/static/js/universal-cart/integration/cart-integration.js",
+      "method": "GET",
+      "resource_type": "script",
+      "timestamp": "2025-09-25T15:46:14.953969"
+    },
+    {
+      "url": "http://localhost:8000/static/js/universal-cart/utils/cart-factory.js",
+      "method": "GET",
+      "resource_type": "script",
+      "timestamp": "2025-09-25T15:46:14.955950"
+    },
+    {
+      "url": "http://localhost:8000/static/js/universal-cart/cart-ui.js",
+      "method": "GET",
+      "resource_type": "script",
+      "timestamp": "2025-09-25T15:46:14.958052"
+    },
+    {
+      "url": "http://localhost:8000/static/img/favicon.png",
+      "method": "GET",
+      "resource_type": "other",
+      "timestamp": "2025-09-25T15:46:14.963271"
+    },
+    {
+      "url": "http://localhost:8000/equipment",
+      "method": "GET",
+      "resource_type": "document",
+      "timestamp": "2025-09-25T15:46:21.383480"
+    },
+    {
+      "url": "http://localhost:8000/equipment/",
+      "method": "GET",
+      "resource_type": "document",
+      "timestamp": "2025-09-25T15:46:21.391127"
+    },
+    {
+      "url": "http://localhost:8000/static/css/lib/bootstrap.min.css",
+      "method": "GET",
+      "resource_type": "stylesheet",
+      "timestamp": "2025-09-25T15:46:21.443426"
+    },
+    {
+      "url": "http://localhost:8000/static/css/lib/inter.css",
+      "method": "GET",
+      "resource_type": "stylesheet",
+      "timestamp": "2025-09-25T15:46:21.443792"
+    },
+    {
+      "url": "http://localhost:8000/static/css/lib/all.min.css",
+      "method": "GET",
+      "resource_type": "stylesheet",
+      "timestamp": "2025-09-25T15:46:21.444180"
+    },
+    {
+      "url": "http://localhost:8000/static/css/lib/daterangepicker.css",
+      "method": "GET",
+      "resource_type": "stylesheet",
+      "timestamp": "2025-09-25T15:46:21.444458"
+    },
+    {
+      "url": "http://localhost:8000/static/css/main.css",
+      "method": "GET",
+      "resource_type": "stylesheet",
+      "timestamp": "2025-09-25T15:46:21.444688"
+    },
+    {
+      "url": "http://localhost:8000/static/css/equipment-table.css",
+      "method": "GET",
+      "resource_type": "stylesheet",
+      "timestamp": "2025-09-25T15:46:21.445013"
+    },
+    {
+      "url": "http://localhost:8000/static/css/universal-cart.css",
+      "method": "GET",
+      "resource_type": "stylesheet",
+      "timestamp": "2025-09-25T15:46:21.445496"
+    },
+    {
+      "url": "http://localhost:8000/static/css/lib/select2.min.css",
+      "method": "GET",
+      "resource_type": "stylesheet",
+      "timestamp": "2025-09-25T15:46:21.445698"
+    },
+    {
+      "url": "http://localhost:8000/static/css/select2-bootstrap-fix.css",
+      "method": "GET",
+      "resource_type": "stylesheet",
+      "timestamp": "2025-09-25T15:46:21.445853"
+    },
+    {
+      "url": "http://localhost:8000/static/css/equipment.css",
+      "method": "GET",
+      "resource_type": "stylesheet",
+      "timestamp": "2025-09-25T15:46:21.445987"
+    },
+    {
+      "url": "http://localhost:8000/static/js/lib/jquery-3.7.1.min.js",
+      "method": "GET",
+      "resource_type": "script",
+      "timestamp": "2025-09-25T15:46:21.446042"
+    },
+    {
+      "url": "http://localhost:8000/static/js/lib/bootstrap.bundle.min.js",
+      "method": "GET",
+      "resource_type": "script",
+      "timestamp": "2025-09-25T15:46:21.446202"
+    },
+    {
+      "url": "http://localhost:8000/static/js/lib/moment.min.js",
+      "method": "GET",
+      "resource_type": "script",
+      "timestamp": "2025-09-25T15:46:21.446376"
+    },
+    {
+      "url": "http://localhost:8000/static/js/lib/ru.js",
+      "method": "GET",
+      "resource_type": "script",
+      "timestamp": "2025-09-25T15:46:21.446630"
+    },
+    {
+      "url": "http://localhost:8000/static/js/lib/daterangepicker.min.js",
+      "method": "GET",
+      "resource_type": "script",
+      "timestamp": "2025-09-25T15:46:21.446929"
+    },
+    {
+      "url": "http://localhost:8000/static/js/lib/select2.min.js",
+      "method": "GET",
+      "resource_type": "script",
+      "timestamp": "2025-09-25T15:46:21.447204"
+    },
+    {
+      "url": "http://localhost:8000/static/js/lib/quagga.min.js",
+      "method": "GET",
+      "resource_type": "script",
+      "timestamp": "2025-09-25T15:46:21.447441"
+    },
+    {
+      "url": "http://localhost:8000/static/js/main.js",
+      "method": "GET",
+      "resource_type": "script",
+      "timestamp": "2025-09-25T15:46:21.447710"
+    },
+    {
+      "url": "http://localhost:8000/static/js/notifications.js",
+      "method": "GET",
+      "resource_type": "script",
+      "timestamp": "2025-09-25T15:46:21.447883"
+    },
+    {
+      "url": "http://localhost:8000/static/js/datepicker.js",
+      "method": "GET",
+      "resource_type": "script",
+      "timestamp": "2025-09-25T15:46:21.448062"
+    },
+    {
+      "url": "http://localhost:8000/static/js/universal-cart/index.js",
+      "method": "GET",
+      "resource_type": "script",
+      "timestamp": "2025-09-25T15:46:21.448296"
+    },
+    {
+      "url": "http://localhost:8000/static/js/utils/logger.js",
+      "method": "GET",
+      "resource_type": "script",
+      "timestamp": "2025-09-25T15:46:21.448486"
+    },
+    {
+      "url": "http://localhost:8000/static/js/utils/api.js",
+      "method": "GET",
+      "resource_type": "script",
+      "timestamp": "2025-09-25T15:46:21.448670"
+    },
+    {
+      "url": "http://localhost:8000/static/js/utils/pagination.js",
+      "method": "GET",
+      "resource_type": "script",
+      "timestamp": "2025-09-25T15:46:21.448813"
+    },
+    {
+      "url": "http://localhost:8000/static/js/scan-storage.js",
+      "method": "GET",
+      "resource_type": "script",
+      "timestamp": "2025-09-25T15:46:21.448874"
+    },
+    {
+      "url": "http://localhost:8000/static/js/equipment-list.js",
+      "method": "GET",
+      "resource_type": "script",
+      "timestamp": "2025-09-25T15:46:21.448931"
+    },
+    {
+      "url": "http://localhost:8000/static/fonts/Inter-Regular.woff2",
+      "method": "GET",
+      "resource_type": "font",
+      "timestamp": "2025-09-25T15:46:21.462775"
+    },
+    {
+      "url": "http://localhost:8000/static/fonts/Inter-Medium.woff2",
+      "method": "GET",
+      "resource_type": "font",
+      "timestamp": "2025-09-25T15:46:21.463003"
+    },
+    {
+      "url": "http://localhost:8000/static/fonts/Inter-SemiBold.woff2",
+      "method": "GET",
+      "resource_type": "font",
+      "timestamp": "2025-09-25T15:46:21.463440"
+    },
+    {
+      "url": "http://localhost:8000/static/css/webfonts/fa-solid-900.woff2",
+      "method": "GET",
+      "resource_type": "font",
+      "timestamp": "2025-09-25T15:46:21.464089"
+    },
+    {
+      "url": "http://localhost:8000/static/fonts/Inter-Bold.woff2",
+      "method": "GET",
+      "resource_type": "font",
+      "timestamp": "2025-09-25T15:46:21.464397"
+    },
+    {
+      "url": "http://localhost:8000/static/js/utils/common.js",
+      "method": "GET",
+      "resource_type": "script",
+      "timestamp": "2025-09-25T15:46:21.467841"
+    },
+    {
+      "url": "http://localhost:8000/static/js/utils/ui-helpers.js",
+      "method": "GET",
+      "resource_type": "script",
+      "timestamp": "2025-09-25T15:46:21.468015"
+    },
+    {
+      "url": "http://localhost:8000/static/js/universal-cart/core/universal-cart.js",
+      "method": "GET",
+      "resource_type": "script",
+      "timestamp": "2025-09-25T15:46:21.470905"
+    },
+    {
+      "url": "http://localhost:8000/api/v1/categories",
+      "method": "GET",
+      "resource_type": "fetch",
+      "timestamp": "2025-09-25T15:46:21.472535"
+    },
+    {
+      "url": "http://localhost:8000/static/js/universal-cart/core/cart-storage.js",
+      "method": "GET",
+      "resource_type": "script",
+      "timestamp": "2025-09-25T15:46:21.475801"
+    },
+    {
+      "url": "http://localhost:8000/api/v1/categories/",
+      "method": "GET",
+      "resource_type": "fetch",
+      "timestamp": "2025-09-25T15:46:21.478181"
+    },
+    {
+      "url": "http://localhost:8000/static/js/universal-cart/ui/cart-templates.js",
+      "method": "GET",
+      "resource_type": "script",
+      "timestamp": "2025-09-25T15:46:21.478512"
+    },
+    {
+      "url": "http://localhost:8000/static/js/universal-cart/ui/cart-renderer.js",
+      "method": "GET",
+      "resource_type": "script",
+      "timestamp": "2025-09-25T15:46:21.478958"
+    },
+    {
+      "url": "http://localhost:8000/static/js/universal-cart/ui/cart-dialogs.js",
+      "method": "GET",
+      "resource_type": "script",
+      "timestamp": "2025-09-25T15:46:21.479231"
+    },
+    {
+      "url": "http://localhost:8000/static/js/universal-cart/handlers/cart-event-handler.js",
+      "method": "GET",
+      "resource_type": "script",
+      "timestamp": "2025-09-25T15:46:21.480344"
+    },
+    {
+      "url": "http://localhost:8000/static/js/universal-cart/config/cart-configs.js",
+      "method": "GET",
+      "resource_type": "script",
+      "timestamp": "2025-09-25T15:46:21.480992"
+    },
+    {
+      "url": "http://localhost:8000/static/js/universal-cart/integration/cart-integration.js",
+      "method": "GET",
+      "resource_type": "script",
+      "timestamp": "2025-09-25T15:46:21.481263"
+    },
+    {
+      "url": "http://localhost:8000/static/js/universal-cart/utils/cart-factory.js",
+      "method": "GET",
+      "resource_type": "script",
+      "timestamp": "2025-09-25T15:46:21.481472"
+    },
+    {
+      "url": "http://localhost:8000/static/js/universal-cart/cart-ui.js",
+      "method": "GET",
+      "resource_type": "script",
+      "timestamp": "2025-09-25T15:46:21.481640"
+    },
+    {
+      "url": "http://localhost:8000/static/img/favicon.png",
+      "method": "GET",
+      "resource_type": "other",
+      "timestamp": "2025-09-25T15:46:21.481877"
+    },
+    {
+      "url": "http://localhost:8000/api/v1/equipment/paginated-with-rental-status?page=1&size=20",
+      "method": "GET",
+      "resource_type": "fetch",
+      "timestamp": "2025-09-25T15:46:21.485987"
+    },
+    {
+      "url": "http://localhost:8000/static/img/favicon.png",
+      "method": "GET",
+      "resource_type": "other",
+      "timestamp": "2025-09-25T15:46:21.534176"
+    },
+    {
+      "url": "http://localhost:8000/",
+      "method": "GET",
+      "resource_type": "document",
+      "timestamp": "2025-09-25T15:46:24.171482"
+    },
+    {
+      "url": "http://localhost:8000/static/css/lib/bootstrap.min.css",
+      "method": "GET",
+      "resource_type": "stylesheet",
+      "timestamp": "2025-09-25T15:46:24.175598"
+    },
+    {
+      "url": "http://localhost:8000/static/css/lib/inter.css",
+      "method": "GET",
+      "resource_type": "stylesheet",
+      "timestamp": "2025-09-25T15:46:24.175849"
+    },
+    {
+      "url": "http://localhost:8000/static/css/lib/all.min.css",
+      "method": "GET",
+      "resource_type": "stylesheet",
+      "timestamp": "2025-09-25T15:46:24.176007"
+    },
+    {
+      "url": "http://localhost:8000/static/css/lib/daterangepicker.css",
+      "method": "GET",
+      "resource_type": "stylesheet",
+      "timestamp": "2025-09-25T15:46:24.176177"
+    },
+    {
+      "url": "http://localhost:8000/static/css/main.css",
+      "method": "GET",
+      "resource_type": "stylesheet",
+      "timestamp": "2025-09-25T15:46:24.176410"
+    },
+    {
+      "url": "http://localhost:8000/static/css/equipment-table.css",
+      "method": "GET",
+      "resource_type": "stylesheet",
+      "timestamp": "2025-09-25T15:46:24.176551"
+    },
+    {
+      "url": "http://localhost:8000/static/css/universal-cart.css",
+      "method": "GET",
+      "resource_type": "stylesheet",
+      "timestamp": "2025-09-25T15:46:24.176710"
+    },
+    {
+      "url": "http://localhost:8000/static/css/lib/select2.min.css",
+      "method": "GET",
+      "resource_type": "stylesheet",
+      "timestamp": "2025-09-25T15:46:24.176845"
+    },
+    {
+      "url": "http://localhost:8000/static/css/select2-bootstrap-fix.css",
+      "method": "GET",
+      "resource_type": "stylesheet",
+      "timestamp": "2025-09-25T15:46:24.176968"
+    },
+    {
+      "url": "http://localhost:8000/static/js/lib/jquery-3.7.1.min.js",
+      "method": "GET",
+      "resource_type": "script",
+      "timestamp": "2025-09-25T15:46:24.177089"
+    },
+    {
+      "url": "http://localhost:8000/static/js/lib/bootstrap.bundle.min.js",
+      "method": "GET",
+      "resource_type": "script",
+      "timestamp": "2025-09-25T15:46:24.177210"
+    },
+    {
+      "url": "http://localhost:8000/static/js/lib/moment.min.js",
+      "method": "GET",
+      "resource_type": "script",
+      "timestamp": "2025-09-25T15:46:24.177321"
+    },
+    {
+      "url": "http://localhost:8000/static/js/lib/ru.js",
+      "method": "GET",
+      "resource_type": "script",
+      "timestamp": "2025-09-25T15:46:24.177456"
+    },
+    {
+      "url": "http://localhost:8000/static/js/lib/daterangepicker.min.js",
+      "method": "GET",
+      "resource_type": "script",
+      "timestamp": "2025-09-25T15:46:24.177584"
+    },
+    {
+      "url": "http://localhost:8000/static/js/lib/select2.min.js",
+      "method": "GET",
+      "resource_type": "script",
+      "timestamp": "2025-09-25T15:46:24.177710"
+    },
+    {
+      "url": "http://localhost:8000/static/js/lib/quagga.min.js",
+      "method": "GET",
+      "resource_type": "script",
+      "timestamp": "2025-09-25T15:46:24.177840"
+    },
+    {
+      "url": "http://localhost:8000/static/js/main.js",
+      "method": "GET",
+      "resource_type": "script",
+      "timestamp": "2025-09-25T15:46:24.177971"
+    },
+    {
+      "url": "http://localhost:8000/static/js/notifications.js",
+      "method": "GET",
+      "resource_type": "script",
+      "timestamp": "2025-09-25T15:46:24.178564"
+    },
+    {
+      "url": "http://localhost:8000/static/js/datepicker.js",
+      "method": "GET",
+      "resource_type": "script",
+      "timestamp": "2025-09-25T15:46:24.178723"
+    },
+    {
+      "url": "http://localhost:8000/static/js/universal-cart/index.js",
+      "method": "GET",
+      "resource_type": "script",
+      "timestamp": "2025-09-25T15:46:24.178912"
+    },
+    {
+      "url": "http://localhost:8000/static/js/utils/common.js",
+      "method": "GET",
+      "resource_type": "script",
+      "timestamp": "2025-09-25T15:46:24.179191"
+    },
+    {
+      "url": "http://localhost:8000/static/js/utils/api.js",
+      "method": "GET",
+      "resource_type": "script",
+      "timestamp": "2025-09-25T15:46:24.179498"
+    },
+    {
+      "url": "http://localhost:8000/static/js/utils/logger.js",
+      "method": "GET",
+      "resource_type": "script",
+      "timestamp": "2025-09-25T15:46:24.179713"
+    },
+    {
+      "url": "http://localhost:8000/static/js/universal-cart/core/universal-cart.js",
+      "method": "GET",
+      "resource_type": "script",
+      "timestamp": "2025-09-25T15:46:24.179929"
+    },
+    {
+      "url": "http://localhost:8000/static/fonts/Inter-Regular.woff2",
+      "method": "GET",
+      "resource_type": "font",
+      "timestamp": "2025-09-25T15:46:24.180939"
+    },
+    {
+      "url": "http://localhost:8000/static/fonts/Inter-Medium.woff2",
+      "method": "GET",
+      "resource_type": "font",
+      "timestamp": "2025-09-25T15:46:24.181159"
+    },
+    {
+      "url": "http://localhost:8000/static/fonts/Inter-SemiBold.woff2",
+      "method": "GET",
+      "resource_type": "font",
+      "timestamp": "2025-09-25T15:46:24.181287"
+    },
+    {
+      "url": "http://localhost:8000/static/fonts/Inter-Bold.woff2",
+      "method": "GET",
+      "resource_type": "font",
+      "timestamp": "2025-09-25T15:46:24.181453"
+    },
+    {
+      "url": "http://localhost:8000/static/css/webfonts/fa-solid-900.woff2",
+      "method": "GET",
+      "resource_type": "font",
+      "timestamp": "2025-09-25T15:46:24.181718"
+    },
+    {
+      "url": "http://localhost:8000/static/js/universal-cart/core/cart-storage.js",
+      "method": "GET",
+      "resource_type": "script",
+      "timestamp": "2025-09-25T15:46:24.182067"
+    },
+    {
+      "url": "http://localhost:8000/static/js/universal-cart/ui/cart-templates.js",
+      "method": "GET",
+      "resource_type": "script",
+      "timestamp": "2025-09-25T15:46:24.182315"
+    },
+    {
+      "url": "http://localhost:8000/static/js/universal-cart/ui/cart-renderer.js",
+      "method": "GET",
+      "resource_type": "script",
+      "timestamp": "2025-09-25T15:46:24.182556"
+    },
+    {
+      "url": "http://localhost:8000/static/js/universal-cart/ui/cart-dialogs.js",
+      "method": "GET",
+      "resource_type": "script",
+      "timestamp": "2025-09-25T15:46:24.182768"
+    },
+    {
+      "url": "http://localhost:8000/static/js/universal-cart/handlers/cart-event-handler.js",
+      "method": "GET",
+      "resource_type": "script",
+      "timestamp": "2025-09-25T15:46:24.182965"
+    },
+    {
+      "url": "http://localhost:8000/static/js/universal-cart/config/cart-configs.js",
+      "method": "GET",
+      "resource_type": "script",
+      "timestamp": "2025-09-25T15:46:24.183125"
+    },
+    {
+      "url": "http://localhost:8000/static/js/universal-cart/integration/cart-integration.js",
+      "method": "GET",
+      "resource_type": "script",
+      "timestamp": "2025-09-25T15:46:24.183279"
+    },
+    {
+      "url": "http://localhost:8000/static/js/universal-cart/utils/cart-factory.js",
+      "method": "GET",
+      "resource_type": "script",
+      "timestamp": "2025-09-25T15:46:24.183462"
+    },
+    {
+      "url": "http://localhost:8000/static/js/universal-cart/cart-ui.js",
+      "method": "GET",
+      "resource_type": "script",
+      "timestamp": "2025-09-25T15:46:24.183696"
+    },
+    {
+      "url": "http://localhost:8000/static/img/favicon.png",
+      "method": "GET",
+      "resource_type": "other",
+      "timestamp": "2025-09-25T15:46:24.183904"
+    },
+    {
+      "url": "http://localhost:8000/",
+      "method": "GET",
+      "resource_type": "document",
+      "timestamp": "2025-09-25T15:46:59.939713"
+    },
+    {
+      "url": "http://localhost:8000/static/css/lib/bootstrap.min.css",
+      "method": "GET",
+      "resource_type": "stylesheet",
+      "timestamp": "2025-09-25T15:46:59.991141"
+    },
+    {
+      "url": "http://localhost:8000/static/css/lib/inter.css",
+      "method": "GET",
+      "resource_type": "stylesheet",
+      "timestamp": "2025-09-25T15:46:59.991351"
+    },
+    {
+      "url": "http://localhost:8000/static/css/lib/all.min.css",
+      "method": "GET",
+      "resource_type": "stylesheet",
+      "timestamp": "2025-09-25T15:46:59.991557"
+    },
+    {
+      "url": "http://localhost:8000/static/css/lib/daterangepicker.css",
+      "method": "GET",
+      "resource_type": "stylesheet",
+      "timestamp": "2025-09-25T15:46:59.991812"
+    },
+    {
+      "url": "http://localhost:8000/static/css/main.css",
+      "method": "GET",
+      "resource_type": "stylesheet",
+      "timestamp": "2025-09-25T15:46:59.992135"
+    },
+    {
+      "url": "http://localhost:8000/static/css/equipment-table.css",
+      "method": "GET",
+      "resource_type": "stylesheet",
+      "timestamp": "2025-09-25T15:46:59.992249"
+    },
+    {
+      "url": "http://localhost:8000/static/css/universal-cart.css",
+      "method": "GET",
+      "resource_type": "stylesheet",
+      "timestamp": "2025-09-25T15:46:59.992429"
+    },
+    {
+      "url": "http://localhost:8000/static/css/lib/select2.min.css",
+      "method": "GET",
+      "resource_type": "stylesheet",
+      "timestamp": "2025-09-25T15:46:59.992582"
+    },
+    {
+      "url": "http://localhost:8000/static/css/select2-bootstrap-fix.css",
+      "method": "GET",
+      "resource_type": "stylesheet",
+      "timestamp": "2025-09-25T15:46:59.992679"
+    },
+    {
+      "url": "http://localhost:8000/static/js/lib/jquery-3.7.1.min.js",
+      "method": "GET",
+      "resource_type": "script",
+      "timestamp": "2025-09-25T15:46:59.992767"
+    },
+    {
+      "url": "http://localhost:8000/static/js/lib/bootstrap.bundle.min.js",
+      "method": "GET",
+      "resource_type": "script",
+      "timestamp": "2025-09-25T15:46:59.992838"
+    },
+    {
+      "url": "http://localhost:8000/static/js/lib/moment.min.js",
+      "method": "GET",
+      "resource_type": "script",
+      "timestamp": "2025-09-25T15:46:59.993093"
+    },
+    {
+      "url": "http://localhost:8000/static/js/lib/ru.js",
+      "method": "GET",
+      "resource_type": "script",
+      "timestamp": "2025-09-25T15:46:59.993233"
+    },
+    {
+      "url": "http://localhost:8000/static/js/lib/daterangepicker.min.js",
+      "method": "GET",
+      "resource_type": "script",
+      "timestamp": "2025-09-25T15:46:59.993386"
+    },
+    {
+      "url": "http://localhost:8000/static/js/lib/select2.min.js",
+      "method": "GET",
+      "resource_type": "script",
+      "timestamp": "2025-09-25T15:46:59.993507"
+    },
+    {
+      "url": "http://localhost:8000/static/js/lib/quagga.min.js",
+      "method": "GET",
+      "resource_type": "script",
+      "timestamp": "2025-09-25T15:46:59.993606"
+    },
+    {
+      "url": "http://localhost:8000/static/js/main.js",
+      "method": "GET",
+      "resource_type": "script",
+      "timestamp": "2025-09-25T15:46:59.993701"
+    },
+    {
+      "url": "http://localhost:8000/static/js/notifications.js",
+      "method": "GET",
+      "resource_type": "script",
+      "timestamp": "2025-09-25T15:46:59.993766"
+    },
+    {
+      "url": "http://localhost:8000/static/js/datepicker.js",
+      "method": "GET",
+      "resource_type": "script",
+      "timestamp": "2025-09-25T15:46:59.993863"
+    },
+    {
+      "url": "http://localhost:8000/static/js/universal-cart/index.js",
+      "method": "GET",
+      "resource_type": "script",
+      "timestamp": "2025-09-25T15:46:59.993966"
+    },
+    {
+      "url": "http://localhost:8000/static/fonts/Inter-SemiBold.woff2",
+      "method": "GET",
+      "resource_type": "font",
+      "timestamp": "2025-09-25T15:47:00.015708"
+    },
+    {
+      "url": "http://localhost:8000/static/css/webfonts/fa-solid-900.woff2",
+      "method": "GET",
+      "resource_type": "font",
+      "timestamp": "2025-09-25T15:47:00.016175"
+    },
+    {
+      "url": "http://localhost:8000/static/fonts/Inter-Medium.woff2",
+      "method": "GET",
+      "resource_type": "font",
+      "timestamp": "2025-09-25T15:47:00.016330"
+    },
+    {
+      "url": "http://localhost:8000/static/fonts/Inter-Regular.woff2",
+      "method": "GET",
+      "resource_type": "font",
+      "timestamp": "2025-09-25T15:47:00.016633"
+    },
+    {
+      "url": "http://localhost:8000/static/js/utils/common.js",
+      "method": "GET",
+      "resource_type": "script",
+      "timestamp": "2025-09-25T15:47:00.022104"
+    },
+    {
+      "url": "http://localhost:8000/static/js/utils/api.js",
+      "method": "GET",
+      "resource_type": "script",
+      "timestamp": "2025-09-25T15:47:00.022345"
+    },
+    {
+      "url": "http://localhost:8000/static/js/utils/logger.js",
+      "method": "GET",
+      "resource_type": "script",
+      "timestamp": "2025-09-25T15:47:00.022480"
+    },
+    {
+      "url": "http://localhost:8000/static/js/universal-cart/core/universal-cart.js",
+      "method": "GET",
+      "resource_type": "script",
+      "timestamp": "2025-09-25T15:47:00.032887"
+    },
+    {
+      "url": "http://localhost:8000/static/js/universal-cart/core/cart-storage.js",
+      "method": "GET",
+      "resource_type": "script",
+      "timestamp": "2025-09-25T15:47:00.036877"
+    },
+    {
+      "url": "http://localhost:8000/static/js/universal-cart/ui/cart-templates.js",
+      "method": "GET",
+      "resource_type": "script",
+      "timestamp": "2025-09-25T15:47:00.039356"
+    },
+    {
+      "url": "http://localhost:8000/static/js/universal-cart/ui/cart-renderer.js",
+      "method": "GET",
+      "resource_type": "script",
+      "timestamp": "2025-09-25T15:47:00.042025"
+    },
+    {
+      "url": "http://localhost:8000/static/js/universal-cart/ui/cart-dialogs.js",
+      "method": "GET",
+      "resource_type": "script",
+      "timestamp": "2025-09-25T15:47:00.044353"
+    },
+    {
+      "url": "http://localhost:8000/static/js/universal-cart/handlers/cart-event-handler.js",
+      "method": "GET",
+      "resource_type": "script",
+      "timestamp": "2025-09-25T15:47:00.047130"
+    },
+    {
+      "url": "http://localhost:8000/static/js/universal-cart/config/cart-configs.js",
+      "method": "GET",
+      "resource_type": "script",
+      "timestamp": "2025-09-25T15:47:00.049602"
+    },
+    {
+      "url": "http://localhost:8000/static/js/universal-cart/integration/cart-integration.js",
+      "method": "GET",
+      "resource_type": "script",
+      "timestamp": "2025-09-25T15:47:00.052408"
+    },
+    {
+      "url": "http://localhost:8000/static/js/universal-cart/utils/cart-factory.js",
+      "method": "GET",
+      "resource_type": "script",
+      "timestamp": "2025-09-25T15:47:00.054670"
+    },
+    {
+      "url": "http://localhost:8000/static/js/universal-cart/cart-ui.js",
+      "method": "GET",
+      "resource_type": "script",
+      "timestamp": "2025-09-25T15:47:00.057021"
+    },
+    {
+      "url": "http://localhost:8000/static/img/favicon.png",
+      "method": "GET",
+      "resource_type": "other",
+      "timestamp": "2025-09-25T15:47:00.060414"
+    },
+    {
+      "url": "http://localhost:8000/",
+      "method": "GET",
+      "resource_type": "document",
+      "timestamp": "2025-09-25T15:47:02.660937"
+    },
+    {
+      "url": "http://localhost:8000/static/css/lib/bootstrap.min.css",
+      "method": "GET",
+      "resource_type": "stylesheet",
+      "timestamp": "2025-09-25T15:47:02.712270"
+    },
+    {
+      "url": "http://localhost:8000/static/css/lib/inter.css",
+      "method": "GET",
+      "resource_type": "stylesheet",
+      "timestamp": "2025-09-25T15:47:02.712682"
+    },
+    {
+      "url": "http://localhost:8000/static/css/lib/all.min.css",
+      "method": "GET",
+      "resource_type": "stylesheet",
+      "timestamp": "2025-09-25T15:47:02.713053"
+    },
+    {
+      "url": "http://localhost:8000/static/css/lib/daterangepicker.css",
+      "method": "GET",
+      "resource_type": "stylesheet",
+      "timestamp": "2025-09-25T15:47:02.713246"
+    },
+    {
+      "url": "http://localhost:8000/static/css/main.css",
+      "method": "GET",
+      "resource_type": "stylesheet",
+      "timestamp": "2025-09-25T15:47:02.713397"
+    },
+    {
+      "url": "http://localhost:8000/static/css/equipment-table.css",
+      "method": "GET",
+      "resource_type": "stylesheet",
+      "timestamp": "2025-09-25T15:47:02.713519"
+    },
+    {
+      "url": "http://localhost:8000/static/css/universal-cart.css",
+      "method": "GET",
+      "resource_type": "stylesheet",
+      "timestamp": "2025-09-25T15:47:02.713696"
+    },
+    {
+      "url": "http://localhost:8000/static/css/lib/select2.min.css",
+      "method": "GET",
+      "resource_type": "stylesheet",
+      "timestamp": "2025-09-25T15:47:02.713836"
+    },
+    {
+      "url": "http://localhost:8000/static/css/select2-bootstrap-fix.css",
+      "method": "GET",
+      "resource_type": "stylesheet",
+      "timestamp": "2025-09-25T15:47:02.714000"
+    },
+    {
+      "url": "http://localhost:8000/static/js/lib/jquery-3.7.1.min.js",
+      "method": "GET",
+      "resource_type": "script",
+      "timestamp": "2025-09-25T15:47:02.714147"
+    },
+    {
+      "url": "http://localhost:8000/static/js/lib/bootstrap.bundle.min.js",
+      "method": "GET",
+      "resource_type": "script",
+      "timestamp": "2025-09-25T15:47:02.714288"
+    },
+    {
+      "url": "http://localhost:8000/static/js/lib/moment.min.js",
+      "method": "GET",
+      "resource_type": "script",
+      "timestamp": "2025-09-25T15:47:02.714481"
+    },
+    {
+      "url": "http://localhost:8000/static/js/lib/ru.js",
+      "method": "GET",
+      "resource_type": "script",
+      "timestamp": "2025-09-25T15:47:02.714644"
+    },
+    {
+      "url": "http://localhost:8000/static/js/lib/daterangepicker.min.js",
+      "method": "GET",
+      "resource_type": "script",
+      "timestamp": "2025-09-25T15:47:02.714809"
+    },
+    {
+      "url": "http://localhost:8000/static/js/lib/select2.min.js",
+      "method": "GET",
+      "resource_type": "script",
+      "timestamp": "2025-09-25T15:47:02.714955"
+    },
+    {
+      "url": "http://localhost:8000/static/js/lib/quagga.min.js",
+      "method": "GET",
+      "resource_type": "script",
+      "timestamp": "2025-09-25T15:47:02.715090"
+    },
+    {
+      "url": "http://localhost:8000/static/js/main.js",
+      "method": "GET",
+      "resource_type": "script",
+      "timestamp": "2025-09-25T15:47:02.715222"
+    },
+    {
+      "url": "http://localhost:8000/static/js/notifications.js",
+      "method": "GET",
+      "resource_type": "script",
+      "timestamp": "2025-09-25T15:47:02.715355"
+    },
+    {
+      "url": "http://localhost:8000/static/js/datepicker.js",
+      "method": "GET",
+      "resource_type": "script",
+      "timestamp": "2025-09-25T15:47:02.715485"
+    },
+    {
+      "url": "http://localhost:8000/static/js/universal-cart/index.js",
+      "method": "GET",
+      "resource_type": "script",
+      "timestamp": "2025-09-25T15:47:02.715622"
+    },
+    {
+      "url": "http://localhost:8000/static/fonts/Inter-Regular.woff2",
+      "method": "GET",
+      "resource_type": "font",
+      "timestamp": "2025-09-25T15:47:02.722234"
+    },
+    {
+      "url": "http://localhost:8000/static/fonts/Inter-Medium.woff2",
+      "method": "GET",
+      "resource_type": "font",
+      "timestamp": "2025-09-25T15:47:02.722645"
+    },
+    {
+      "url": "http://localhost:8000/static/fonts/Inter-SemiBold.woff2",
+      "method": "GET",
+      "resource_type": "font",
+      "timestamp": "2025-09-25T15:47:02.722951"
+    },
+    {
+      "url": "http://localhost:8000/static/css/webfonts/fa-solid-900.woff2",
+      "method": "GET",
+      "resource_type": "font",
+      "timestamp": "2025-09-25T15:47:02.723286"
+    },
+    {
+      "url": "http://localhost:8000/static/js/utils/common.js",
+      "method": "GET",
+      "resource_type": "script",
+      "timestamp": "2025-09-25T15:47:02.723582"
+    },
+    {
+      "url": "http://localhost:8000/static/js/utils/api.js",
+      "method": "GET",
+      "resource_type": "script",
+      "timestamp": "2025-09-25T15:47:02.723922"
+    },
+    {
+      "url": "http://localhost:8000/static/js/utils/logger.js",
+      "method": "GET",
+      "resource_type": "script",
+      "timestamp": "2025-09-25T15:47:02.724200"
+    },
+    {
+      "url": "http://localhost:8000/static/js/universal-cart/core/universal-cart.js",
+      "method": "GET",
+      "resource_type": "script",
+      "timestamp": "2025-09-25T15:47:02.724434"
+    },
+    {
+      "url": "http://localhost:8000/static/js/universal-cart/core/cart-storage.js",
+      "method": "GET",
+      "resource_type": "script",
+      "timestamp": "2025-09-25T15:47:02.724658"
+    },
+    {
+      "url": "http://localhost:8000/static/js/universal-cart/ui/cart-templates.js",
+      "method": "GET",
+      "resource_type": "script",
+      "timestamp": "2025-09-25T15:47:02.724867"
+    },
+    {
+      "url": "http://localhost:8000/static/js/universal-cart/ui/cart-renderer.js",
+      "method": "GET",
+      "resource_type": "script",
+      "timestamp": "2025-09-25T15:47:02.725094"
+    },
+    {
+      "url": "http://localhost:8000/static/js/universal-cart/ui/cart-dialogs.js",
+      "method": "GET",
+      "resource_type": "script",
+      "timestamp": "2025-09-25T15:47:02.725241"
+    },
+    {
+      "url": "http://localhost:8000/static/js/universal-cart/handlers/cart-event-handler.js",
+      "method": "GET",
+      "resource_type": "script",
+      "timestamp": "2025-09-25T15:47:02.725380"
+    },
+    {
+      "url": "http://localhost:8000/static/js/universal-cart/config/cart-configs.js",
+      "method": "GET",
+      "resource_type": "script",
+      "timestamp": "2025-09-25T15:47:02.725517"
+    },
+    {
+      "url": "http://localhost:8000/static/js/universal-cart/integration/cart-integration.js",
+      "method": "GET",
+      "resource_type": "script",
+      "timestamp": "2025-09-25T15:47:02.725693"
+    },
+    {
+      "url": "http://localhost:8000/static/js/universal-cart/utils/cart-factory.js",
+      "method": "GET",
+      "resource_type": "script",
+      "timestamp": "2025-09-25T15:47:02.725888"
+    },
+    {
+      "url": "http://localhost:8000/static/js/universal-cart/cart-ui.js",
+      "method": "GET",
+      "resource_type": "script",
+      "timestamp": "2025-09-25T15:47:02.726065"
+    },
+    {
+      "url": "http://localhost:8000/static/img/favicon.png",
+      "method": "GET",
+      "resource_type": "other",
+      "timestamp": "2025-09-25T15:47:02.726304"
+    }
+  ],
+  "api_calls": [
+    {
+      "endpoint": "http://localhost:8000/api/v1/categories",
+      "method": "GET",
+      "headers": {
+        "sec-ch-ua-platform": "\"macOS\"",
+        "referer": "http://localhost:8000/equipment/",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36",
+        "sec-ch-ua": "\"Not.A/Brand\";v=\"99\", \"Chromium\";v=\"136\"",
+        "sec-ch-ua-mobile": "?0"
+      },
+      "timestamp": "2025-09-25T15:46:21.472558",
+      "status": 307,
+      "response_headers": {
+        "location": "http://localhost:8000/api/v1/categories/",
+        "content-length": "0",
+        "date": "Thu, 25 Sep 2025 12:46:20 GMT",
+        "server": "uvicorn"
+      }
+    },
+    {
+      "endpoint": "http://localhost:8000/api/v1/categories/",
+      "method": "GET",
+      "headers": {
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36",
+        "referer": "http://localhost:8000/equipment/"
+      },
+      "timestamp": "2025-09-25T15:46:21.478193",
+      "status": 200,
+      "response_headers": {
+        "content-length": "18797",
+        "date": "Thu, 25 Sep 2025 12:46:20 GMT",
+        "content-type": "application/json",
+        "server": "uvicorn"
+      }
+    },
+    {
+      "endpoint": "http://localhost:8000/api/v1/equipment/paginated-with-rental-status?page=1&size=20",
+      "method": "GET",
+      "headers": {
+        "sec-ch-ua-platform": "\"macOS\"",
+        "referer": "http://localhost:8000/equipment/",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36",
+        "sec-ch-ua": "\"Not.A/Brand\";v=\"99\", \"Chromium\";v=\"136\"",
+        "sec-ch-ua-mobile": "?0"
+      },
+      "timestamp": "2025-09-25T15:46:21.486002",
+      "status": 200,
+      "response_headers": {
+        "content-length": "11594",
+        "date": "Thu, 25 Sep 2025 12:46:20 GMT",
+        "content-type": "application/json",
+        "server": "uvicorn"
+      }
+    }
+  ],
+  "screenshots": [
+    "01-initial-dashboard-load.png",
+    "02-scanner-modal-open.png",
+    "03-navigation-test.png",
+    "04-mobile-responsive.png",
+    "04b-error-state-test.png",
+    "05-final-dashboard-state.png"
+  ],
+  "findings": [
+    {
+      "type": "dom_structure",
+      "data": {
+        "title": "\u0413\u043b\u0430\u0432\u043d\u0430\u044f - ACT-Rental",
+        "mainContainer": "container py-5",
+        "cardCount": 4,
+        "buttonCount": 7,
+        "formCount": 0,
+        "modalCount": 1,
+        "hasUniversalCart": false,
+        "hasFloatingCart": false,
+        "navigationItems": [
+          {
+            "text": "\u041e\u0431\u043e\u0440\u0443\u0434\u043e\u0432\u0430\u043d\u0438\u0435",
+            "href": "http://localhost:8000/equipment"
+          },
+          {
+            "text": "\u041a\u0430\u0442\u0435\u0433\u043e\u0440\u0438\u0438",
+            "href": "http://localhost:8000/categories"
+          },
+          {
+            "text": "\u041a\u043b\u0438\u0435\u043d\u0442\u044b",
+            "href": "http://localhost:8000/clients"
+          },
+          {
+            "text": "\u0411\u0440\u043e\u043d\u0438\u0440\u043e\u0432\u0430\u043d\u0438\u044f",
+            "href": "http://localhost:8000/bookings"
+          },
+          {
+            "text": "\u041f\u0440\u043e\u0435\u043a\u0442\u044b",
+            "href": "http://localhost:8000/projects"
+          },
+          {
+            "text": "\u0421\u043a\u0430\u043d\u0435\u0440",
+            "href": "http://localhost:8000/scanner"
+          }
+        ]
+      }
+    },
+    {
+      "type": "dashboard_cards",
+      "data": [
+        {
+          "className": "card h-100",
+          "title": "\u0411\u044b\u0441\u0442\u0440\u044b\u0435 \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u044f",
+          "content": "\u0411\u044b\u0441\u0442\u0440\u044b\u0435 \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u044f\n                \n                \n                    \n                         \u041d\u043e\u0432\u043e\u0435 \u0431\u0440\u043e\u043d\u0438\u0440\u043e\u0432\u0430\u043d\u0438\u0435\n                    \n                    \n                         \u041d\u043e\u0432\u044b\u0439 \u043a\u043b\u0438\u0435\u043d\u0442\n                    \n                    \n                         \u0421\u043a\u0430\u043d\u0438\u0440\u043e\u0432\u0430\u0442\u044c \u043e\u0431\u043e\u0440\u0443\u0434\u043e\u0432\u0430\u043d\u0438\u0435",
+          "hasButton": true,
+          "hasLink": true
+        },
+        {
+          "className": "card h-100",
+          "title": "\u041f\u043e\u0441\u043b\u0435\u0434\u043d\u0438\u0435 \u0431\u0440\u043e\u043d\u0438\u0440\u043e\u0432\u0430\u043d\u0438\u044f",
+          "content": "\u041f\u043e\u0441\u043b\u0435\u0434\u043d\u0438\u0435 \u0431\u0440\u043e\u043d\u0438\u0440\u043e\u0432\u0430\u043d\u0438\u044f\n                \n                \n            \n                \u041e\u0448\u0438\u0431\u043a\u0430 \u0437\u0430\u0433\u0440\u0443\u0437\u043a\u0438 \u0431\u0440\u043e\u043d\u0438\u0440\u043e\u0432\u0430\u043d\u0438\u0439",
+          "hasButton": true,
+          "hasLink": true
+        },
+        {
+          "className": "card h-100",
+          "title": "\u0421\u0442\u0430\u0442\u0443\u0441 \u043e\u0431\u043e\u0440\u0443\u0434\u043e\u0432\u0430\u043d\u0438\u044f",
+          "content": "\u0421\u0442\u0430\u0442\u0443\u0441 \u043e\u0431\u043e\u0440\u0443\u0434\u043e\u0432\u0430\u043d\u0438\u044f\n                \n                \n            \n                \u041e\u0448\u0438\u0431\u043a\u0430 \u0437\u0430\u0433\u0440\u0443\u0437\u043a\u0438 \u0441\u0442\u0430\u0442\u0438\u0441\u0442\u0438\u043a\u0438",
+          "hasButton": true,
+          "hasLink": true
+        },
+        {
+          "className": "card h-100",
+          "title": "\u0412\u043e\u0437\u0432\u0440\u0430\u0442\u044b \u0441\u0435\u0433\u043e\u0434\u043d\u044f",
+          "content": "\u0412\u043e\u0437\u0432\u0440\u0430\u0442\u044b \u0441\u0435\u0433\u043e\u0434\u043d\u044f\n                \n                \n            \n                \u041e\u0448\u0438\u0431\u043a\u0430 \u0437\u0430\u0433\u0440\u0443\u0437\u043a\u0438 \u0432\u043e\u0437\u0432\u0440\u0430\u0442\u043e\u0432",
+          "hasButton": true,
+          "hasLink": true
+        }
+      ]
+    }
+  ],
+  "interactions": [
+    "click_scanner_button",
+    "navigate_to_/equipment",
+    "click_action_button_0"
+  ],
+  "analysis_timestamp": "2025-09-25T15:47:03.931408"
+}
