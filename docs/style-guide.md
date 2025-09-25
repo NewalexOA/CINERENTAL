@@ -154,6 +154,7 @@ export { fetchEquipment, MAX_ITEMS };
 4. **Name templates** according to their purpose.
 
 {% raw %}
+
 ```html
 {# equipment/detail.html #}
 {% extends "base.html" %}
@@ -168,6 +169,7 @@ export { fetchEquipment, MAX_ITEMS };
   </section>
 {% endblock %}
 ```
+
 {% endraw %}
 
 ## CSS
