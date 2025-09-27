@@ -133,8 +133,6 @@ export async function checkEquipmentAvailability(equipmentId, startDate, endDate
         availabilityElement.textContent = availability.is_available ? 'Доступно' : 'Недоступно';
         availabilityElement.className = availability.is_available ? 'text-success' : 'text-danger';
 
-        document.getElementById('addToProjectBtn').disabled = !availability.is_available;
-
         const selectedItem = document.querySelector('.equipment-item.selected');
         if (selectedItem) {
             selectedItem.dataset.equipmentAvailable = availability.is_available.toString();
