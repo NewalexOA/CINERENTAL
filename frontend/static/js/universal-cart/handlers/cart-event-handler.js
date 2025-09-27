@@ -87,6 +87,33 @@ class CartEventHandler {
             itemsList.addEventListener('change', this._handleItemInputChange);
         }
 
+        // Also listen on table body for embedded table mode
+        const tableBody = container.querySelector('.table-body');
+        if (tableBody) {
+            tableBody.addEventListener('click', this._handleItemControlClick);
+            tableBody.addEventListener('change', this._handleItemInputChange);
+        }
+
+        // Fallback: delegate from the container itself so dynamically rendered
+        // elements (like table rows) are always captured
+        container.addEventListener('click', (e) => {
+            // Fast path: only react if target is one of our controls
+            if (
+                e.target.closest('.quantity-increase') ||
+                e.target.closest('.quantity-decrease') ||
+                e.target.closest('.cart-item-remove') ||
+                e.target.closest('.date-display') ||
+                e.target.closest('.booking-period-input')
+            ) {
+                this._handleItemControlClick(e);
+            }
+        });
+        container.addEventListener('change', (e) => {
+            if (e.target.closest('.quantity-input, .quantity-input-embedded')) {
+                this._handleItemInputChange(e);
+            }
+        });
+
         // Handle cart item date changes from daterangepicker
         container.addEventListener('cartItemDateChanged', (event) => {
             const { itemId, startDate, endDate } = event.detail;
@@ -233,10 +260,18 @@ class CartEventHandler {
      * @private
      */
     _handleItemControlClick(e) {
+        // Debug log for event binding confirmation
+        try {
+            const cls = e.target && e.target.className ? e.target.className.toString() : '';
+            console.log('[CartEventHandler] _handleItemControlClick dispatch', cls);
+        } catch (_) {}
+        // Support both cards mode (.cart-item) and table mode (tr[data-item-key])
         const cartItem = e.target.closest('.cart-item');
-        if (!cartItem) return;
+        const cartRow = e.target.closest('tr[data-item-key]');
+        const itemContainer = cartItem || cartRow;
+        if (!itemContainer) return;
 
-        const itemKey = cartItem.dataset.itemKey;
+        const itemKey = itemContainer.dataset.itemKey;
 
         if (e.target.closest('.quantity-decrease')) {
             this._changeQuantity(itemKey, -1);
@@ -244,7 +279,7 @@ class CartEventHandler {
             this._changeQuantity(itemKey, 1);
         } else if (e.target.closest('.cart-item-remove')) {
             this.cart.removeItem(itemKey);
-        } else if (e.target.closest('.date-display')) {
+        } else if (e.target.closest('.date-display') || e.target.closest('.booking-period-input')) {
             this._handleDateEdit(itemKey);
         }
     }
@@ -274,6 +309,7 @@ class CartEventHandler {
      */
     _changeQuantity(itemKey, delta) {
         const item = this.cart.getItem(itemKey);
+        console.log('[CartEventHandler] _changeQuantity', { itemKey, delta, hasItem: !!item, currentQty: item?.quantity });
         if (item) {
             const newQuantity = (item.quantity || 1) + delta;
             if (newQuantity > 0) {

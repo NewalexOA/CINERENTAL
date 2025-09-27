@@ -249,6 +249,12 @@ class CartUI {
             this.badge = document.getElementById(this.config.badgeId);
 
             // cartContent is already set in _createUI()
+            // Bind table body for embedded table mode
+            if (this.container) {
+                this.itemsList = this.container.querySelector('.cart-items-list');
+                this.summary = this.container.querySelector('.cart-summary');
+                this.tableBody = this.container.querySelector('.table-body');
+            }
         }
 
         if (!this.container) {
@@ -262,6 +268,11 @@ class CartUI {
      */
     _setupEventListeners() {
         this.eventHandler.setupEventListeners(this.container, this.toggleButton);
+        // For embedded table mode ensure delegates on table body as well
+        if (this.tableBody) {
+            this.tableBody.addEventListener('click', this.eventHandler._handleItemControlClick);
+            this.tableBody.addEventListener('change', this.eventHandler._handleItemInputChange);
+        }
     }
 
     /**
