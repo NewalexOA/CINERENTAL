@@ -14,6 +14,7 @@ from backend.constants.log_messages import (
     ErrorLogMessages,
     ProjectLogMessages,
 )
+from backend.core.timezone_utils import ensure_timezone_aware, normalize_project_period
 from backend.exceptions import DateError, NotFoundError, ValidationError
 from backend.exceptions.messages import DateErrorMessages, ProjectErrorMessages
 from backend.models import BookingStatus, Project, ProjectStatus
@@ -66,6 +67,13 @@ class CrudOperations:
         )
 
         try:
+            # Normalize timezone and clamp to business day boundaries
+            start_date, end_date = normalize_project_period(start_date, end_date)
+
+            # Extra safety to ensure tz-aware datetimes
+            start_date = ensure_timezone_aware(start_date)
+            end_date = ensure_timezone_aware(end_date)
+
             # Validate dates
             if start_date > end_date:
                 raise DateError(

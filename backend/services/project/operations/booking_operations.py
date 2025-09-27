@@ -14,6 +14,7 @@ from backend.constants.log_messages import (
     ErrorLogMessages,
     ProjectLogMessages,
 )
+from backend.core.timezone_utils import ensure_timezone_aware, normalize_project_period
 from backend.exceptions import NotFoundError, ValidationError
 from backend.exceptions.messages import ProjectErrorMessages
 from backend.models import Project
@@ -220,6 +221,11 @@ class BookingOperations:
         try:
             log.info(BookingLogMessages.CREATING_WITH_BOOKINGS, len(bookings))
 
+            # Normalize project period boundaries and tz
+            start_date, end_date = normalize_project_period(start_date, end_date)
+            start_date = ensure_timezone_aware(start_date)
+            end_date = ensure_timezone_aware(end_date)
+
             # Create the project first
             project = await self.crud_operations.create_project(
                 name=name,
@@ -295,6 +301,22 @@ class BookingOperations:
                             }
                         )
                         continue
+
+                    # Normalize only if end is 00:00 (date-only);
+                    # otherwise keep explicit times
+                    if (
+                        isinstance(booking_end, datetime)
+                        and booking_end.hour == 0
+                        and booking_end.minute == 0
+                        and booking_end.second == 0
+                        and booking_end.microsecond == 0
+                    ):
+                        booking_start, booking_end = normalize_project_period(
+                            booking_start, booking_end
+                        )
+                    # Ensure tz-aware (assume Moscow for naive)
+                    booking_start = ensure_timezone_aware(booking_start)
+                    booking_end = ensure_timezone_aware(booking_end)
 
                     # Create booking with verified data
                     booking = await self.booking_service.create_booking(
