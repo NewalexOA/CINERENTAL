@@ -339,8 +339,32 @@ class CartRenderer {
             console.log('[CartRenderer] Table rows inserted, total HTML length:', rows.length);
         }
 
-        // Initialize daterangepicker for period inputs
+        // Initialize daterangepicker for period inputs and hook change -> custom dates
         this._initializeDateRangePickers(container);
+
+        // After render, re-log number of date displays for diagnostics
+        const dd = container.querySelectorAll('.booking-period-input');
+        console.log('[CartRenderer] booking-period-input count:', dd.length);
+
+        // Bind apply event to persist dates into item (custom dates) immediately
+        const tableBodyEl = container.querySelector('.table-body');
+        if (tableBodyEl) {
+            const inputs = tableBodyEl.querySelectorAll('.booking-period-input');
+            console.log('[CartRenderer] binding apply handlers for inputs:', inputs.length);
+            inputs.forEach((input) => {
+                $(input).off('apply.daterangepicker').on('apply.daterangepicker', (ev, picker) => {
+                    const row = input.closest('tr[data-item-key]');
+                    if (!row) return;
+                    const itemKey = row.getAttribute('data-item-key');
+                    // Update cart item dates as custom
+                    if (typeof this.cart.updateItemDates === 'function') {
+                        this.cart.updateItemDates(itemKey, picker.startDate.format('YYYY-MM-DDTHH:mm:ss'), picker.endDate.format('YYYY-MM-DDTHH:mm:ss'));
+                    }
+                    // Update input display
+                    input.value = `${picker.startDate.format('DD.MM.YYYY HH:mm')} - ${picker.endDate.format('DD.MM.YYYY HH:mm')}`;
+                });
+            });
+        }
 
         // Track activity
         this.trackActivity('table_render', `${items.length} items`);

@@ -10,6 +10,7 @@ from typing import Any, List, Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from backend.core.timezone_utils import ensure_timezone_aware
 from backend.exceptions import (
     AvailabilityError,
     DateError,
@@ -87,11 +88,17 @@ class BookingService:
             if quantity <= 0:
                 raise ValidationError('Quantity must be positive')
 
-            # Ensure dates are timezone-aware
-            if start_date.tzinfo is None:
-                start_date = start_date.replace(tzinfo=timezone.utc)
-            if end_date.tzinfo is None:
-                end_date = end_date.replace(tzinfo=timezone.utc)
+            # Ensure dates are timezone-aware (assume Moscow TZ for naive inputs)
+            try:
+                if start_date.tzinfo is None:
+                    start_date = ensure_timezone_aware(start_date)
+                if end_date.tzinfo is None:
+                    end_date = ensure_timezone_aware(end_date)
+            except Exception:
+                if start_date.tzinfo is None:
+                    start_date = start_date.replace(tzinfo=timezone.utc)
+                if end_date.tzinfo is None:
+                    end_date = end_date.replace(tzinfo=timezone.utc)
 
             # Get current time in UTC
             now = datetime.now(timezone.utc)
@@ -106,15 +113,6 @@ class BookingService:
                 today_start.isoformat(),
                 now.isoformat(),
             )
-
-            # Check if start date is in the past (before the beginning of today)
-            # Disabled to allow past dates
-            # if start_date < today_start:
-            #     raise DateError(
-            #         'Start date cannot be in the past',
-            #         start_date=start_date,
-            #         details={'today_start': today_start.isoformat()},
-            #     )
 
             # Log when creating a retroactive booking (if needed for other logic)
             if start_date < now:

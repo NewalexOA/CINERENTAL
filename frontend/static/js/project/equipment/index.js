@@ -52,11 +52,6 @@ export function initializeEquipmentManagement() {
     });
     document.getElementById('closeEquipmentDetailsBtn')?.addEventListener('click', hideEquipmentDetails);
 
-    // Search functionality handled by input events and debounce in search.js
-
-    // Add to project button
-    document.getElementById('addToProjectBtn')?.addEventListener('click', addSelectedEquipmentToProject);
-
     // Initialize HID scanner (without auto-starting - will be managed by modal open/close)
     initializeHIDScanner();
 }

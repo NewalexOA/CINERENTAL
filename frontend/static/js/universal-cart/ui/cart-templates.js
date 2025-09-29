@@ -192,16 +192,16 @@ class CartTemplates {
                     {{/hasSerial}}
                     {{#noSerial}}
                     <div class="btn-group btn-group-sm" role="group">
-                        <button class="btn btn-outline-secondary quantity-increase-btn quantity-increase" title="Увеличить кол-во">
+                        <button class="btn btn-outline-secondary quantity-increase-btn quantity-increase" type="button" title="Увеличить кол-во">
                             <i class="fas fa-plus"></i>
                         </button>
                         {{#quantityMultiple}}
-                        <button class="btn btn-outline-secondary quantity-decrease-btn quantity-decrease" title="Уменьшить кол-во">
+                        <button class="btn btn-outline-secondary quantity-decrease-btn quantity-decrease" type="button" title="Уменьшить кол-во">
                             <i class="fas fa-minus"></i>
                         </button>
                         {{/quantityMultiple}}
                         {{#quantityOne}}
-                        <button class="btn btn-outline-danger remove-booking-btn cart-item-remove" title="Удалить">
+                        <button class="btn btn-outline-danger remove-booking-btn cart-item-remove" type="button" title="Удалить">
                             <i class="fas fa-times"></i>
                         </button>
                         {{/quantityOne}}
