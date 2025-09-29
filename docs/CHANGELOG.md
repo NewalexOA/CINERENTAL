@@ -2,6 +2,42 @@
 
 This document lists notable changes to the ACT-Rental application.
 
+## [0.16.0-beta.1] - 2025-09-29
+
+### Timezone Normalization and Cart Enhancement
+
+### Moscow Timezone Infrastructure Implementation
+
+- **Backend Timezone Utilities:** Added `backend/core/timezone_utils.py` with Moscow TZ constants and normalization functions for consistent datetime handling across the application. Implemented `ensure_timezone_aware()` to handle naive datetimes and `normalize_project_period()` to preserve explicit times while defaulting end-of-day to 23:59.
+- **Service Layer Integration:** Enhanced BookingService.create_booking() and CrudOperations.create_project() with timezone utils integration, replacing UTC assumptions with proper Moscow timezone handling. Added conditional normalization in BookingOperations.create_project_with_bookings() ensuring all datetime objects are timezone-aware before database storage.
+- **Timezone Consistency:** Resolved timezone shifts in booking and project operations by applying Moscow timezone normalization throughout the system, eliminating booking time discrepancies and ensuring accurate local time representation.
+
+### Frontend DateTime Enhancement
+
+- **Centralized DateTime Utilities:** Created `frontend/static/js/utils/datetime.js` with date normalization functions replacing scattered manual time manipulations. Added `clampStartIfDateOnly()` and `clampEndIfDateOnly()` for proper time boundaries and `toApiIso()` for consistent API datetime serialization.
+- **Project Integration:** Updated projects-new.js to use new datetime utilities, eliminating manual hour(0)/hour(23) calls and ensuring consistent date/time flow across project creation workflow. Implemented time preservation logic maintaining user-specified times for hourly rentals.
+- **API Serialization:** Standardized datetime formatting through centralized utilities ensuring consistent communication between frontend and backend components.
+
+### Universal Cart System Improvements
+
+- **Enhanced Date Parsing:** Improved cart-integration.js with universal date parsing removing daterangepicker dependency limitations. Added support for multiple date formats (DD.MM.YYYY HH:mm and DD.MM.YYYY) with robust fallback parsing mechanisms and custom date handling fixes.
+- **Event Delegation Enhancement:** Extended event delegation to table body elements for dynamic content in cart-event-handler.js, improving container-level delegation for dynamically rendered cart elements. Enhanced cart-ui.js table body binding fixes for embedded table mode operations.
+- **Quantity Control Optimization:** Fixed quantity control buttons with proper type="button" specifications in cart-templates.js and improved cart-renderer.js daterangepicker initialization for table mode with existing value parsing from input fields.
+
+### UI Workflow Optimization
+
+- **Deprecated Element Removal:** Removed "Add to Project" button from projects/view.html template enforcing cart-based workflow as the single equipment addition pathway. Cleaned up event handlers removing deprecated addToProjectBtn references from equipment/index.js, equipment/ui.js, and equipment/availability.js.
+- **Workflow Enforcement:** Streamlined equipment addition interface through cart system eliminating multiple conflicting workflow paths. Enhanced template simplification and availability check optimization removing unused button availability logic.
+
+### Technical Improvements & Bug Fixes (0.16.0-beta.1)
+
+- Enhanced timezone handling preventing booking conflicts and scheduling errors through consistent Moscow TZ application
+- Improved cart functionality with universal date parsing and enhanced event delegation for dynamic content support
+- Streamlined project workflows reducing complexity through enforced cart-based equipment addition process
+- Fixed custom_start_date/custom_end_date assignment issues in cart integration with comprehensive debugging integration
+- Optimized daterangepicker initialization and event handling for improved user experience across all cart modes
+- Enhanced code maintainability through centralized datetime and timezone utilities replacing scattered logic throughout the system
+
 ## [0.15.2-beta.1] - 2025-09-25
 
 ### Equipment Booking History - Complete Rental Lifecycle Visibility

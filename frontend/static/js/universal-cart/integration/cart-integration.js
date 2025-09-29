@@ -201,6 +201,15 @@ async function addSelectedEquipmentToCart() {
         const successfullyAdded = [];
         const errors = [];
 
+        // Read quantity from common input, fallback to 1
+        const qtyInput = document.getElementById('newBookingQuantity');
+        const commonQuantity = parseInt(qtyInput?.value || '1', 10) || 1;
+        console.log('[CartIntegration] addSelectedEquipmentToCart: commonQuantity', commonQuantity);
+
+        // Read booking dates once (for batch add)
+        const { startDate: commonStartDate, endDate: commonEndDate } = getBookingDatesFromPage();
+        console.log('[CartIntegration] addSelectedEquipmentToCart: commonDates', { commonStartDate, commonEndDate });
+
         // Get all selected equipment from the page
         for (const equipmentId of selectedEquipmentIds) {
             const equipmentElement = document.querySelector(`[data-equipment-id="${equipmentId}"]`);
@@ -216,7 +225,7 @@ async function addSelectedEquipmentToCart() {
                 barcode: equipmentElement.dataset.equipmentBarcode || '',
                 serial_number: equipmentElement.dataset.equipmentSerial || '',
                 category: equipmentElement.dataset.equipmentCategory || 'Без категории',
-                quantity: 1, // Default quantity
+                quantity: commonQuantity, // take quantity from common input
                 available: equipmentElement.dataset.equipmentAvailable === 'true'
             };
 
@@ -226,6 +235,16 @@ async function addSelectedEquipmentToCart() {
                 continue;
             }
 
+            // Attach dates if available
+            if (commonStartDate && commonEndDate) {
+                equipmentData.start_date = commonStartDate;
+                equipmentData.end_date = commonEndDate;
+                equipmentData.custom_start_date = commonStartDate;
+                equipmentData.custom_end_date = commonEndDate;
+                equipmentData.use_project_dates = false;
+            }
+
+            console.log('[CartIntegration] addSelectedEquipmentToCart: adding item', equipmentData);
             // Add to cart
             const success = await window.universalCart.addItem(equipmentData);
             if (success) {
@@ -369,7 +388,26 @@ async function addToCartFromSelection(equipmentData) {
     }
 
     try {
-        const success = await window.universalCart.addItem(equipmentData);
+        console.log('[CartIntegration] addToCartFromSelection: incoming equipmentData', equipmentData);
+        // Try to capture currently selected booking period from the page
+        let withDates = { ...equipmentData };
+        try {
+            const { startDate, endDate } = getBookingDatesFromPage();
+            console.log('[CartIntegration] getBookingDatesFromPage ->', { startDate, endDate });
+            if (startDate && endDate) {
+                // Persist dates in item so UI shows the right period immediately
+                withDates.start_date = startDate;
+                withDates.end_date = endDate;
+                withDates.custom_start_date = startDate;
+                withDates.custom_end_date = endDate;
+                withDates.use_project_dates = false;
+            }
+        } catch (e) {
+            console.warn('[CartIntegration] getBookingDatesFromPage failed, fallback to defaults', e);
+        }
+
+        console.log('[CartIntegration] addItem payload', withDates);
+        const success = await window.universalCart.addItem(withDates);
         if (!success) {
             console.warn('Failed to add item to cart:', equipmentData.name);
         }
@@ -511,23 +549,55 @@ function getBookingDatesFromPage() {
         const dateRangeInput = document.getElementById('newBookingPeriod');
         if (dateRangeInput && $(dateRangeInput).data('daterangepicker')) {
             const picker = $(dateRangeInput).data('daterangepicker');
+            console.log('[CartIntegration] using daterangepicker from #newBookingPeriod');
             return {
                 startDate: picker.startDate.format('YYYY-MM-DDTHH:mm:ss'),
                 endDate: picker.endDate.format('YYYY-MM-DDTHH:mm:ss')
             };
         }
 
-        // Fallback: try to find date inputs
+        // Fallback #1: parse value from #newBookingPeriod even without daterangepicker
+        const dateRangeInputEl = document.getElementById('newBookingPeriod');
+        if (dateRangeInputEl && dateRangeInputEl.value && dateRangeInputEl.value.includes(' - ')) {
+            try {
+                const [startStr, endStr] = dateRangeInputEl.value.split(' - ');
+                console.log('[CartIntegration] parsing plain value from #newBookingPeriod', { startStr, endStr });
+                // Try with time first
+                let start = moment(startStr, ['DD.MM.YYYY HH:mm', 'DD.MM.YYYY'], true);
+                let end = moment(endStr, ['DD.MM.YYYY HH:mm', 'DD.MM.YYYY'], true);
+                if (start.isValid() && end.isValid()) {
+                    // If time parts missing, default start 00:00, end 23:59
+                    if (start.format('HH:mm') === '00:00' && startStr.trim().length === 10) {
+                        start = start.hour(0).minute(0);
+                    }
+                    if (end.format('HH:mm') === '00:00' && endStr.trim().length === 10) {
+                        end = end.hour(23).minute(59);
+                    }
+                    console.log('[CartIntegration] parsed dates from plain input', { start: start.toISOString(), end: end.toISOString() });
+                    return {
+                        startDate: start.format('YYYY-MM-DDTHH:mm:ss'),
+                        endDate: end.format('YYYY-MM-DDTHH:mm:ss')
+                    };
+                }
+            } catch (parseErr) {
+                // ignore and try next fallback
+                console.warn('[CartIntegration] plain parse failed', parseErr);
+            }
+        }
+
+        // Fallback #2: try to find separate date inputs
         const startDateInput = document.querySelector('input[name="start_date"], #startDate');
         const endDateInput = document.querySelector('input[name="end_date"], #endDate');
 
         if (startDateInput && endDateInput) {
+            console.log('[CartIntegration] using fallback separate date inputs');
             return {
                 startDate: startDateInput.value,
                 endDate: endDateInput.value
             };
         }
 
+        console.warn('[CartIntegration] booking dates not found on page');
         return {
             startDate: null,
             endDate: null

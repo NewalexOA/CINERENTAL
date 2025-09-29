@@ -11,6 +11,7 @@
 // Import API client
 import { api } from './utils/api.js';
 import { DATERANGEPICKER_LOCALE } from './utils/common.js';
+import { clampStartIfDateOnly, clampEndIfDateOnly, toApiIso } from './utils/datetime.js';
 
 // State variables
 let selectedEquipment = [];
@@ -255,8 +256,8 @@ function saveSessionData() {
         client_id: formData.get('client_id') || '',
         description: formData.get('description') || '',
         notes: formData.get('notes') || '',
-        start_date: dateRange?.startDate?.isValid() ? dateRange.startDate.hour(0).minute(0).format('YYYY-MM-DDTHH:mm:ss') : null,
-        end_date: dateRange?.endDate?.isValid() ? dateRange.endDate.hour(23).minute(59).format('YYYY-MM-DDTHH:mm:ss') : null,
+        start_date: dateRange?.startDate?.isValid() ? toApiIso(clampStartIfDateOnly(dateRange.startDate)) : null,
+        end_date: dateRange?.endDate?.isValid() ? toApiIso(clampEndIfDateOnly(dateRange.endDate)) : null,
         bookings: selectedEquipment.map(item => ({
             equipment_id: item.id,
             equipment_name: item.name,
@@ -481,14 +482,14 @@ function createProjectPayload(status) {
         description: formData.get('description') || null,
         notes: formData.get('notes') || null,
         status: status,
-        start_date: dateRange?.startDate?.isValid() ? dateRange.startDate.hour(0).minute(0).format('YYYY-MM-DDTHH:mm:ss') : null,
-        end_date: dateRange?.endDate?.isValid() ? dateRange.endDate.hour(23).minute(59).format('YYYY-MM-DDTHH:mm:ss') : null,
+        start_date: dateRange?.startDate?.isValid() ? toApiIso(clampStartIfDateOnly(dateRange.startDate)) : null,
+        end_date: dateRange?.endDate?.isValid() ? toApiIso(clampEndIfDateOnly(dateRange.endDate)) : null,
         bookings: []
     };
 
     selectedEquipment.forEach(item => {
-        const bookingStartDate = item.booking_start || (dateRange?.startDate?.isValid() ? dateRange.startDate.hour(0).minute(0).format('YYYY-MM-DDTHH:mm:ss') : null);
-        const bookingEndDate = item.booking_end || (dateRange?.endDate?.isValid() ? dateRange.endDate.hour(23).minute(59).format('YYYY-MM-DDTHH:mm:ss') : null);
+        const bookingStartDate = item.booking_start || (dateRange?.startDate?.isValid() ? toApiIso(clampStartIfDateOnly(dateRange.startDate)) : null);
+        const bookingEndDate = item.booking_end || (dateRange?.endDate?.isValid() ? toApiIso(clampEndIfDateOnly(dateRange.endDate)) : null);
 
         const booking = {
             equipment_id: parseInt(item.id),
@@ -645,8 +646,8 @@ function addEquipmentItemEventListeners() {
     $('.equipment-period-input').on('apply.daterangepicker', function(ev, picker) {
         const index = parseInt($(this).data('index'));
         if (!isNaN(index) && index >= 0 && index < selectedEquipment.length) {
-            selectedEquipment[index].booking_start = picker.startDate.hour(0).minute(0).format('YYYY-MM-DDTHH:mm:ss');
-            selectedEquipment[index].booking_end = picker.endDate.hour(23).minute(59).format('YYYY-MM-DDTHH:mm:ss');
+            selectedEquipment[index].booking_start = toApiIso(clampStartIfDateOnly(picker.startDate));
+            selectedEquipment[index].booking_end = toApiIso(clampEndIfDateOnly(picker.endDate));
             $(this).val(picker.startDate.format('DD.MM.YYYY') + ' - ' + picker.endDate.format('DD.MM.YYYY'));
             saveSessionData();
         }
@@ -678,9 +679,9 @@ async function applyProjectDatesToAllItems() {
         return;
     }
 
-    // Use full day hours 00:00-23:59 for bookings
-    const projectStartDate = projectDateRangePicker.startDate.hour(0).minute(0).format('YYYY-MM-DDTHH:mm:ss');
-    const projectEndDate = projectDateRangePicker.endDate.hour(23).minute(59).format('YYYY-MM-DDTHH:mm:ss');
+    // Apply normalization: keep explicit time, end defaults to 23:59 if date-only
+    const projectStartDate = toApiIso(clampStartIfDateOnly(projectDateRangePicker.startDate));
+    const projectEndDate = toApiIso(clampEndIfDateOnly(projectDateRangePicker.endDate));
 
     const equipmentItemsToCheck = [...selectedEquipment]; // Clone array
 
@@ -887,8 +888,8 @@ function openEquipmentPeriodModal(index) {
     newSaveBtn.addEventListener('click', () => {
         const picker = periodInput.data('daterangepicker');
         if (picker && picker.startDate && picker.endDate) {
-            selectedEquipment[index].booking_start = picker.startDate.hour(0).minute(0).format('YYYY-MM-DDTHH:mm:ss');
-            selectedEquipment[index].booking_end = picker.endDate.hour(23).minute(59).format('YYYY-MM-DDTHH:mm:ss');
+            selectedEquipment[index].booking_start = toApiIso(clampStartIfDateOnly(picker.startDate));
+            selectedEquipment[index].booking_end = toApiIso(clampEndIfDateOnly(picker.endDate));
             updateEquipmentTable();
             saveSessionData();
             modal.hide();

@@ -18,10 +18,6 @@ export function displaySearchResults(results) {
 
     if (!results || results.length === 0) {
         resultsContainer.innerHTML = '<div class="alert alert-info">Оборудование не найдено</div>';
-        const addToProjectBtn = document.getElementById('addToProjectBtn');
-        if (addToProjectBtn) {
-            addToProjectBtn.disabled = true;
-        }
         // Check if hideCartControls is available
         if (typeof hideCartControls === 'function') {
             hideCartControls();
@@ -144,10 +140,6 @@ export function selectEquipment(event) {
     selectedItem.classList.add('selected', 'bg-light');
 
     const isAvailable = selectedItem.dataset.equipmentAvailable === 'true';
-    const addToProjectBtn = document.getElementById('addToProjectBtn');
-    if (addToProjectBtn) {
-        addToProjectBtn.disabled = !isAvailable;
-    }
 
     showEquipmentDetails(selectedItem.dataset);
 
@@ -231,9 +223,6 @@ export function resetEquipmentSelection() {
 
     const searchResults = document.getElementById('searchResults');
     if (searchResults) searchResults.innerHTML = '';
-
-    const addToProjectBtn = document.getElementById('addToProjectBtn');
-    if (addToProjectBtn) addToProjectBtn.disabled = true;
 
     const categoryFilter = document.getElementById('categoryFilter');
     if (categoryFilter) categoryFilter.value = '';
