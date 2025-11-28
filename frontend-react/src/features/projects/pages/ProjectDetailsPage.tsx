@@ -23,8 +23,9 @@ import {
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../../components/ui/dialog';
 import { Popover, PopoverContent, PopoverTrigger } from '../../../components/ui/popover';
 import { Calendar } from '../../../components/ui/calendar';
+import { Textarea } from '../../../components/ui/textarea';
 import { EquipmentPicker } from '../../equipment/components/EquipmentPicker';
-import { ArrowLeft, Trash2, Plus, Calendar as CalendarIcon, User, Printer, Minus } from 'lucide-react';
+import { ArrowLeft, Trash2, Plus, Calendar as CalendarIcon, User, Printer, Minus, Save } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { DateRange } from 'react-day-picker';
@@ -44,19 +45,23 @@ export default function ProjectDetailsPage() {
   const projectId = Number(id);
 
   const [isAddEquipmentOpen, setIsAddEquipmentOpen] = useState(false);
+  const [notes, setNotes] = useState("");
 
   const { data: project, isLoading, error } = useQuery({
     queryKey: ['project', projectId],
     queryFn: () => projectsService.getById(projectId),
-    enabled: !!projectId
+    enabled: !!projectId,
+    onSuccess: (data) => {
+      setNotes(data.description || "");
+    }
   });
 
   // Mutations
-  const updateStatusMutation = useMutation({
-    mutationFn: (status: ProjectStatus) => projectsService.update(projectId, { id: projectId, status }),
+  const updateProjectMutation = useMutation({
+    mutationFn: (data: { description: string }) => projectsService.update(projectId, { id: projectId, ...data }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['project', projectId] });
-      toast.success('Статус обновлен');
+      toast.success('Заметки обновлены');
     }
   });
 
@@ -126,6 +131,10 @@ export default function ProjectDetailsPage() {
     }
   };
 
+  const handleSaveNotes = () => {
+    updateProjectMutation.mutate({ description: notes });
+  };
+
   if (isLoading) return <div className="p-8 text-center text-muted-foreground">Загрузка проекта...</div>;
   if (error || !project) return <div className="p-8 text-center text-destructive">Ошибка загрузки проекта</div>;
 
@@ -150,7 +159,7 @@ export default function ProjectDetailsPage() {
              </Button>
              <Select 
                value={project.status} 
-               onValueChange={(val) => updateStatusMutation.mutate(val as ProjectStatus)}
+               onValueChange={(val) => updateProjectMutation.mutate({ status: val as ProjectStatus })}
              >
                <SelectTrigger className="w-[140px]">
                  <SelectValue />
@@ -176,8 +185,14 @@ export default function ProjectDetailsPage() {
           </p>
         </div>
         <div className="bg-card border rounded-lg p-4 shadow-sm md:col-span-2">
-          <h3 className="font-semibold mb-2">Описание</h3>
-          <p className="text-sm text-muted-foreground">{project.description || 'Нет описания'}</p>
+          <h3 className="font-semibold mb-2">Заметки</h3>
+          <div className="flex flex-col gap-2">
+            <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Добавьте заметки к проекту..." />
+            <Button size="sm" onClick={handleSaveNotes} className="self-end">
+              <Save className="mr-2 h-4 w-4"/>
+              Сохранить заметки
+            </Button>
+          </div>
         </div>
       </div>
 
