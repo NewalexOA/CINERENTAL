@@ -25,6 +25,6 @@ export interface ClientCreate {
   notes?: string;
 }
 
-export interface ClientUpdate extends Partial(ClientCreate) {
+export type ClientUpdate = Partial<ClientCreate> & {
   id: number;
-}
+};
