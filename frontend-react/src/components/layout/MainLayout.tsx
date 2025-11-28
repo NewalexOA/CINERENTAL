@@ -9,7 +9,7 @@ import {
   QrCode,
   Menu
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn } from '../../lib/utils';
 import { useState } from 'react';
 
 // Navigation items configuration

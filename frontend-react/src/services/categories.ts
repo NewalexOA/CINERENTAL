@@ -1,4 +1,4 @@
-import api from '@/lib/axios';
+import api from '../lib/axios';
 import { Category, CategoryCreate, CategoryUpdate } from '@/types/category';
 
 export const categoriesService = {

@@ -1,4 +1,4 @@
-import api from '@/lib/axios';
+import api from '../lib/axios';
 import { Client, ClientCreate, ClientUpdate } from '@/types/client';
 
 export const clientsService = {
