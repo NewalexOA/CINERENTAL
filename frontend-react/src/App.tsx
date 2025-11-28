@@ -4,11 +4,11 @@ import { Toaster } from './components/ui/sonner';
 import ClientsPage from './features/clients/pages/ClientsPage';
 import CategoriesPage from './features/categories/pages/CategoriesPage';
 import EquipmentPage from './features/equipment/pages/EquipmentPage';
+import ProjectsPage from './features/projects/pages/ProjectsPage';
+import ScannerPage from './features/scanner/pages/ScannerPage';
 
 // Placeholder pages
 const BookingsPage = () => <div className="p-4">Bookings Page Content</div>;
-const ProjectsPage = () => <div className="p-4">Projects Page Content</div>;
-const ScannerPage = () => <div className="p-4">Scanner Page Content</div>;
 
 function App() {
   return (
