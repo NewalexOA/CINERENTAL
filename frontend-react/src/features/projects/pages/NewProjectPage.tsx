@@ -18,6 +18,7 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { projectsService } from '../../../services/projects';
 import { clientsService } from '../../../services/clients';
 import { equipmentService } from '../../../services/equipment';
+import { bookingsService } from '../../../services/bookings';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/ui/select';
@@ -54,8 +55,6 @@ export default function NewProjectPage() {
     setIsApplyingDates(true);
     let conflictsCount = 0;
 
-    // Check availability for all items
-    // In a real app, this should probably be a bulk check API or handled gracefully
     for (const item of items) {
       try {
         const result = await equipmentService.checkAvailability(item.id, dates.start, dates.end);
@@ -63,7 +62,6 @@ export default function NewProjectPage() {
           updateItemDates(item.id, { start: dates.start, end: dates.end });
         } else {
           conflictsCount++;
-          // Could highlight conflict here
         }
       } catch (e) {
         console.error(e);
@@ -91,13 +89,20 @@ export default function NewProjectPage() {
         status: ProjectStatus.DRAFT
       });
 
-      // 2. Add Bookings
-      console.log('Project created:', project);
-      console.log('Items to book:', items.map(i => ({
-        equipment_id: i.id,
-        start: i.start_date,
-        end: i.end_date
-      })));
+      // 2. Add Bookings (Batch)
+      if (items.length > 0) {
+        const bookingsData = items.map(i => ({
+          project_id: project.id,
+          client_id: Number(clientId),
+          equipment_id: i.id,
+          start_date: i.start_date!,
+          end_date: i.end_date!,
+          quantity: i.quantity,
+          total_amount: 0 // Logic for price calculation needed
+        }));
+        
+        await bookingsService.createBatch(bookingsData, project.id);
+      }
       
       return project;
     },
