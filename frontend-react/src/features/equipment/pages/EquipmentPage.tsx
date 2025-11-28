@@ -1,7 +1,7 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { equipmentService } from '../../../services/equipment';
 import { categoriesService } from '../../../services/categories';
-import { Equipment, EquipmentCreate, EquipmentUpdate, EquipmentStatus } from '../../../types/equipment';
+import { EquipmentStatus } from '../../../types/equipment';
 import { 
   Table, 
   TableBody, 
@@ -22,8 +22,9 @@ import {
 import { EquipmentFormDialog } from '../components/EquipmentFormDialog';
 import { EquipmentDeleteDialog } from '../components/EquipmentDeleteDialog';
 import { Plus, Search, QrCode, Pencil, Trash2 } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { toast } from 'sonner';
+import { flattenCategories } from '../../../utils/category-utils';
 
 const statusMap: Record<string, { label: string, variant: "default" | "secondary" | "destructive" | "outline" | "success" | "warning" }> = {
   [EquipmentStatus.AVAILABLE]: { label: 'Доступно', variant: 'success' },
@@ -50,6 +51,8 @@ export default function EquipmentPage() {
     queryKey: ['categories'],
     queryFn: categoriesService.getAll
   });
+
+  const flattenedCategories = useMemo(() => categories ? flattenCategories(categories) : [], [categories]);
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['equipment', page, size, search, status, categoryId],
@@ -163,8 +166,12 @@ export default function EquipmentPage() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Все категории</SelectItem>
-              {categories?.map((cat) => (
-                <SelectItem key={cat.id} value={String(cat.id)}>{cat.name}</SelectItem>
+              {flattenedCategories.map((cat) => (
+                <SelectItem key={cat.id} value={String(cat.id)}>
+                  <span style={{ paddingLeft: `${cat.depth * 1.5}rem` }}>
+                    {cat.name}
+                  </span>
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>

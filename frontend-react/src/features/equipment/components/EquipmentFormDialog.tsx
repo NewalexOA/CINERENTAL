@@ -1,9 +1,10 @@
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { Equipment, EquipmentCreate, EquipmentStatus } from '../../../types/equipment';
 import { Category } from '../../../types/category';
+import { flattenCategories } from '../../../utils/category-utils';
 import {
   Dialog,
   DialogContent,
@@ -82,6 +83,8 @@ export function EquipmentFormDialog({
     }
   });
 
+  const flattenedCategories = useMemo(() => categories ? flattenCategories(categories) : [], [categories]);
+
   useEffect(() => {
     if (open) {
       if (equipment) {
@@ -146,9 +149,11 @@ export function EquipmentFormDialog({
                       <SelectValue placeholder="Выберите категорию" />
                     </SelectTrigger>
                     <SelectContent>
-                      {categories.map((cat) => (
+                      {flattenedCategories.map((cat) => (
                         <SelectItem key={cat.id} value={String(cat.id)}>
-                          {cat.name}
+                          <span style={{ paddingLeft: `${cat.depth * 1.5}rem` }}>
+                            {cat.name}
+                          </span>
                         </SelectItem>
                       ))}
                     </SelectContent>
