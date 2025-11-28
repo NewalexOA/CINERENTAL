@@ -1,0 +1,20 @@
+{
+  "mcpServers": {
+    "codealive": {
+      "url": "https://mcp.codealive.ai/api",
+      "headers": {
+        "Authorization": "Bearer ca_1764326477126_vYwLmtKZycZM1Mq-Mzn_ijMpu9HQIijU9p4ZMH5aj0w"
+      }
+    },
+    "firebase": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "firebase-tools@latest",
+        "experimental:mcp",
+        "--only",
+        "auth,firestore"
+      ]
+    }
+  }
+}
