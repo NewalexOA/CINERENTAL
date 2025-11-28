@@ -1,7 +1,7 @@
 export enum ClientStatus {
   ACTIVE = 'active',
   ARCHIVED = 'archived',
-  BLOCKED = 'blocked' // Assuming standard statuses, will verify if needed
+  BLOCKED = 'blocked'
 }
 
 export interface Client {
@@ -10,10 +10,11 @@ export interface Client {
   email?: string;
   phone?: string;
   company?: string;
-  status: ClientStatus | string; // Allow string fallback if enum doesn't match exactly
+  status: ClientStatus | string;
   notes?: string;
   created_at?: string;
   updated_at?: string;
+  bookings_count?: number; // Added field
 }
 
 export interface ClientCreate {
