@@ -15,6 +15,10 @@
         "--only",
         "auth,firestore"
       ]
+    },
+    "browsermcp": {
+      "command": "npx",
+      "args": ["@browsermcp/mcp@latest"]
     }
   }
 }
