@@ -18,6 +18,14 @@ export interface PaginatedResponse<T> {
   pages: number;
 }
 
+export interface AvailabilityResponse {
+  is_available: boolean;
+  equipment_status: EquipmentStatus;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  conflicts?: any[];
+  message?: string;
+}
+
 export const equipmentService = {
   getPaginated: async (params: EquipmentSearchParams) => {
     const response = await api.get<PaginatedResponse<Equipment>>('/equipment/paginated', { params });
@@ -39,13 +47,20 @@ export const equipmentService = {
     return response.data;
   },
 
+  checkAvailability: async (id: number, start: string, end: string) => {
+    const response = await api.get<AvailabilityResponse>(`/equipment/${id}/availability`, { 
+      params: { start_date: start, end_date: end } 
+    });
+    return response.data;
+  },
+
   create: async (data: EquipmentCreate) => {
     const response = await api.post<Equipment>('/equipment', data);
     return response.data;
   },
 
   update: async (id: number, data: EquipmentUpdate) => {
-    const response = await api.put<Equipment>(`/equipment/${id}`, data); // Note: API uses PUT for update
+    const response = await api.put<Equipment>(`/equipment/${id}`, data); 
     return response.data;
   },
 
