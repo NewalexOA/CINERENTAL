@@ -1,4 +1,4 @@
-import api from '@/lib/axios';
+import api from '../lib/axios';
 import { Equipment, EquipmentCreate, EquipmentUpdate, EquipmentStatus } from '@/types/equipment';
 
 export interface EquipmentSearchParams {
