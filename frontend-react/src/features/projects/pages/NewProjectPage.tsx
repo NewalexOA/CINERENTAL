@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { useCart, CartItem } from '../../../context/CartContext';
+import { useState } from 'react';
+import { useCart } from '../../../context/CartContext';
 import { EquipmentPicker } from '../../equipment/components/EquipmentPicker';
 import { Button } from '../../../components/ui/button';
 import { Input } from '../../../components/ui/input';
@@ -13,42 +13,71 @@ import {
   TableHeader, 
   TableRow 
 } from '../../../components/ui/table';
-import { Trash2, Save, CalendarClock, CalendarCheck } from 'lucide-react';
+import { Trash2, Save } from 'lucide-react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { projectsService } from '../../../services/projects';
 import { clientsService } from '../../../services/clients';
+import { equipmentService } from '../../../services/equipment';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/ui/select';
 import { ProjectStatus } from '../../../types/project';
-import { ItemDatesDialog } from '../components/ItemDatesDialog';
 
 export default function NewProjectPage() {
-  const { items, addItem, removeItem, updateQuantity, updateItemDates, clearCart, setDates, dates } = useCart();
+  const { items, addItem, removeItem, updateQuantity, updateItemDates, clearCart, dates, setDates } = useCart();
   const navigate = useNavigate();
   
   // Project Form State
   const [name, setName] = useState('');
   const [clientId, setClientId] = useState('');
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
   const [description, setDescription] = useState('');
-
-  // Item Date Edit State
-  const [editingItem, setEditingItem] = useState<CartItem | null>(null);
+  
+  const [isApplyingDates, setIsApplyingDates] = useState(false);
 
   const { data: clients } = useQuery({
     queryKey: ['clients'],
     queryFn: clientsService.getAll
   });
 
-  // Sync local date state with context
-  useEffect(() => {
-    setDates({ 
-        start: startDate || null, 
-        end: endDate || null 
-    });
-  }, [startDate, endDate, setDates]);
+  // Sync local state with context dates if needed, or just use context dates
+  const handleDateChange = (type: 'start' | 'end', value: string) => {
+    setDates({ ...dates, [type]: value || null });
+  };
+
+  const applyProjectDatesToAll = async () => {
+    if (!dates.start || !dates.end) {
+      toast.warning('Сначала выберите даты проекта');
+      return;
+    }
+    if (items.length === 0) return;
+
+    setIsApplyingDates(true);
+    let conflictsCount = 0;
+
+    // Check availability for all items
+    // In a real app, this should probably be a bulk check API or handled gracefully
+    for (const item of items) {
+      try {
+        const result = await equipmentService.checkAvailability(item.id, dates.start, dates.end);
+        if (result.is_available) {
+          updateItemDates(item.id, { start: dates.start, end: dates.end });
+        } else {
+          conflictsCount++;
+          // Could highlight conflict here
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    setIsApplyingDates(false);
+    
+    if (conflictsCount > 0) {
+      toast.warning(`Применено с конфликтами: ${conflictsCount} позиций недоступны.`);
+    } else {
+      toast.success('Даты применены ко всем позициям');
+    }
+  };
 
   const createProjectMutation = useMutation({
     mutationFn: async () => {
@@ -56,20 +85,18 @@ export default function NewProjectPage() {
       const project = await projectsService.create({
         name,
         client_id: Number(clientId),
-        start_date: startDate ? new Date(startDate).toISOString() : new Date().toISOString(),
-        end_date: endDate ? new Date(endDate).toISOString() : new Date().toISOString(),
+        start_date: dates.start || new Date().toISOString(),
+        end_date: dates.end || new Date().toISOString(),
         description,
         status: ProjectStatus.DRAFT
       });
 
-      // 2. Add Bookings (Items)
-      // This logic will need to send `item.startDate` and `item.endDate` to the backend booking creation endpoint.
+      // 2. Add Bookings
       console.log('Project created:', project);
       console.log('Items to book:', items.map(i => ({
-          id: i.id,
-          qty: i.quantity,
-          start: i.startDate,
-          end: i.endDate
+        equipment_id: i.id,
+        start: i.start_date,
+        end: i.end_date
       })));
       
       return project;
@@ -91,22 +118,13 @@ export default function NewProjectPage() {
       toast.error('Заполните обязательные поля и добавьте оборудование');
       return;
     }
-    createProjectMutation.mutate();
-  };
-
-  const applyDatesToAll = () => {
-    if (!startDate || !endDate) {
-        toast.error('Сначала выберите даты проекта');
-        return;
+    // Check if items have dates
+    const missingDates = items.some(i => !i.start_date || !i.end_date);
+    if (missingDates) {
+      toast.warning('У некоторых позиций не указаны даты бронирования');
+      return;
     }
-    items.forEach(item => {
-        updateItemDates(item.id, { start: startDate, end: endDate });
-    });
-    toast.success('Даты применены ко всем позициям');
-  };
-
-  const handleItemDateSave = (id: number, dates: { start: string; end: string }) => {
-      updateItemDates(id, { start: dates.start, end: dates.end });
+    createProjectMutation.mutate();
   };
 
   return (
@@ -138,11 +156,21 @@ export default function NewProjectPage() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="start_date">Начало</Label>
-                <Input id="start_date" type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+                <Input 
+                  id="start_date" 
+                  type="date" 
+                  value={dates.start ? dates.start.split('T')[0] : ''} 
+                  onChange={(e) => handleDateChange('start', e.target.value)} 
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="end_date">Окончание</Label>
-                <Input id="end_date" type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
+                <Input 
+                  id="end_date" 
+                  type="date" 
+                  value={dates.end ? dates.end.split('T')[0] : ''} 
+                  onChange={(e) => handleDateChange('end', e.target.value)} 
+                />
               </div>
             </div>
 
@@ -157,12 +185,10 @@ export default function NewProjectPage() {
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-lg font-semibold">Корзина ({items.length})</h2>
             <div className="flex gap-2">
-                <Button variant="outline" size="sm" onClick={applyDatesToAll} disabled={items.length === 0}>
-                    <CalendarCheck className="mr-2 h-4 w-4" /> Применить даты
-                </Button>
-                <Button variant="ghost" size="sm" onClick={clearCart} className="text-destructive">
-                    Очистить
-                </Button>
+              <Button variant="outline" size="sm" onClick={applyProjectDatesToAll} disabled={isApplyingDates}>
+                {isApplyingDates ? 'Проверка...' : 'Применить даты ко всем'}
+              </Button>
+              <Button variant="ghost" size="sm" onClick={clearCart} className="text-destructive">Очистить</Button>
             </div>
           </div>
           
@@ -172,7 +198,7 @@ export default function NewProjectPage() {
                 <TableRow>
                   <TableHead>Оборудование</TableHead>
                   <TableHead>Период</TableHead>
-                  <TableHead className="w-[100px]">Кол-во</TableHead>
+                  <TableHead className="w-[80px]">Кол-во</TableHead>
                   <TableHead className="w-[100px] text-right">Цена</TableHead>
                   <TableHead className="w-[50px]"></TableHead>
                 </TableRow>
@@ -183,23 +209,30 @@ export default function NewProjectPage() {
                 ) : items.map((item) => (
                   <TableRow key={item.id}>
                     <TableCell className="font-medium">
-                        <div>{item.name}</div>
-                        <div className="text-xs text-muted-foreground">{item.category_name}</div>
+                      {item.name}
+                      <div className="text-xs text-muted-foreground">{item.category_name}</div>
                     </TableCell>
                     <TableCell>
-                        <div className="flex items-center gap-2 cursor-pointer hover:text-primary" onClick={() => setEditingItem(item)}>
-                            <CalendarClock className="h-4 w-4 text-muted-foreground" />
-                            <div className="text-sm">
-                                {item.startDate ? new Date(item.startDate).toLocaleDateString() : '...'} - 
-                                {item.endDate ? new Date(item.endDate).toLocaleDateString() : '...'}
-                            </div>
-                        </div>
+                      <div className="flex flex-col gap-1">
+                        <Input 
+                          type="date" 
+                          className="h-7 text-xs" 
+                          value={item.start_date ? item.start_date.split('T')[0] : ''} 
+                          onChange={(e) => updateItemDates(item.id, { start: e.target.value, end: item.end_date || null })}
+                        />
+                        <Input 
+                          type="date" 
+                          className="h-7 text-xs" 
+                          value={item.end_date ? item.end_date.split('T')[0] : ''} 
+                          onChange={(e) => updateItemDates(item.id, { start: item.start_date || null, end: e.target.value })}
+                        />
+                      </div>
                     </TableCell>
                     <TableCell>
                       <Input 
                         type="number" 
                         min="1" 
-                        className="h-8 w-20" 
+                        className="h-8 w-16" 
                         value={item.quantity} 
                         onChange={(e) => updateQuantity(item.id, parseInt(e.target.value))}
                       />
@@ -233,16 +266,9 @@ export default function NewProjectPage() {
       <div className="w-full md:w-[400px] bg-card border rounded-lg p-4 shadow-sm flex flex-col h-full">
         <h2 className="text-lg font-semibold mb-4">Добавить оборудование</h2>
         <div className="flex-1 overflow-hidden">
-          <EquipmentPicker onAdd={(item) => addItem(item, { start: startDate, end: endDate })} />
+          <EquipmentPicker onAdd={addItem} />
         </div>
       </div>
-
-      <ItemDatesDialog 
-        open={!!editingItem} 
-        onOpenChange={(open) => !open && setEditingItem(null)} 
-        item={editingItem}
-        onSave={handleItemDateSave}
-      />
     </div>
   );
 }

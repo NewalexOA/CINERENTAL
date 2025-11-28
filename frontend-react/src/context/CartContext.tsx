@@ -3,18 +3,18 @@ import { Equipment } from '../types/equipment';
 
 export interface CartItem extends Equipment {
   quantity: number;
-  startDate?: string | null;
-  endDate?: string | null;
+  start_date?: string | null; // ISO string
+  end_date?: string | null; // ISO string
 }
 
 interface CartContextType {
   items: CartItem[];
-  addItem: (item: Equipment, dates?: { start: string | null; end: string | null }) => void;
+  addItem: (item: Equipment) => void;
   removeItem: (id: number) => void;
   updateQuantity: (id: number, quantity: number) => void;
   updateItemDates: (id: number, dates: { start: string | null; end: string | null }) => void;
   clearCart: () => void;
-  dates: { start: string | null; end: string | null }; // Project global dates
+  dates: { start: string | null; end: string | null };
   setDates: (dates: { start: string | null; end: string | null }) => void;
   totalItems: number;
 }
@@ -23,24 +23,22 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
-  // Global project dates
   const [dates, setDates] = useState<{ start: string | null; end: string | null }>({ start: null, end: null });
 
-  const addItem = (item: Equipment, itemDates?: { start: string | null; end: string | null }) => {
+  const addItem = (item: Equipment) => {
     setItems((current) => {
       const existing = current.find((i) => i.id === item.id);
       if (existing) {
-        // If adding existing, we just increment quantity. 
-        // Dates logic: keep existing dates? Or update? usually keep.
         return current.map((i) =>
           i.id === item.id ? { ...i, quantity: i.quantity + 1 } : i
         );
       }
+      // Initialize with global dates if set
       return [...current, { 
         ...item, 
-        quantity: 1,
-        startDate: itemDates?.start || dates.start, // Default to project dates if not provided
-        endDate: itemDates?.end || dates.end 
+        quantity: 1, 
+        start_date: dates.start, 
+        end_date: dates.end 
       }];
     });
   };
@@ -59,9 +57,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
     );
   };
 
-  const updateItemDates = (id: number, itemDates: { start: string | null; end: string | null }) => {
+  const updateItemDates = (id: number, dateRange: { start: string | null; end: string | null }) => {
     setItems((current) =>
-      current.map((i) => (i.id === id ? { ...i, startDate: itemDates.start, endDate: itemDates.end } : i))
+      current.map((i) => (i.id === id ? { ...i, start_date: dateRange.start, end_date: dateRange.end } : i))
     );
   };
 
