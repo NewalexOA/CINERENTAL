@@ -8,12 +8,17 @@ import { Input } from '../../../components/ui/input';
 import { Badge } from '../../../components/ui/badge';
 import { toast } from 'sonner';
 import { ScanBarcode, Trash2, Box, Info, History } from 'lucide-react';
+import { useCart } from '../../../context/CartContext';
+import { useNavigate } from 'react-router-dom';
 
 export default function ScannerPage() {
   const [lastScanned, setLastScanned] = useState<Equipment | null>(null);
   const [manualBarcode, setManualBarcode] = useState('');
   const [isScanning, setIsScanning] = useState(false);
   const [session, setSession] = useLocalStorage<{ items: Equipment[] }>('scanner_session', { items: [] });
+  
+  const { addItem, clearCart } = useCart();
+  const navigate = useNavigate();
 
   const processBarcode = async (barcode: string) => {
     if (!barcode) return;
@@ -51,6 +56,21 @@ export default function ScannerPage() {
     e.preventDefault();
     processBarcode(manualBarcode);
     setManualBarcode('');
+  };
+
+  const handleCreateProject = () => {
+    if (session.items.length === 0) return;
+    
+    if (confirm('Создать проект из текущей сессии? Корзина будет очищена.')) {
+      clearCart();
+      // Add items from session to cart
+      // We iterate in reverse to keep chronological order if session is [newest...oldest]
+      // Actually scanner usually adds to top list, so reversing restores scan order.
+      [...session.items].reverse().forEach(item => addItem(item));
+      
+      toast.success('Товары добавлены в корзину');
+      navigate('/projects/new');
+    }
   };
 
   return (
@@ -155,7 +175,7 @@ export default function ScannerPage() {
           </div>
           
           <div className="p-4 border-t bg-muted/40">
-             <Button className="w-full" disabled={session.items.length === 0}>
+             <Button className="w-full" disabled={session.items.length === 0} onClick={handleCreateProject}>
                <Box className="mr-2 h-4 w-4" /> Создать проект
              </Button>
           </div>
