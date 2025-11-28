@@ -1,7 +1,7 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { equipmentService } from '../../../services/equipment';
 import { categoriesService } from '../../../services/categories';
-import { EquipmentStatus } from '../../../types/equipment';
+import { Equipment, EquipmentCreate, EquipmentUpdate, EquipmentStatus } from '../../../types/equipment';
 import { 
   Table, 
   TableBody, 
