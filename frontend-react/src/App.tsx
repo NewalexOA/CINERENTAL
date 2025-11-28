@@ -3,9 +3,9 @@ import { MainLayout } from './components/layout/MainLayout';
 import { Toaster } from './components/ui/toaster';
 import ClientsPage from './features/clients/pages/ClientsPage';
 import CategoriesPage from './features/categories/pages/CategoriesPage';
+import EquipmentPage from './features/equipment/pages/EquipmentPage';
 
 // Placeholder pages
-const EquipmentPage = () => <div className="p-4">Equipment Page Content</div>;
 const BookingsPage = () => <div className="p-4">Bookings Page Content</div>;
 const ProjectsPage = () => <div className="p-4">Projects Page Content</div>;
 const ScannerPage = () => <div className="p-4">Scanner Page Content</div>;

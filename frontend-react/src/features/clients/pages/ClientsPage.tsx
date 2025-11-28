@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { clientsService } from '@/services/clients';
-import { Client, ClientStatus } from '@/types/client';
+import { ClientStatus } from '@/types/client';
 import { 
   Table, 
   TableBody, 
