@@ -1,4 +1,5 @@
 import { Client } from './client';
+import { Booking } from '../services/bookings';
 
 export enum ProjectStatus {
   DRAFT = 'DRAFT',
@@ -20,6 +21,7 @@ export interface Project {
   updated_at?: string;
   // Relations
   client?: Client;
+  bookings?: Booking[];
 }
 
 export interface ProjectCreate {

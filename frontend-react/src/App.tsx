@@ -7,6 +7,7 @@ import CategoriesPage from './features/categories/pages/CategoriesPage';
 import EquipmentPage from './features/equipment/pages/EquipmentPage';
 import ProjectsPage from './features/projects/pages/ProjectsPage';
 import NewProjectPage from './features/projects/pages/NewProjectPage';
+import ProjectDetailsPage from './features/projects/pages/ProjectDetailsPage';
 import ScannerPage from './features/scanner/pages/ScannerPage';
 
 // Placeholder pages
@@ -25,6 +26,7 @@ function App() {
             <Route path="/bookings" element={<BookingsPage />} />
             <Route path="/projects" element={<ProjectsPage />} />
             <Route path="/projects/new" element={<NewProjectPage />} />
+            <Route path="/projects/:id" element={<ProjectDetailsPage />} />
             <Route path="/scanner" element={<ScannerPage />} />
           </Route>
         </Routes>
