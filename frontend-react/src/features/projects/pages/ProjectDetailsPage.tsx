@@ -1,7 +1,7 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { projectsService } from '../../../services/projects';
-import { bookingsService, BookingCreate } from '../../../services/bookings';
+import { bookingsService, BookingCreate, BookingUpdate } from '../../../services/bookings';
 import { ProjectStatus } from '../../../types/project';
 import { Equipment } from '../../../types/equipment';
 import { Button } from '../../../components/ui/button';
@@ -21,10 +21,14 @@ import {
   SelectValue 
 } from '../../../components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../../components/ui/dialog';
+import { Popover, PopoverContent, PopoverTrigger } from '../../../components/ui/popover';
+import { Calendar } from '../../../components/ui/calendar';
 import { EquipmentPicker } from '../../equipment/components/EquipmentPicker';
-import { ArrowLeft, Trash2, Plus, Calendar, User, Printer } from 'lucide-react';
+import { ArrowLeft, Trash2, Plus, Calendar as CalendarIcon, User, Printer, Minus } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
+import { DateRange } from 'react-day-picker';
+import { format } from 'date-fns';
 
 const statusMap: Record<string, { label: string, variant: "default" | "secondary" | "destructive" | "outline" | "success" | "warning" }> = {
   [ProjectStatus.DRAFT]: { label: 'Черновик', variant: 'secondary' },
@@ -76,17 +80,50 @@ export default function ProjectDetailsPage() {
     }
   });
 
+  const updateBookingMutation = useMutation({
+    mutationFn: ({ id, data }: { id: number; data: BookingUpdate }) => bookingsService.update(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['project', projectId] });
+      toast.success('Бронирование обновлено');
+    },
+    onError: (err) => {
+      toast.error('Ошибка при обновлении бронирования');
+      console.error(err);
+    }
+  });
+
   const handleAddEquipment = (item: Equipment) => {
     if (!project) return;
     addBookingMutation.mutate({
       project_id: projectId,
-      client_id: project.client_id, // Add client_id
+      client_id: project.client_id,
       equipment_id: item.id,
       start_date: project.start_date,
       end_date: project.end_date,
       quantity: 1,
       total_amount: 0 // Placeholder
     });
+  };
+  
+  const handleDateUpdate = (bookingId: number, range: DateRange | undefined) => {
+    if (range?.from && range?.to) {
+      updateBookingMutation.mutate({
+        id: bookingId,
+        data: {
+          start_date: range.from.toISOString(),
+          end_date: range.to.toISOString()
+        }
+      });
+    }
+  };
+
+  const handleQuantityChange = (bookingId: number, currentQuantity: number, change: 1 | -1) => {
+    const newQuantity = currentQuantity + change;
+    if (newQuantity > 0) {
+      updateBookingMutation.mutate({ id: bookingId, data: { quantity: newQuantity } });
+    } else {
+      deleteBookingMutation.mutate(bookingId);
+    }
   };
 
   if (isLoading) return <div className="p-8 text-center text-muted-foreground">Загрузка проекта...</div>;
@@ -132,7 +169,7 @@ export default function ProjectDetailsPage() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="bg-card border rounded-lg p-4 shadow-sm">
           <h3 className="font-semibold mb-2 flex items-center gap-2">
-            <Calendar className="h-4 w-4" /> Даты
+            <CalendarIcon className="h-4 w-4" /> Даты
           </h3>
           <p className="text-sm">
             {new Date(project.start_date).toLocaleDateString()} - {new Date(project.end_date).toLocaleDateString()}
@@ -160,7 +197,7 @@ export default function ProjectDetailsPage() {
                 <TableHead>Оборудование</TableHead>
                 <TableHead>Штрихкод</TableHead>
                 <TableHead>Период</TableHead>
-                <TableHead className="w-[80px] text-center">Кол-во</TableHead>
+                <TableHead className="w-[120px] text-center">Кол-во</TableHead>
                 <TableHead className="w-[50px]"></TableHead>
               </TableRow>
             </TableHeader>
@@ -176,11 +213,37 @@ export default function ProjectDetailsPage() {
                   <TableCell className="font-mono text-xs">
                     {booking.equipment?.barcode}
                   </TableCell>
-                  <TableCell className="text-sm">
-                    {new Date(booking.start_date).toLocaleDateString()} - {new Date(booking.end_date).toLocaleDateString()}
+                  <TableCell>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" size="sm" className="w-[220px] justify-start text-left font-normal">
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {format(new Date(booking.start_date), "dd.MM.yyyy")} - {format(new Date(booking.end_date), "dd.MM.yyyy")}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0">
+                        <Calendar
+                          mode="range"
+                          selected={{ from: new Date(booking.start_date), to: new Date(booking.end_date) }}
+                          onSelect={(range) => handleDateUpdate(booking.id, range)}
+                        />
+                      </PopoverContent>
+                    </Popover>
                   </TableCell>
                   <TableCell className="text-center">
-                    {booking.quantity}
+                    {!booking.equipment?.serial_number ? (
+                      <div className="flex items-center justify-center gap-1">
+                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleQuantityChange(booking.id, booking.quantity, -1)}>
+                          <Minus className="h-3 w-3" />
+                        </Button>
+                        <span>{booking.quantity}</span>
+                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleQuantityChange(booking.id, booking.quantity, 1)}>
+                          <Plus className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <span>{booking.quantity}</span>
+                    )}
                   </TableCell>
                   <TableCell>
                     <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => deleteBookingMutation.mutate(booking.id)}>
