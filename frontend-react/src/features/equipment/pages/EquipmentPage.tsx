@@ -1,7 +1,7 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { equipmentService } from '../../../services/equipment';
 import { categoriesService } from '../../../services/categories';
-import { EquipmentStatus } from '../../../types/equipment';
+import { Equipment, EquipmentCreate, EquipmentUpdate, EquipmentStatus } from '../../../types/equipment';
 import { 
   Table, 
   TableBody, 
@@ -19,8 +19,11 @@ import {
   SelectTrigger, 
   SelectValue 
 } from '../../../components/ui/select';
-import { Plus, Search, QrCode } from 'lucide-react';
+import { EquipmentFormDialog } from '../components/EquipmentFormDialog';
+import { EquipmentDeleteDialog } from '../components/EquipmentDeleteDialog';
+import { Plus, Search, QrCode, Pencil, Trash2 } from 'lucide-react';
 import { useState } from 'react';
+import { toast } from 'sonner';
 
 const statusMap: Record<string, { label: string, variant: "default" | "secondary" | "destructive" | "outline" | "success" | "warning" }> = {
   [EquipmentStatus.AVAILABLE]: { label: 'Доступно', variant: 'success' },
@@ -31,11 +34,17 @@ const statusMap: Record<string, { label: string, variant: "default" | "secondary
 };
 
 export default function EquipmentPage() {
+  const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
   const [size] = useState(20);
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState<EquipmentStatus | ''>('');
   const [categoryId, setCategoryId] = useState<number | ''>('');
+
+  // Dialog states
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [editingEquipment, setEditingEquipment] = useState<Equipment | null>(null);
+  const [deletingEquipment, setDeletingEquipment] = useState<Equipment | null>(null);
 
   const { data: categories } = useQuery({
     queryKey: ['categories'],
@@ -53,9 +62,65 @@ export default function EquipmentPage() {
     })
   });
 
+  // Mutations
+  const createMutation = useMutation({
+    mutationFn: (data: EquipmentCreate) => equipmentService.create(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['equipment'] });
+      setIsCreateOpen(false);
+      toast.success('Оборудование добавлено');
+    },
+    onError: (err) => {
+      toast.error('Ошибка при добавлении оборудования');
+      console.error(err);
+    }
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: number; data: EquipmentUpdate }) => equipmentService.update(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['equipment'] });
+      setEditingEquipment(null);
+      toast.success('Оборудование обновлено');
+    },
+    onError: (err) => {
+      toast.error('Ошибка при обновлении оборудования');
+      console.error(err);
+    }
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: number) => equipmentService.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['equipment'] });
+      setDeletingEquipment(null);
+      toast.success('Оборудование удалено');
+    },
+    onError: (err) => {
+      toast.error('Ошибка при удалении (возможно есть активные бронирования)');
+      console.error(err);
+    }
+  });
+
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearch(e.target.value);
-    setPage(1); // Reset to first page on search
+    setPage(1); 
+  };
+
+  const handleCreate = async (data: EquipmentCreate) => {
+    await createMutation.mutateAsync(data);
+  };
+
+  const handleUpdate = async (data: EquipmentCreate) => {
+    if (editingEquipment) {
+      await updateMutation.mutateAsync({ id: editingEquipment.id, data: { ...data, id: editingEquipment.id } });
+    }
+  };
+
+  const handleDelete = async () => {
+    if (deletingEquipment) {
+      await deleteMutation.mutateAsync(deletingEquipment.id);
+    }
   };
 
   if (error) return <div className="p-8 text-center text-destructive">Ошибка загрузки данных</div>;
@@ -105,7 +170,7 @@ export default function EquipmentPage() {
           </Select>
         </div>
 
-        <Button>
+        <Button onClick={() => setIsCreateOpen(true)}>
           <Plus className="mr-2 h-4 w-4" /> Добавить
         </Button>
       </div>
@@ -119,12 +184,13 @@ export default function EquipmentPage() {
               <TableHead>Штрихкод / S/N</TableHead>
               <TableHead>Стоимость</TableHead>
               <TableHead>Статус</TableHead>
+              <TableHead className="text-right">Действия</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
                <TableRow>
-                 <TableCell colSpan={5} className="h-24 text-center">Загрузка...</TableCell>
+                 <TableCell colSpan={6} className="h-24 text-center">Загрузка...</TableCell>
                </TableRow>
             ) : data?.items.map((item) => (
               <TableRow key={item.id}>
@@ -158,11 +224,21 @@ export default function EquipmentPage() {
                     {statusMap[item.status]?.label || item.status}
                   </Badge>
                 </TableCell>
+                <TableCell className="text-right">
+                  <div className="flex justify-end gap-2">
+                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setEditingEquipment(item)}>
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => setDeletingEquipment(item)}>
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </TableCell>
               </TableRow>
             ))}
             {!isLoading && data?.items.length === 0 && (
               <TableRow>
-                <TableCell colSpan={5} className="h-24 text-center">
+                <TableCell colSpan={6} className="h-24 text-center">
                   Оборудование не найдено
                 </TableCell>
               </TableRow>
@@ -198,6 +274,31 @@ export default function EquipmentPage() {
           </Button>
         </div>
       </div>
+
+      {/* Dialogs */}
+      <EquipmentFormDialog 
+        open={isCreateOpen} 
+        onOpenChange={setIsCreateOpen}
+        categories={categories || []}
+        onSubmit={handleCreate}
+        isLoading={createMutation.isPending}
+      />
+
+      <EquipmentFormDialog 
+        open={!!editingEquipment} 
+        onOpenChange={(val) => !val && setEditingEquipment(null)}
+        equipment={editingEquipment}
+        categories={categories || []}
+        onSubmit={handleUpdate}
+        isLoading={updateMutation.isPending}
+      />
+
+      <EquipmentDeleteDialog 
+        open={!!deletingEquipment} 
+        onOpenChange={(val) => !val && setDeletingEquipment(null)}
+        onConfirm={handleDelete}
+        isLoading={deleteMutation.isPending}
+      />
     </div>
   );
 }
