@@ -1,6 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { MainLayout } from './components/layout/MainLayout';
-import { Toaster } from './components/ui/toaster';
+import { Toaster } from './components/ui/sonner';
 import ClientsPage from './features/clients/pages/ClientsPage';
 import CategoriesPage from './features/categories/pages/CategoriesPage';
 import EquipmentPage from './features/equipment/pages/EquipmentPage';

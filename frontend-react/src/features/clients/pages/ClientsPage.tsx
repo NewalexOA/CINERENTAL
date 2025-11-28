@@ -11,6 +11,13 @@ import {
 } from '../../../components/ui/table';
 import { Button } from '../../../components/ui/button';
 import { Badge } from '../../../components/ui/badge';
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from '../../../components/ui/select';
 import { ClientFormDialog } from '../components/ClientFormDialog';
 import { ClientDeleteDialog } from '../components/ClientDeleteDialog';
 import { 
@@ -142,15 +149,20 @@ export default function ClientsPage() {
                 onChange={(e) => setSearch(e.target.value)}
               />
             </div>
-            <select
-              className="h-9 rounded-md border border-input bg-transparent px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring w-[200px]"
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as SortOption)}
+            
+            <Select 
+              value={sortBy} 
+              onValueChange={(val) => setSortBy(val as SortOption)}
             >
-              <option value="name">По имени</option>
-              <option value="created_at">По дате регистрации</option>
-              <option value="bookings_count">По количеству бронирований</option>
-            </select>
+              <SelectTrigger className="w-[200px]">
+                <SelectValue placeholder="Сортировка" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="name">По имени</SelectItem>
+                <SelectItem value="created_at">По дате регистрации</SelectItem>
+                <SelectItem value="bookings_count">По количеству бронирований</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="flex items-center border rounded-md overflow-hidden">
