@@ -1,5 +1,6 @@
-import { useQuery } from '@tanstack/react-query';
-import { categoriesService } from '@/services/categories';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { categoriesService } from '../../../services/categories';
+import { Category, CategoryCreate, CategoryUpdate } from '../../../types/category';
 import { 
   Table, 
   TableBody, 
@@ -7,31 +8,67 @@ import {
   TableHead, 
   TableHeader, 
   TableRow 
-} from '@/components/ui/table';
-import { Button } from '@/components/ui/button';
-import { Plus, Pencil, Trash2, Search, Folder, FolderOpen } from 'lucide-react';
+} from '../../../components/ui/table';
+import { Button } from '../../../components/ui/button';
+import { CategoryFormDialog } from '../components/CategoryFormDialog';
+import { SubcategoriesDialog } from '../components/SubcategoriesDialog';
+import { ClientDeleteDialog } from '../../clients/components/ClientDeleteDialog'; // Reuse
+import { Plus, Pencil, Trash2, Search, FolderTree } from 'lucide-react';
 import { useState } from 'react';
 
 export default function CategoriesPage() {
+  const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
+  
+  // Dialog states
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [editingCategory, setEditingCategory] = useState<Category | null>(null);
+  const [deletingCategory, setDeletingCategory] = useState<Category | null>(null);
+  const [subcategoriesParent, setSubcategoriesParent] = useState<Category | null>(null);
 
   const { data: categories, isLoading, error } = useQuery({
     queryKey: ['categories'],
-    queryFn: categoriesService.getAll
+    queryFn: categoriesService.getAllWithCount
   });
 
-  const filteredCategories = categories?.filter(cat => 
-    cat.name.toLowerCase().includes(search.toLowerCase()) ||
-    cat.description?.toLowerCase().includes(search.toLowerCase())
-  );
+  // Mutations
+  const createMutation = useMutation({
+    mutationFn: (data: CategoryCreate) => categoriesService.create(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['categories'] });
+      setIsCreateOpen(false);
+    }
+  });
 
-  if (isLoading) return <div className="p-8 text-center text-muted-foreground">Загрузка категорий...</div>;
-  if (error) return <div className="p-8 text-center text-destructive">Ошибка загрузки данных</div>;
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: number; data: CategoryUpdate }) => categoriesService.update(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['categories'] });
+      setEditingCategory(null);
+    }
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: number) => categoriesService.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['categories'] });
+      setDeletingCategory(null);
+    }
+  });
+
+  // Filter root categories and apply search
+  const filteredCategories = categories
+    ?.filter(cat => !cat.parent_id) // Show only root categories
+    .filter(cat => 
+      cat.name.toLowerCase().includes(search.toLowerCase()) ||
+      cat.description?.toLowerCase().includes(search.toLowerCase())
+    );
 
   return (
     <div className="h-full flex flex-col space-y-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4 flex-1">
+          <h1 className="text-2xl font-bold tracking-tight mr-4">Категории</h1>
           <div className="relative w-64">
             <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
             <input
@@ -42,65 +79,94 @@ export default function CategoriesPage() {
             />
           </div>
         </div>
-        <Button>
-          <Plus className="mr-2 h-4 w-4" /> Новая категория
+        <Button onClick={() => setIsCreateOpen(true)}>
+          <Plus className="mr-2 h-4 w-4" /> Добавить категорию
         </Button>
       </div>
 
-      <div className="border rounded-md flex-1 overflow-auto">
+      <div className="border rounded-md flex-1 overflow-auto bg-card">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-[50px]"></TableHead>
+              <TableHead className="w-[80px]">ID</TableHead>
               <TableHead>Название</TableHead>
-              <TableHead>Родительская категория</TableHead>
-              <TableHead>Описание</TableHead>
-              <TableHead className="w-[100px] text-right">Действия</TableHead>
+              <TableHead>Оборудование</TableHead>
+              <TableHead className="text-right">Действия</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredCategories?.map((cat) => (
-              <TableRow key={cat.id}>
-                <TableCell>
-                  {cat.parent_id ? (
-                    <Folder className="h-4 w-4 text-muted-foreground" />
-                  ) : (
-                    <FolderOpen className="h-4 w-4 text-primary" />
-                  )}
-                </TableCell>
-                <TableCell className="font-medium">
-                  {cat.name}
-                </TableCell>
-                <TableCell className="text-muted-foreground">
-                  {/* Since API might just return parent_id, we would need to look it up or backend needs to send parent_name.
-                      Assuming basic list for now. */}
-                  {cat.parent_id ? (categories?.find(p => p.id === cat.parent_id)?.name || cat.parent_id) : '-'}
-                </TableCell>
-                <TableCell className="max-w-[300px] truncate text-muted-foreground">
-                  {cat.description}
-                </TableCell>
-                <TableCell className="text-right">
-                  <div className="flex justify-end gap-2">
-                    <Button variant="ghost" size="icon" className="h-8 w-8">
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive">
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
-            {filteredCategories?.length === 0 && (
+            {isLoading ? (
               <TableRow>
-                <TableCell colSpan={5} className="h-24 text-center">
-                  Категории не найдены
-                </TableCell>
+                <TableCell colSpan={4} className="h-24 text-center">Загрузка...</TableCell>
               </TableRow>
+            ) : error ? (
+              <TableRow>
+                <TableCell colSpan={4} className="h-24 text-center text-destructive">Ошибка загрузки</TableCell>
+              </TableRow>
+            ) : filteredCategories?.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={4} className="h-24 text-center">Категории не найдены</TableCell>
+              </TableRow>
+            ) : (
+              filteredCategories?.map((cat) => (
+                <TableRow key={cat.id}>
+                  <TableCell>{cat.id}</TableCell>
+                  <TableCell className="font-medium">
+                    <div className="flex flex-col">
+                      <span>{cat.name}</span>
+                      {cat.description && <span className="text-xs text-muted-foreground truncate max-w-[300px]">{cat.description}</span>}
+                    </div>
+                  </TableCell>
+                  <TableCell>{cat.equipment_count || 0}</TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex justify-end gap-2">
+                      <Button variant="outline" size="sm" onClick={() => setSubcategoriesParent(cat)}>
+                        <FolderTree className="h-3 w-3 mr-2" />
+                        Подкатегории
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setEditingCategory(cat)}>
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => setDeletingCategory(cat)}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))
             )}
           </TableBody>
         </Table>
       </div>
+
+      {/* Dialogs */}
+      <CategoryFormDialog 
+        open={isCreateOpen} 
+        onOpenChange={setIsCreateOpen} 
+        onSubmit={(data) => createMutation.mutateAsync(data)}
+        isLoading={createMutation.isPending}
+      />
+
+      <CategoryFormDialog 
+        open={!!editingCategory} 
+        onOpenChange={(val) => !val && setEditingCategory(null)} 
+        category={editingCategory}
+        onSubmit={(data) => editingCategory && updateMutation.mutateAsync({ id: editingCategory.id, data })}
+        isLoading={updateMutation.isPending}
+      />
+
+      <ClientDeleteDialog 
+        open={!!deletingCategory} 
+        onOpenChange={(val) => !val && setDeletingCategory(null)} 
+        onConfirm={() => deletingCategory && deleteMutation.mutateAsync(deletingCategory.id)}
+        isLoading={deleteMutation.isPending}
+      />
+
+      <SubcategoriesDialog 
+        open={!!subcategoriesParent}
+        onOpenChange={(val) => !val && setSubcategoriesParent(null)}
+        parentCategory={subcategoriesParent}
+      />
     </div>
   );
 }
