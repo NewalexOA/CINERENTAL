@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
-import { equipmentService } from '@/services/equipment';
-import { categoriesService } from '@/services/categories';
-import { EquipmentStatus } from '@/types/equipment';
+import { equipmentService } from '../../../services/equipment';
+import { categoriesService } from '../../../services/categories';
+import { EquipmentStatus } from '../../../types/equipment';
 import { 
   Table, 
   TableBody, 
@@ -9,9 +9,16 @@ import {
   TableHead, 
   TableHeader, 
   TableRow 
-} from '@/components/ui/table';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
+} from '../../../components/ui/table';
+import { Button } from '../../../components/ui/button';
+import { Badge } from '../../../components/ui/badge';
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from '../../../components/ui/select';
 import { Plus, Search, QrCode } from 'lucide-react';
 import { useState } from 'react';
 
@@ -51,16 +58,6 @@ export default function EquipmentPage() {
     setPage(1); // Reset to first page on search
   };
 
-  const handleStatusChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    setStatus(e.target.value as EquipmentStatus | '');
-    setPage(1);
-  };
-
-  const handleCategoryChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    setCategoryId(e.target.value ? Number(e.target.value) : '');
-    setPage(1);
-  };
-
   if (error) return <div className="p-8 text-center text-destructive">Ошибка загрузки данных</div>;
 
   return (
@@ -77,27 +74,35 @@ export default function EquipmentPage() {
             />
           </div>
           
-          <select 
-            className="h-9 rounded-md border border-input bg-transparent px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-            value={status}
-            onChange={handleStatusChange}
+          <Select 
+            value={status || "all"} 
+            onValueChange={(val) => { setStatus(val === 'all' ? '' : val as EquipmentStatus); setPage(1); }}
           >
-            <option value="">Все статусы</option>
-            {Object.entries(statusMap).map(([key, val]) => (
-              <option key={key} value={key}>{val.label}</option>
-            ))}
-          </select>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Все статусы" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Все статусы</SelectItem>
+              {Object.entries(statusMap).map(([key, val]) => (
+                <SelectItem key={key} value={key}>{val.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
 
-          <select 
-            className="h-9 rounded-md border border-input bg-transparent px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring max-w-[200px]"
-            value={categoryId}
-            onChange={handleCategoryChange}
+          <Select 
+            value={categoryId ? String(categoryId) : "all"} 
+            onValueChange={(val) => { setCategoryId(val === 'all' ? '' : Number(val)); setPage(1); }}
           >
-            <option value="">Все категории</option>
-            {categories?.map((cat) => (
-              <option key={cat.id} value={cat.id}>{cat.name}</option>
-            ))}
-          </select>
+            <SelectTrigger className="w-[200px]">
+              <SelectValue placeholder="Все категории" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Все категории</SelectItem>
+              {categories?.map((cat) => (
+                <SelectItem key={cat.id} value={String(cat.id)}>{cat.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         <Button>
