@@ -19,7 +19,6 @@ import {
   SelectValue 
 } from '../../../components/ui/select';
 import { Checkbox } from '../../../components/ui/checkbox';
-import { Label } from '../../../components/ui/label';
 import { Badge } from '../../../components/ui/badge';
 import { Search, X, Calendar as CalendarIcon } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
@@ -56,7 +55,7 @@ export default function BookingsPage() {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
 
-  const { data, isLoading, error, refetch } = useQuery({
+  const { data, isLoading } = useQuery({
     queryKey: ['bookings', page, size, clientSearch, equipmentSearch, bookingStatus, paymentStatus, activeOnly, startDate, endDate],
     queryFn: () => bookingsService.getPaginated({
       page,
@@ -124,7 +123,7 @@ export default function BookingsPage() {
           <div className="space-y-1">
              <Select 
                value={bookingStatus} 
-               onValueChange={(val) => { setBookingStatus(val as any); setPage(1); }}
+               onValueChange={(val) => { setBookingStatus(val as BookingStatus | 'all'); setPage(1); }}
              >
                <SelectTrigger className="h-7 text-xs">
                  <SelectValue placeholder="Статус бронирования" />
@@ -141,7 +140,7 @@ export default function BookingsPage() {
           <div className="space-y-1">
              <Select 
                value={paymentStatus} 
-               onValueChange={(val) => { setPaymentStatus(val as any); setPage(1); }}
+               onValueChange={(val) => { setPaymentStatus(val as PaymentStatus | 'all'); setPage(1); }}
              >
                <SelectTrigger className="h-7 text-xs">
                  <SelectValue placeholder="Статус оплаты" />
@@ -214,6 +213,7 @@ export default function BookingsPage() {
                 <TableCell className="py-1">
                   <div className="flex flex-col text-[10px]">
                      <span className="flex items-center gap-1">
+                       <CalendarIcon className="h-3 w-3 text-muted-foreground" />
                        {format(parseISO(item.start_date), "dd.MM HH:mm")} - {format(parseISO(item.end_date), "dd.MM HH:mm")}
                      </span>
                   </div>

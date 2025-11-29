@@ -1,6 +1,6 @@
 import * as React from "react"
 import { Calendar as CalendarIcon, Clock } from "lucide-react"
-import { format, setHours, setMinutes, parse } from "date-fns"
+import { format, setHours, setMinutes } from "date-fns"
 import { DateRange } from "react-day-picker"
 import { cn } from "../../lib/utils"
 import { Button } from "./button"
