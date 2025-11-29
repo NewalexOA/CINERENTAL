@@ -258,3 +258,6 @@ backend/scripts/*.json
 backend/scripts/*.sql
 CLAUDE.md
 /.claude
+
+# 
+/frontend-react/node_modules/*
