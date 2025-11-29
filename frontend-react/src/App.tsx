@@ -9,9 +9,7 @@ import ProjectsPage from './features/projects/pages/ProjectsPage';
 import NewProjectPage from './features/projects/pages/NewProjectPage';
 import ProjectDetailsPage from './features/projects/pages/ProjectDetailsPage';
 import ScannerPage from './features/scanner/pages/ScannerPage';
-
-// Placeholder pages
-const BookingsPage = () => <div className="p-4">Bookings Page Content</div>;
+import BookingsPage from './features/bookings/pages/BookingsPage';
 
 function App() {
   return (
