@@ -87,73 +87,73 @@ export function DateTimeRangePicker({
   }
 
   return (
-    <div className={cn("grid gap-2", className)}>
-      <Popover>
-        <PopoverTrigger asChild>
-          <Button
-            id="date"
-            variant={"outline"}
-            className={cn(
-              "w-full justify-start text-left font-normal",
-              !date && "text-muted-foreground"
-            )}
-          >
-            <CalendarIcon className="mr-2 h-4 w-4" />
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button
+          id="date"
+          variant={"outline"}
+          className={cn(
+            "w-full justify-start text-left font-normal truncate px-2",
+            !date && "text-muted-foreground",
+            className
+          )}
+        >
+          <CalendarIcon className="mr-2 h-3.5 w-3.5 shrink-0" />
+          <span className="truncate">
             {date?.from ? (
               date.to ? (
                 <>
-                  {format(date.from, "dd.MM.yyyy HH:mm")} -{" "}
-                  {format(date.to, "dd.MM.yyyy HH:mm")}
+                  {format(date.from, "dd.MM HH:mm")} - {format(date.to, "dd.MM HH:mm")}
                 </>
               ) : (
-                format(date.from, "dd.MM.yyyy HH:mm")
+                format(date.from, "dd.MM HH:mm")
               )
             ) : (
               <span>{placeholder}</span>
             )}
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-auto p-0" align="start">
-          <div className="flex flex-col">
-            <Calendar
-              initialFocus
-              mode="range"
-              defaultMonth={date?.from}
-              selected={date}
-              onSelect={handleDateSelect}
-              numberOfMonths={2}
-            />
-            <div className="border-t p-3 bg-muted/20">
-              <div className="flex items-center gap-4">
-                 <div className="flex flex-col gap-1.5 flex-1">
-                   <Label className="text-xs text-muted-foreground">Время начала</Label>
-                   <div className="relative">
-                     <Clock className="absolute left-2 top-2.5 h-3 w-3 text-muted-foreground" />
-                     <Input 
-                       type="time" 
-                       value={startTime} 
-                       onChange={(e) => handleTimeChange('start', e.target.value)}
-                       className="h-8 pl-7 text-xs"
-                     />
-                   </div>
+          </span>
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-auto p-0" align="start">
+        <div className="flex flex-col">
+          <Calendar
+            initialFocus
+            mode="range"
+            defaultMonth={date?.from}
+            selected={date}
+            onSelect={handleDateSelect}
+            numberOfMonths={2}
+          />
+          <div className="border-t p-3 bg-muted/20">
+            <div className="flex items-center gap-4">
+               <div className="flex flex-col gap-1.5 flex-1">
+                 <Label className="text-xs text-muted-foreground">Время начала</Label>
+                 <div className="relative">
+                   <Clock className="absolute left-2 top-2.5 h-3 w-3 text-muted-foreground" />
+                   <Input 
+                     type="time" 
+                     value={startTime} 
+                     onChange={(e) => handleTimeChange('start', e.target.value)}
+                     className="h-8 pl-7 text-xs"
+                   />
                  </div>
-                 <div className="flex flex-col gap-1.5 flex-1">
-                   <Label className="text-xs text-muted-foreground">Время окончания</Label>
-                   <div className="relative">
-                     <Clock className="absolute left-2 top-2.5 h-3 w-3 text-muted-foreground" />
-                     <Input 
-                       type="time" 
-                       value={endTime} 
-                       onChange={(e) => handleTimeChange('end', e.target.value)}
-                       className="h-8 pl-7 text-xs"
-                     />
-                   </div>
+               </div>
+               <div className="flex flex-col gap-1.5 flex-1">
+                 <Label className="text-xs text-muted-foreground">Время окончания</Label>
+                 <div className="relative">
+                   <Clock className="absolute left-2 top-2.5 h-3 w-3 text-muted-foreground" />
+                   <Input 
+                     type="time" 
+                     value={endTime} 
+                     onChange={(e) => handleTimeChange('end', e.target.value)}
+                     className="h-8 pl-7 text-xs"
+                   />
                  </div>
-              </div>
+               </div>
             </div>
           </div>
-        </PopoverContent>
-      </Popover>
-    </div>
+        </div>
+      </PopoverContent>
+    </Popover>
   )
 }
