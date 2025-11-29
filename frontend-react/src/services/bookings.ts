@@ -1,12 +1,38 @@
 import api from '../lib/axios';
 
+export enum BookingStatus {
+  PENDING = 'PENDING',
+  CONFIRMED = 'CONFIRMED',
+  ACTIVE = 'ACTIVE',
+  COMPLETED = 'COMPLETED',
+  CANCELLED = 'CANCELLED',
+  OVERDUE = 'OVERDUE'
+}
+
+export enum PaymentStatus {
+  PENDING = 'PENDING',
+  PARTIAL = 'PARTIAL',
+  PAID = 'PAID',
+  REFUNDED = 'REFUNDED',
+  OVERDUE = 'OVERDUE'
+}
+
 export interface Booking {
   id: number;
   project_id: number;
+  client_id: number;
   equipment_id: number;
   start_date: string;
   end_date: string;
   quantity: number;
+  total_amount: number;
+  booking_status: BookingStatus;
+  payment_status: PaymentStatus;
+  created_at: string;
+  updated_at: string;
+  equipment_name: string;
+  client_name: string;
+  project_name?: string;
   equipment?: {
     name: string;
     barcode: string;
@@ -17,8 +43,8 @@ export interface Booking {
 }
 
 export interface BookingCreate {
-  project_id: number;
-  client_id: number; // Added
+  project_id?: number;
+  client_id: number;
   equipment_id: number;
   start_date: string;
   end_date: string;
@@ -30,9 +56,36 @@ export interface BookingUpdate {
   start_date?: string;
   end_date?: string;
   quantity?: number;
+  booking_status?: BookingStatus;
+  payment_status?: PaymentStatus;
+}
+
+export interface BookingSearchParams {
+  page?: number;
+  size?: number;
+  query?: string;
+  equipment_query?: string;
+  booking_status?: BookingStatus;
+  payment_status?: PaymentStatus;
+  start_date?: string;
+  end_date?: string;
+  active_only?: boolean;
+}
+
+export interface PaginatedResponse<T> {
+  items: T[];
+  total: number;
+  page: number;
+  size: number;
+  pages: number;
 }
 
 export const bookingsService = {
+  getPaginated: async (params: BookingSearchParams) => {
+    const response = await api.get<PaginatedResponse<Booking>>('/bookings', { params });
+    return response.data;
+  },
+
   create: async (data: BookingCreate) => {
     const response = await api.post<Booking>('/bookings', data);
     return response.data;
