@@ -23,6 +23,7 @@ import { Label } from '../../../components/ui/label';
 import { Badge } from '../../../components/ui/badge';
 import { Search, X, Calendar as CalendarIcon } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
+import { DateTimeRangePicker } from '../../../components/ui/date-range-picker';
 
 const bookingStatusMap: Record<string, { label: string, variant: "default" | "secondary" | "destructive" | "outline" | "success" | "warning" }> = {
   [BookingStatus.PENDING]: { label: 'Ожидает', variant: 'secondary' },
@@ -157,23 +158,19 @@ export default function BookingsPage() {
              </Select>
           </div>
           
-          <div className="space-y-1">
-            <Label className="text-xs">Начало периода</Label>
-            <Input 
-              type="date" 
-              className="h-8 text-sm" 
-              value={startDate}
-              onChange={(e) => { setStartDate(e.target.value); setPage(1); }}
-            />
-          </div>
-
-          <div className="space-y-1">
-            <Label className="text-xs">Конец периода</Label>
-            <Input 
-              type="date" 
-              className="h-8 text-sm" 
-              value={endDate}
-              onChange={(e) => { setEndDate(e.target.value); setPage(1); }}
+          <div className="space-y-1 lg:col-span-2">
+            <Label className="text-xs">Период</Label>
+            <DateTimeRangePicker
+               date={{
+                 from: startDate ? parseISO(startDate) : undefined,
+                 to: endDate ? parseISO(endDate) : undefined
+               }}
+               setDate={(range) => {
+                 setStartDate(range?.from ? range.from.toISOString() : '');
+                 setEndDate(range?.to ? range.to.toISOString() : '');
+                 setPage(1);
+               }}
+               className="h-8"
             />
           </div>
 
@@ -222,7 +219,10 @@ export default function BookingsPage() {
                   <div className="flex flex-col text-sm">
                      <span className="flex items-center gap-1">
                        <CalendarIcon className="h-3 w-3 text-muted-foreground" />
-                       {format(parseISO(item.start_date), "dd.MM.yyyy")} - {format(parseISO(item.end_date), "dd.MM.yyyy")}
+                       {format(parseISO(item.start_date), "dd.MM.yyyy HH:mm")}
+                     </span>
+                     <span className="text-xs text-muted-foreground ml-4">
+                       до {format(parseISO(item.end_date), "dd.MM.yyyy HH:mm")}
                      </span>
                   </div>
                 </TableCell>
