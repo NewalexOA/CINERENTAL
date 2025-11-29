@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { projectsService } from '../../../services/projects';
 import { clientsService } from '../../../services/clients';
 import { bookingsService, BookingCreate, BookingUpdate } from '../../../services/bookings';
-import { ProjectStatus } from '../../../types/project';
+import { ProjectStatus, ProjectCreate } from '../../../types/project';
 import { Equipment } from '../../../types/equipment';
 import { Button } from '../../../components/ui/button';
 import { 
@@ -88,7 +88,7 @@ export default function ProjectDetailsPage() {
 
   // Mutations
   const updateProjectMutation = useMutation({
-    mutationFn: (data: any) => projectsService.update(projectId, { id: projectId, ...data }),
+    mutationFn: (data: Partial<ProjectCreate>) => projectsService.update(projectId, { id: projectId, ...data }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['project', projectId] });
       toast.success('Проект обновлен');

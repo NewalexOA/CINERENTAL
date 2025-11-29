@@ -1,19 +1,9 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { equipmentService } from '../../../services/equipment';
-import { bookingsService } from '../../../services/bookings';
 import { Button } from '../../../components/ui/button';
-import { ArrowLeft, QrCode, Tag, DollarSign, Calendar } from 'lucide-react';
+import { ArrowLeft, QrCode, Tag, DollarSign } from 'lucide-react';
 import { Badge } from '../../../components/ui/badge';
-import { format, parseISO } from 'date-fns';
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
-} from '../../../components/ui/table';
 
 export default function EquipmentDetailsPage() {
   const { id } = useParams<{ id: string }>();
@@ -22,13 +12,9 @@ export default function EquipmentDetailsPage() {
 
   const { data: equipment, isLoading, error } = useQuery({
     queryKey: ['equipment', equipmentId],
-    queryFn: () => equipmentService.getById(equipmentId), // Need to verify getById exists or use filtering
+    queryFn: () => equipmentService.getById(equipmentId),
     enabled: !!equipmentId
   });
-
-  // Use getPaginated with ID filter if getById is not available, but usually it is. 
-  // Checking equipmentService: it has getPaginated, create, update, delete. getById is missing in frontend service?
-  // Let's check frontend-react/src/services/equipment.ts
 
   if (isLoading) return <div className="p-8 text-center text-muted-foreground">Загрузка...</div>;
   if (error || !equipment) return <div className="p-8 text-center text-destructive">Оборудование не найдено</div>;
