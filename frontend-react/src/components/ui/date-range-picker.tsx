@@ -26,8 +26,8 @@ export function DateTimeRangePicker({
   className,
   placeholder = "Выберите период"
 }: DateTimeRangePickerProps) {
-  const [startTime, setStartTime] = React.useState("10:00")
-  const [endTime, setEndTime] = React.useState("19:00")
+  const [startTime, setStartTime] = React.useState("00:00")
+  const [endTime, setEndTime] = React.useState("23:59")
 
   // Sync internal time state with external date prop if available
   React.useEffect(() => {
