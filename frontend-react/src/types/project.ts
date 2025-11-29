@@ -19,7 +19,8 @@ export interface Project {
   notes?: string;
   created_at?: string;
   updated_at?: string;
-  // Relations
+  // Relations & Joined Fields
+  client_name?: string;
   client?: Client;
   bookings?: Booking[];
 }

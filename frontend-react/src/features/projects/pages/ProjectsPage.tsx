@@ -139,12 +139,12 @@ export default function ProjectsPage() {
                   {item.description && <div className="text-[10px] text-muted-foreground truncate max-w-[200px]">{item.description}</div>}
                 </TableCell>
                 <TableCell className="py-1">
-                  {item.client?.name || '-'}
+                  {item.client_name || '-'}
                 </TableCell>
                 <TableCell className="py-1">
-                   <div className="flex flex-col text-[10px]">
-                    <span>{format(parseISO(item.start_date), "dd.MM.yyyy")}</span>
-                    <span className="text-muted-foreground">do {format(parseISO(item.end_date), "dd.MM.yyyy")}</span>
+                   <div className="flex flex-col text-[10px] gap-0.5">
+                    <span className="text-muted-foreground">from: <span className="text-foreground font-mono">{format(parseISO(item.start_date), "dd.MM.yy HH:mm")}</span></span>
+                    <span className="text-muted-foreground">to: <span className="text-foreground font-mono">{format(parseISO(item.end_date), "dd.MM.yy HH:mm")}</span></span>
                   </div>
                 </TableCell>
                 <TableCell className="py-1">
