@@ -22,8 +22,6 @@ import {
   SelectValue 
 } from '../../../components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '../../../components/ui/dialog';
-import { Popover, PopoverContent, PopoverTrigger } from '../../../components/ui/popover';
-import { Calendar } from '../../../components/ui/calendar';
 import { Textarea } from '../../../components/ui/textarea';
 import { Input } from '../../../components/ui/input';
 import { Label } from '../../../components/ui/label';
@@ -33,6 +31,7 @@ import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { DateRange } from 'react-day-picker';
 import { format, isSameDay, parseISO } from 'date-fns';
+import { DateTimeRangePicker } from '../../../components/ui/date-range-picker';
 
 const statusMap: Record<string, { label: string, variant: "default" | "secondary" | "destructive" | "outline" | "success" | "warning" }> = {
   [ProjectStatus.DRAFT]: { label: 'Черновик', variant: 'secondary' },
@@ -80,8 +79,8 @@ export default function ProjectDetailsPage() {
       setEditForm({
         name: project.name,
         client_id: String(project.client_id),
-        start_date: project.start_date.split('T')[0],
-        end_date: project.end_date.split('T')[0],
+        start_date: project.start_date,
+        end_date: project.end_date,
         description: project.description || ''
       });
     }
@@ -248,7 +247,7 @@ export default function ProjectDetailsPage() {
             <CalendarIcon className="h-4 w-4 text-primary" /> Даты проекта
           </h3>
           <p className="text-lg font-medium">
-            {format(parseISO(project.start_date), 'dd.MM.yyyy')} - {format(parseISO(project.end_date), 'dd.MM.yyyy')}
+            {format(parseISO(project.start_date), 'dd.MM.yyyy HH:mm')} - {format(parseISO(project.end_date), 'dd.MM.yyyy HH:mm')}
           </p>
           {project.description && (
             <div className="mt-4">
@@ -321,25 +320,14 @@ export default function ProjectDetailsPage() {
                       {booking.equipment?.category_name || '-'}
                     </TableCell>
                     <TableCell>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            className={`w-[240px] justify-start text-left font-normal ${isDifferentDates ? 'text-amber-600 font-medium bg-amber-50 hover:bg-amber-100 hover:text-amber-700' : ''}`}
-                          >
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {format(parseISO(booking.start_date), "dd.MM.yyyy")} - {format(parseISO(booking.end_date), "dd.MM.yyyy")}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
-                            mode="range"
-                            selected={{ from: parseISO(booking.start_date), to: parseISO(booking.end_date) }}
-                            onSelect={(range) => handleDateUpdate(booking.id, range)}
-                          />
-                        </PopoverContent>
-                      </Popover>
+                      <DateTimeRangePicker
+                        date={{
+                          from: parseISO(booking.start_date),
+                          to: parseISO(booking.end_date)
+                        }}
+                        setDate={(range) => handleDateUpdate(booking.id, range)}
+                        className={isDifferentDates ? 'text-amber-600 font-medium' : ''}
+                      />
                     </TableCell>
                     <TableCell className="text-center">
                       {!booking.equipment?.serial_number ? (
@@ -417,27 +405,21 @@ export default function ProjectDetailsPage() {
               </Select>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="edit-start">Начало</Label>
-                <Input 
-                  id="edit-start" 
-                  type="date" 
-                  value={editForm.start_date} 
-                  onChange={(e) => setEditForm({...editForm, start_date: e.target.value})} 
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-end">Окончание</Label>
-                <Input 
-                  id="edit-end" 
-                  type="date" 
-                  value={editForm.end_date} 
-                  onChange={(e) => setEditForm({...editForm, end_date: e.target.value})} 
-                  required
-                />
-              </div>
+            <div className="space-y-2">
+              <Label>Период проекта</Label>
+              <DateTimeRangePicker
+                date={{
+                  from: editForm.start_date ? parseISO(editForm.start_date) : undefined,
+                  to: editForm.end_date ? parseISO(editForm.end_date) : undefined
+                }}
+                setDate={(range) => {
+                  setEditForm({
+                    ...editForm,
+                    start_date: range?.from ? range.from.toISOString() : editForm.start_date,
+                    end_date: range?.to ? range.to.toISOString() : editForm.end_date
+                  });
+                }}
+              />
             </div>
 
             <div className="space-y-2">

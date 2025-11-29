@@ -23,6 +23,8 @@ import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/ui/select';
 import { ProjectStatus } from '../../../types/project';
+import { DateTimeRangePicker } from '../../../components/ui/date-range-picker';
+import { format, parseISO } from 'date-fns';
 
 export default function NewProjectPage() {
   const { items, addItem, removeItem, updateQuantity, updateItemDates, clearCart, dates, setDates } = useCart();
@@ -39,11 +41,6 @@ export default function NewProjectPage() {
     queryKey: ['clients'],
     queryFn: clientsService.getAll
   });
-
-  // Sync local state with context dates if needed, or just use context dates
-  const handleDateChange = (type: 'start' | 'end', value: string) => {
-    setDates({ ...dates, [type]: value || null });
-  };
 
   const applyProjectDatesToAll = async () => {
     if (!dates.start || !dates.end) {
@@ -158,25 +155,20 @@ export default function NewProjectPage() {
               </Select>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="start_date">Начало</Label>
-                <Input 
-                  id="start_date" 
-                  type="date" 
-                  value={dates.start ? dates.start.split('T')[0] : ''} 
-                  onChange={(e) => handleDateChange('start', e.target.value)} 
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="end_date">Окончание</Label>
-                <Input 
-                  id="end_date" 
-                  type="date" 
-                  value={dates.end ? dates.end.split('T')[0] : ''} 
-                  onChange={(e) => handleDateChange('end', e.target.value)} 
-                />
-              </div>
+            <div className="space-y-2">
+              <Label>Период проекта *</Label>
+              <DateTimeRangePicker 
+                 date={{ 
+                   from: dates.start ? parseISO(dates.start) : undefined, 
+                   to: dates.end ? parseISO(dates.end) : undefined 
+                 }}
+                 setDate={(range) => {
+                   setDates({
+                     start: range?.from ? range.from.toISOString() : null,
+                     end: range?.to ? range.to.toISOString() : null
+                   })
+                 }}
+              />
             </div>
 
             <div className="space-y-2">
@@ -202,7 +194,7 @@ export default function NewProjectPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Оборудование</TableHead>
-                  <TableHead>Период</TableHead>
+                  <TableHead className="w-[280px]">Период</TableHead>
                   <TableHead className="w-[80px]">Кол-во</TableHead>
                   <TableHead className="w-[100px] text-right">Цена</TableHead>
                   <TableHead className="w-[50px]"></TableHead>
@@ -218,20 +210,19 @@ export default function NewProjectPage() {
                       <div className="text-xs text-muted-foreground">{item.category_name}</div>
                     </TableCell>
                     <TableCell>
-                      <div className="flex flex-col gap-1">
-                        <Input 
-                          type="date" 
-                          className="h-7 text-xs" 
-                          value={item.start_date ? item.start_date.split('T')[0] : ''} 
-                          onChange={(e) => updateItemDates(item.id, { start: e.target.value, end: item.end_date || null })}
-                        />
-                        <Input 
-                          type="date" 
-                          className="h-7 text-xs" 
-                          value={item.end_date ? item.end_date.split('T')[0] : ''} 
-                          onChange={(e) => updateItemDates(item.id, { start: item.start_date || null, end: e.target.value })}
-                        />
-                      </div>
+                      <DateTimeRangePicker 
+                         date={{ 
+                           from: item.start_date ? parseISO(item.start_date) : undefined, 
+                           to: item.end_date ? parseISO(item.end_date) : undefined 
+                         }}
+                         setDate={(range) => {
+                           updateItemDates(item.id, {
+                             start: range?.from ? range.from.toISOString() : null,
+                             end: range?.to ? range.to.toISOString() : null
+                           });
+                         }}
+                         className="h-8"
+                      />
                     </TableCell>
                     <TableCell>
                       <Input 
