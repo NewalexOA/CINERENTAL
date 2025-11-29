@@ -1,4 +1,4 @@
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { projectsService } from '../../../services/projects';
 import { clientsService } from '../../../services/clients';
@@ -129,6 +129,10 @@ export default function ProjectDetailsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['project', projectId] });
       toast.success('Бронирование удалено');
+    },
+    onError: (err) => {
+      toast.error('Ошибка при обновлении бронирования');
+      console.error(err);
     }
   });
 
@@ -210,7 +214,13 @@ export default function ProjectDetailsPage() {
             <h1 className="text-2xl font-bold tracking-tight">{project.name}</h1>
             <div className="flex items-center gap-2 mt-1 text-muted-foreground text-sm">
               <User className="h-3 w-3" />
-              <span className="font-medium">{project.client?.name || 'Нет клиента'}</span>
+              <span className="font-medium">
+                {project.client ? (
+                  <Link to={`/clients/${project.client_id}`} className="hover:underline text-foreground hover:text-primary transition-colors">
+                    {project.client.name}
+                  </Link>
+                ) : 'Нет клиента'}
+              </span>
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -312,7 +322,13 @@ export default function ProjectDetailsPage() {
                   <TableRow key={booking.id} className="h-8">
                     <TableCell className="py-1 font-medium">
                       <div className="flex flex-col">
-                        <span>{booking.equipment?.name || `Item #${booking.equipment_id}`}</span>
+                        {booking.equipment ? (
+                          <Link to={`/equipment/${booking.equipment_id}`} className="hover:underline text-foreground hover:text-primary transition-colors">
+                            {booking.equipment.name}
+                          </Link>
+                        ) : (
+                          <span>{`Item #${booking.equipment_id}`}</span>
+                        )}
                         <span className="text-[10px] text-muted-foreground font-mono">{booking.equipment?.barcode}</span>
                       </div>
                     </TableCell>
