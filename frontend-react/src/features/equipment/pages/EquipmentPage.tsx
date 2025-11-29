@@ -19,16 +19,18 @@ import {
   SelectTrigger, 
   SelectValue 
 } from '../../../components/ui/select';
+import { Input } from '../../../components/ui/input';
 import { EquipmentFormDialog } from '../components/EquipmentFormDialog';
 import { EquipmentDeleteDialog } from '../components/EquipmentDeleteDialog';
 import { Plus, Search, QrCode, Pencil, Trash2 } from 'lucide-react';
 import { useState, useMemo } from 'react';
 import { toast } from 'sonner';
 import { flattenCategories } from '../../../utils/category-utils';
+import { PaginationControls } from '../../../components/ui/pagination-controls';
 
 const statusMap: Record<string, { label: string, variant: "default" | "secondary" | "destructive" | "outline" | "success" | "warning" }> = {
   [EquipmentStatus.AVAILABLE]: { label: 'Доступно', variant: 'success' },
-  [EquipmentStatus.RENTED]: { label: 'В аренде', variant: 'default' }, // primary
+  [EquipmentStatus.RENTED]: { label: 'В аренде', variant: 'default' },
   [EquipmentStatus.MAINTENANCE]: { label: 'Обслуживание', variant: 'warning' },
   [EquipmentStatus.BROKEN]: { label: 'Сломано', variant: 'destructive' },
   [EquipmentStatus.RETIRED]: { label: 'Списано', variant: 'secondary' },
@@ -37,7 +39,7 @@ const statusMap: Record<string, { label: string, variant: "default" | "secondary
 export default function EquipmentPage() {
   const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
-  const [size] = useState(20);
+  const [size, setSize] = useState(20);
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState<EquipmentStatus | ''>('');
   const [categoryId, setCategoryId] = useState<number | ''>('');
@@ -129,14 +131,14 @@ export default function EquipmentPage() {
   if (error) return <div className="p-8 text-center text-destructive">Ошибка загрузки данных</div>;
 
   return (
-    <div className="h-full flex flex-col space-y-4">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div className="h-full flex flex-col space-y-2">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between px-1">
         <div className="flex flex-1 items-center gap-2">
           <div className="relative w-full sm:w-64">
-            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-            <input
-              placeholder="Поиск по названию, серийному номеру..."
-              className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 pl-8 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+            <Search className="absolute left-2 top-2 h-3 w-3 text-muted-foreground" />
+            <Input
+              placeholder="Поиск по названию..."
+              className="h-7 pl-7 text-xs"
               value={search}
               onChange={handleSearchChange}
             />
@@ -146,7 +148,7 @@ export default function EquipmentPage() {
             value={status || "all"} 
             onValueChange={(val) => { setStatus(val === 'all' ? '' : val as EquipmentStatus); setPage(1); }}
           >
-            <SelectTrigger className="w-[180px]">
+            <SelectTrigger className="w-[140px] h-7 text-xs">
               <SelectValue placeholder="Все статусы" />
             </SelectTrigger>
             <SelectContent>
@@ -161,7 +163,7 @@ export default function EquipmentPage() {
             value={categoryId ? String(categoryId) : "all"} 
             onValueChange={(val) => { setCategoryId(val === 'all' ? '' : Number(val)); setPage(1); }}
           >
-            <SelectTrigger className="w-[200px]">
+            <SelectTrigger className="w-[200px] h-7 text-xs">
               <SelectValue placeholder="Все категории" />
             </SelectTrigger>
             <SelectContent>
@@ -177,21 +179,21 @@ export default function EquipmentPage() {
           </Select>
         </div>
 
-        <Button onClick={() => setIsCreateOpen(true)}>
-          <Plus className="mr-2 h-4 w-4" /> Добавить
+        <Button size="sm" className="h-7 text-xs" onClick={() => setIsCreateOpen(true)}>
+          <Plus className="mr-1 h-3 w-3" /> Добавить
         </Button>
       </div>
 
       <div className="border rounded-md flex-1 overflow-auto bg-card">
-        <Table>
+        <Table className="text-xs">
           <TableHeader>
-            <TableRow>
-              <TableHead>Название</TableHead>
-              <TableHead>Категория</TableHead>
-              <TableHead>Штрихкод / S/N</TableHead>
-              <TableHead>Стоимость</TableHead>
-              <TableHead>Статус</TableHead>
-              <TableHead className="text-right">Действия</TableHead>
+            <TableRow className="h-8">
+              <TableHead className="h-8 py-0">Название</TableHead>
+              <TableHead className="h-8 py-0">Категория</TableHead>
+              <TableHead className="h-8 py-0">Штрихкод / S/N</TableHead>
+              <TableHead className="h-8 py-0">Стоимость</TableHead>
+              <TableHead className="h-8 py-0">Статус</TableHead>
+              <TableHead className="h-8 py-0 text-right">Действия</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -200,44 +202,44 @@ export default function EquipmentPage() {
                  <TableCell colSpan={6} className="h-24 text-center">Загрузка...</TableCell>
                </TableRow>
             ) : data?.items.map((item) => (
-              <TableRow key={item.id}>
-                <TableCell className="font-medium">
+              <TableRow key={item.id} className="h-8 hover:bg-muted/50">
+                <TableCell className="py-1 font-medium">
                   <div className="flex flex-col">
                     <span>{item.name}</span>
                     {item.description && (
-                      <span className="text-xs text-muted-foreground truncate max-w-[300px]">{item.description}</span>
+                      <span className="text-[10px] text-muted-foreground truncate max-w-[300px]">{item.description}</span>
                     )}
                   </div>
                 </TableCell>
-                <TableCell>
+                <TableCell className="py-1">
                   {item.category_name || item.category?.name || '-'}
                 </TableCell>
-                <TableCell>
-                   <div className="flex flex-col text-sm">
+                <TableCell className="py-1">
+                   <div className="flex flex-col text-[10px]">
                     <div className="flex items-center gap-1">
                       <QrCode className="h-3 w-3 text-muted-foreground" />
-                      <span className="font-mono text-xs">{item.barcode}</span>
+                      <span className="font-mono">{item.barcode}</span>
                     </div>
                     {item.serial_number && (
-                      <span className="text-xs text-muted-foreground">SN: {item.serial_number}</span>
+                      <span className="text-muted-foreground">SN: {item.serial_number}</span>
                     )}
                   </div>
                 </TableCell>
-                <TableCell>
+                <TableCell className="py-1">
                   {item.replacement_cost} ₽
                 </TableCell>
-                <TableCell>
-                  <Badge variant={statusMap[item.status]?.variant || 'outline'}>
+                <TableCell className="py-1">
+                  <Badge variant={statusMap[item.status]?.variant || 'outline'} className="px-1.5 py-0 text-[10px] h-5">
                     {statusMap[item.status]?.label || item.status}
                   </Badge>
                 </TableCell>
-                <TableCell className="text-right">
-                  <div className="flex justify-end gap-2">
-                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setEditingEquipment(item)}>
-                      <Pencil className="h-4 w-4" />
+                <TableCell className="py-1 text-right">
+                  <div className="flex justify-end gap-1">
+                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setEditingEquipment(item)}>
+                      <Pencil className="h-3 w-3" />
                     </Button>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => setDeletingEquipment(item)}>
-                      <Trash2 className="h-4 w-4" />
+                    <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive hover:text-destructive" onClick={() => setDeletingEquipment(item)}>
+                      <Trash2 className="h-3 w-3" />
                     </Button>
                   </div>
                 </TableCell>
@@ -254,33 +256,15 @@ export default function EquipmentPage() {
         </Table>
       </div>
 
-      {/* Pagination Controls */}
-      <div className="flex items-center justify-between px-2">
-        <div className="text-sm text-muted-foreground">
-          Всего: {data?.total || 0}
-        </div>
-        <div className="flex items-center space-x-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
-            disabled={page === 1 || isLoading}
-          >
-            Назад
-          </Button>
-          <div className="text-sm font-medium">
-            Стр. {page} из {data?.pages || 1}
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setPage((p) => p + 1)}
-            disabled={page >= (data?.pages || 1) || isLoading}
-          >
-            Вперед
-          </Button>
-        </div>
-      </div>
+      <PaginationControls 
+        currentPage={page}
+        totalPages={data?.pages || 1}
+        pageSize={size}
+        totalItems={data?.total || 0}
+        onPageChange={setPage}
+        onPageSizeChange={setSize}
+        disabled={isLoading}
+      />
 
       {/* Dialogs */}
       <EquipmentFormDialog 

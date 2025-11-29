@@ -18,6 +18,7 @@ import {
   SelectTrigger, 
   SelectValue 
 } from '../../../components/ui/select';
+import { Input } from '../../../components/ui/input';
 import { ClientFormDialog } from '../components/ClientFormDialog';
 import { ClientDeleteDialog } from '../components/ClientDeleteDialog';
 import { 
@@ -34,6 +35,7 @@ import {
   Box
 } from 'lucide-react';
 import { useState } from 'react';
+import { PaginationControls } from '../../../components/ui/pagination-controls';
 
 type ViewMode = 'list' | 'grid';
 type SortOption = 'name' | 'created_at' | 'bookings_count';
@@ -43,6 +45,10 @@ export default function ClientsPage() {
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [search, setSearch] = useState('');
   const [sortBy, setSortBy] = useState<SortOption>('name');
+  
+  // Pagination
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
   
   // Dialog states
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -104,6 +110,11 @@ export default function ClientsPage() {
       }
     });
 
+  // Pagination logic
+  const totalItems = filteredAndSortedClients?.length || 0;
+  const totalPages = Math.ceil(totalItems / pageSize);
+  const paginatedClients = filteredAndSortedClients?.slice((page - 1) * pageSize, page * pageSize);
+
   // Handlers
   const handleCreate = async (data: ClientCreate) => {
     await createMutation.mutateAsync(data);
@@ -121,32 +132,36 @@ export default function ClientsPage() {
     }
   };
 
+  const handleSearch = (val: string) => {
+    setSearch(val);
+    setPage(1);
+  };
+
   if (isLoading) return <div className="p-8 text-center text-muted-foreground">Загрузка клиентов...</div>;
   if (error) return <div className="p-8 text-center text-destructive">Ошибка загрузки данных</div>;
 
   return (
-    <div className="h-full flex flex-col space-y-4">
+    <div className="h-full flex flex-col space-y-2">
       {/* Header & Toolbar */}
-      <div className="flex flex-col gap-4">
-        <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center justify-between px-1">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">Клиенты</h1>
-            <p className="text-muted-foreground">Управление клиентами и контактной информацией</p>
+            <h1 className="text-xl font-bold tracking-tight">Клиенты</h1>
           </div>
-          <Button onClick={() => setIsCreateOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" /> Добавить клиента
+          <Button size="sm" className="h-7 text-xs" onClick={() => setIsCreateOpen(true)}>
+            <Plus className="mr-1 h-3 w-3" /> Добавить клиента
           </Button>
         </div>
 
-        <div className="flex flex-col sm:flex-row gap-4 items-center justify-between bg-card p-4 rounded-lg border">
+        <div className="flex flex-col sm:flex-row gap-2 items-center justify-between bg-card p-2 rounded-md border shadow-sm">
           <div className="flex flex-1 items-center gap-2 w-full">
             <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-              <input
+              <Search className="absolute left-2 top-2 h-3 w-3 text-muted-foreground" />
+              <Input
                 placeholder="Поиск клиентов..."
-                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 pl-8 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                className="h-7 pl-7 text-xs"
                 value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                onChange={(e) => handleSearch(e.target.value)}
               />
             </div>
             
@@ -154,7 +169,7 @@ export default function ClientsPage() {
               value={sortBy} 
               onValueChange={(val) => setSortBy(val as SortOption)}
             >
-              <SelectTrigger className="w-[200px]">
+              <SelectTrigger className="w-[160px] h-7 text-xs">
                 <SelectValue placeholder="Сортировка" />
               </SelectTrigger>
               <SelectContent>
@@ -165,131 +180,129 @@ export default function ClientsPage() {
             </Select>
           </div>
 
-          <div className="flex items-center border rounded-md overflow-hidden">
+          <div className="flex items-center border rounded-md overflow-hidden h-7">
             <button
               onClick={() => setViewMode('grid')}
-              className={`p-2 hover:bg-accent ${viewMode === 'grid' ? 'bg-accent text-accent-foreground' : 'text-muted-foreground'}`}
+              className={`px-2 h-full hover:bg-accent flex items-center justify-center ${viewMode === 'grid' ? 'bg-accent text-accent-foreground' : 'text-muted-foreground'}`}
               title="Сетка"
             >
-              <LayoutGrid className="h-4 w-4" />
+              <LayoutGrid className="h-3.5 w-3.5" />
             </button>
-            <div className="w-[1px] bg-border h-9"></div>
+            <div className="w-[1px] bg-border h-full"></div>
             <button
               onClick={() => setViewMode('list')}
-              className={`p-2 hover:bg-accent ${viewMode === 'list' ? 'bg-accent text-accent-foreground' : 'text-muted-foreground'}`}
+              className={`px-2 h-full hover:bg-accent flex items-center justify-center ${viewMode === 'list' ? 'bg-accent text-accent-foreground' : 'text-muted-foreground'}`}
               title="Список"
             >
-              <ListIcon className="h-4 w-4" />
+              <ListIcon className="h-3.5 w-3.5" />
             </button>
           </div>
         </div>
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-auto min-h-0">
-        {filteredAndSortedClients?.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-64 text-muted-foreground">
-            <Search className="h-12 w-12 mb-4 opacity-20" />
-            <p>Клиенты не найдены</p>
+      <div className="flex-1 overflow-auto min-h-0 bg-card border rounded-md">
+        {totalItems === 0 ? (
+          <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
+            <Search className="h-10 w-10 mb-2 opacity-20" />
+            <p className="text-sm">Клиенты не найдены</p>
           </div>
         ) : viewMode === 'list' ? (
-          <div className="border rounded-md">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Клиент</TableHead>
-                  <TableHead>Компания</TableHead>
-                  <TableHead>Контакты</TableHead>
-                  <TableHead>Бронирований</TableHead>
-                  <TableHead>Добавлен</TableHead>
-                  <TableHead className="text-right">Действия</TableHead>
+          <Table className="text-xs">
+            <TableHeader>
+              <TableRow className="h-8">
+                <TableHead className="h-8 py-0">Клиент</TableHead>
+                <TableHead className="h-8 py-0">Компания</TableHead>
+                <TableHead className="h-8 py-0">Контакты</TableHead>
+                <TableHead className="h-8 py-0">Бронирований</TableHead>
+                <TableHead className="h-8 py-0">Добавлен</TableHead>
+                <TableHead className="h-8 py-0 text-right">Действия</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {paginatedClients?.map((client) => (
+                <TableRow key={client.id} className="h-8 cursor-pointer hover:bg-muted/50" onClick={() => console.log('View client', client.id)}>
+                  <TableCell className="py-1 font-medium">{client.name}</TableCell>
+                  <TableCell className="py-1">{client.company || '-'}</TableCell>
+                  <TableCell className="py-1">
+                    <div className="flex flex-col text-[10px]">
+                      {client.email && <div className="flex items-center gap-1"><Mail className="h-3 w-3 text-muted-foreground"/> {client.email}</div>}
+                      {client.phone && <div className="flex items-center gap-1"><Phone className="h-3 w-3 text-muted-foreground"/> {client.phone}</div>}
+                    </div>
+                  </TableCell>
+                  <TableCell className="py-1">
+                    <Badge variant="secondary" className="font-normal text-[10px] h-5 px-1.5">
+                      {client.bookings_count || 0}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="py-1 text-muted-foreground text-[10px]">
+                    {client.created_at ? new Date(client.created_at).toLocaleDateString() : '-'}
+                  </TableCell>
+                  <TableCell className="py-1 text-right">
+                    <div className="flex justify-end gap-1" onClick={(e) => e.stopPropagation()}>
+                      <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setEditingClient(client)}>
+                        <Pencil className="h-3 w-3" />
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive hover:text-destructive" onClick={() => setDeletingClient(client)}>
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </TableCell>
                 </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredAndSortedClients?.map((client) => (
-                  <TableRow key={client.id} className="cursor-pointer hover:bg-muted/50" onClick={() => console.log('View client', client.id)}>
-                    <TableCell className="font-medium">{client.name}</TableCell>
-                    <TableCell>{client.company || '-'}</TableCell>
-                    <TableCell>
-                      <div className="flex flex-col text-sm">
-                        {client.email && <div className="flex items-center gap-1"><Mail className="h-3 w-3 text-muted-foreground"/> {client.email}</div>}
-                        {client.phone && <div className="flex items-center gap-1"><Phone className="h-3 w-3 text-muted-foreground"/> {client.phone}</div>}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="secondary" className="font-normal">
-                        {client.bookings_count || 0} бронирований
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-muted-foreground text-sm">
-                      {client.created_at ? new Date(client.created_at).toLocaleDateString() : '-'}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2" onClick={(e) => e.stopPropagation()}>
-                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setEditingClient(client)}>
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => setDeletingClient(client)}>
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+              ))}
+            </TableBody>
+          </Table>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {filteredAndSortedClients?.map((client) => (
-              <div key={client.id} className="bg-card border rounded-lg p-4 hover:border-primary/50 transition-colors flex flex-col h-full shadow-sm">
-                <div className="flex justify-between items-start mb-3">
+          <div className="p-2 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2">
+            {paginatedClients?.map((client) => (
+              <div key={client.id} className="bg-card border rounded-md p-3 hover:border-primary/50 transition-colors flex flex-col h-full shadow-sm">
+                <div className="flex justify-between items-start mb-2">
                   <div>
-                    <h3 className="font-semibold text-lg line-clamp-1">{client.name}</h3>
-                    <p className="text-sm text-muted-foreground line-clamp-1">{client.company || 'Нет компании'}</p>
+                    <h3 className="font-semibold text-sm line-clamp-1">{client.name}</h3>
+                    <p className="text-xs text-muted-foreground line-clamp-1">{client.company || 'Нет компании'}</p>
                   </div>
                   <div className="flex gap-1">
-                    <Button variant="ghost" size="icon" className="h-8 w-8 -mt-1 -mr-2" onClick={() => setEditingClient(client)}>
-                      <MoreVertical className="h-4 w-4" />
+                    <Button variant="ghost" size="icon" className="h-6 w-6 -mt-1 -mr-1" onClick={() => setEditingClient(client)}>
+                      <MoreVertical className="h-3 w-3" />
                     </Button>
                   </div>
                 </div>
                 
-                <div className="space-y-2 flex-1 text-sm text-muted-foreground mb-4">
+                <div className="space-y-1 flex-1 text-xs text-muted-foreground mb-3">
                   <div className="flex items-center gap-2">
-                    <Mail className="h-4 w-4 opacity-70" />
+                    <Mail className="h-3 w-3 opacity-70" />
                     <span className="truncate">{client.email || 'Нет email'}</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Phone className="h-4 w-4 opacity-70" />
+                    <Phone className="h-3 w-3 opacity-70" />
                     <span>{client.phone || 'Нет телефона'}</span>
                   </div>
                 </div>
 
-                <div className="flex justify-between items-center pt-3 border-t mt-auto">
-                  <Badge variant="outline" className="bg-background">
+                <div className="flex justify-between items-center pt-2 border-t mt-auto">
+                  <Badge variant="outline" className="bg-background text-[10px] h-5 px-1.5">
                     <Box className="h-3 w-3 mr-1" />
                     {client.bookings_count || 0}
                   </Badge>
-                  <span className="text-xs text-muted-foreground flex items-center gap-1">
+                  <span className="text-[10px] text-muted-foreground flex items-center gap-1">
                     <Calendar className="h-3 w-3" />
                     {client.created_at ? new Date(client.created_at).toLocaleDateString() : '-'}
                   </span>
-                </div>
-                
-                <div className="grid grid-cols-2 gap-2 mt-3 pt-3 border-t">
-                   <Button variant="outline" size="sm" onClick={() => setEditingClient(client)}>
-                     <Pencil className="h-3 w-3 mr-2" /> Изменить
-                   </Button>
-                   <Button variant="outline" size="sm" className="text-destructive hover:bg-destructive/10 hover:text-destructive" onClick={() => setDeletingClient(client)}>
-                     <Trash2 className="h-3 w-3 mr-2" /> Удалить
-                   </Button>
                 </div>
               </div>
             ))}
           </div>
         )}
       </div>
+
+      <PaginationControls 
+        currentPage={page}
+        totalPages={totalPages}
+        pageSize={pageSize}
+        totalItems={totalItems}
+        onPageChange={setPage}
+        onPageSizeChange={setPageSize}
+      />
 
       {/* Dialogs */}
       <ClientFormDialog 

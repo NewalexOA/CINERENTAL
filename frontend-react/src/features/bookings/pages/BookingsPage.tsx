@@ -24,6 +24,7 @@ import { Badge } from '../../../components/ui/badge';
 import { Search, X, Calendar as CalendarIcon } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { DateTimeRangePicker } from '../../../components/ui/date-range-picker';
+import { PaginationControls } from '../../../components/ui/pagination-controls';
 
 const bookingStatusMap: Record<string, { label: string, variant: "default" | "secondary" | "destructive" | "outline" | "success" | "warning" }> = {
   [BookingStatus.PENDING]: { label: 'Ожидает', variant: 'secondary' },
@@ -44,7 +45,7 @@ const paymentStatusMap: Record<string, { label: string, variant: "default" | "se
 
 export default function BookingsPage() {
   const [page, setPage] = useState(1);
-  const [size] = useState(20);
+  const [size, setSize] = useState(20);
   
   // Filters
   const [clientSearch, setClientSearch] = useState('');
@@ -82,27 +83,26 @@ export default function BookingsPage() {
   };
 
   return (
-    <div className="h-full flex flex-col space-y-4">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold tracking-tight">Бронирования</h1>
+    <div className="h-full flex flex-col space-y-2">
+      <div className="flex justify-between items-center px-1">
+        <h1 className="text-xl font-bold tracking-tight">Бронирования</h1>
       </div>
 
-      <div className="bg-card border rounded-lg p-4 shadow-sm space-y-4">
+      <div className="bg-card border rounded-md p-2 shadow-sm space-y-2">
         <div className="flex items-center justify-between">
-          <h2 className="text-sm font-semibold">Фильтры</h2>
-          <Button variant="ghost" size="sm" onClick={handleResetFilters} className="text-muted-foreground">
-            <X className="mr-2 h-3 w-3" /> Сбросить
+          <h2 className="text-xs font-semibold uppercase text-muted-foreground">Фильтры</h2>
+          <Button variant="ghost" size="sm" onClick={handleResetFilters} className="h-6 text-xs text-muted-foreground">
+            <X className="mr-1 h-3 w-3" /> Сбросить
           </Button>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2">
           <div className="space-y-1">
-            <Label className="text-xs">Клиент</Label>
             <div className="relative">
-              <Search className="absolute left-2 top-2.5 h-3 w-3 text-muted-foreground" />
+              <Search className="absolute left-2 top-2 h-3 w-3 text-muted-foreground" />
               <Input 
                 placeholder="Поиск клиента..." 
-                className="h-8 pl-8 text-sm" 
+                className="h-7 pl-7 text-xs" 
                 value={clientSearch}
                 onChange={(e) => { setClientSearch(e.target.value); setPage(1); }}
               />
@@ -110,12 +110,11 @@ export default function BookingsPage() {
           </div>
           
           <div className="space-y-1">
-            <Label className="text-xs">Оборудование</Label>
             <div className="relative">
-              <Search className="absolute left-2 top-2.5 h-3 w-3 text-muted-foreground" />
+              <Search className="absolute left-2 top-2 h-3 w-3 text-muted-foreground" />
               <Input 
                 placeholder="Поиск оборудования..." 
-                className="h-8 pl-8 text-sm"
+                className="h-7 pl-7 text-xs"
                 value={equipmentSearch}
                 onChange={(e) => { setEquipmentSearch(e.target.value); setPage(1); }}
               />
@@ -123,13 +122,12 @@ export default function BookingsPage() {
           </div>
 
           <div className="space-y-1">
-             <Label className="text-xs">Статус бронирования</Label>
              <Select 
                value={bookingStatus} 
                onValueChange={(val) => { setBookingStatus(val as any); setPage(1); }}
              >
-               <SelectTrigger className="h-8 text-sm">
-                 <SelectValue placeholder="Все статусы" />
+               <SelectTrigger className="h-7 text-xs">
+                 <SelectValue placeholder="Статус бронирования" />
                </SelectTrigger>
                <SelectContent>
                  <SelectItem value="all">Все статусы</SelectItem>
@@ -141,13 +139,12 @@ export default function BookingsPage() {
           </div>
 
           <div className="space-y-1">
-             <Label className="text-xs">Статус оплаты</Label>
              <Select 
                value={paymentStatus} 
                onValueChange={(val) => { setPaymentStatus(val as any); setPage(1); }}
              >
-               <SelectTrigger className="h-8 text-sm">
-                 <SelectValue placeholder="Все статусы" />
+               <SelectTrigger className="h-7 text-xs">
+                 <SelectValue placeholder="Статус оплаты" />
                </SelectTrigger>
                <SelectContent>
                  <SelectItem value="all">Все статусы</SelectItem>
@@ -159,7 +156,6 @@ export default function BookingsPage() {
           </div>
           
           <div className="space-y-1 lg:col-span-2">
-            <Label className="text-xs">Период</Label>
             <DateTimeRangePicker
                date={{
                  from: startDate ? parseISO(startDate) : undefined,
@@ -170,76 +166,72 @@ export default function BookingsPage() {
                  setEndDate(range?.to ? range.to.toISOString() : '');
                  setPage(1);
                }}
-               className="h-8"
+               className="h-7"
+               placeholder="Период бронирования"
             />
           </div>
 
-          <div className="flex items-end pb-1">
-             <div className="flex items-center space-x-2">
-               <Checkbox 
-                 id="active" 
-                 checked={activeOnly} 
-                 onCheckedChange={(checked) => { setActiveOnly(checked as boolean); setPage(1); }} 
-               />
-               <label htmlFor="active" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                 Только активные
-               </label>
-             </div>
+          <div className="flex items-center space-x-2 pt-1">
+             <Checkbox 
+               id="active" 
+               checked={activeOnly} 
+               onCheckedChange={(checked) => { setActiveOnly(checked as boolean); setPage(1); }} 
+               className="h-4 w-4"
+             />
+             <label htmlFor="active" className="text-xs font-medium leading-none cursor-pointer">
+               Только активные
+             </label>
           </div>
         </div>
       </div>
 
       <div className="border rounded-md flex-1 overflow-auto bg-card">
-        <Table>
+        <Table className="text-xs">
           <TableHeader>
-            <TableRow>
-              <TableHead>Клиент</TableHead>
-              <TableHead>Оборудование</TableHead>
-              <TableHead>Период</TableHead>
-              <TableHead>Проект</TableHead>
-              <TableHead>Статус</TableHead>
-              <TableHead>Оплата</TableHead>
+            <TableRow className="h-8">
+              <TableHead className="h-8 py-0">Клиент</TableHead>
+              <TableHead className="h-8 py-0">Оборудование</TableHead>
+              <TableHead className="h-8 py-0">Период</TableHead>
+              <TableHead className="h-8 py-0">Проект</TableHead>
+              <TableHead className="h-8 py-0">Статус</TableHead>
+              <TableHead className="h-8 py-0">Оплата</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
                <TableRow><TableCell colSpan={6} className="h-24 text-center">Загрузка...</TableCell></TableRow>
             ) : data?.items.map((item) => (
-              <TableRow key={item.id}>
-                <TableCell className="font-medium">
+              <TableRow key={item.id} className="h-8">
+                <TableCell className="py-1 font-medium">
                   {item.client_name}
                 </TableCell>
-                <TableCell>
+                <TableCell className="py-1">
                   <div className="flex flex-col">
-                    <span>{item.equipment_name}</span>
-                    {item.quantity > 1 && <span className="text-xs text-muted-foreground">Кол-во: {item.quantity}</span>}
+                    <span className="truncate max-w-[200px]">{item.equipment_name}</span>
+                    {item.quantity > 1 && <span className="text-[10px] text-muted-foreground">x{item.quantity}</span>}
                   </div>
                 </TableCell>
-                <TableCell>
-                  <div className="flex flex-col text-sm">
+                <TableCell className="py-1">
+                  <div className="flex flex-col text-[10px]">
                      <span className="flex items-center gap-1">
-                       <CalendarIcon className="h-3 w-3 text-muted-foreground" />
-                       {format(parseISO(item.start_date), "dd.MM.yyyy HH:mm")}
-                     </span>
-                     <span className="text-xs text-muted-foreground ml-4">
-                       до {format(parseISO(item.end_date), "dd.MM.yyyy HH:mm")}
+                       {format(parseISO(item.start_date), "dd.MM HH:mm")} - {format(parseISO(item.end_date), "dd.MM HH:mm")}
                      </span>
                   </div>
                 </TableCell>
-                <TableCell>
+                <TableCell className="py-1">
                   {item.project_name ? (
-                     <a href={`/projects/${item.project_id}`} className="text-primary hover:underline underline-offset-4">
+                     <a href={`/projects/${item.project_id}`} className="text-primary hover:underline underline-offset-4 truncate max-w-[150px] block">
                        {item.project_name}
                      </a>
                   ) : '-'}
                 </TableCell>
-                <TableCell>
-                  <Badge variant={bookingStatusMap[item.booking_status]?.variant || 'outline'}>
+                <TableCell className="py-1">
+                  <Badge variant={bookingStatusMap[item.booking_status]?.variant || 'outline'} className="px-1.5 py-0 text-[10px] h-5">
                     {bookingStatusMap[item.booking_status]?.label || item.booking_status}
                   </Badge>
                 </TableCell>
-                <TableCell>
-                   <Badge variant={paymentStatusMap[item.payment_status]?.variant || 'outline'}>
+                <TableCell className="py-1">
+                   <Badge variant={paymentStatusMap[item.payment_status]?.variant || 'outline'} className="px-1.5 py-0 text-[10px] h-5">
                     {paymentStatusMap[item.payment_status]?.label || item.payment_status}
                   </Badge>
                 </TableCell>
@@ -252,33 +244,15 @@ export default function BookingsPage() {
         </Table>
       </div>
 
-      {/* Pagination */}
-      <div className="flex items-center justify-between px-2">
-        <div className="text-sm text-muted-foreground">
-          Всего: {data?.total || 0}
-        </div>
-        <div className="flex items-center space-x-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
-            disabled={page === 1 || isLoading}
-          >
-            Назад
-          </Button>
-          <div className="text-sm font-medium">
-            Стр. {page} из {data?.pages || 1}
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setPage((p) => p + 1)}
-            disabled={page >= (data?.pages || 1) || isLoading}
-          >
-            Вперед
-          </Button>
-        </div>
-      </div>
+      <PaginationControls 
+        currentPage={page}
+        totalPages={data?.pages || 1}
+        pageSize={size}
+        totalItems={data?.total || 0}
+        onPageChange={setPage}
+        onPageSizeChange={setSize}
+        disabled={isLoading}
+      />
     </div>
   );
 }

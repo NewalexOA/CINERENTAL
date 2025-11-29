@@ -11,6 +11,7 @@ import {
   TableRow 
 } from '../../../components/ui/table';
 import { Button } from '../../../components/ui/button';
+import { Input } from '../../../components/ui/input';
 import { 
   Select, 
   SelectContent, 
@@ -21,6 +22,7 @@ import {
 import { Search, QrCode, Plus } from 'lucide-react';
 import { useState, useMemo } from 'react';
 import { flattenCategories } from '../../../utils/category-utils';
+import { PaginationControls } from '../../../components/ui/pagination-controls';
 
 interface EquipmentPickerProps {
   onAdd: (equipment: Equipment) => void;
@@ -28,9 +30,9 @@ interface EquipmentPickerProps {
 
 export function EquipmentPicker({ onAdd }: EquipmentPickerProps) {
   const [page, setPage] = useState(1);
-  const [size] = useState(10); // Smaller page size for picker
+  const [size, setSize] = useState(20);
   const [search, setSearch] = useState('');
-  const [status] = useState<EquipmentStatus | ''>(EquipmentStatus.AVAILABLE); // Default to available, read-only here
+  const [status] = useState<EquipmentStatus | ''>(EquipmentStatus.AVAILABLE);
   const [categoryId, setCategoryId] = useState<number | ''>('');
 
   const { data: categories } = useQuery({
@@ -59,13 +61,13 @@ export function EquipmentPicker({ onAdd }: EquipmentPickerProps) {
   if (error) return <div className="p-4 text-center text-destructive">Ошибка загрузки</div>;
 
   return (
-    <div className="flex flex-col space-y-4">
-      <div className="flex flex-col sm:flex-row gap-2">
-        <div className="relative flex-1">
-          <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-          <input
+    <div className="flex flex-col h-full space-y-2">
+      <div className="flex flex-col gap-2">
+        <div className="relative">
+          <Search className="absolute left-2 top-2 h-3 w-3 text-muted-foreground" />
+          <Input
             placeholder="Поиск..."
-            className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 pl-8 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+            className="h-7 pl-7 text-xs"
             value={search}
             onChange={handleSearchChange}
           />
@@ -75,7 +77,7 @@ export function EquipmentPicker({ onAdd }: EquipmentPickerProps) {
           value={categoryId ? String(categoryId) : "all"} 
           onValueChange={(val) => { setCategoryId(val === 'all' ? '' : Number(val)); setPage(1); }}
         >
-          <SelectTrigger className="w-[180px]">
+          <SelectTrigger className="w-full h-7 text-xs">
             <SelectValue placeholder="Категория" />
           </SelectTrigger>
           <SelectContent>
@@ -91,37 +93,37 @@ export function EquipmentPicker({ onAdd }: EquipmentPickerProps) {
         </Select>
       </div>
 
-      <div className="border rounded-md">
-        <Table>
+      <div className="border rounded-md flex-1 overflow-auto">
+        <Table className="text-xs">
           <TableHeader>
-            <TableRow>
-              <TableHead>Название</TableHead>
-              <TableHead>Код</TableHead>
-              <TableHead>Цена</TableHead>
-              <TableHead className="w-[50px]"></TableHead>
+            <TableRow className="h-8">
+              <TableHead className="h-8 py-0">Название</TableHead>
+              <TableHead className="h-8 py-0">Код</TableHead>
+              <TableHead className="h-8 py-0">Цена</TableHead>
+              <TableHead className="h-8 py-0 w-[40px]"></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
                <TableRow><TableCell colSpan={4} className="h-24 text-center">Загрузка...</TableCell></TableRow>
             ) : data?.items.map((item) => (
-              <TableRow key={item.id}>
-                <TableCell className="font-medium">
+              <TableRow key={item.id} className="h-8">
+                <TableCell className="py-1 font-medium">
                   <div className="flex flex-col">
-                    <span>{item.name}</span>
-                    <span className="text-xs text-muted-foreground truncate max-w-[200px]">{item.category_name}</span>
+                    <span className="truncate max-w-[200px]">{item.name}</span>
+                    <span className="text-[10px] text-muted-foreground truncate max-w-[200px]">{item.category_name}</span>
                   </div>
                 </TableCell>
-                <TableCell>
-                   <div className="flex items-center gap-1 text-xs">
+                <TableCell className="py-1">
+                   <div className="flex items-center gap-1 text-[10px]">
                       <QrCode className="h-3 w-3 text-muted-foreground" />
                       <span className="font-mono">{item.barcode}</span>
                    </div>
                 </TableCell>
-                <TableCell>{item.replacement_cost} ₽</TableCell>
-                <TableCell>
-                  <Button size="sm" variant="ghost" onClick={() => onAdd(item)}>
-                    <Plus className="h-4 w-4" />
+                <TableCell className="py-1">{item.replacement_cost} ₽</TableCell>
+                <TableCell className="py-1">
+                  <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => onAdd(item)}>
+                    <Plus className="h-3 w-3" />
                   </Button>
                 </TableCell>
               </TableRow>
@@ -133,26 +135,15 @@ export function EquipmentPicker({ onAdd }: EquipmentPickerProps) {
         </Table>
       </div>
 
-      {/* Simplified Pagination */}
-      <div className="flex items-center justify-between">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setPage((p) => Math.max(1, p - 1))}
-          disabled={page === 1 || isLoading}
-        >
-          Назад
-        </Button>
-        <span className="text-xs text-muted-foreground">Стр. {page}</span>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setPage((p) => p + 1)}
-          disabled={page >= (data?.pages || 1) || isLoading}
-        >
-          Вперед
-        </Button>
-      </div>
+      <PaginationControls 
+        currentPage={page}
+        totalPages={data?.pages || 1}
+        pageSize={size}
+        totalItems={data?.total || 0}
+        onPageChange={setPage}
+        onPageSizeChange={setSize}
+        disabled={isLoading}
+      />
     </div>
   );
 }

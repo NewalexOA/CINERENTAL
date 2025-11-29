@@ -199,32 +199,32 @@ export default function ProjectDetailsPage() {
   if (error || !project) return <div className="p-8 text-center text-destructive">Ошибка загрузки проекта</div>;
 
   return (
-    <div className="h-full flex flex-col space-y-6 overflow-hidden">
+    <div className="h-full flex flex-col space-y-4 overflow-hidden">
       {/* Header */}
       <div className="flex flex-col gap-2 shrink-0">
-        <Button variant="ghost" size="sm" className="w-fit -ml-2 text-muted-foreground" onClick={() => navigate('/projects')}>
-          <ArrowLeft className="mr-2 h-4 w-4" /> Назад к списку
+        <Button variant="ghost" size="sm" className="w-fit -ml-2 text-muted-foreground h-6 text-xs" onClick={() => navigate('/projects')}>
+          <ArrowLeft className="mr-1 h-3 w-3" /> Назад к списку
         </Button>
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">{project.name}</h1>
-            <div className="flex items-center gap-2 mt-2 text-muted-foreground">
-              <User className="h-4 w-4" />
+            <h1 className="text-2xl font-bold tracking-tight">{project.name}</h1>
+            <div className="flex items-center gap-2 mt-1 text-muted-foreground text-sm">
+              <User className="h-3 w-3" />
               <span className="font-medium">{project.client?.name || 'Нет клиента'}</span>
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-             <Button variant="outline" size="sm" onClick={() => setIsEditProjectOpen(true)}>
-               <Edit className="mr-2 h-4 w-4" /> Редактировать
+             <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => setIsEditProjectOpen(true)}>
+               <Edit className="mr-1 h-3 w-3" /> Редактировать
              </Button>
-             <Button variant="outline" size="sm" onClick={() => window.open(`http://localhost:8000/projects/${projectId}/print`, '_blank')}>
-               <Printer className="mr-2 h-4 w-4" /> Печать
+             <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => window.open(`http://localhost:8000/projects/${projectId}/print`, '_blank')}>
+               <Printer className="mr-1 h-3 w-3" /> Печать
              </Button>
              <Select 
                value={project.status} 
                onValueChange={(val) => updateProjectMutation.mutate({ status: val as ProjectStatus })}
              >
-               <SelectTrigger className="w-[140px]">
+               <SelectTrigger className="w-[130px] h-7 text-xs">
                  <SelectValue />
                </SelectTrigger>
                <SelectContent>
@@ -233,42 +233,42 @@ export default function ProjectDetailsPage() {
                  ))}
                </SelectContent>
              </Select>
-             <Button variant="destructive" size="icon" className="ml-2" onClick={() => setIsDeleteDialogOpen(true)}>
-               <Trash2 className="h-4 w-4" />
+             <Button variant="destructive" size="icon" className="ml-2 h-7 w-7" onClick={() => setIsDeleteDialogOpen(true)}>
+               <Trash2 className="h-3 w-3" />
              </Button>
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 shrink-0">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 shrink-0">
         {/* Info Card */}
-        <div className="bg-card border rounded-lg p-4 shadow-sm">
-          <h3 className="font-semibold mb-3 flex items-center gap-2">
-            <CalendarIcon className="h-4 w-4 text-primary" /> Даты проекта
+        <div className="bg-card border rounded-md p-3 shadow-sm">
+          <h3 className="font-semibold mb-2 flex items-center gap-2 text-sm">
+            <CalendarIcon className="h-3 w-3 text-primary" /> Даты проекта
           </h3>
-          <p className="text-lg font-medium">
+          <p className="text-sm font-medium">
             {format(parseISO(project.start_date), 'dd.MM.yyyy HH:mm')} - {format(parseISO(project.end_date), 'dd.MM.yyyy HH:mm')}
           </p>
           {project.description && (
-            <div className="mt-4">
-              <h4 className="text-xs uppercase text-muted-foreground font-semibold mb-1">Описание</h4>
-              <p className="text-sm">{project.description}</p>
+            <div className="mt-2">
+              <h4 className="text-[10px] uppercase text-muted-foreground font-semibold mb-1">Описание</h4>
+              <p className="text-xs">{project.description}</p>
             </div>
           )}
         </div>
 
         {/* Notes Card */}
-        <div className="bg-card border rounded-lg p-4 shadow-sm md:col-span-2 flex flex-col">
-          <h3 className="font-semibold mb-2">Заметки</h3>
+        <div className="bg-card border rounded-md p-3 shadow-sm md:col-span-2 flex flex-col">
+          <h3 className="font-semibold mb-2 text-sm">Заметки</h3>
           <div className="flex flex-col gap-2 flex-1">
             <Textarea 
               value={notes} 
               onChange={(e) => setNotes(e.target.value)} 
               placeholder="Добавьте заметки к проекту..." 
-              className="resize-none flex-1 min-h-[80px]"
+              className="resize-none flex-1 min-h-[60px] text-xs"
             />
-            <Button size="sm" variant="secondary" onClick={handleSaveNotes} className="self-end" disabled={notes === project.notes}>
-              <Save className="mr-2 h-4 w-4"/>
+            <Button size="sm" variant="secondary" onClick={handleSaveNotes} className="self-end h-6 text-xs" disabled={notes === project.notes}>
+              <Save className="mr-1 h-3 w-3"/>
               Сохранить заметки
             </Button>
           </div>
@@ -276,28 +276,28 @@ export default function ProjectDetailsPage() {
       </div>
 
       {/* Equipment List */}
-      <div className="bg-card border rounded-lg shadow-sm flex-1 flex flex-col min-h-[300px] overflow-hidden">
-        <div className="p-4 border-b flex justify-between items-center shrink-0">
-          <h2 className="text-lg font-semibold flex items-center gap-2">
+      <div className="bg-card border rounded-md shadow-sm flex-1 flex flex-col min-h-[300px] overflow-hidden">
+        <div className="p-2 border-b flex justify-between items-center shrink-0 bg-muted/20">
+          <h2 className="text-sm font-semibold flex items-center gap-2">
             Оборудование 
-            <span className="bg-secondary text-secondary-foreground px-2 py-0.5 rounded-full text-xs">
+            <span className="bg-secondary text-secondary-foreground px-1.5 py-0.5 rounded-full text-[10px]">
               {project.bookings?.length || 0}
             </span>
           </h2>
-          <Button size="sm" onClick={() => setIsAddEquipmentOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" /> Добавить
+          <Button size="sm" className="h-6 text-xs" onClick={() => setIsAddEquipmentOpen(true)}>
+            <Plus className="mr-1 h-3 w-3" /> Добавить
           </Button>
         </div>
         
         <div className="flex-1 overflow-auto">
-          <Table>
+          <Table className="text-xs">
             <TableHeader>
-              <TableRow>
-                <TableHead>Оборудование</TableHead>
-                <TableHead>Категория</TableHead>
-                <TableHead>Период</TableHead>
-                <TableHead className="w-[120px] text-center">Кол-во</TableHead>
-                <TableHead className="w-[50px]"></TableHead>
+              <TableRow className="h-8">
+                <TableHead className="h-8 py-0">Оборудование</TableHead>
+                <TableHead className="h-8 py-0">Категория</TableHead>
+                <TableHead className="h-8 py-0 w-[240px]">Период</TableHead>
+                <TableHead className="h-8 py-0 w-[100px] text-center">Кол-во</TableHead>
+                <TableHead className="h-8 py-0 w-[40px]"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -309,46 +309,46 @@ export default function ProjectDetailsPage() {
                   !isSameDay(parseISO(booking.end_date), parseISO(project.end_date));
 
                 return (
-                  <TableRow key={booking.id}>
-                    <TableCell className="font-medium">
+                  <TableRow key={booking.id} className="h-8">
+                    <TableCell className="py-1 font-medium">
                       <div className="flex flex-col">
                         <span>{booking.equipment?.name || `Item #${booking.equipment_id}`}</span>
-                        <span className="text-xs text-muted-foreground font-mono">{booking.equipment?.barcode}</span>
+                        <span className="text-[10px] text-muted-foreground font-mono">{booking.equipment?.barcode}</span>
                       </div>
                     </TableCell>
-                    <TableCell className="text-muted-foreground text-sm">
+                    <TableCell className="py-1 text-muted-foreground text-[10px]">
                       {booking.equipment?.category_name || '-'}
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="py-1">
                       <DateTimeRangePicker
                         date={{
                           from: parseISO(booking.start_date),
                           to: parseISO(booking.end_date)
                         }}
                         setDate={(range) => handleDateUpdate(booking.id, range)}
-                        className={isDifferentDates ? 'text-amber-600 font-medium' : ''}
+                        className={`h-7 ${isDifferentDates ? 'text-amber-600 font-medium' : ''}`}
                       />
                     </TableCell>
-                    <TableCell className="text-center">
+                    <TableCell className="py-1 text-center">
                       {!booking.equipment?.serial_number ? (
-                        <div className="flex items-center justify-center gap-1 border rounded-md p-0.5">
-                          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleQuantityChange(booking.id, booking.quantity, -1)}>
+                        <div className="flex items-center justify-center gap-1 border rounded-md p-0.5 w-fit mx-auto">
+                          <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => handleQuantityChange(booking.id, booking.quantity, -1)}>
                             <Minus className="h-3 w-3" />
                           </Button>
-                          <span className="w-6 text-center text-sm">{booking.quantity}</span>
-                          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleQuantityChange(booking.id, booking.quantity, 1)}>
+                          <span className="w-5 text-center text-[10px]">{booking.quantity}</span>
+                          <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => handleQuantityChange(booking.id, booking.quantity, 1)}>
                             <Plus className="h-3 w-3" />
                           </Button>
                         </div>
                       ) : (
-                        <span className="font-mono text-sm">{booking.quantity}</span>
+                        <span className="font-mono text-[10px]">{booking.quantity}</span>
                       )}
                     </TableCell>
-                    <TableCell>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => {
+                    <TableCell className="py-1">
+                      <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => {
                         if (confirm('Удалить эту позицию?')) deleteBookingMutation.mutate(booking.id);
                       }}>
-                        <Trash2 className="h-4 w-4" />
+                        <Trash2 className="h-3 w-3" />
                       </Button>
                     </TableCell>
                   </TableRow>
@@ -362,10 +362,10 @@ export default function ProjectDetailsPage() {
       {/* Add Equipment Dialog */}
       <Dialog open={isAddEquipmentOpen} onOpenChange={setIsAddEquipmentOpen}>
         <DialogContent className="sm:max-w-[900px] h-[85vh] flex flex-col p-0 gap-0">
-          <DialogHeader className="p-4 pb-2">
-            <DialogTitle>Добавить оборудование в проект</DialogTitle>
+          <DialogHeader className="p-3 pb-2 border-b">
+            <DialogTitle className="text-base">Добавить оборудование в проект</DialogTitle>
           </DialogHeader>
-          <div className="flex-1 overflow-hidden p-1">
+          <div className="flex-1 overflow-hidden p-2">
             <EquipmentPicker onAdd={handleAddEquipment} />
           </div>
         </DialogContent>
