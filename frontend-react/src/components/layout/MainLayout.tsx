@@ -1,4 +1,4 @@
-import { Outlet, NavLink } from 'react-router-dom';
+import { Outlet, NavLink, useLocation } from 'react-router-dom';
 import { 
   Camera, 
   Tags, 
@@ -10,7 +10,7 @@ import {
   Menu
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 
 // Navigation items configuration
 const navItems = [
@@ -24,6 +24,23 @@ const navItems = [
 
 export function MainLayout() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const location = useLocation();
+
+  const pageTitle = useMemo(() => {
+    const currentPath = location.pathname;
+    
+    // Check for exact matches or prefix matches
+    const activeItem = navItems.find(item => 
+      currentPath === item.href || currentPath.startsWith(item.href + '/')
+    );
+
+    if (activeItem) return activeItem.label;
+    
+    // Specific overrides if needed
+    if (currentPath === '/') return 'Оборудование';
+    
+    return 'ACT Rental';
+  }, [location.pathname]);
 
   return (
     <div className="flex h-screen bg-background overflow-hidden">
@@ -87,10 +104,9 @@ export function MainLayout() {
       {/* Main Content */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Header */}
-        <header className="h-14 border-b bg-card flex items-center px-6 justify-between">
+        <header className="h-14 border-b bg-card flex items-center px-6 justify-between shrink-0">
           <h1 className="text-lg font-semibold">
-            {/* Dynamic Title based on current route could go here */}
-            Dashboard
+            {pageTitle}
           </h1>
           <div className="flex items-center gap-4">
             <div className="h-8 w-8 rounded-full bg-accent"></div>
@@ -98,7 +114,7 @@ export function MainLayout() {
         </header>
 
         {/* Page Content */}
-        <main className="flex-1 overflow-auto p-6">
+        <main className="flex-1 overflow-auto p-4">
           <Outlet />
         </main>
       </div>
