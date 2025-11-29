@@ -24,7 +24,7 @@ import { useNavigate } from 'react-router-dom';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/ui/select';
 import { ProjectStatus } from '../../../types/project';
 import { DateTimeRangePicker } from '../../../components/ui/date-range-picker';
-import { format, parseISO } from 'date-fns';
+import { parseISO } from 'date-fns';
 
 export default function NewProjectPage() {
   const { items, addItem, removeItem, updateQuantity, updateItemDates, clearCart, dates, setDates } = useCart();
