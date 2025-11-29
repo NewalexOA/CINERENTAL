@@ -1,11 +1,11 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { clientsService } from '../../../services/clients';
-import { bookingsService } from '../../../services/bookings';
-import { projectsService } from '../../../services/projects';
-import { Button } from '../../../components/ui/button';
+import { clientsService } from '@/services/clients';
+import { bookingsService } from '@/services/bookings';
+import { projectsService } from '@/services/projects';
+import { Button } from '@/components/ui/button';
 import { ArrowLeft, Mail, Phone, MapPin, Building, Calendar, Package } from 'lucide-react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../../components/ui/tabs';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   Table, 
   TableBody, 
@@ -13,8 +13,8 @@ import {
   TableHead, 
   TableHeader, 
   TableRow 
-} from '../../../components/ui/table';
-import { Badge } from '../../../components/ui/badge';
+} from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
 import { format, parseISO } from 'date-fns';
 
 export default function ClientDetailsPage() {
