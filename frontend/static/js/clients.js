@@ -9,6 +9,9 @@ import { showToast } from './utils/common.js';
 // Global variables
 let currentView = 'list'; // 'grid' or 'list' - default view is 'list'
 let allClients = [];
+let currentClients = []; // currently displayed dataset (search/sort result)
+let currentSearchRequestId = 0; // monotonically increasing search request id
+let isUsingSearchResults = false; // whether currentClients represents active search results
 
 // Disable the global client controls initialization in main.js
 window.disableGlobalClientControls = true;
@@ -74,6 +77,10 @@ async function performSearch(query) {
 
     // Empty query – restore initial clients list from cache
     if (!trimmedQuery) {
+        // Invalidate all in-flight search requests
+        currentSearchRequestId += 1;
+        currentClients = allClients;
+        isUsingSearchResults = false;
         if (currentView === 'list') {
             renderListView(allClients);
         } else {
@@ -83,10 +90,19 @@ async function performSearch(query) {
     }
 
     try {
+        const requestId = ++currentSearchRequestId;
         showLocalLoader();
 
         const searchParams = { query: trimmedQuery };
         const clients = await api.get('/clients', searchParams);
+
+        // Ignore stale responses that finished after a newer request was started
+        if (requestId !== currentSearchRequestId) {
+            return;
+        }
+
+        currentClients = clients;
+        isUsingSearchResults = true;
 
         console.log(`Found ${clients.length} matches from server for query "${trimmedQuery}"`);
 
@@ -98,6 +114,9 @@ async function performSearch(query) {
     } catch (error) {
         console.error('Error searching clients:', error);
         showToast(error.message || 'Ошибка при поиске клиентов', 'danger');
+        // On search failure, fall back to full clients list state
+        isUsingSearchResults = false;
+        currentClients = allClients;
     } finally {
         hideLocalLoader();
     }
@@ -105,9 +124,13 @@ async function performSearch(query) {
 
 // Sort function
 function sortClients(sortBy) {
-    if (!allClients.length) return;
+    // Invalidate in-flight search responses so they cannot overwrite sorted data
+    currentSearchRequestId += 1;
 
-    const sortedClients = [...allClients];
+    const baseClients = isUsingSearchResults ? currentClients : allClients;
+    if (!baseClients || !baseClients.length) return;
+
+    const sortedClients = [...baseClients];
 
     switch (sortBy) {
         case 'name':
@@ -120,6 +143,13 @@ function sortClients(sortBy) {
             sortedClients.sort((a, b) => (b.bookings_count || 0) - (a.bookings_count || 0));
             break;
     }
+
+    // Persist sort order to the underlying full list when not in search mode
+    if (!isUsingSearchResults) {
+        allClients = sortedClients;
+    }
+
+    currentClients = sortedClients;
 
     if (currentView === 'list') {
         renderListView(sortedClients);
@@ -144,12 +174,18 @@ function hideLocalLoader() {
 
 async function loadClientsWithoutGlobalLoader() {
     try {
+        // Invalidate any in-flight search requests so their responses cannot
+        // overwrite freshly loaded full clients data
+        currentSearchRequestId += 1;
+
         showLocalLoader();
 
         const clients = await api.get('/clients');
         const container = document.getElementById('clientsGrid');
 
         allClients = clients || [];
+        currentClients = allClients;
+        isUsingSearchResults = false;
 
         if (clients && clients.length > 0) {
             container.innerHTML = '';
