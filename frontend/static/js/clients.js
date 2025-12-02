@@ -67,11 +67,13 @@ function initViewToggle() {
     }
 }
 
-// Search function
-function performSearch(query) {
-    console.log(`Local search: "${query}" (using cached data)`);
+// Search function (server-side search)
+async function performSearch(query) {
+    const trimmedQuery = query.trim();
+    console.log(`Client search input: "${query}"`);
 
-    if (!query.trim()) {
+    // Empty query – restore initial clients list from cache
+    if (!trimmedQuery) {
         if (currentView === 'list') {
             renderListView(allClients);
         } else {
@@ -80,25 +82,24 @@ function performSearch(query) {
         return;
     }
 
-    const searchQuery = query.toLowerCase();
-    const filteredClients = allClients.filter(client => {
-        const name = (client.name || '').toLowerCase();
-        const company = (client.company || '').toLowerCase();
-        const email = (client.email || '').toLowerCase();
-        const phone = (client.phone || '').toLowerCase();
+    try {
+        showLocalLoader();
 
-        return name.includes(searchQuery) ||
-               company.includes(searchQuery) ||
-               email.includes(searchQuery) ||
-               phone.includes(searchQuery);
-    });
+        const searchParams = { query: trimmedQuery };
+        const clients = await api.get('/clients', searchParams);
 
-    console.log(`Found ${filteredClients.length} matches locally`);
+        console.log(`Found ${clients.length} matches from server for query "${trimmedQuery}"`);
 
-    if (currentView === 'list') {
-        renderListView(filteredClients);
-    } else {
-        renderGridView(filteredClients);
+        if (currentView === 'list') {
+            renderListView(clients);
+        } else {
+            renderGridView(clients);
+        }
+    } catch (error) {
+        console.error('Error searching clients:', error);
+        showToast(error.message || 'Ошибка при поиске клиентов', 'danger');
+    } finally {
+        hideLocalLoader();
     }
 }
 
