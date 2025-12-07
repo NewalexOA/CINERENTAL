@@ -240,6 +240,11 @@ cython_debug/
 /custom_modes/*
 /ai-docs/*
 
+CLAUDE.md
+.claude/
+GEMINI.md
+.gemini/
+
 # HTMLHint
 .htmlhintrc
 .htmlhintrc.json
@@ -257,8 +262,6 @@ docs/Current_task/*
 # Scripts
 backend/scripts/*.json
 backend/scripts/*.sql
-CLAUDE.md
-/.claude
 
 # Node.js
 node_modules/
