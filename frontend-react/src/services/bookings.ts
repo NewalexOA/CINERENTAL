@@ -30,9 +30,14 @@ export interface Booking {
   payment_status: PaymentStatus;
   created_at: string;
   updated_at: string;
+  // Flat structure fields from backend
   equipment_name: string;
   client_name: string;
   project_name?: string;
+  barcode?: string;
+  category_name?: string;
+  serial_number?: string;
+  // Legacy nested structure (deprecated, kept for backwards compatibility)
   equipment?: {
     name: string;
     barcode: string;

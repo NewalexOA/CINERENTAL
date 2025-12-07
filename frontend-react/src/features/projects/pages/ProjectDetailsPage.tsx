@@ -6,20 +6,20 @@ import { bookingsService, BookingCreate, BookingUpdate } from '../../../services
 import { ProjectStatus, ProjectCreate } from '../../../types/project';
 import { Equipment } from '../../../types/equipment';
 import { Button } from '../../../components/ui/button';
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow
 } from '../../../components/ui/table';
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
 } from '../../../components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '../../../components/ui/dialog';
 import { Textarea } from '../../../components/ui/textarea';
@@ -160,7 +160,7 @@ export default function ProjectDetailsPage() {
       total_amount: 0 // Placeholder
     });
   };
-  
+
   const handleDateUpdate = (bookingId: number, range: DateRange | undefined) => {
     if (range?.from && range?.to) {
       updateBookingMutation.mutate({
@@ -230,8 +230,8 @@ export default function ProjectDetailsPage() {
              <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => window.open(`http://localhost:8000/projects/${projectId}/print`, '_blank')}>
                <Printer className="mr-1 h-3 w-3" /> Печать
              </Button>
-             <Select 
-               value={project.status} 
+             <Select
+               value={project.status}
                onValueChange={(val) => updateProjectMutation.mutate({ status: val as ProjectStatus })}
              >
                <SelectTrigger className="w-[130px] h-7 text-xs">
@@ -271,10 +271,10 @@ export default function ProjectDetailsPage() {
         <div className="bg-card border rounded-md p-3 shadow-sm md:col-span-2 flex flex-col">
           <h3 className="font-semibold mb-2 text-sm">Заметки</h3>
           <div className="flex flex-col gap-2 flex-1">
-            <Textarea 
-              value={notes} 
-              onChange={(e) => setNotes(e.target.value)} 
-              placeholder="Добавьте заметки к проекту..." 
+            <Textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Добавьте заметки к проекту..."
               className="resize-none flex-1 min-h-[60px] text-xs"
             />
             <Button size="sm" variant="secondary" onClick={handleSaveNotes} className="self-end h-6 text-xs" disabled={notes === project.notes}>
@@ -289,7 +289,7 @@ export default function ProjectDetailsPage() {
       <div className="bg-card border rounded-md shadow-sm flex-1 flex flex-col min-h-[300px] overflow-hidden">
         <div className="p-2 border-b flex justify-between items-center shrink-0 bg-muted/20">
           <h2 className="text-sm font-semibold flex items-center gap-2">
-            Оборудование 
+            Оборудование
             <span className="bg-secondary text-secondary-foreground px-1.5 py-0.5 rounded-full text-[10px]">
               {project.bookings?.length || 0}
             </span>
@@ -298,7 +298,7 @@ export default function ProjectDetailsPage() {
             <Plus className="mr-1 h-3 w-3" /> Добавить
           </Button>
         </div>
-        
+
         <div className="flex-1 overflow-auto">
           <Table className="text-xs">
             <TableHeader>
@@ -314,26 +314,22 @@ export default function ProjectDetailsPage() {
               {project.bookings?.length === 0 ? (
                 <TableRow><TableCell colSpan={5} className="h-24 text-center text-muted-foreground">Нет оборудования</TableCell></TableRow>
               ) : project.bookings?.map((booking) => {
-                const isDifferentDates = 
-                  !isSameDay(parseISO(booking.start_date), parseISO(project.start_date)) || 
+                const isDifferentDates =
+                  !isSameDay(parseISO(booking.start_date), parseISO(project.start_date)) ||
                   !isSameDay(parseISO(booking.end_date), parseISO(project.end_date));
 
                 return (
                   <TableRow key={booking.id} className="h-8">
                     <TableCell className="py-1 font-medium">
                       <div className="flex flex-col">
-                        {booking.equipment ? (
-                          <Link to={`/equipment/${booking.equipment_id}`} className="hover:underline text-foreground hover:text-primary transition-colors">
-                            {booking.equipment.name}
-                          </Link>
-                        ) : (
-                          <span>{`Item #${booking.equipment_id}`}</span>
-                        )}
-                        <span className="text-[10px] text-muted-foreground font-mono">{booking.equipment?.barcode}</span>
+                        <Link to={`/equipment/${booking.equipment_id}`} className="hover:underline text-foreground hover:text-primary transition-colors">
+                          {booking.equipment_name || `Item #${booking.equipment_id}`}
+                        </Link>
+                        <span className="text-[10px] text-muted-foreground font-mono">{booking.barcode}</span>
                       </div>
                     </TableCell>
                     <TableCell className="py-1 text-muted-foreground text-[10px]">
-                      {booking.equipment?.category_name || '-'}
+                      {booking.category_name || '-'}
                     </TableCell>
                     <TableCell className="py-1">
                       <DateTimeRangePicker
@@ -346,7 +342,7 @@ export default function ProjectDetailsPage() {
                       />
                     </TableCell>
                     <TableCell className="py-1 text-center">
-                      {!booking.equipment?.serial_number ? (
+                      {!booking.serial_number ? (
                         <div className="flex items-center justify-center gap-1 border rounded-md p-0.5 w-fit mx-auto">
                           <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => handleQuantityChange(booking.id, booking.quantity, -1)}>
                             <Minus className="h-3 w-3" />
@@ -396,18 +392,18 @@ export default function ProjectDetailsPage() {
           <form onSubmit={handleEditSubmit} className="space-y-4 py-4">
             <div className="space-y-2">
               <Label htmlFor="edit-name">Название проекта</Label>
-              <Input 
-                id="edit-name" 
-                value={editForm.name} 
-                onChange={(e) => setEditForm({...editForm, name: e.target.value})} 
-                required 
+              <Input
+                id="edit-name"
+                value={editForm.name}
+                onChange={(e) => setEditForm({...editForm, name: e.target.value})}
+                required
               />
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="edit-client">Клиент</Label>
-              <Select 
-                value={editForm.client_id} 
+              <Select
+                value={editForm.client_id}
                 onValueChange={(val) => setEditForm({...editForm, client_id: val})}
               >
                 <SelectTrigger id="edit-client">
@@ -440,10 +436,10 @@ export default function ProjectDetailsPage() {
 
             <div className="space-y-2">
               <Label htmlFor="edit-desc">Описание</Label>
-              <Textarea 
-                id="edit-desc" 
-                value={editForm.description} 
-                onChange={(e) => setEditForm({...editForm, description: e.target.value})} 
+              <Textarea
+                id="edit-desc"
+                value={editForm.description}
+                onChange={(e) => setEditForm({...editForm, description: e.target.value})}
               />
             </div>
 
