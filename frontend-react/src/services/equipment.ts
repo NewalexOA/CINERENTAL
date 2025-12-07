@@ -1,5 +1,6 @@
 import api from '../lib/axios';
 import { Equipment, EquipmentCreate, EquipmentUpdate, EquipmentStatus } from '@/types/equipment';
+import { Booking } from './bookings';
 
 export interface EquipmentSearchParams {
   page?: number;
@@ -48,8 +49,8 @@ export const equipmentService = {
   },
 
   checkAvailability: async (id: number, start: string, end: string) => {
-    const response = await api.get<AvailabilityResponse>(`/equipment/${id}/availability`, { 
-      params: { start_date: start, end_date: end } 
+    const response = await api.get<AvailabilityResponse>(`/equipment/${id}/availability`, {
+      params: { start_date: start, end_date: end }
     });
     return response.data;
   },
@@ -60,7 +61,7 @@ export const equipmentService = {
   },
 
   update: async (id: number, data: EquipmentUpdate) => {
-    const response = await api.put<Equipment>(`/equipment/${id}`, data); 
+    const response = await api.put<Equipment>(`/equipment/${id}`, data);
     return response.data;
   },
 
@@ -71,5 +72,20 @@ export const equipmentService = {
 
   delete: async (id: number) => {
     await api.delete(`/equipment/${id}`);
+  },
+
+  getBookings: async (id: number) => {
+    const response = await api.get<Booking[]>(`/equipment/${id}/bookings`);
+    return response.data;
+  },
+
+  updateNotes: async (id: number, notes: string) => {
+    const response = await api.patch<Equipment>(`/equipment/${id}/notes`, { notes });
+    return response.data;
+  },
+
+  regenerateBarcode: async (id: number) => {
+    const response = await api.post<Equipment>(`/equipment/${id}/regenerate-barcode`);
+    return response.data;
   }
 };

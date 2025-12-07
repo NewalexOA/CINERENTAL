@@ -2,28 +2,29 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { equipmentService } from '../../../services/equipment';
 import { categoriesService } from '../../../services/categories';
 import { Equipment, EquipmentCreate, EquipmentUpdate, EquipmentStatus } from '../../../types/equipment';
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow
 } from '../../../components/ui/table';
 import { Button } from '../../../components/ui/button';
 import { Badge } from '../../../components/ui/badge';
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
 } from '../../../components/ui/select';
 import { Input } from '../../../components/ui/input';
 import { EquipmentFormDialog } from '../components/EquipmentFormDialog';
 import { EquipmentDeleteDialog } from '../components/EquipmentDeleteDialog';
 import { Plus, Search, QrCode, Pencil, Trash2 } from 'lucide-react';
 import { useState, useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import { flattenCategories } from '../../../utils/category-utils';
 import { PaginationControls } from '../../../components/ui/pagination-controls';
@@ -109,7 +110,7 @@ export default function EquipmentPage() {
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearch(e.target.value);
-    setPage(1); 
+    setPage(1);
   };
 
   const handleCreate = async (data: EquipmentCreate) => {
@@ -137,15 +138,15 @@ export default function EquipmentPage() {
           <div className="relative w-full sm:w-64">
             <Search className="absolute left-2 top-2 h-3 w-3 text-muted-foreground" />
             <Input
-              placeholder="Поиск по названию..."
+              placeholder="Поиск..."
               className="h-7 pl-7 text-xs"
               value={search}
               onChange={handleSearchChange}
             />
           </div>
-          
-          <Select 
-            value={status || "all"} 
+
+          <Select
+            value={status || "all"}
             onValueChange={(val) => { setStatus(val === 'all' ? '' : val as EquipmentStatus); setPage(1); }}
           >
             <SelectTrigger className="w-[140px] h-7 text-xs">
@@ -159,8 +160,8 @@ export default function EquipmentPage() {
             </SelectContent>
           </Select>
 
-          <Select 
-            value={categoryId ? String(categoryId) : "all"} 
+          <Select
+            value={categoryId ? String(categoryId) : "all"}
             onValueChange={(val) => { setCategoryId(val === 'all' ? '' : Number(val)); setPage(1); }}
           >
             <SelectTrigger className="w-[200px] h-7 text-xs">
@@ -191,7 +192,6 @@ export default function EquipmentPage() {
               <TableHead className="h-8 py-0">Название</TableHead>
               <TableHead className="h-8 py-0">Категория</TableHead>
               <TableHead className="h-8 py-0">Штрихкод / S/N</TableHead>
-              <TableHead className="h-8 py-0">Стоимость</TableHead>
               <TableHead className="h-8 py-0">Статус</TableHead>
               <TableHead className="h-8 py-0 text-right">Действия</TableHead>
             </TableRow>
@@ -199,13 +199,15 @@ export default function EquipmentPage() {
           <TableBody>
             {isLoading ? (
                <TableRow>
-                 <TableCell colSpan={6} className="h-24 text-center">Загрузка...</TableCell>
+                 <TableCell colSpan={5} className="h-24 text-center">Загрузка...</TableCell>
                </TableRow>
             ) : data?.items.map((item) => (
               <TableRow key={item.id} className="h-8 hover:bg-muted/50">
                 <TableCell className="py-1 font-medium">
                   <div className="flex flex-col">
-                    <span>{item.name}</span>
+                    <Link to={`/equipment/${item.id}`} className="hover:underline text-foreground hover:text-primary transition-colors">
+                      {item.name}
+                    </Link>
                     {item.description && (
                       <span className="text-[10px] text-muted-foreground truncate max-w-[300px]">{item.description}</span>
                     )}
@@ -226,9 +228,6 @@ export default function EquipmentPage() {
                   </div>
                 </TableCell>
                 <TableCell className="py-1">
-                  {item.replacement_cost} ₽
-                </TableCell>
-                <TableCell className="py-1">
                   <Badge variant={statusMap[item.status]?.variant || 'outline'} className="px-1.5 py-0 text-[10px] h-5">
                     {statusMap[item.status]?.label || item.status}
                   </Badge>
@@ -247,7 +246,7 @@ export default function EquipmentPage() {
             ))}
             {!isLoading && data?.items.length === 0 && (
               <TableRow>
-                <TableCell colSpan={6} className="h-24 text-center">
+                <TableCell colSpan={5} className="h-24 text-center">
                   Оборудование не найдено
                 </TableCell>
               </TableRow>
@@ -256,7 +255,7 @@ export default function EquipmentPage() {
         </Table>
       </div>
 
-      <PaginationControls 
+      <PaginationControls
         currentPage={page}
         totalPages={data?.pages || 1}
         pageSize={size}
@@ -267,16 +266,16 @@ export default function EquipmentPage() {
       />
 
       {/* Dialogs */}
-      <EquipmentFormDialog 
-        open={isCreateOpen} 
+      <EquipmentFormDialog
+        open={isCreateOpen}
         onOpenChange={setIsCreateOpen}
         categories={categories || []}
         onSubmit={handleCreate}
         isLoading={createMutation.isPending}
       />
 
-      <EquipmentFormDialog 
-        open={!!editingEquipment} 
+      <EquipmentFormDialog
+        open={!!editingEquipment}
         onOpenChange={(val) => !val && setEditingEquipment(null)}
         equipment={editingEquipment}
         categories={categories || []}
@@ -284,8 +283,8 @@ export default function EquipmentPage() {
         isLoading={updateMutation.isPending}
       />
 
-      <EquipmentDeleteDialog 
-        open={!!deletingEquipment} 
+      <EquipmentDeleteDialog
+        open={!!deletingEquipment}
         onOpenChange={(val) => !val && setDeletingEquipment(null)}
         onConfirm={handleDelete}
         isLoading={deleteMutation.isPending}

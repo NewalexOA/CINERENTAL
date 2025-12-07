@@ -1,55 +1,57 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { clientsService } from '../../../services/clients';
 import { Client, ClientCreate, ClientUpdate } from '../../../types/client';
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow
 } from '../../../components/ui/table';
 import { Button } from '../../../components/ui/button';
 import { Badge } from '../../../components/ui/badge';
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
 } from '../../../components/ui/select';
 import { Input } from '../../../components/ui/input';
 import { ClientFormDialog } from '../components/ClientFormDialog';
 import { ClientDeleteDialog } from '../components/ClientDeleteDialog';
-import { 
-  Plus, 
-  Pencil, 
-  Trash2, 
-  Search, 
-  LayoutGrid, 
-  List as ListIcon, 
-  MoreVertical, 
-  Phone, 
-  Mail, 
+import {
+  Plus,
+  Pencil,
+  Trash2,
+  Search,
+  LayoutGrid,
+  List as ListIcon,
+  MoreVertical,
+  Phone,
+  Mail,
   Calendar,
   Box
 } from 'lucide-react';
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { PaginationControls } from '../../../components/ui/pagination-controls';
 
 type ViewMode = 'list' | 'grid';
 type SortOption = 'name' | 'created_at' | 'bookings_count';
 
 export default function ClientsPage() {
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [search, setSearch] = useState('');
   const [sortBy, setSortBy] = useState<SortOption>('name');
-  
+
   // Pagination
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
-  
+
   // Dialog states
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
@@ -164,9 +166,9 @@ export default function ClientsPage() {
                 onChange={(e) => handleSearch(e.target.value)}
               />
             </div>
-            
-            <Select 
-              value={sortBy} 
+
+            <Select
+              value={sortBy}
               onValueChange={(val) => setSortBy(val as SortOption)}
             >
               <SelectTrigger className="w-[160px] h-7 text-xs">
@@ -221,7 +223,7 @@ export default function ClientsPage() {
             </TableHeader>
             <TableBody>
               {paginatedClients?.map((client) => (
-                <TableRow key={client.id} className="h-8 cursor-pointer hover:bg-muted/50" onClick={() => console.log('View client', client.id)}>
+                <TableRow key={client.id} className="h-8 cursor-pointer hover:bg-muted/50" onClick={() => navigate(`/clients/${client.id}`)}>
                   <TableCell className="py-1 font-medium">{client.name}</TableCell>
                   <TableCell className="py-1">{client.company || '-'}</TableCell>
                   <TableCell className="py-1">
@@ -255,19 +257,23 @@ export default function ClientsPage() {
         ) : (
           <div className="p-2 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2">
             {paginatedClients?.map((client) => (
-              <div key={client.id} className="bg-card border rounded-md p-3 hover:border-primary/50 transition-colors flex flex-col h-full shadow-sm">
+              <div
+                key={client.id}
+                className="bg-card border rounded-md p-3 hover:border-primary/50 transition-colors flex flex-col h-full shadow-sm cursor-pointer"
+                onClick={() => navigate(`/clients/${client.id}`)}
+              >
                 <div className="flex justify-between items-start mb-2">
                   <div>
                     <h3 className="font-semibold text-sm line-clamp-1">{client.name}</h3>
                     <p className="text-xs text-muted-foreground line-clamp-1">{client.company || 'Нет компании'}</p>
                   </div>
-                  <div className="flex gap-1">
+                  <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
                     <Button variant="ghost" size="icon" className="h-6 w-6 -mt-1 -mr-1" onClick={() => setEditingClient(client)}>
                       <MoreVertical className="h-3 w-3" />
                     </Button>
                   </div>
                 </div>
-                
+
                 <div className="space-y-1 flex-1 text-xs text-muted-foreground mb-3">
                   <div className="flex items-center gap-2">
                     <Mail className="h-3 w-3 opacity-70" />
@@ -295,7 +301,7 @@ export default function ClientsPage() {
         )}
       </div>
 
-      <PaginationControls 
+      <PaginationControls
         currentPage={page}
         totalPages={totalPages}
         pageSize={pageSize}
@@ -305,23 +311,23 @@ export default function ClientsPage() {
       />
 
       {/* Dialogs */}
-      <ClientFormDialog 
-        open={isCreateOpen} 
-        onOpenChange={setIsCreateOpen} 
+      <ClientFormDialog
+        open={isCreateOpen}
+        onOpenChange={setIsCreateOpen}
         onSubmit={handleCreate}
         isLoading={createMutation.isPending}
       />
-      
-      <ClientFormDialog 
-        open={!!editingClient} 
-        onOpenChange={(open) => !open && setEditingClient(null)} 
+
+      <ClientFormDialog
+        open={!!editingClient}
+        onOpenChange={(open) => !open && setEditingClient(null)}
         client={editingClient}
         onSubmit={handleUpdate}
         isLoading={updateMutation.isPending}
       />
 
-      <ClientDeleteDialog 
-        open={!!deletingClient} 
+      <ClientDeleteDialog
+        open={!!deletingClient}
         onOpenChange={(open) => !open && setDeletingClient(null)}
         onConfirm={handleDelete}
         isLoading={deleteMutation.isPending}
