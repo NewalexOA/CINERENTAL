@@ -11,7 +11,7 @@ import { useState, useEffect } from 'react';
 import { EquipmentFormDialog } from '../components/EquipmentFormDialog';
 import { EquipmentDeleteDialog } from '../components/EquipmentDeleteDialog';
 import { BarcodePrintDialog } from '../components/BarcodePrintDialog';
-import { EquipmentCreate, EquipmentUpdate } from '../../../types/equipment';
+import { EquipmentCreate } from '../../../types/equipment';
 import {
   Table,
   TableBody,
