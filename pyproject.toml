@@ -25,7 +25,9 @@ jinja2 = "^3.1.2"
 aiofiles = "^23.2.1"
 loguru = "^0.7.2"
 apscheduler = "^3.11.0"
-treepoem = "^3.24.1"
+python-barcode = {extras = ["images"], version = "^0.15.1"}
+segno = "^1.6.1"
+treepoem = "^3.8.0"
 fastapi-pagination = "^0.12.34"
 
 [tool.poetry.group.dev.dependencies]
