@@ -29,6 +29,7 @@ ENV/
 # IDE
 .idea/
 .vscode/
+.idx/
 *.swp
 *.swo
 .DS_Store
@@ -259,5 +260,8 @@ backend/scripts/*.sql
 CLAUDE.md
 /.claude
 
-# 
+# Node.js
+node_modules/
 /frontend-react/node_modules/*
+frontend-react/.claude/
+frontend-react/.claude/*
