@@ -67,9 +67,11 @@ COPY migrations/ ./migrations/
 COPY alembic.ini .
 COPY tests/ ./tests/
 
+
 # Install Python dependencies
 RUN export PATH="/root/.local/bin:$PATH" && \
-    uv pip install --system . && \
+    uv pip install --system .
+RUN export PATH="/root/.local/bin:$PATH" && \
     uv pip install --system \
     pytest==7.4.0 \
     pytest-asyncio==0.21.1 \
@@ -82,7 +84,6 @@ RUN export PATH="/root/.local/bin:$PATH" && \
     psycopg2-binary \
     faker \
     factory-boy \
-    treepoem \
     playwright
 
 # Copy additional scripts
