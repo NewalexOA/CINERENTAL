@@ -8,7 +8,9 @@ import io
 from enum import Enum
 from typing import Tuple
 
+import barcode
 import treepoem
+from barcode.writer import ImageWriter
 from PIL import Image
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -210,7 +212,7 @@ class BarcodeService:
             )
 
     def _generate_code128_image(self, barcode_value: str) -> Tuple[bytes, str]:
-        """Generate a Code128 barcode image using treepoem.
+        """Generate a Code128 barcode image using python-barcode.
 
         Args:
             barcode_value: The barcode value to encode
@@ -219,27 +221,57 @@ class BarcodeService:
             Tuple containing the image data as bytes and the MIME type
         """
         try:
-            # Generate Code128 using treepoem
-            image = treepoem.generate_barcode(
-                barcode_type='code128',
-                data=barcode_value,
+            # Configure writer for optimal quality
+            writer = ImageWriter()
+            writer.dpi = 300
+            writer.module_width = 0.4
+            writer.module_height = 7.0
+            writer.quiet_zone = 0  # No quiet zone - printer adds margins
+            writer.text_distance = 1.0
+            writer.font_size = 0  # No text below barcode
+
+            # Generate Code128 barcode
+            code128 = barcode.get_barcode_class('code128')
+            barcode_instance = code128(barcode_value, writer=writer)
+
+            # Render to PIL Image
+            temp_buffer = io.BytesIO()
+            barcode_instance.write(
+                temp_buffer,
                 options={
-                    'includetext': False,
-                    'height': '6.0',
-                    'modulewidth': '0.4',
-                    'guardwhitespace': True,
-                    'quietzoneright': '2',
-                    'quietzoneleft': '2',
-                    'inkspread': '0.2',
-                    'showborder': False,
-                    'width': '28',
+                    'write_text': False,
+                    'compress': True,
                 },
             )
+            temp_buffer.seek(0)
 
-            # Convert to binary image (1-bit) to get cleaner lines
-            image = image.convert('1')
+            # Open image and crop white borders
+            image = Image.open(temp_buffer)
 
-            # Save to bytes buffer
+            # Convert to grayscale and find dark pixels
+            gray = image.convert('L')
+            pixels = gray.load()
+            width, height = gray.size
+
+            # Find bounding box of dark content (barcode)
+            left = width
+            right = 0
+            top = height
+            bottom = 0
+
+            for x in range(width):
+                for y in range(height):
+                    if pixels[x, y] < 250:  # Not white (threshold 250)
+                        left = min(left, x)
+                        right = max(right, x)
+                        top = min(top, y)
+                        bottom = max(bottom, y)
+
+            # Crop to bounding box if found
+            if right > left and bottom > top:
+                image = image.crop((left, top, right + 1, bottom + 1))
+
+            # Save cropped image to final buffer
             buffer = io.BytesIO()
             image.save(buffer, format='PNG')
             buffer.seek(0)
@@ -261,30 +293,13 @@ class BarcodeService:
             Tuple containing the image data as bytes and the MIME type
         """
         try:
-            # Generate DataMatrix using treepoem
             image = treepoem.generate_barcode(
                 barcode_type='datamatrix',
                 data=barcode_value,
-                options={
-                    'format': 'square',
-                    'size': 'default',
-                    'includetext': False,
-                    'padding': '5',  # padding
-                    'inkspread': '0',  # Prevent ink spread
-                    'backgroundcolor': 'ffffff',
-                },
             )
 
-            # Add left padding by creating larger image
-            border_size = 5
-            img_width, img_height = image.size
-            # Create white image with padding
-            new_img = Image.new('1', (img_width + 2 * border_size, img_height), color=1)
-            new_img.paste(image.convert('1'), (border_size, 0))
-
-            # Save to bytes buffer
             buffer = io.BytesIO()
-            new_img.save(buffer, format='PNG')
+            image.save(buffer, format='PNG')
             buffer.seek(0)
 
             return buffer.getvalue(), 'image/png'
