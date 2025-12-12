@@ -7,23 +7,74 @@ import { showToast, DATERANGEPICKER_LOCALE_WITH_TIME } from '../utils/common.js'
 import { withLoading } from './project-utils.js';
 import { updateProjectData } from './project-details.js';
 
+// Local state to avoid stale client list overwriting the latest select content
+const clientSelectState = {
+    requestId: 0,
+    lastSuccessful: []
+};
+
 /**
  * Initialize edit project modal
  */
 export function initializeEditProjectModal() {
     // Initialize client selection with Select2
     const clientSelect = document.getElementById('edit-project-client');
+    const hiddenClientIdInput = document.getElementById('project-client-id');
+    const clientNameDisplay = document.getElementById('project-client-display');
 
     if (clientSelect) {
-        // Initialize Select2 for client dropdown
+        // Initialize Select2 for client dropdown with remote search (no reliance on paginated preload)
         $(clientSelect).select2({
             placeholder: 'Выберите клиента',
             allowClear: true,
-            dropdownParent: $('#editProjectModal')
+            dropdownParent: $('#editProjectModal'),
+            minimumInputLength: 0,
+            ajax: {
+                delay: 250,
+                transport: (params, success, failure) => {
+                    const term = params?.data?.term || '';
+                    const requestId = ++clientSelectState.requestId;
+                    const searchParams = term ? { query: term } : {};
+
+                    api.get('/clients', searchParams)
+                        .then((clients) => {
+                            if (requestId !== clientSelectState.requestId) {
+                                return;
+                            }
+
+                            clientSelectState.lastSuccessful = Array.isArray(clients) ? clients : [];
+                            success(clients);
+                        })
+                        .catch((err) => {
+                            if (requestId !== clientSelectState.requestId) {
+                                return;
+                            }
+
+                            // Fallback to cached list if available
+                            if (clientSelectState.lastSuccessful.length) {
+                                success(clientSelectState.lastSuccessful);
+                            }
+
+                            failure(err);
+                        });
+                },
+                processResults: (clients) => ({
+                    results: (clients || []).map(client => ({
+                        id: client.id,
+                        text: client.name
+                    }))
+                })
+            }
         });
 
-        // Load clients list
-        loadClientsForSelect(clientSelect);
+        // Preselect current project client if available
+        const initialClientId = clientSelect.dataset.clientId || hiddenClientIdInput?.value;
+        const initialClientName = clientSelect.dataset.clientName
+            || window.projectData?.client_name
+            || (clientNameDisplay ? clientNameDisplay.textContent.trim() : undefined);
+        if (initialClientId) {
+            ensureInitialClientOption(clientSelect, initialClientId, initialClientName);
+        }
     }
 
     // Initialize project date range picker
@@ -224,34 +275,18 @@ export function initializeEditProjectModal() {
  * Load clients for select dropdown
  * @param {HTMLElement} selectElement - Select element to populate
  */
-async function loadClientsForSelect(selectElement) {
-    try {
-        const clients = await api.get('/clients');
+function ensureInitialClientOption(selectElement, clientId, clientName) {
+    if (!clientId) return;
 
-        // Clear select except placeholder
-        const placeholder = selectElement.querySelector('option[value=""]');
-        selectElement.innerHTML = '';
-        if (placeholder) {
-            selectElement.appendChild(placeholder);
-        }
-
-        // Add clients to select
-        clients.forEach(client => {
-            const option = document.createElement('option');
-            option.value = client.id;
-            option.textContent = client.name;
-            selectElement.appendChild(option);
-        });
-
-        // If select has client ID attribute, select it
-        const clientId = selectElement.dataset.clientId;
-        if (clientId) {
-            $(selectElement).val(clientId).trigger('change');
-        }
-    } catch (error) {
-        console.error('Error loading clients:', error);
-        showToast('Ошибка загрузки списка клиентов', 'danger');
+    let option = selectElement.querySelector(`option[value="${clientId}"]`);
+    if (!option) {
+        option = new Option(clientName || `Client #${clientId}`, clientId, true, true);
+        selectElement.appendChild(option);
+    } else {
+        option.selected = true;
     }
+
+    $(selectElement).trigger('change');
 }
 
 /**
@@ -272,10 +307,8 @@ export function fillEditProjectForm(project) {
         // Set client ID attribute if Select2 not initialized yet
         clientSelect.dataset.clientId = project.client_id;
 
-        // If Select2 already initialized, select client
-        if ($.fn.select2 && $(clientSelect).data('select2')) {
-            $(clientSelect).val(project.client_id).trigger('change');
-        }
+        // Ensure option exists and is selected (works for both initialized and non-initialized select2)
+        ensureInitialClientOption(clientSelect, project.client_id, project.client_name);
     }
 
     if (descriptionInput) descriptionInput.value = project.description || '';

@@ -514,6 +514,14 @@ function setupGlobalEventHandlers() {
 
 // --- Client Search and Sort Functionality ---
 
+// Local state for client search/sort to avoid stale updates
+const clientSearchState = {
+    allClients: [],
+    currentClients: [],
+    requestId: 0,
+    usingSearchResults: false
+};
+
 // Function to render a single client card (adapt structure as needed)
 function renderClientCard(client) {
     // Basic security check: Ensure client object and essential fields exist
@@ -615,6 +623,30 @@ function updateClientDisplay(clients) {
     }
 }
 
+// Local sort helper to keep client ordering consistent across modes
+function sortClientsForDisplay(clients, sortBy) {
+    if (!clients || !clients.length) return [];
+
+    const sortedClients = [...clients];
+
+    switch (sortBy) {
+        case 'name':
+            sortedClients.sort((a, b) => a.name.localeCompare(b.name));
+            break;
+        case 'email':
+            sortedClients.sort((a, b) => a.email?.localeCompare(b.email || '') || 0);
+            break;
+        case 'created_at':
+            sortedClients.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+            break;
+        default:
+            sortedClients.sort((a, b) => a.name.localeCompare(b.name));
+            break;
+    }
+
+    return sortedClients;
+}
+
 // Function to fetch clients from API and update display
 async function fetchAndUpdateClients() {
     const searchInput = document.getElementById('searchClient');
@@ -629,6 +661,20 @@ async function fetchAndUpdateClients() {
     const sortOrder = 'asc'; // Assuming ascending for now
 
     console.log(`Fetching clients: Query="${query}", SortBy="${sortBy}", Order="${sortOrder}"`);
+
+    // When clearing search and we already have a base dataset, reuse it instead of refetching
+    if (!query && clientSearchState.allClients.length) {
+        clientSearchState.requestId += 1; // Invalidate any in-flight responses
+        clientSearchState.usingSearchResults = false;
+
+        const sortedBase = sortClientsForDisplay(clientSearchState.allClients, sortBy);
+        clientSearchState.allClients = sortedBase;
+        clientSearchState.currentClients = sortedBase;
+        updateClientDisplay(sortedBase);
+        return;
+    }
+
+    const requestId = ++clientSearchState.requestId;
 
     // Show loading indicator
     clientsGrid.innerHTML = '<div class="col-12 text-center p-5"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Загрузка...</span></div></div>';
@@ -645,9 +691,24 @@ async function fetchAndUpdateClients() {
         // Add pagination params if needed: params.skip = ..., params.limit = ...
 
         const clients = await api.get('/clients/', params);
+
+        // Ignore stale responses
+        if (requestId !== clientSearchState.requestId) {
+            return;
+        }
+
         console.log('Received clients:', clients);
         if (Array.isArray(clients)) {
-            updateClientDisplay(clients);
+            const sortedClients = sortClientsForDisplay(clients, sortBy);
+
+            clientSearchState.currentClients = sortedClients;
+            clientSearchState.usingSearchResults = !!query;
+
+            if (!query) {
+                clientSearchState.allClients = sortedClients;
+            }
+
+            updateClientDisplay(sortedClients);
         } else {
             console.error('Invalid response format from API:', clients);
             updateClientDisplay([]);
@@ -658,7 +719,40 @@ async function fetchAndUpdateClients() {
         if (window.showToast) {
              window.showToast('Ошибка при загрузке клиентов.', 'danger');
         }
+
+        // Fallback to cached dataset if available
+        clientSearchState.usingSearchResults = false;
+        if (clientSearchState.allClients.length) {
+            const fallbackClients = sortClientsForDisplay(clientSearchState.allClients, sortBy);
+            clientSearchState.currentClients = fallbackClients;
+            updateClientDisplay(fallbackClients);
+        }
     }
+}
+
+// Apply local sort to the currently available dataset
+function handleClientSortChange() {
+    const sortOrderSelect = document.getElementById('sortOrder');
+    const sortBy = sortOrderSelect ? sortOrderSelect.value : 'name';
+
+    // Invalidate any in-flight requests to avoid stale overwrites
+    clientSearchState.requestId += 1;
+
+    const baseClients = clientSearchState.usingSearchResults ? clientSearchState.currentClients : clientSearchState.allClients;
+
+    if (!baseClients || !baseClients.length) {
+        fetchAndUpdateClients();
+        return;
+    }
+
+    const sortedClients = sortClientsForDisplay(baseClients, sortBy);
+
+    if (!clientSearchState.usingSearchResults) {
+        clientSearchState.allClients = sortedClients;
+    }
+    clientSearchState.currentClients = sortedClients;
+
+    updateClientDisplay(sortedClients);
 }
 
 // Initialize client search and sort controls
@@ -682,7 +776,7 @@ function initClientControls() {
     const debouncedFetch = debounce(fetchAndUpdateClients, 300);
 
     searchInput.addEventListener('input', debouncedFetch);
-    sortOrderSelect.addEventListener('change', fetchAndUpdateClients);
+    sortOrderSelect.addEventListener('change', handleClientSortChange);
 
     // Initial load (optional, if you want to load based on initial state)
      fetchAndUpdateClients(); // Load based on initial input/select values
