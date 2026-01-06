@@ -2,6 +2,36 @@
 
 This document lists notable changes to the ACT-Rental application.
 
+## [0.16.0-beta.2] - 2026-01-07
+
+### Project Payment Status Tracking System
+
+- **New Payment Status Feature:** Added independent `ProjectPaymentStatus` enum (UNPAID, PARTIALLY_PAID, PAID) with PostgreSQL ENUM type, database index, and migration. Existing COMPLETED projects automatically set to PAID status for data consistency.
+- **Secure Status Updates:** Implemented captcha-protected payment status changes via new `PATCH /projects/{id}/payment-status` API endpoint. Backend validates 4-digit code from environment variable with `CaptchaError` exception and `X-Error-Type` header for frontend error differentiation.
+- **Visual Status Indicators:** Added color-coded payment status badges (green/yellow/red) in project header, list table view, and card view. CSS animations provide visual feedback on status updates.
+- **Payment Status Filtering:** Extended projects list API and frontend with payment status filter dropdown. Full-stack implementation from repository through service to API and JavaScript.
+
+### Client Search Enhancement
+
+- **Server-Side Client Search:** Migrated clients list search from client-side to server-side with hardened UI state management. Improved search reliability and sorting logic for better user experience.
+
+### Development Infrastructure
+
+- **Mypy Configuration Sync:** Synchronized mypy versions (v1.14.1) and dependencies between pre-commit and CI workflow. Added `sqlalchemy[mypy]==2.0.45` to both configurations for consistent type inference. Resolved redundant-cast/unused-ignore conflicts with `getattr()` pattern.
+- **Type Stubs Alignment:** Added missing type stubs (types-passlib, types-python-jose, types-python-dateutil, etc.) to CI workflow matching pre-commit configuration.
+
+### Technical Improvements & Bug Fixes (0.16.0-beta.2)
+
+- Added `ProjectPaymentStatus` enum to models with proper PostgreSQL ENUM type registration
+- Created `CaptchaError` exception class with validation error inheritance
+- Implemented `update_payment_status` service method with captcha validation
+- Added payment status to `ProjectResponse` schema and `get_project_as_dict` helper
+- Extended repository and service layers with payment_status filtering
+- Created `payment-status.js` module with inline captcha UI and dot progress indicators
+- Added `payment-status.css` with status badge colors and captcha styling
+- Fixed Select2 callback in projects-list.js for proper client dropdown initialization
+- Removed unused `payment_status` field from `ProjectUpdate` schema
+
 ## [0.16.0-beta.1] - 2025-09-29
 
 ### Timezone Normalization and Cart Enhancement
