@@ -10,13 +10,13 @@ import {
   DialogFooter,
 } from '../../../components/ui/dialog';
 import { Button } from '../../../components/ui/button';
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow
 } from '../../../components/ui/table';
 import { Plus, Pencil, Trash2 } from 'lucide-react';
 import { CategoryFormDialog } from './CategoryFormDialog';
@@ -28,10 +28,10 @@ interface SubcategoriesDialogProps {
   parentCategory: Category | null;
 }
 
-export function SubcategoriesDialog({ 
-  open, 
-  onOpenChange, 
-  parentCategory 
+export function SubcategoriesDialog({
+  open,
+  onOpenChange,
+  parentCategory
 }: SubcategoriesDialogProps) {
   const queryClient = useQueryClient();
   const [editingSub, setEditingSub] = useState<Category | null>(null);
@@ -76,7 +76,7 @@ export function SubcategoriesDialog({
           <DialogHeader>
             <DialogTitle>Подкатегории: {parentCategory?.name}</DialogTitle>
           </DialogHeader>
-          
+
           <div className="flex justify-end mb-4">
             <Button size="sm" onClick={() => setIsAddOpen(true)}>
               <Plus className="mr-2 h-4 w-4" /> Добавить подкатегорию
@@ -135,7 +135,7 @@ export function SubcategoriesDialog({
           open={isAddOpen}
           onOpenChange={setIsAddOpen}
           parentId={parentCategory?.id}
-          onSubmit={(data) => createMutation.mutateAsync(data)}
+          onSubmit={async (data) => { await createMutation.mutateAsync(data); }}
           isLoading={createMutation.isPending}
         />
       )}
@@ -145,7 +145,7 @@ export function SubcategoriesDialog({
           open={!!editingSub}
           onOpenChange={(val) => !val && setEditingSub(null)}
           category={editingSub}
-          onSubmit={(data) => updateMutation.mutateAsync({ id: editingSub.id, data })}
+          onSubmit={async (data) => { await updateMutation.mutateAsync({ id: editingSub.id, data: data as any }); }}
           isLoading={updateMutation.isPending}
         />
       )}

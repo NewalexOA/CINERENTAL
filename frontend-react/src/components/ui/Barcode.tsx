@@ -23,7 +23,7 @@ const Barcode: React.FC<BarcodeProps> = ({ value, options, ...canvasProps }) => 
 
   useEffect(() => {
     if (canvasRef.current) {
-      const combinedOptions: BarcodeOptions = {
+      const combinedOptions = {
         bcid: 'datamatrix', // Default to datamatrix
         text: value,
         scale: 5,
@@ -32,10 +32,10 @@ const Barcode: React.FC<BarcodeProps> = ({ value, options, ...canvasProps }) => 
         includetext: true,
         textxalign: 'center',
         ...options,
-      };
+      } as const;
 
       try {
-        bwipjs.toCanvas(canvasRef.current, combinedOptions);
+        bwipjs.toCanvas(canvasRef.current, combinedOptions as any);
       } catch (e) {
         console.error('Barcode generation error:', e);
       }

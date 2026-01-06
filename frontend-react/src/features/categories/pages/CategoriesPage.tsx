@@ -1,13 +1,13 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { categoriesService } from '../../../services/categories';
 import { Category, CategoryCreate, CategoryUpdate } from '../../../types/category';
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow
 } from '../../../components/ui/table';
 import { Button } from '../../../components/ui/button';
 import { CategoryFormDialog } from '../components/CategoryFormDialog';
@@ -19,7 +19,7 @@ import { useState } from 'react';
 export default function CategoriesPage() {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
-  
+
   // Dialog states
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
@@ -59,7 +59,7 @@ export default function CategoriesPage() {
   // Filter root categories and apply search
   const filteredCategories = categories
     ?.filter(cat => !cat.parent_id) // Show only root categories
-    .filter(cat => 
+    .filter(cat =>
       cat.name.toLowerCase().includes(search.toLowerCase()) ||
       cat.description?.toLowerCase().includes(search.toLowerCase())
     );
@@ -140,29 +140,29 @@ export default function CategoriesPage() {
       </div>
 
       {/* Dialogs */}
-      <CategoryFormDialog 
-        open={isCreateOpen} 
-        onOpenChange={setIsCreateOpen} 
-        onSubmit={(data) => createMutation.mutateAsync(data)}
+      <CategoryFormDialog
+        open={isCreateOpen}
+        onOpenChange={setIsCreateOpen}
+        onSubmit={async (data) => { await createMutation.mutateAsync(data); }}
         isLoading={createMutation.isPending}
       />
 
-      <CategoryFormDialog 
-        open={!!editingCategory} 
-        onOpenChange={(val) => !val && setEditingCategory(null)} 
+      <CategoryFormDialog
+        open={!!editingCategory}
+        onOpenChange={(val) => !val && setEditingCategory(null)}
         category={editingCategory}
-        onSubmit={(data) => editingCategory && updateMutation.mutateAsync({ id: editingCategory.id, data })}
+        onSubmit={async (data) => { if (editingCategory) await updateMutation.mutateAsync({ id: editingCategory.id, data: data as any }); }}
         isLoading={updateMutation.isPending}
       />
 
-      <ClientDeleteDialog 
-        open={!!deletingCategory} 
-        onOpenChange={(val) => !val && setDeletingCategory(null)} 
-        onConfirm={() => deletingCategory && deleteMutation.mutateAsync(deletingCategory.id)}
+      <ClientDeleteDialog
+        open={!!deletingCategory}
+        onOpenChange={(val) => !val && setDeletingCategory(null)}
+        onConfirm={async () => { if (deletingCategory) await deleteMutation.mutateAsync(deletingCategory.id); }}
         isLoading={deleteMutation.isPending}
       />
 
-      <SubcategoriesDialog 
+      <SubcategoriesDialog
         open={!!subcategoriesParent}
         onOpenChange={(val) => !val && setSubcategoriesParent(null)}
         parentCategory={subcategoriesParent}
