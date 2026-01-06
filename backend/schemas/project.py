@@ -10,7 +10,7 @@ from typing import List, Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from backend.models import ProjectStatus
+from backend.models import ProjectPaymentStatus, ProjectStatus
 
 
 class DateRange(BaseModel):
@@ -59,6 +59,9 @@ class ProjectCreate(ProjectBase):
     """Create project request schema."""
 
     status: ProjectStatus = Field(default=ProjectStatus.DRAFT, title='Project Status')
+    payment_status: ProjectPaymentStatus = Field(
+        default=ProjectPaymentStatus.UNPAID, title='Payment Status'
+    )
 
 
 class BookingCreateForProject(BaseModel):
@@ -83,7 +86,11 @@ class ProjectCreateWithBookings(ProjectCreate):
 
 
 class ProjectUpdate(BaseModel):
-    """Update project request schema."""
+    """Update project request schema.
+
+    Note: payment_status is not included here as it requires captcha validation
+    and must be updated via the dedicated /payment-status endpoint.
+    """
 
     name: Optional[str] = Field(None, title='Project Name')
     description: Optional[str] = Field(None, title='Description')
@@ -106,6 +113,7 @@ class ProjectResponse(ProjectBase):
 
     id: int
     status: ProjectStatus
+    payment_status: ProjectPaymentStatus
     created_at: datetime
     updated_at: datetime
     client_name: str
@@ -271,5 +279,29 @@ class ProjectBookingResponse(BaseModel):
         from_attributes=True,
         ser_json_bytes='utf8',
         ser_json_timedelta='iso8601',
+        validate_default=True,
+    )
+
+
+class ProjectPaymentStatusUpdate(BaseModel):
+    """Update project payment status with captcha validation."""
+
+    payment_status: ProjectPaymentStatus = Field(
+        ...,
+        title='Payment Status',
+        description='New payment status for the project',
+    )
+    captcha_code: str = Field(
+        ...,
+        title='Captcha Code',
+        description='4-digit captcha code for validation',
+        min_length=4,
+        max_length=4,
+        pattern=r'^\d{4}$',
+    )
+
+    model_config = ConfigDict(
+        from_attributes=True,
+        ser_json_bytes='utf8',
         validate_default=True,
     )

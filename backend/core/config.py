@@ -85,6 +85,11 @@ class Settings(BaseSettings):
 
     MAX_UPLOAD_SIZE: int = int(os.environ.get('MAX_UPLOAD_SIZE', '10485760'))
 
+    # Payment Status Security
+    PAYMENT_STATUS_CAPTCHA_CODE: str = os.environ.get(
+        'PAYMENT_STATUS_CAPTCHA_CODE', '0990'
+    )
+
     @field_validator('ALLOWED_HOSTS', 'CORS_ORIGINS')
     @classmethod
     def parse_list_fields(cls, value: str) -> List[str]:

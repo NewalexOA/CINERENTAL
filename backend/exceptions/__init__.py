@@ -13,6 +13,7 @@ from backend.exceptions.resource_exceptions import (
 )
 from backend.exceptions.state_exceptions import StateError, StatusTransitionError
 from backend.exceptions.validation_exceptions import (
+    CaptchaError,
     DateError,
     DurationError,
     ValidationError,
@@ -25,6 +26,7 @@ __all__ = [
     'ValidationError',
     'DateError',
     'DurationError',
+    'CaptchaError',
     # State exceptions
     'StateError',
     'StatusTransitionError',

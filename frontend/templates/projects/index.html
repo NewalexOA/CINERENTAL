@@ -23,7 +23,7 @@
 <div class="card mb-3">
     <div class="card-header">
         <form id="searchForm" class="row g-3 align-items-center">
-            <div class="col-md-4">
+            <div class="col-md-3">
                 <div class="position-relative">
                     <input type="text"
                            class="form-control rounded"
@@ -59,7 +59,15 @@
                     <option value="CANCELLED">Отмененный</option>
                 </select>
             </div>
-            <div class="col-md-3">
+            <div class="col-md-2">
+                <select class="form-select" id="searchPaymentStatus" name="payment_status">
+                    <option value="">Все оплаты</option>
+                    <option value="UNPAID">Не оплачен</option>
+                    <option value="PARTIALLY_PAID">Частично оплачен</option>
+                    <option value="PAID">Оплачен</option>
+                </select>
+            </div>
+            <div class="col-md-2">
                 <input type="text" class="form-control daterangepicker-input" id="searchPeriod" placeholder="Период" name="period">
             </div>
             <div class="col-md-1">

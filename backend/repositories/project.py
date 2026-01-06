@@ -12,7 +12,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, selectinload
 from sqlalchemy.sql import Select
 
-from backend.models import Booking, Client, Equipment, Project, ProjectStatus
+from backend.models import (
+    Booking,
+    Client,
+    Equipment,
+    Project,
+    ProjectPaymentStatus,
+    ProjectStatus,
+)
 from backend.repositories.base import BaseRepository
 
 
@@ -90,6 +97,7 @@ class ProjectRepository(BaseRepository[Project]):
         offset: int = 0,
         client_id: Optional[int] = None,
         status: Optional[ProjectStatus] = None,
+        payment_status: Optional[ProjectPaymentStatus] = None,
         start_date: Optional[datetime] = None,
         end_date: Optional[datetime] = None,
         query: Optional[str] = None,
@@ -101,6 +109,7 @@ class ProjectRepository(BaseRepository[Project]):
             offset: Number of projects to skip
             client_id: Filter by client ID
             status: Filter by project status
+            payment_status: Filter by payment status
             start_date: Filter by start date
             end_date: Filter by end date
             query: Search by project name (case-insensitive)
@@ -119,6 +128,10 @@ class ProjectRepository(BaseRepository[Project]):
         if status is not None:
             query_obj = query_obj.where(Project.status == status)
             count_query = count_query.where(Project.status == status)
+
+        if payment_status is not None:
+            query_obj = query_obj.where(Project.payment_status == payment_status)
+            count_query = count_query.where(Project.payment_status == payment_status)
 
         if start_date is not None and end_date is not None:
             date_filter = (Project.start_date <= end_date) & (
@@ -190,6 +203,7 @@ class ProjectRepository(BaseRepository[Project]):
         self,
         client_id: Optional[int] = None,
         status: Optional[ProjectStatus] = None,
+        payment_status: Optional[ProjectPaymentStatus] = None,
         start_date: Optional[datetime] = None,
         end_date: Optional[datetime] = None,
         include_deleted: bool = False,
@@ -200,6 +214,7 @@ class ProjectRepository(BaseRepository[Project]):
         Args:
             client_id: Filter by client ID
             status: Filter by project status
+            payment_status: Filter by payment status
             start_date: Filter by start date
             end_date: Filter by end date
             include_deleted: Whether to include deleted projects
@@ -218,6 +233,9 @@ class ProjectRepository(BaseRepository[Project]):
 
         if status is not None:
             query_obj = query_obj.where(Project.status == status)
+
+        if payment_status is not None:
+            query_obj = query_obj.where(Project.payment_status == payment_status)
 
         if start_date is not None and end_date is not None:
             query_obj = query_obj.where(

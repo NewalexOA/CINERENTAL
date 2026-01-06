@@ -16,6 +16,7 @@ import {
     withLoading
 } from './project-utils.js';
 import { updateProjectStatus, deleteProject } from './project-actions.js';
+import { initPaymentStatusChanger } from './payment-status.js';
 
 // Project data state
 export let projectData = {};
@@ -54,6 +55,15 @@ export function initializeProjectDetails(projectId) {
 
     // Initialize edit project modal
     initializeEditProjectModal();
+
+    // Initialize payment status changer
+    initPaymentStatusChanger(projectId, (newStatus) => {
+        // Update project data when payment status changes
+        if (projectData) {
+            projectData.payment_status = newStatus;
+            window.projectData = projectData;
+        }
+    });
 }
 
 /**

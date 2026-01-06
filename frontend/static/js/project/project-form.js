@@ -53,9 +53,9 @@ export function initializeEditProjectModal() {
                             // Fallback to cached list if available
                             if (clientSelectState.lastSuccessful.length) {
                                 success(clientSelectState.lastSuccessful);
+                            } else {
+                                failure(err);
                             }
-
-                            failure(err);
                         });
                 },
                 processResults: (clients) => ({

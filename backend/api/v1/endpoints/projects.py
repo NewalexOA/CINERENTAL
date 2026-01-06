@@ -20,14 +20,21 @@ from backend.api.v1.decorators import (
     typed_put,
 )
 from backend.core.database import get_db
-from backend.exceptions import BusinessError, DateError, NotFoundError, ValidationError
-from backend.models import ProjectStatus
+from backend.exceptions import (
+    BusinessError,
+    CaptchaError,
+    DateError,
+    NotFoundError,
+    ValidationError,
+)
+from backend.models import ProjectPaymentStatus, ProjectStatus
 from backend.schemas import (
     ClientInfo,
     DateFilterType,
     EquipmentPrintItem,
     ProjectBookingResponse,
     ProjectCreateWithBookings,
+    ProjectPaymentStatusUpdate,
     ProjectPrint,
     ProjectResponse,
     ProjectUpdate,
@@ -50,6 +57,7 @@ async def get_projects(
     offset: int = 0,
     client_id: Optional[int] = None,
     project_status: Optional[ProjectStatus] = None,
+    payment_status: Optional[ProjectPaymentStatus] = None,
     start_date: Optional[datetime] = None,
     end_date: Optional[datetime] = None,
     query: Optional[str] = None,
@@ -62,6 +70,7 @@ async def get_projects(
         offset: Number of projects to skip
         client_id: Filter by client ID
         project_status: Filter by project status
+        payment_status: Filter by payment status
         start_date: Filter by start date
         end_date: Filter by end date
         query: Search by project name (case-insensitive)
@@ -74,6 +83,7 @@ async def get_projects(
         offset=offset,
         client_id=client_id,
         status=project_status.value if project_status else None,
+        payment_status=payment_status.value if payment_status else None,
         start_date=start_date,
         end_date=end_date,
         query=query,
@@ -86,6 +96,7 @@ async def get_projects(
             offset=offset,
             client_id=client_id,
             status=project_status,
+            payment_status=payment_status,
             start_date=start_date,
             end_date=end_date,
             query=query,
@@ -120,6 +131,7 @@ async def get_projects_paginated(
     params: Params = Depends(),
     client_id: Optional[int] = None,
     project_status: Optional[ProjectStatus] = None,
+    payment_status: Optional[ProjectPaymentStatus] = None,
     start_date: Optional[datetime] = None,
     end_date: Optional[datetime] = None,
     query: Optional[str] = None,
@@ -131,6 +143,7 @@ async def get_projects_paginated(
         params: Pagination parameters
         client_id: Filter by client ID
         project_status: Filter by project status
+        payment_status: Filter by payment status
         start_date: Filter by start date
         end_date: Filter by end date
         query: Search by project name (case-insensitive)
@@ -141,6 +154,7 @@ async def get_projects_paginated(
     log = logger.bind(
         client_id=client_id,
         status=project_status.value if project_status else None,
+        payment_status=payment_status.value if payment_status else None,
         start_date=start_date,
         end_date=end_date,
         query=query,
@@ -153,6 +167,7 @@ async def get_projects_paginated(
         projects_query = await service.get_projects_list_query(
             client_id=client_id,
             status=project_status,
+            payment_status=payment_status,
             start_date=start_date,
             end_date=end_date,
             query=query,
@@ -172,6 +187,7 @@ async def get_projects_paginated(
                     start_date=project.start_date,
                     end_date=project.end_date,
                     status=project.status,
+                    payment_status=project.payment_status,
                     notes=project.notes,
                     created_at=project.created_at,
                     updated_at=project.updated_at,
@@ -778,5 +794,67 @@ async def patch_project(
     except BusinessError as e:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(e),
+        )
+
+
+@typed_patch(
+    projects_router,
+    '/{project_id}/payment-status',
+    response_model=ProjectResponse,
+    summary='Update project payment status',
+)
+async def update_project_payment_status(
+    project_id: int,
+    payment_update: ProjectPaymentStatusUpdate,
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> ProjectResponse:
+    """Update project payment status with captcha validation.
+
+    This endpoint updates the payment status of a project. A valid captcha code
+    is required for security purposes.
+
+    Args:
+        project_id: Project ID
+        payment_update: Payment status update data with captcha code
+        db: Database session
+
+    Returns:
+        Updated project
+
+    Raises:
+        HTTPException: 400 if captcha is invalid, 404 if project not found
+    """
+    log = logger.bind(
+        project_id=project_id,
+        payment_status=payment_update.payment_status.value,
+    )
+
+    service = ProjectService(db)
+    try:
+        updated_project = await service.update_payment_status(
+            project_id=project_id,
+            payment_status=payment_update.payment_status,
+            captcha_code=payment_update.captcha_code,
+        )
+        log.info('Payment status updated successfully')
+        return ProjectResponse.model_validate(updated_project)
+    except CaptchaError as e:
+        log.warning('Captcha validation failed: {}', str(e))
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+            headers={'X-Error-Type': 'CAPTCHA_ERROR'},
+        )
+    except NotFoundError as e:
+        log.error('Project not found: {}', str(e))
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e),
+        )
+    except ValidationError as e:
+        log.error('Validation error: {}', str(e))
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e),
         )

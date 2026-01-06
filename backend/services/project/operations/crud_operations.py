@@ -14,10 +14,11 @@ from backend.constants.log_messages import (
     ErrorLogMessages,
     ProjectLogMessages,
 )
+from backend.core.config import settings
 from backend.core.timezone_utils import ensure_timezone_aware, normalize_project_period
-from backend.exceptions import DateError, NotFoundError, ValidationError
+from backend.exceptions import CaptchaError, DateError, NotFoundError, ValidationError
 from backend.exceptions.messages import DateErrorMessages, ProjectErrorMessages
-from backend.models import BookingStatus, Project, ProjectStatus
+from backend.models import BookingStatus, Project, ProjectPaymentStatus, ProjectStatus
 from backend.repositories import BookingRepository, ClientRepository, ProjectRepository
 
 
@@ -389,4 +390,90 @@ class CrudOperations:
         except Exception as e:
             await self.db_session.rollback()
             log.error(ErrorLogMessages.DELETE_PROJECT_ERROR, str(e))
+            raise
+
+    async def update_payment_status(
+        self,
+        project_id: int,
+        payment_status: ProjectPaymentStatus,
+        captcha_code: str,
+    ) -> Project:
+        """Update project payment status with captcha validation.
+
+        Args:
+            project_id: Project ID
+            payment_status: New payment status
+            captcha_code: Captcha code for validation
+
+        Returns:
+            Updated project
+
+        Raises:
+            NotFoundError: If project not found
+            CaptchaError: If captcha code is invalid
+        """
+        log = logger.bind(
+            project_id=project_id,
+            payment_status=payment_status.value,
+        )
+
+        try:
+            # Validate captcha code
+            if captcha_code != settings.PAYMENT_STATUS_CAPTCHA_CODE:
+                log.warning('Invalid captcha code for payment status update')
+                raise CaptchaError(
+                    'Invalid captcha code',
+                    details={'project_id': project_id},
+                )
+
+            # Check if project exists
+            project = await self.repository.get_by_id(project_id)
+            if project is None:
+                log.warning(ProjectLogMessages.PROJECT_NOT_FOUND, project_id)
+                raise NotFoundError(
+                    ProjectErrorMessages.PROJECT_NOT_FOUND.format(project_id),
+                    details={'project_id': project_id},
+                )
+
+            # Update payment status
+            update_data = {'payment_status': payment_status}
+            updated_project = await self.repository.update_project(
+                project_id, update_data
+            )
+            if updated_project is None:
+                log.warning(ProjectLogMessages.PROJECT_NOT_FOUND, project_id)
+                raise NotFoundError(
+                    ProjectErrorMessages.PROJECT_NOT_FOUND.format(project_id),
+                    details={'project_id': project_id},
+                )
+
+            # Get client name for response
+            client = await self.client_repository.get(updated_project.client_id)
+            if client is None:
+                client_id = updated_project.client_id
+                log.warning(ClientLogMessages.CLIENT_NOT_FOUND, client_id)
+                raise NotFoundError(
+                    ProjectErrorMessages.CLIENT_NOT_FOUND.format(client_id),
+                    details={'client_id': client_id},
+                )
+            setattr(updated_project, 'client_name', client.name)
+
+            # Commit the transaction
+            await self.db_session.commit()
+
+            log.info(
+                'Project {} payment status updated to {}',
+                project_id,
+                payment_status.value,
+            )
+            return updated_project
+
+        except (NotFoundError, CaptchaError):
+            # Re-raise domain exceptions
+            await self.db_session.rollback()
+            raise
+        except Exception as e:
+            # Handle unexpected errors
+            await self.db_session.rollback()
+            log.error('Error updating payment status: {}', str(e))
             raise
