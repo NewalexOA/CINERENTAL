@@ -86,7 +86,11 @@ class ProjectCreateWithBookings(ProjectCreate):
 
 
 class ProjectUpdate(BaseModel):
-    """Update project request schema."""
+    """Update project request schema.
+
+    Note: payment_status is not included here as it requires captcha validation
+    and must be updated via the dedicated /payment-status endpoint.
+    """
 
     name: Optional[str] = Field(None, title='Project Name')
     description: Optional[str] = Field(None, title='Description')
@@ -94,7 +98,6 @@ class ProjectUpdate(BaseModel):
     start_date: Optional[datetime] = Field(None, title='Start Date')
     end_date: Optional[datetime] = Field(None, title='End Date')
     status: Optional[ProjectStatus] = Field(None, title='Status')
-    payment_status: Optional[ProjectPaymentStatus] = Field(None, title='Payment Status')
     notes: Optional[str] = Field(None, title='Notes')
 
     model_config = ConfigDict(
