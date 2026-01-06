@@ -88,6 +88,7 @@ class ProjectService:
         offset: int = 0,
         client_id: Optional[int] = None,
         status: Optional[ProjectStatus] = None,
+        payment_status: Optional[ProjectPaymentStatus] = None,
         start_date: Optional[datetime] = None,
         end_date: Optional[datetime] = None,
         query: Optional[str] = None,
@@ -99,6 +100,7 @@ class ProjectService:
             offset: Number of projects to skip
             client_id: Filter by client ID
             status: Filter by project status
+            payment_status: Filter by payment status
             start_date: Filter by start date
             end_date: Filter by end date
             query: Search by project name (case-insensitive)
@@ -114,6 +116,7 @@ class ProjectService:
             offset=offset,
             client_id=client_id,
             status=status,
+            payment_status=payment_status,
             start_date=start_date,
             end_date=end_date,
             query=query,
@@ -123,6 +126,7 @@ class ProjectService:
         self,
         client_id: Optional[int] = None,
         status: Optional[ProjectStatus] = None,
+        payment_status: Optional[ProjectPaymentStatus] = None,
         start_date: Optional[datetime] = None,
         end_date: Optional[datetime] = None,
         include_deleted: bool = False,
@@ -133,6 +137,7 @@ class ProjectService:
         Args:
             client_id: Filter by client ID
             status: Filter by project status
+            payment_status: Filter by payment status
             start_date: Filter by start date
             end_date: Filter by end date
             include_deleted: Whether to include deleted projects
@@ -147,6 +152,7 @@ class ProjectService:
         return await self.query_operations.get_projects_list_query(
             client_id=client_id,
             status=status,
+            payment_status=payment_status,
             start_date=start_date,
             end_date=end_date,
             include_deleted=include_deleted,

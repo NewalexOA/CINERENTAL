@@ -13,7 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from backend.constants.log_messages import ClientLogMessages, ProjectLogMessages
 from backend.exceptions import NotFoundError
 from backend.exceptions.messages import ProjectErrorMessages
-from backend.models import Project, ProjectStatus
+from backend.models import Project, ProjectPaymentStatus, ProjectStatus
 from backend.models.booking import Booking
 from backend.models.category import Category
 from backend.models.equipment import Equipment
@@ -39,6 +39,7 @@ class QueryOperations:
         offset: int = 0,
         client_id: Optional[int] = None,
         status: Optional[ProjectStatus] = None,
+        payment_status: Optional[ProjectPaymentStatus] = None,
         start_date: Optional[datetime] = None,
         end_date: Optional[datetime] = None,
         query: Optional[str] = None,
@@ -50,6 +51,7 @@ class QueryOperations:
             offset: Number of projects to skip
             client_id: Filter by client ID
             status: Filter by project status
+            payment_status: Filter by payment status
             start_date: Filter by start date
             end_date: Filter by end date
             query: Search by project name (case-insensitive)
@@ -65,6 +67,7 @@ class QueryOperations:
             offset=offset,
             client_id=client_id,
             status=status.value if status else None,
+            payment_status=payment_status.value if payment_status else None,
             start_date=start_date,
             end_date=end_date,
             query=query,
@@ -86,6 +89,7 @@ class QueryOperations:
             offset=offset,
             client_id=client_id,
             status=status,
+            payment_status=payment_status,
             start_date=start_date,
             end_date=end_date,
             query=query,
@@ -98,6 +102,7 @@ class QueryOperations:
         self,
         client_id: Optional[int] = None,
         status: Optional[ProjectStatus] = None,
+        payment_status: Optional[ProjectPaymentStatus] = None,
         start_date: Optional[datetime] = None,
         end_date: Optional[datetime] = None,
         include_deleted: bool = False,
@@ -108,6 +113,7 @@ class QueryOperations:
         Args:
             client_id: Filter by client ID
             status: Filter by project status
+            payment_status: Filter by payment status
             start_date: Filter by start date
             end_date: Filter by end date
             include_deleted: Whether to include deleted projects
@@ -132,6 +138,7 @@ class QueryOperations:
         return self.repository.get_paginatable_query(
             client_id=client_id,
             status=status,
+            payment_status=payment_status,
             start_date=start_date,
             end_date=end_date,
             include_deleted=include_deleted,

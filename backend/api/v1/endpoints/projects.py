@@ -27,7 +27,7 @@ from backend.exceptions import (
     NotFoundError,
     ValidationError,
 )
-from backend.models import ProjectStatus
+from backend.models import ProjectPaymentStatus, ProjectStatus
 from backend.schemas import (
     ClientInfo,
     DateFilterType,
@@ -57,6 +57,7 @@ async def get_projects(
     offset: int = 0,
     client_id: Optional[int] = None,
     project_status: Optional[ProjectStatus] = None,
+    payment_status: Optional[ProjectPaymentStatus] = None,
     start_date: Optional[datetime] = None,
     end_date: Optional[datetime] = None,
     query: Optional[str] = None,
@@ -69,6 +70,7 @@ async def get_projects(
         offset: Number of projects to skip
         client_id: Filter by client ID
         project_status: Filter by project status
+        payment_status: Filter by payment status
         start_date: Filter by start date
         end_date: Filter by end date
         query: Search by project name (case-insensitive)
@@ -81,6 +83,7 @@ async def get_projects(
         offset=offset,
         client_id=client_id,
         status=project_status.value if project_status else None,
+        payment_status=payment_status.value if payment_status else None,
         start_date=start_date,
         end_date=end_date,
         query=query,
@@ -93,6 +96,7 @@ async def get_projects(
             offset=offset,
             client_id=client_id,
             status=project_status,
+            payment_status=payment_status,
             start_date=start_date,
             end_date=end_date,
             query=query,
@@ -127,6 +131,7 @@ async def get_projects_paginated(
     params: Params = Depends(),
     client_id: Optional[int] = None,
     project_status: Optional[ProjectStatus] = None,
+    payment_status: Optional[ProjectPaymentStatus] = None,
     start_date: Optional[datetime] = None,
     end_date: Optional[datetime] = None,
     query: Optional[str] = None,
@@ -138,6 +143,7 @@ async def get_projects_paginated(
         params: Pagination parameters
         client_id: Filter by client ID
         project_status: Filter by project status
+        payment_status: Filter by payment status
         start_date: Filter by start date
         end_date: Filter by end date
         query: Search by project name (case-insensitive)
@@ -148,6 +154,7 @@ async def get_projects_paginated(
     log = logger.bind(
         client_id=client_id,
         status=project_status.value if project_status else None,
+        payment_status=payment_status.value if payment_status else None,
         start_date=start_date,
         end_date=end_date,
         query=query,
@@ -160,6 +167,7 @@ async def get_projects_paginated(
         projects_query = await service.get_projects_list_query(
             client_id=client_id,
             status=project_status,
+            payment_status=payment_status,
             start_date=start_date,
             end_date=end_date,
             query=query,

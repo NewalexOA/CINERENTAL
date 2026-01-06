@@ -20,6 +20,7 @@ let projectsPagination = null;
 let filters = {
     client_id: null,
     status: null,
+    payment_status: null,
     start_date: null,
     end_date: null,
     query: null
@@ -82,6 +83,14 @@ function initFilterListeners() {
     document.getElementById('searchStatus').addEventListener('change', () => {
         applyFilters();
     });
+
+    // Payment status dropdown change
+    const paymentStatusSelect = document.getElementById('searchPaymentStatus');
+    if (paymentStatusSelect) {
+        paymentStatusSelect.addEventListener('change', () => {
+            applyFilters();
+        });
+    }
 
     // Form submit (keeping this for backward compatibility)
     document.getElementById('searchForm').addEventListener('submit', (e) => {
@@ -286,6 +295,7 @@ function applyFilters() {
 
     filters.client_id = formData.get('client_id') || null;
     filters.status = formData.get('status') || null;
+    filters.payment_status = formData.get('payment_status') || null;
     filters.query = searchQuery.length >= 3 ? searchQuery : null;
 
     projectsPagination.reset(); // Reset to first page and reload
@@ -425,6 +435,7 @@ async function loadProjectsData(page, size) {
 
         if (filters.client_id) params.append('client_id', filters.client_id);
         if (filters.status) params.append('project_status', filters.status);
+        if (filters.payment_status) params.append('payment_status', filters.payment_status);
         if (filters.start_date) params.append('start_date', filters.start_date);
         if (filters.end_date) params.append('end_date', filters.end_date);
         if (filters.query) params.append('query', filters.query);
