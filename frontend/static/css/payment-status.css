@@ -62,6 +62,22 @@
     }
 }
 
+/* Masked captcha input - shows dots instead of characters */
+.captcha-masked-input {
+    -webkit-text-security: disc;
+    text-security: disc;
+    font-family: monospace;
+    letter-spacing: 0.3em;
+    text-align: center;
+}
+
+/* Fallback for browsers without text-security support */
+@supports not (-webkit-text-security: disc) {
+    .captcha-masked-input {
+        font-family: 'text-security-disc', monospace;
+    }
+}
+
 /* Payment Status Card */
 #paymentStatusCard .form-control:focus {
     border-color: #3b82f6;

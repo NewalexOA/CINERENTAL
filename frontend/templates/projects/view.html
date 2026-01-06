@@ -312,8 +312,8 @@
                             {% elif project_data.payment_status == 'UNPAID' %}Не оплачен
                             {% else %}{{ project_data.payment_status }}{% endif %}
                         </span>
-                        <button type="button" class="btn btn-sm btn-outline-primary" id="changePaymentStatusBtn">
-                            <i class="fas fa-edit me-1"></i>Изменить
+                        <button type="button" class="btn btn-sm btn-outline-primary" id="changePaymentStatusBtn" title="Изменить статус оплаты">
+                            <i class="fas fa-edit"></i>
                         </button>
                     </div>
                 </div>
@@ -330,9 +330,9 @@
                     </div>
                     <div class="mb-3">
                         <label class="form-label" for="paymentCaptchaInput">Код подтверждения</label>
-                        <input type="text" class="form-control" id="paymentCaptchaInput"
+                        <input type="text" class="form-control captcha-masked-input" id="paymentCaptchaInput"
                                maxlength="4" inputmode="numeric" pattern="[0-9]*"
-                               placeholder="Введите 4-значный код">
+                               placeholder="••••" autocomplete="off" data-lpignore="true" data-form-type="other">
                         <div class="captcha-dots mt-2">
                             <span class="captcha-dot"></span>
                             <span class="captcha-dot"></span>

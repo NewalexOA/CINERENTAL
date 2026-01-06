@@ -70,6 +70,11 @@ export function initPaymentStatusChanger(projectId, onStatusChanged) {
         captchaInput.classList.remove('is-invalid');
     });
 
+    // Focus on captcha input when status is selected
+    selectInput.addEventListener('change', () => {
+        captchaInput.focus();
+    });
+
     // Update captcha dots as user types
     captchaInput.addEventListener('input', (e) => {
         // Only allow digits
