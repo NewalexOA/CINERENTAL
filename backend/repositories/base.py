@@ -1,10 +1,10 @@
 """Base repository module."""
 
 from datetime import datetime, timezone
-from typing import Generic, List, Optional, Type, TypeVar, Union
+from typing import Any, Generic, List, Optional, Type, TypeVar, Union, cast
 from uuid import UUID
 
-from sqlalchemy import delete, select
+from sqlalchemy import CursorResult, delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.models.core import Base
@@ -118,9 +118,9 @@ class BaseRepository(Generic[ModelType]):
             True if record was deleted, False otherwise
         """
         query = delete(self.model).where(self.model.id == id)
-        result = await self.session.execute(query)
+        result = cast(CursorResult[Any], await self.session.execute(query))
         await self.session.commit()
-        return result.rowcount > 0
+        return bool(result.rowcount and result.rowcount > 0)
 
     async def exists(self, id: Union[int, UUID]) -> bool:
         """Check if entity exists by ID.
