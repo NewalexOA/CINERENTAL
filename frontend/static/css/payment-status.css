@@ -1,0 +1,89 @@
+/**
+ * Payment Status Styles
+ * Styles for payment status badges and captcha form
+ */
+
+/* Payment Status Badges */
+.payment-status-badge {
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+}
+
+.payment-status-paid {
+    background-color: #10b981 !important;
+    color: #fff !important;
+}
+
+.payment-status-partially_paid {
+    background-color: #f59e0b !important;
+    color: #fff !important;
+}
+
+.payment-status-unpaid {
+    background-color: #ef4444 !important;
+    color: #fff !important;
+}
+
+/* Captcha Dots */
+.captcha-dots {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+}
+
+.captcha-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background-color: #d1d5db;
+    transition: all 0.2s ease;
+}
+
+.captcha-dot.filled {
+    background-color: #3b82f6;
+    transform: scale(1.1);
+}
+
+/* Animation for badge update */
+.payment-status-badge.updated {
+    animation: badge-pulse 0.5s ease;
+}
+
+@keyframes badge-pulse {
+    0% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.1);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+
+/* Payment Status Card */
+#paymentStatusCard .form-control:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 0.2rem rgba(59, 130, 246, 0.25);
+}
+
+#paymentStatusCard .invalid-feedback {
+    display: none;
+}
+
+#paymentStatusCard .is-invalid ~ .invalid-feedback {
+    display: block;
+}
+
+/* Card view badge in projects list */
+.project-card .payment-status-badge {
+    font-size: 0.75rem;
+    padding: 0.25em 0.5em;
+}
+
+/* Table view badge in projects list */
+.projects-table .payment-status-badge {
+    font-size: 0.7rem;
+    padding: 0.2em 0.4em;
+}

@@ -26,6 +26,7 @@
 <input type="hidden" id="project-description" value="{{ project_data.description|default('')|e }}">
 <input type="hidden" id="project-notes" value="{{ project_data.notes|default('')|e }}">
 <input type="hidden" id="project-status" value="{{ project_data.status }}">
+<input type="hidden" id="project-payment-status" value="{{ project_data.payment_status }}">
 
 <div class="row">
     <div class="col-md-8">
@@ -44,6 +45,12 @@
                     <div>
                         <span id="project-status-badge" class="badge bg-{{ project_data.status | lower }} fs-6">
                             {{ project_data.status }}
+                        </span>
+                        <span id="payment-status-badge" class="badge payment-status-badge payment-status-{{ project_data.payment_status | lower }} fs-6 ms-2">
+                            {% if project_data.payment_status == 'PAID' %}Оплачен
+                            {% elif project_data.payment_status == 'PARTIALLY_PAID' %}Частично оплачен
+                            {% elif project_data.payment_status == 'UNPAID' %}Не оплачен
+                            {% else %}{{ project_data.payment_status }}{% endif %}
                         </span>
                     </div>
                 </div>
@@ -287,6 +294,64 @@
                     </div>
                     <button type="submit" class="btn btn-primary">Обновить статус</button>
                 </form>
+            </div>
+        </div>
+
+        <!-- Payment Status -->
+        <div class="card mb-4" id="paymentStatusCard">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Статус оплаты</h5>
+            </div>
+            <div class="card-body">
+                <!-- Display Mode -->
+                <div id="paymentStatusDisplay">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span id="paymentStatusText" class="badge payment-status-badge payment-status-{{ project_data.payment_status | lower }} fs-6">
+                            {% if project_data.payment_status == 'PAID' %}Оплачен
+                            {% elif project_data.payment_status == 'PARTIALLY_PAID' %}Частично оплачен
+                            {% elif project_data.payment_status == 'UNPAID' %}Не оплачен
+                            {% else %}{{ project_data.payment_status }}{% endif %}
+                        </span>
+                        <button type="button" class="btn btn-sm btn-outline-primary" id="changePaymentStatusBtn">
+                            <i class="fas fa-edit me-1"></i>Изменить
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Edit Mode (hidden by default) -->
+                <div id="paymentStatusForm" style="display: none;">
+                    <div class="mb-3">
+                        <label class="form-label" for="paymentStatusSelect">Новый статус</label>
+                        <select class="form-select" id="paymentStatusSelect">
+                            <option value="UNPAID" {% if project_data.payment_status == 'UNPAID' %}selected{% endif %}>Не оплачен</option>
+                            <option value="PARTIALLY_PAID" {% if project_data.payment_status == 'PARTIALLY_PAID' %}selected{% endif %}>Частично оплачен</option>
+                            <option value="PAID" {% if project_data.payment_status == 'PAID' %}selected{% endif %}>Оплачен</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="paymentCaptchaInput">Код подтверждения</label>
+                        <input type="text" class="form-control" id="paymentCaptchaInput"
+                               maxlength="4" inputmode="numeric" pattern="[0-9]*"
+                               placeholder="Введите 4-значный код">
+                        <div class="captcha-dots mt-2">
+                            <span class="captcha-dot"></span>
+                            <span class="captcha-dot"></span>
+                            <span class="captcha-dot"></span>
+                            <span class="captcha-dot"></span>
+                        </div>
+                        <div class="invalid-feedback" id="paymentCaptchaError">
+                            Неверный код подтверждения
+                        </div>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-primary" id="savePaymentStatusBtn">
+                            <i class="fas fa-save me-1"></i>Сохранить
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary" id="cancelPaymentStatusBtn">
+                            Отмена
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
 

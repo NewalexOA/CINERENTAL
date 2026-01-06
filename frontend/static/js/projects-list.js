@@ -552,13 +552,24 @@ function renderTableView(projects) {
         tr.style.cursor = 'pointer';
         tr.dataset.projectId = project.id;
 
+        const paymentStatusBadgeClass = typeof getPaymentStatusBadgeClass === 'function'
+            ? getPaymentStatusBadgeClass(project.payment_status)
+            : `payment-status-badge payment-status-${(project.payment_status || '').toLowerCase()}`;
+        const paymentStatusName = typeof getPaymentStatusName === 'function'
+            ? getPaymentStatusName(project.payment_status)
+            : (project.payment_status === 'PAID' ? 'Оплачен' :
+               project.payment_status === 'PARTIALLY_PAID' ? 'Частично оплачен' : 'Не оплачен');
+
         tr.innerHTML = `
             <td>
                 <strong>${project.name}</strong>
             </td>
             <td>${project.client_name}</td>
             <td>${formatDate(project.start_date)} - ${formatDate(project.end_date)}</td>
-            <td><span class="badge bg-${statusColor}">${project.status}</span></td>
+            <td>
+                <span class="badge bg-${statusColor}">${project.status}</span>
+                <span class="badge ${paymentStatusBadgeClass} ms-1">${paymentStatusName}</span>
+            </td>
             <td>
                 <button class="btn btn-sm btn-outline-primary view-project-btn" data-project-id="${project.id}">
                     <i class="fas fa-eye"></i> Просмотр
@@ -629,6 +640,14 @@ function renderCardView(projects) {
 
         const bookingCount = project.booking_count || 0;
 
+        const paymentStatusBadgeClass = typeof getPaymentStatusBadgeClass === 'function'
+            ? getPaymentStatusBadgeClass(project.payment_status)
+            : `payment-status-badge payment-status-${(project.payment_status || '').toLowerCase()}`;
+        const paymentStatusName = typeof getPaymentStatusName === 'function'
+            ? getPaymentStatusName(project.payment_status)
+            : (project.payment_status === 'PAID' ? 'Оплачен' :
+               project.payment_status === 'PARTIALLY_PAID' ? 'Частично оплачен' : 'Не оплачен');
+
         const col = document.createElement('div');
         col.className = 'col-12 col-md-6 col-lg-4';
 
@@ -640,10 +659,13 @@ function renderCardView(projects) {
                         <span class="badge bg-${statusColor}">${project.status}</span>
                     </div>
                     <p class="card-text mb-2">${project.client_name}</p>
-                    <p class="project-period text-muted mt-3">
-                        <i class="fa-solid fa-calendar-alt me-1"></i>
-                        ${formatDate(project.start_date)} - ${formatDate(project.end_date)}
-                    </p>
+                    <div class="d-flex justify-content-between align-items-center mt-3">
+                        <p class="project-period text-muted mb-0">
+                            <i class="fa-solid fa-calendar-alt me-1"></i>
+                            ${formatDate(project.start_date)} - ${formatDate(project.end_date)}
+                        </p>
+                        <span class="badge ${paymentStatusBadgeClass}">${paymentStatusName}</span>
+                    </div>
                     ${bookingCount > 0 ? `<div class="bookings-count">${bookingCount}</div>` : ''}
                 </div>
             </div>
