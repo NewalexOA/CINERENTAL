@@ -8,7 +8,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.models import Project, ProjectStatus
+from backend.models import Project, ProjectPaymentStatus, ProjectStatus
 from backend.repositories import BookingRepository, ClientRepository, ProjectRepository
 from backend.services.booking import BookingService
 from backend.services.project.formatters import FormattersOperations
@@ -354,4 +354,30 @@ class ProjectService:
             query=query,
             category_id=category_id,
             date_filter=date_filter,
+        )
+
+    async def update_payment_status(
+        self,
+        project_id: int,
+        payment_status: ProjectPaymentStatus,
+        captcha_code: str,
+    ) -> Project:
+        """Update project payment status with captcha validation.
+
+        Args:
+            project_id: Project ID
+            payment_status: New payment status
+            captcha_code: Captcha code for validation
+
+        Returns:
+            Updated project
+
+        Raises:
+            NotFoundError: If project not found
+            CaptchaError: If captcha code is invalid
+        """
+        return await self.crud_operations.update_payment_status(
+            project_id=project_id,
+            payment_status=payment_status,
+            captcha_code=captcha_code,
         )
