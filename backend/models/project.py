@@ -29,10 +29,26 @@ class ProjectStatus(str, enum.Enum):
     CANCELLED = 'CANCELLED'
 
 
+class ProjectPaymentStatus(str, enum.Enum):
+    """Project payment status enumeration."""
+
+    UNPAID = 'UNPAID'
+    PARTIALLY_PAID = 'PARTIALLY_PAID'
+    PAID = 'PAID'
+
+
 # Create ENUM type for PostgreSQL
 project_status_enum = ENUM(
     ProjectStatus,
     name='projectstatus',
+    create_type=True,
+    values_callable=lambda obj: [e.value for e in obj],
+    metadata=Base.metadata,
+)
+
+project_payment_status_enum = ENUM(
+    ProjectPaymentStatus,
+    name='projectpaymentstatus',
     create_type=True,
     values_callable=lambda obj: [e.value for e in obj],
     metadata=Base.metadata,
@@ -50,6 +66,7 @@ class Project(TimestampMixin, SoftDeleteMixin, Base):
         start_date: Project start date
         end_date: Project end date
         status: Current project status
+        payment_status: Payment status of the project
         notes: Optional project notes
         client: Client relationship
         bookings: Bookings relationship
@@ -70,6 +87,12 @@ class Project(TimestampMixin, SoftDeleteMixin, Base):
     status: Mapped[ProjectStatus] = mapped_column(
         project_status_enum,
         default=ProjectStatus.DRAFT,
+        nullable=False,
+        index=True,
+    )
+    payment_status: Mapped[ProjectPaymentStatus] = mapped_column(
+        project_payment_status_enum,
+        default=ProjectPaymentStatus.UNPAID,
         nullable=False,
         index=True,
     )

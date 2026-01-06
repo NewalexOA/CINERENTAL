@@ -10,7 +10,7 @@ from typing import List, Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from backend.models import ProjectStatus
+from backend.models import ProjectPaymentStatus, ProjectStatus
 
 
 class DateRange(BaseModel):
@@ -59,6 +59,9 @@ class ProjectCreate(ProjectBase):
     """Create project request schema."""
 
     status: ProjectStatus = Field(default=ProjectStatus.DRAFT, title='Project Status')
+    payment_status: ProjectPaymentStatus = Field(
+        default=ProjectPaymentStatus.UNPAID, title='Payment Status'
+    )
 
 
 class BookingCreateForProject(BaseModel):
@@ -91,6 +94,7 @@ class ProjectUpdate(BaseModel):
     start_date: Optional[datetime] = Field(None, title='Start Date')
     end_date: Optional[datetime] = Field(None, title='End Date')
     status: Optional[ProjectStatus] = Field(None, title='Status')
+    payment_status: Optional[ProjectPaymentStatus] = Field(None, title='Payment Status')
     notes: Optional[str] = Field(None, title='Notes')
 
     model_config = ConfigDict(
@@ -106,6 +110,7 @@ class ProjectResponse(ProjectBase):
 
     id: int
     status: ProjectStatus
+    payment_status: ProjectPaymentStatus
     created_at: datetime
     updated_at: datetime
     client_name: str
@@ -271,5 +276,29 @@ class ProjectBookingResponse(BaseModel):
         from_attributes=True,
         ser_json_bytes='utf8',
         ser_json_timedelta='iso8601',
+        validate_default=True,
+    )
+
+
+class ProjectPaymentStatusUpdate(BaseModel):
+    """Update project payment status with captcha validation."""
+
+    payment_status: ProjectPaymentStatus = Field(
+        ...,
+        title='Payment Status',
+        description='New payment status for the project',
+    )
+    captcha_code: str = Field(
+        ...,
+        title='Captcha Code',
+        description='4-digit captcha code for validation',
+        min_length=4,
+        max_length=4,
+        pattern=r'^\d{4}$',
+    )
+
+    model_config = ConfigDict(
+        from_attributes=True,
+        ser_json_bytes='utf8',
         validate_default=True,
     )
