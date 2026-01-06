@@ -52,6 +52,15 @@ def upgrade() -> None:
         unique=False,
     )
 
+    # Set PAID status for completed projects
+    op.execute(
+        """
+        UPDATE projects
+        SET payment_status = 'PAID'
+        WHERE status = 'COMPLETED'
+        """
+    )
+
 
 def downgrade() -> None:
     # Drop index
