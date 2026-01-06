@@ -28,7 +28,28 @@ jobs:
       - name: Install dependencies
         run: |
           uv pip install --system .
-          uv pip install --system black==24.1.0 isort==6.0.0 flake8==7.0.0 mypy==1.8.0 flake8-docstrings flake8-quotes types-redis types-passlib types-python-jose pytest-asyncio pytest-cov pytest-mock
+          uv pip install --system \
+            black==24.1.0 \
+            isort==6.0.0 \
+            flake8==7.0.0 \
+            mypy==1.14.1 \
+            flake8-docstrings \
+            flake8-quotes \
+            types-python-dateutil \
+            types-pytz \
+            types-redis \
+            types-requests \
+            types-setuptools \
+            types-toml \
+            types-ujson \
+            types-passlib \
+            types-python-jose \
+            "sqlalchemy[mypy]==2.0.45" \
+            "pydantic>=2.0.0" \
+            "fastapi>=0.100.0" \
+            pytest-asyncio \
+            pytest-cov \
+            pytest-mock
 
       - name: Run Black
         run: |

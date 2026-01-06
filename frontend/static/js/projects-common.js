@@ -172,3 +172,27 @@ function formatDateRange(start, end) {
     const endDate = moment(end).format('DD.MM.YYYY');
     return `${startDate} - ${endDate}`;
 }
+
+/**
+ * Get CSS class for payment status badge
+ * @param {string} paymentStatus - Payment status value
+ * @returns {string} CSS class name
+ */
+function getPaymentStatusBadgeClass(paymentStatus) {
+    const statusLower = (paymentStatus || '').toLowerCase();
+    return `payment-status-badge payment-status-${statusLower}`;
+}
+
+/**
+ * Get Russian label for payment status
+ * @param {string} paymentStatus - Payment status value
+ * @returns {string} Russian label
+ */
+function getPaymentStatusName(paymentStatus) {
+    const names = {
+        'PAID': 'Оплачен',
+        'PARTIALLY_PAID': 'Частично оплачен',
+        'UNPAID': 'Не оплачен'
+    };
+    return names[paymentStatus] || paymentStatus;
+}

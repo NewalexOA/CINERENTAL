@@ -223,6 +223,9 @@ class FormattersOperations:
             ),
             'end_date': (project.end_date.isoformat() if project.end_date else None),
             'status': project.status.value if project.status else None,
+            'payment_status': (
+                project.payment_status.value if project.payment_status else 'UNPAID'
+            ),
             'description': project.description,
             'notes': project.notes,
             'created_at': (

@@ -67,7 +67,8 @@ const bookingManager = {
 
     // State
     state: {
-        // We might store pagination state here later if needed
+        requestId: 0, // monotonically increasing to track freshest request
+        lastSuccessful: null // cache of last successful response for fallback
     },
 
     // Initialize the component
@@ -396,17 +397,38 @@ const bookingManager = {
         apiParams.page = page;
         const queryString = new URLSearchParams(apiParams).toString();
 
+        // Track request to prevent stale responses from overwriting UI
+        const requestId = ++this.state.requestId;
+
         try {
             const response = await fetch(`/api/v1/bookings/?${queryString}`);
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
             const data = await response.json();
+
+            // Ignore stale responses if a newer request was started
+            if (requestId !== this.state.requestId) {
+                return;
+            }
+
             this.renderBookings(data.items);
             this.renderPaginationInfo(data);
+
+            // Cache successful data for potential fallback rendering
+            this.state.lastSuccessful = data;
         } catch (error) {
             console.error('Error loading bookings:', error);
-            bookingsTableBody.innerHTML = '<tr><td colspan="6" class="text-center text-danger">Ошибка загрузки бронирований.</td></tr>';
+            if (requestId !== this.state.requestId) {
+                // If stale, just exit quietly
+                return;
+            }
+            if (this.state.lastSuccessful) {
+                this.renderBookings(this.state.lastSuccessful.items || []);
+                this.renderPaginationInfo(this.state.lastSuccessful);
+            } else {
+                bookingsTableBody.innerHTML = '<tr><td colspan="6" class="text-center text-danger">Ошибка загрузки бронирований.</td></tr>';
+            }
         } finally {
             if (clientSearchSpinner) clientSearchSpinner.classList.add('d-none');
             if (equipmentSearchSpinner) equipmentSearchSpinner.classList.add('d-none');

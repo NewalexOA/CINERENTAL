@@ -93,3 +93,28 @@ class DurationError(ValidationError):
         if actual_days is not None:
             error_details['actual_days'] = actual_days
         super().__init__(message, error_details)
+
+
+class CaptchaError(ValidationError):
+    """Captcha validation error exception.
+
+    Raised when captcha verification fails.
+
+    Examples:
+    - Invalid captcha code
+    - Expired captcha
+    - Incorrect code format
+    """
+
+    def __init__(
+        self,
+        message: str = 'Invalid captcha code',
+        details: Optional[dict[str, Any]] = None,
+    ) -> None:
+        """Initialize captcha error.
+
+        Args:
+            message: Error message
+            details: Additional error details
+        """
+        super().__init__(message, details or {})

@@ -494,3 +494,152 @@ class TestProjectsAPIValidation:
 
         # Assert
         assert response.status_code == 400  # Bad request for invalid types
+
+
+class TestProjectPaymentStatusAPI:
+    """Test cases for project payment status endpoints."""
+
+    @pytest.mark.asyncio
+    async def test_get_project_includes_payment_status(
+        self, async_client: AsyncClient, test_project: Project
+    ) -> None:
+        """Test that GET project returns payment_status field."""
+        # Act
+        response = await async_client.get(f'/api/v1/projects/{test_project.id}')
+
+        # Assert
+        assert response.status_code == 200
+        data = response.json()
+        assert 'payment_status' in data
+        assert data['payment_status'] == 'UNPAID'  # Default value
+
+    @pytest.mark.asyncio
+    async def test_update_payment_status_success(
+        self, async_client: AsyncClient, test_project: Project
+    ) -> None:
+        """Test successful payment status update with valid captcha."""
+        # Arrange
+        update_data = {
+            'payment_status': 'PAID',
+            'captcha_code': '0990',  # Default captcha code
+        }
+
+        # Act
+        response = await async_client.patch(
+            f'/api/v1/projects/{test_project.id}/payment-status', json=update_data
+        )
+
+        # Assert
+        assert response.status_code == 200
+        data = response.json()
+        assert data['id'] == test_project.id
+        assert data['payment_status'] == 'PAID'
+
+    @pytest.mark.asyncio
+    async def test_update_payment_status_invalid_captcha(
+        self, async_client: AsyncClient, test_project: Project
+    ) -> None:
+        """Test payment status update with invalid captcha returns 400."""
+        # Arrange
+        update_data = {
+            'payment_status': 'PAID',
+            'captcha_code': '1234',  # Wrong captcha code
+        }
+
+        # Act
+        response = await async_client.patch(
+            f'/api/v1/projects/{test_project.id}/payment-status', json=update_data
+        )
+
+        # Assert
+        assert response.status_code == 400
+        assert response.headers.get('X-Error-Type') == 'CAPTCHA_ERROR'
+
+    @pytest.mark.asyncio
+    async def test_update_payment_status_partially_paid(
+        self, async_client: AsyncClient, test_project: Project
+    ) -> None:
+        """Test updating payment status to PARTIALLY_PAID."""
+        # Arrange
+        update_data = {'payment_status': 'PARTIALLY_PAID', 'captcha_code': '0990'}
+
+        # Act
+        response = await async_client.patch(
+            f'/api/v1/projects/{test_project.id}/payment-status', json=update_data
+        )
+
+        # Assert
+        assert response.status_code == 200
+        data = response.json()
+        assert data['payment_status'] == 'PARTIALLY_PAID'
+
+    @pytest.mark.asyncio
+    async def test_update_payment_status_project_not_found(
+        self, async_client: AsyncClient
+    ) -> None:
+        """Test payment status update for nonexistent project returns 404."""
+        # Arrange
+        update_data = {'payment_status': 'PAID', 'captcha_code': '0990'}
+
+        # Act
+        response = await async_client.patch(
+            '/api/v1/projects/99999/payment-status', json=update_data
+        )
+
+        # Assert
+        assert response.status_code == 404
+
+    @pytest.mark.asyncio
+    async def test_update_payment_status_invalid_captcha_format(
+        self, async_client: AsyncClient, test_project: Project
+    ) -> None:
+        """Test payment status update with invalid captcha format."""
+        # Arrange
+        update_data = {
+            'payment_status': 'PAID',
+            'captcha_code': '12',  # Too short, should be 4 digits
+        }
+
+        # Act
+        response = await async_client.patch(
+            f'/api/v1/projects/{test_project.id}/payment-status', json=update_data
+        )
+
+        # Assert
+        assert response.status_code == 400
+
+    @pytest.mark.asyncio
+    async def test_projects_list_includes_payment_status(
+        self, async_client: AsyncClient, test_project: Project
+    ) -> None:
+        """Test that projects list includes payment_status field."""
+        # Act
+        response = await async_client.get('/api/v1/projects/')
+
+        # Assert
+        assert response.status_code == 200
+        data = response.json()
+        assert isinstance(data, list)
+        if len(data) > 0:
+            # Find our test project and verify it has payment_status
+            for project in data:
+                if project['id'] == test_project.id:
+                    assert 'payment_status' in project
+                    break
+
+    @pytest.mark.asyncio
+    async def test_paginated_projects_includes_payment_status(
+        self, async_client: AsyncClient, test_project: Project
+    ) -> None:
+        """Test that paginated projects endpoint includes payment_status."""
+        # Act
+        response = await async_client.get('/api/v1/projects/paginated?page=1&size=20')
+
+        # Assert
+        assert response.status_code == 200
+        data = response.json()
+        assert 'items' in data
+        if len(data['items']) > 0:
+            # Check that payment_status is included in response
+            for project in data['items']:
+                assert 'payment_status' in project
