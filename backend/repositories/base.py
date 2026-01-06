@@ -120,7 +120,8 @@ class BaseRepository(Generic[ModelType]):
         query = delete(self.model).where(self.model.id == id)
         result = await self.session.execute(query)
         await self.session.commit()
-        rowcount = result.rowcount  # type: ignore[attr-defined]
+        # Use getattr for compatibility with different SQLAlchemy type stubs
+        rowcount = getattr(result, 'rowcount', 0)
         return bool(rowcount and rowcount > 0)
 
     async def exists(self, id: Union[int, UUID]) -> bool:
