@@ -14,7 +14,7 @@ fi
 
 # Создание внешних томов (только если они не существуют)
 echo "Проверка и создание внешних именованных томов для хранения данных..."
-VOLUMES=("act_rental_postgres_data" "act_rental_redis_data" "act_rental_media")
+VOLUMES=("act-rental_postgres_data" "act-rental_redis_data" "act-rental_media")
 
 for VOLUME in "${VOLUMES[@]}"; do
     if docker volume inspect "$VOLUME" >/dev/null 2>&1; then
@@ -50,7 +50,6 @@ if [ "$ALL_VOLUMES_EXIST" = true ]; then
         if [[ "$choice" =~ ^[Yy]$ ]]; then
             echo "Перезапуск продакшен-окружения..."
             docker compose -f docker-compose.prod.yml --env-file ./.env.production down
-            export $(grep -v '^#' .env.production | xargs)
             docker compose -f docker-compose.prod.yml --env-file ./.env.production up -d
             echo "✅ Продакшен-окружение успешно перезапущено!"
         else

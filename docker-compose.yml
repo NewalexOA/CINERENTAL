@@ -26,7 +26,7 @@ services:
       - WORKERS_COUNT=${WORKERS_COUNT:-2}
       - LOG_LEVEL=${LOG_LEVEL:-info}
       - ALLOWED_HOSTS=${ALLOWED_HOSTS:-localhost,127.0.0.1}
-      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:3000}
+      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:5173,http://localhost:3000}
     volumes:
       - media_volume:/app/media
     deploy:
@@ -38,7 +38,7 @@ services:
           cpus: '0.25'
           memory: 256M
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health"]
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/health').read()"]
       interval: 5s
       timeout: 10s
       retries: 10
@@ -85,7 +85,16 @@ services:
 
   redis:
     image: redis:6-alpine
-    command: redis-server --appendonly yes
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        if [ -n "$$REDIS_PASSWORD" ]; then
+          exec redis-server --appendonly yes --requirepass "$$REDIS_PASSWORD"
+        else
+          exec redis-server --appendonly yes
+        fi
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-}
     ports:
       - "6379:6379"
     volumes:
@@ -98,10 +107,40 @@ services:
     networks:
       - act-rental_network
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD-SHELL", "redis-cli -a \"$$REDIS_PASSWORD\" ping 2>/dev/null || redis-cli ping"]
       interval: 5s
       timeout: 5s
       retries: 5
+
+  frontend:
+    build:
+      context: ./frontend-react
+      dockerfile: Dockerfile.dev
+    ports:
+      - "5173:5173"
+    environment:
+      - BACKEND_URL=http://web:8000
+      - NODE_ENV=development
+    volumes:
+      # Mount source code for hot reload
+      - ./frontend-react/src:/app/src
+      - ./frontend-react/public:/app/public
+      - ./frontend-react/index.html:/app/index.html
+      - ./frontend-react/vite.config.ts:/app/vite.config.ts
+      - ./frontend-react/tsconfig.json:/app/tsconfig.json
+      # Prevent node_modules from being overwritten
+      - /app/node_modules
+    depends_on:
+      web:
+        condition: service_healthy
+    networks:
+      - act-rental_network
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
 volumes:
   postgres_data:
