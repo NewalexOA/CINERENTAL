@@ -7,6 +7,7 @@ import sys
 import time
 from typing import Any, Callable, Optional, cast
 
+from backup.backup_models import BackupInfo
 from backup.backup_ui import BackupGroup, BackupManagerWindow
 from docker_manager import DockerManager
 from PyQt5.QtCore import QEvent, QSettings, QThread, pyqtSignal
@@ -157,8 +158,18 @@ class MainWindow(QMainWindow):
 
         # Initialize Docker manager with the project path
         self.docker = DockerManager(project_path=project_path)
+
+        # If DockerManager couldn't find project automatically, ask user
+        if not self.docker.project_path:
+            project_path = self.select_project_path()
+            if project_path:
+                self.settings.setValue('project_path', project_path)
+                # Reinitialize DockerManager with the selected path
+                self.docker = DockerManager(project_path=project_path)
+
         self.log_monitor_thread = None
         self.container_log_monitor: Optional[QThread] = None
+        self.backup_manager_window: Optional[BackupManagerWindow] = None
 
         # Initialize UI and check status
         self.init_ui()
@@ -1037,9 +1048,11 @@ class MainWindow(QMainWindow):
         """Perform quick restore with proper confirmation flow."""
         try:
             backup_manager = self.docker.backup_manager
+            if not backup_manager:
+                raise ValueError('Менеджер резервных копий недоступен')
 
             # Worker to get latest backup info (using fast method)
-            def get_latest_backup_info():
+            def get_latest_backup_info() -> Optional[BackupInfo]:
                 return backup_manager.get_latest_backup_fast()
 
             # Start worker to get backup info
@@ -1057,7 +1070,7 @@ class MainWindow(QMainWindow):
                 f'Ошибка получения информации о резервной копии: {str(e)}',
             )
 
-    def _on_backup_info_received(self, latest_backup) -> None:
+    def _on_backup_info_received(self, latest_backup: Optional[BackupInfo]) -> None:
         """Handle backup info retrieval completion."""
         try:
             self.backup_group.show_progress(False)
@@ -1094,6 +1107,9 @@ class MainWindow(QMainWindow):
 
             # Restore in worker thread
             backup_manager = self.docker.backup_manager
+            if not backup_manager:
+                raise ValueError('Менеджер резервных копий недоступен')
+
             self.restore_worker = WorkerThread(
                 backup_manager.restore_backup, latest_backup
             )

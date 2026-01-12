@@ -1,14 +1,16 @@
 """Script for building the ACT-Rental Launcher application using py2app."""
 
+from typing import Any, Sequence
+
 from setuptools import setup
 
 APP = ['main.py']
-DATA_FILES = [
+DATA_FILES: list[tuple[str, Sequence[str]]] = [
     ('assets', ['../assets/README.md']),
 ]
-OPTIONS = {
+OPTIONS: dict[str, Any] = {
     'argv_emulation': False,
-    'packages': ['PyQt5'],
+    'packages': ['PyQt5', 'backup'],
     'includes': [
         'sip',
         'typing',

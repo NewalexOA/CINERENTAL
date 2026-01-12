@@ -6,6 +6,9 @@ import subprocess
 import time
 from typing import Optional, Tuple, Union
 
+from backup import BackupManager
+from backup.backup_utils import get_project_root
+
 
 class DockerManager:
     """Docker container manager for ACT-Rental."""
@@ -23,14 +26,30 @@ class DockerManager:
             compose_file: Docker compose file name
             log_folder: Path to log folder
         """
-        # Use project path if provided, otherwise use correct default path
-        self.project_path = project_path or os.path.expanduser(
-            '~/Documents/GitHub/CINERENTAL'
-        )
+        # Use project path if provided, otherwise try to find it automatically
+        self.project_path: Optional[str] = None
+        if project_path:
+            self.project_path = project_path
+        else:
+            # Try to find project automatically
+            try:
+                self.project_path = get_project_root()
+            except FileNotFoundError:
+                # Fallback to None, will need user to select path
+                pass
+
         self.compose_file = compose_file
 
-        self.log_folder = log_folder or os.path.join(self.project_path, 'logs')
-        os.makedirs(self.log_folder, exist_ok=True)
+        # Setup log folder
+        if self.project_path:
+            self.log_folder = log_folder or os.path.join(self.project_path, 'logs')
+            os.makedirs(self.log_folder, exist_ok=True)
+        else:
+            # Use temporary location if project path not found
+            self.log_folder = log_folder or os.path.expanduser(
+                '~/Library/Logs/ACT-Rental'
+            )
+            os.makedirs(self.log_folder, exist_ok=True)
 
         self.log_file = os.path.join(self.log_folder, 'act-rental_launcher.log')
         self.setup_log_file = os.path.join(self.log_folder, 'setup_output.log')
@@ -41,9 +60,15 @@ class DockerManager:
         # Initialize backup manager (lazy loading)
         self._backup_manager = None
 
-        self.logger.info(
-            f'DockerManager инициализирован. Путь проекта: {self.project_path}'
-        )
+        if self.project_path:
+            self.logger.info(
+                f'DockerManager инициализирован. Путь проекта: {self.project_path}'
+            )
+        else:
+            self.logger.warning(
+                'DockerManager инициализирован без пути к проекту. '
+                'Требуется выбор пути.'
+            )
         self.logger.info(f'Файл docker-compose: {self.compose_file}')
 
     def setup_logger(self) -> None:
@@ -80,6 +105,11 @@ class DockerManager:
             Command execution result (stdout, stderr, returncode)
         """
         self.logger.debug(f'Выполнение команды: {command}')
+
+        # Check if project path is set
+        if not self.project_path:
+            self.logger.error('Путь к проекту не задан. Невозможно выполнить команду.')
+            return None
 
         try:
             cwd = os.getcwd()
@@ -318,6 +348,18 @@ class DockerManager:
         """Start ACT-Rental containers."""
         self.logger.info('Запуск контейнеров ACT-Rental...')
 
+        # Check if project path is set
+        if not self.project_path:
+            self.logger.error('Путь к проекту не задан.')
+            return (
+                False,
+                'Путь к проекту не задан. '
+                'Пожалуйста, выберите папку проекта в настройках.',
+            )
+
+        # Type narrowing: at this point project_path is definitely str, not None
+        project_path: str = self.project_path
+
         if not self.is_docker_running():
             self.logger.error('Docker не запущен. Невозможно запустить контейнеры.')
             return (
@@ -325,11 +367,9 @@ class DockerManager:
                 'Docker не запущен. Пожалуйста, запустите Docker Desktop.',
             )
 
-        compose_path = os.path.join(self.project_path, self.compose_file)
+        compose_path = os.path.join(project_path, self.compose_file)
         if not os.path.exists(compose_path):
-            self.logger.error(
-                f'Файл {self.compose_file} не найден в {self.project_path}'
-            )
+            self.logger.error(f'Файл {self.compose_file} не найден в {project_path}')
             return (
                 False,
                 f'Файл {self.compose_file} не найден. Проверьте путь к проекту.',
@@ -540,6 +580,18 @@ class DockerManager:
         """Rebuild ACT-Rental containers with fresh code."""
         self.logger.info('Пересборка контейнеров ACT-Rental...')
 
+        # Check if project path is set
+        if not self.project_path:
+            self.logger.error('Путь к проекту не задан.')
+            return (
+                False,
+                'Путь к проекту не задан. '
+                'Пожалуйста, выберите папку проекта в настройках.',
+            )
+
+        # Type narrowing: at this point project_path is definitely str, not None
+        project_path: str = self.project_path
+
         if not self.is_docker_running():
             return False, 'Docker не запущен'
 
@@ -564,42 +616,43 @@ class DockerManager:
         # Log the current working directory
         current_dir = os.getcwd()
         self.logger.info(f'Текущий рабочий каталог: {current_dir}')
-        self.logger.info(f'Путь проекта в конфигурации: {self.project_path}')
+        self.logger.info(f'Путь проекта в конфигурации: {project_path}')
 
         # Ensure absolute path
-        if not os.path.isabs(self.project_path):
-            abs_path = os.path.abspath(self.project_path)
+        if not os.path.isabs(project_path):
+            abs_path = os.path.abspath(project_path)
             self.logger.info(f'Преобразование пути проекта в абсолютный: {abs_path}')
+            project_path = abs_path
             self.project_path = abs_path
 
         # Create list of files to check
         files_to_check = ['Dockerfile', self.compose_file, 'app', 'requirements.txt']
 
         for file_name in files_to_check:
-            file_path = os.path.join(self.project_path, file_name)
+            file_path = os.path.join(project_path, file_name)
             if os.path.exists(file_path):
                 self.logger.info(f'✓ Файл/каталог найден: {file_name}')
             else:
                 self.logger.error(f'✗ Файл/каталог не найден: {file_name}')
                 # Continue checking but log the issue
 
-        dockerfile_path = os.path.join(self.project_path, 'Dockerfile')
-        compose_path = os.path.join(self.project_path, self.compose_file)
+        dockerfile_path = os.path.join(project_path, 'Dockerfile')
+        compose_path = os.path.join(project_path, self.compose_file)
 
         if not os.path.exists(dockerfile_path):
-            error_msg = f'Dockerfile не найден в {self.project_path}'
+            error_msg = f'Dockerfile не найден в {project_path}'
             self.logger.error(error_msg)
             return False, error_msg
 
         if not os.path.exists(compose_path):
-            error_msg = f'Файл {self.compose_file} не найден в {self.project_path}'
+            error_msg = f'Файл {self.compose_file} не найден в {project_path}'
             self.logger.error(error_msg)
             return False, error_msg
 
         # Explicitly set working directory for build command
-        self.logger.info(f'Используем каталог проекта для сборки: {self.project_path}')
+        self.logger.info(f'Используем каталог проекта для сборки: {project_path}')
         try:
-            os.chdir(self.project_path)
+            os.chdir(project_path)
             current_after_chdir = os.getcwd()
             self.logger.info(f'Текущий каталог после chdir: {current_after_chdir}')
         except Exception as e:
@@ -673,16 +726,14 @@ class DockerManager:
         )
 
     @property
-    def backup_manager(self):
+    def backup_manager(self) -> Optional[BackupManager]:
         """Get backup manager instance (lazy loading).
 
         Returns:
-            BackupManager instance
+            BackupManager instance or None if initialization failed
         """
         if self._backup_manager is None:
             try:
-                from backup import BackupManager
-
                 self._backup_manager = BackupManager(docker_manager=self)
                 self.logger.info('BackupManager инициализирован')
             except ImportError as e:
