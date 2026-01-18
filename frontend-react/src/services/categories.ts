@@ -3,7 +3,7 @@ import { Category, CategoryCreate, CategoryUpdate } from '@/types/category';
 
 export const categoriesService = {
   getAll: async () => {
-    const response = await api.get<Category[]>('/categories');
+    const response = await api.get<Category[]>('/categories/');
     return response.data;
   },
 
@@ -18,15 +18,12 @@ export const categoriesService = {
   },
 
   getSubcategories: async (parentId: number) => {
-    // Assuming backend supports filter by parent_id
-    // If not, we might need to filter client side or use specific endpoint if exists.
-    // Based on standard REST:
-    const response = await api.get<Category[]>('/categories', { params: { parent_id: parentId } });
+    const response = await api.get<Category[]>('/categories/', { params: { parent_id: parentId } });
     return response.data;
   },
 
   create: async (data: CategoryCreate) => {
-    const response = await api.post<Category>('/categories', data);
+    const response = await api.post<Category>('/categories/', data);
     return response.data;
   },
 

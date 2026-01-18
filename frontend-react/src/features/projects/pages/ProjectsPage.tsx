@@ -2,22 +2,22 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { projectsService } from '../../../services/projects';
 import { ProjectStatus } from '../../../types/project';
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow
 } from '../../../components/ui/table';
 import { Button } from '../../../components/ui/button';
 import { Badge } from '../../../components/ui/badge';
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
 } from '../../../components/ui/select';
 import { Input } from '../../../components/ui/input';
 import { Plus, Search, Pencil, Trash2 } from 'lucide-react';
@@ -47,7 +47,7 @@ export default function ProjectsPage() {
       page,
       size,
       query: search || undefined,
-      status: status || undefined,
+      project_status: status || undefined,
     })
   });
 
@@ -65,7 +65,7 @@ export default function ProjectsPage() {
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearch(e.target.value);
-    setPage(1); 
+    setPage(1);
   };
 
   const handleDelete = async (e: React.MouseEvent, id: number) => {
@@ -90,9 +90,9 @@ export default function ProjectsPage() {
               onChange={handleSearchChange}
             />
           </div>
-          
-          <Select 
-            value={status || "all"} 
+
+          <Select
+            value={status || "all"}
             onValueChange={(val) => { setStatus(val === 'all' ? '' : val as ProjectStatus); setPage(1); }}
           >
             <SelectTrigger className="w-[140px] h-7 text-xs">
@@ -129,8 +129,8 @@ export default function ProjectsPage() {
                  <TableCell colSpan={5} className="h-24 text-center">Загрузка...</TableCell>
                </TableRow>
             ) : data?.items.map((item) => (
-              <TableRow 
-                key={item.id} 
+              <TableRow
+                key={item.id}
                 className="h-8 cursor-pointer hover:bg-muted/50"
                 onClick={() => navigate(`/projects/${item.id}`)}
               >
@@ -174,7 +174,7 @@ export default function ProjectsPage() {
         </Table>
       </div>
 
-      <PaginationControls 
+      <PaginationControls
         currentPage={page}
         totalPages={data?.pages || 1}
         pageSize={size}

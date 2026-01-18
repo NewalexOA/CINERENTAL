@@ -87,12 +87,12 @@ export interface PaginatedResponse<T> {
 
 export const bookingsService = {
   getPaginated: async (params: BookingSearchParams) => {
-    const response = await api.get<PaginatedResponse<Booking>>('/bookings', { params });
+    const response = await api.get<PaginatedResponse<Booking>>('/bookings/', { params });
     return response.data;
   },
 
   create: async (data: BookingCreate) => {
-    const response = await api.post<Booking>('/bookings', data);
+    const response = await api.post<Booking>('/bookings/', data);
     return response.data;
   },
 
