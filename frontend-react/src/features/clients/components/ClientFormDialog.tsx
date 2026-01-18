@@ -18,27 +18,36 @@ import { Textarea } from '../../../components/ui/textarea';
 const strictSchema = z.object({
   name: z.string().min(1, "ФИО обязательно"),
   company: z.string().optional(),
-  email: z.string().email("Некорректный email"),
-  phone: z.string().min(1, "Телефон обязателен"),
+  email: z.string().email("Некорректный email").or(z.literal('')),
+  phone: z.string().optional(),
   notes: z.string().optional(),
 });
 
 type FormValues = z.infer<typeof strictSchema>;
 
+// Type for cleaned/submitted data (empty strings converted to undefined)
+export interface ClientSubmitData {
+  name: string;
+  company?: string;
+  email?: string;
+  phone?: string;
+  notes?: string;
+}
+
 interface ClientFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   client?: Client | null; // If present, edit mode
-  onSubmit: (data: FormValues) => Promise<void>;
+  onSubmit: (data: ClientSubmitData) => Promise<void>;
   isLoading?: boolean;
 }
 
-export function ClientFormDialog({ 
-  open, 
-  onOpenChange, 
-  client, 
+export function ClientFormDialog({
+  open,
+  onOpenChange,
+  client,
   onSubmit,
-  isLoading 
+  isLoading
 }: ClientFormDialogProps) {
   const {
     register,
@@ -77,23 +86,31 @@ export function ClientFormDialog({
     }
   }, [open, client, reset, setValue]);
 
-  const handleFormSubmit = (data: FormValues) => {
-    onSubmit(data);
+  const handleFormSubmit = async (data: FormValues) => {
+    // Clean up empty strings to undefined for backend (converts to null)
+    const cleanedData: ClientSubmitData = {
+      name: data.name,
+      company: data.company || undefined,
+      email: data.email || undefined,
+      phone: data.phone || undefined,
+      notes: data.notes || undefined,
+    };
+    await onSubmit(cleanedData);
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={(open) => !isLoading && onOpenChange(open)}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>{client ? 'Редактировать клиента' : 'Добавить клиента'}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="name">ФИО</Label>
+            <Label htmlFor="name">ФИО <span className="text-destructive">*</span></Label>
             <Input id="name" {...register('name')} />
             {errors.name && <p className="text-sm text-destructive">{errors.name.message}</p>}
           </div>
-          
+
           <div className="space-y-2">
             <Label htmlFor="company">Компания</Label>
             <Input id="company" {...register('company')} />
@@ -108,7 +125,6 @@ export function ClientFormDialog({
           <div className="space-y-2">
             <Label htmlFor="phone">Телефон</Label>
             <Input id="phone" type="tel" {...register('phone')} />
-            {errors.phone && <p className="text-sm text-destructive">{errors.phone.message}</p>}
           </div>
 
           <div className="space-y-2">
@@ -117,7 +133,7 @@ export function ClientFormDialog({
           </div>
 
           <DialogFooter>
-            <Button type="button" variant="secondary" onClick={() => onOpenChange(false)}>
+            <Button type="button" variant="secondary" onClick={() => onOpenChange(false)} disabled={isLoading}>
               Отмена
             </Button>
             <Button type="submit" disabled={isLoading}>
