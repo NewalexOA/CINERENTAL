@@ -221,8 +221,8 @@ export default function ProjectsPage() {
   };
 
   // Group projects by status for card view
-  const groupedProjects = useMemo(() => {
-    if (!data?.items) return {};
+  const groupedProjects = useMemo((): Record<ProjectStatus, Project[]> => {
+    if (!data?.items) return {} as Record<ProjectStatus, Project[]>;
     return statusOrder.reduce((acc, statusKey) => {
       acc[statusKey] = data.items
         .filter((p) => p.status === statusKey)
