@@ -82,6 +82,7 @@ def create_app() -> FastAPI:
         docs_url='/api/docs',
         openapi_url='/api/openapi.json',
         lifespan=lifespan,
+        redirect_slashes=False,
     )
 
     # Configure CORS

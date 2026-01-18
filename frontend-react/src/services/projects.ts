@@ -4,7 +4,7 @@ import { Project, ProjectCreate, ProjectUpdate } from '@/types/project';
 export interface ProjectSearchParams {
   page?: number;
   size?: number;
-  status?: string;
+  project_status?: string;
   client_id?: number;
   query?: string;
   start_date?: string;
@@ -26,7 +26,7 @@ export const projectsService = {
   },
 
   getAll: async () => {
-    const response = await api.get<Project[]>('/projects');
+    const response = await api.get<Project[]>('/projects/');
     return response.data;
   },
 
@@ -36,7 +36,7 @@ export const projectsService = {
   },
 
   create: async (data: ProjectCreate) => {
-    const response = await api.post<Project>('/projects', data);
+    const response = await api.post<Project>('/projects/', data);
     return response.data;
   },
 

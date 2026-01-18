@@ -4,7 +4,8 @@ import { defineConfig, loadEnv } from "vite"
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
-  const target = env.BACKEND_URL || 'http://localhost:8000'
+  // Check process.env first (Docker), then .env files, then default
+  const target = process.env.BACKEND_URL || env.BACKEND_URL || 'http://localhost:8000'
 
   return {
     plugins: [react()],

@@ -34,7 +34,7 @@ export const equipmentService = {
   },
 
   getAll: async (params?: Partial<EquipmentSearchParams>) => {
-    const response = await api.get<Equipment[]>('/equipment', { params });
+    const response = await api.get<Equipment[]>('/equipment/', { params });
     return response.data;
   },
 
@@ -56,7 +56,7 @@ export const equipmentService = {
   },
 
   create: async (data: EquipmentCreate) => {
-    const response = await api.post<Equipment>('/equipment', data);
+    const response = await api.post<Equipment>('/equipment/', data);
     return response.data;
   },
 
