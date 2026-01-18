@@ -5,6 +5,7 @@ export interface ProjectSearchParams {
   page?: number;
   size?: number;
   project_status?: string;
+  payment_status?: string;
   client_id?: number;
   query?: string;
   start_date?: string;
