@@ -8,6 +8,16 @@ export enum EquipmentStatus {
   RETIRED = 'RETIRED'
 }
 
+export type RentalStatus = 'available' | 'on-project' | 'unavailable';
+
+export interface ActiveProject {
+  project_id: number;
+  project_name: string;
+  start_date: string;
+  end_date: string;
+  booking_status: string;
+}
+
 export interface Equipment {
   id: number;
   name: string;
@@ -23,6 +33,11 @@ export interface Equipment {
   // Relationships
   category?: Category;
   category_name?: string;
+  // Rental status (computed by backend)
+  active_projects?: ActiveProject[];
+  rental_status?: RentalStatus;
+  rental_status_display?: string;
+  is_available?: boolean;
 }
 
 export interface EquipmentCreate {
