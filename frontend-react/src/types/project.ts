@@ -8,6 +8,12 @@ export enum ProjectStatus {
   CANCELLED = 'CANCELLED'
 }
 
+export enum ProjectPaymentStatus {
+  UNPAID = 'UNPAID',
+  PARTIALLY_PAID = 'PARTIALLY_PAID',
+  PAID = 'PAID'
+}
+
 export interface Project {
   id: number;
   name: string;
@@ -16,6 +22,7 @@ export interface Project {
   start_date: string;
   end_date: string;
   status: ProjectStatus;
+  payment_status?: ProjectPaymentStatus;
   notes?: string;
   created_at?: string;
   updated_at?: string;
