@@ -1,6 +1,7 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { projectsService } from '../../../services/projects';
+import { clientsService } from '../../../services/clients';
 import { Project, ProjectStatus, ProjectPaymentStatus } from '../../../types/project';
 import {
   Table,
@@ -19,6 +20,19 @@ import {
   SelectTrigger,
   SelectValue
 } from '../../../components/ui/select';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '../../../components/ui/popover';
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '../../../components/ui/command';
 import { Input } from '../../../components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/card';
 import {
@@ -35,13 +49,17 @@ import {
   List,
   Calendar,
   ChevronDown,
-  User
+  ChevronsUpDown,
+  Check,
+  User,
+  Loader2
 } from 'lucide-react';
 import { useState, useEffect, useMemo } from 'react';
 import { toast } from 'sonner';
 import { PaginationControls } from '../../../components/ui/pagination-controls';
 import { format, parseISO } from 'date-fns';
 import { cn } from '../../../lib/utils';
+import { useDebounce } from '../../../hooks/useDebounce';
 
 type ViewMode = 'table' | 'card';
 
@@ -172,6 +190,11 @@ export default function ProjectsPage() {
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState<ProjectStatus | ''>('');
   const [paymentStatus, setPaymentStatus] = useState<ProjectPaymentStatus | ''>('');
+  const [clientId, setClientId] = useState<number | null>(null);
+  const [clientPopoverOpen, setClientPopoverOpen] = useState(false);
+  const [clientSearch, setClientSearch] = useState('');
+  const debouncedClientSearch = useDebounce(clientSearch, 300);
+  const [selectedClientName, setSelectedClientName] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
     const saved = localStorage.getItem(VIEW_STORAGE_KEY);
     return (saved === 'card' || saved === 'table') ? saved : 'table';
@@ -181,14 +204,24 @@ export default function ProjectsPage() {
     localStorage.setItem(VIEW_STORAGE_KEY, viewMode);
   }, [viewMode]);
 
+  // Fetch clients for filter dropdown with server-side search
+  const { data: clients, isFetching: isFetchingClients, isError: isClientsError } = useQuery({
+    queryKey: ['clients-search', debouncedClientSearch],
+    queryFn: () => clientsService.search({ query: debouncedClientSearch, limit: 20 }),
+    placeholderData: keepPreviousData, // Keep previous results while fetching new ones
+    enabled: clientPopoverOpen, // Only fetch when popover is open
+    staleTime: 30 * 1000, // Consider data fresh for 30 seconds
+  });
+
   const { data, isLoading, error } = useQuery({
-    queryKey: ['projects', page, size, search, status, paymentStatus],
+    queryKey: ['projects', page, size, search, status, paymentStatus, clientId],
     queryFn: () => projectsService.getPaginated({
       page,
       size,
       query: search || undefined,
       project_status: status || undefined,
       payment_status: paymentStatus || undefined,
+      client_id: clientId || undefined,
     })
   });
 
@@ -246,6 +279,89 @@ export default function ProjectsPage() {
               onChange={handleSearchChange}
             />
           </div>
+
+          <Popover open={clientPopoverOpen} onOpenChange={(open) => {
+            setClientPopoverOpen(open);
+            if (!open) setClientSearch('');
+          }}>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                role="combobox"
+                aria-expanded={clientPopoverOpen}
+                className="w-[160px] h-7 text-xs justify-between font-normal"
+              >
+                <span className="truncate">
+                  {clientId ? selectedClientName || 'Загрузка...' : 'Все клиенты'}
+                </span>
+                <ChevronsUpDown className="ml-1 h-3 w-3 shrink-0 opacity-50" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[200px] p-0" align="start">
+              <Command shouldFilter={false}>
+                <div className="relative">
+                  <CommandInput
+                    placeholder="Поиск клиента..."
+                    className="h-8 text-xs"
+                    value={clientSearch}
+                    onValueChange={setClientSearch}
+                  />
+                  {isFetchingClients && (
+                    <div className="absolute right-2 top-1/2 -translate-y-1/2">
+                      <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
+                    </div>
+                  )}
+                </div>
+                <CommandList className="min-h-[120px] max-h-[200px]">
+                  {isClientsError && (
+                    <CommandEmpty className="py-6 text-xs text-center text-destructive">
+                      Ошибка загрузки клиентов
+                    </CommandEmpty>
+                  )}
+                  {!isFetchingClients && !isClientsError && clients?.length === 0 && clientSearch && (
+                    <CommandEmpty className="py-6 text-xs text-center">
+                      Клиент не найден
+                    </CommandEmpty>
+                  )}
+                  <CommandGroup>
+                    {!clientSearch && (
+                      <CommandItem
+                        value="all"
+                        onSelect={() => {
+                          setClientId(null);
+                          setSelectedClientName(null);
+                          setClientPopoverOpen(false);
+                          setClientSearch('');
+                          setPage(1);
+                        }}
+                        className="text-xs"
+                      >
+                        <Check className={cn("mr-2 h-3 w-3", clientId === null ? "opacity-100" : "opacity-0")} />
+                        Все клиенты
+                      </CommandItem>
+                    )}
+                    {clients?.map((client) => (
+                      <CommandItem
+                        key={client.id}
+                        value={client.name}
+                        onSelect={() => {
+                          setClientId(client.id);
+                          setSelectedClientName(client.name);
+                          setClientPopoverOpen(false);
+                          setClientSearch('');
+                          setPage(1);
+                        }}
+                        className="text-xs"
+                      >
+                        <Check className={cn("mr-2 h-3 w-3", clientId === client.id ? "opacity-100" : "opacity-0")} />
+                        {client.name}
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
 
           <Select
             value={status || "all"}
