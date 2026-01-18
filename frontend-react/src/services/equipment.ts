@@ -29,7 +29,11 @@ export interface AvailabilityResponse {
 
 export const equipmentService = {
   getPaginated: async (params: EquipmentSearchParams) => {
-    const response = await api.get<PaginatedResponse<Equipment>>('/equipment/paginated', { params });
+    // Use endpoint with rental status to get active_projects data
+    const response = await api.get<PaginatedResponse<Equipment>>(
+      '/equipment/paginated-with-rental-status',
+      { params }
+    );
     return response.data;
   },
 
