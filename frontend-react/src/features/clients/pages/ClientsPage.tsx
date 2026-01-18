@@ -124,7 +124,7 @@ export default function ClientsPage() {
 
   const handleUpdate = async (data: ClientCreate) => {
     if (editingClient) {
-      await updateMutation.mutateAsync({ id: editingClient.id, data: { ...data, id: editingClient.id } });
+      await updateMutation.mutateAsync({ id: editingClient.id, data });
     }
   };
 
