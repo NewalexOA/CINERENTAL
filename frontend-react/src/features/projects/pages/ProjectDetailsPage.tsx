@@ -3,7 +3,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { projectsService } from '../../../services/projects';
 import { clientsService } from '../../../services/clients';
 import { bookingsService, BookingCreate, BookingUpdate } from '../../../services/bookings';
-import { ProjectStatus, ProjectCreate } from '../../../types/project';
+import { ProjectStatus, ProjectCreate, ProjectPaymentStatus } from '../../../types/project';
+import { PaymentStatusChanger } from '../components/PaymentStatusChanger';
 import { Equipment } from '../../../types/equipment';
 import { Button } from '../../../components/ui/button';
 import {
@@ -26,6 +27,7 @@ import { Textarea } from '../../../components/ui/textarea';
 import { Input } from '../../../components/ui/input';
 import { Label } from '../../../components/ui/label';
 import { EquipmentPicker } from '../../equipment/components/EquipmentPicker';
+import { Badge } from '../../../components/ui/badge';
 import { ArrowLeft, Trash2, Plus, Calendar as CalendarIcon, User, Printer, Minus, Save, Edit, AlertTriangle } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
@@ -38,6 +40,12 @@ const statusMap: Record<string, { label: string, variant: "default" | "secondary
   [ProjectStatus.ACTIVE]: { label: 'Активен', variant: 'default' },
   [ProjectStatus.COMPLETED]: { label: 'Завершен', variant: 'success' },
   [ProjectStatus.CANCELLED]: { label: 'Отменен', variant: 'destructive' },
+};
+
+const paymentStatusMap: Record<string, { label: string, variant: "default" | "secondary" | "destructive" | "outline" | "success" | "warning" }> = {
+  [ProjectPaymentStatus.UNPAID]: { label: 'Не оплачен', variant: 'destructive' },
+  [ProjectPaymentStatus.PARTIALLY_PAID]: { label: 'Частично', variant: 'warning' },
+  [ProjectPaymentStatus.PAID]: { label: 'Оплачен', variant: 'success' },
 };
 
 export default function ProjectDetailsPage() {
@@ -211,7 +219,17 @@ export default function ProjectDetailsPage() {
         </Button>
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">{project.name}</h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-2xl font-bold tracking-tight">{project.name}</h1>
+              {project.payment_status && (
+                <Badge
+                  variant={paymentStatusMap[project.payment_status]?.variant || 'outline'}
+                  className="text-xs"
+                >
+                  {paymentStatusMap[project.payment_status]?.label || project.payment_status}
+                </Badge>
+              )}
+            </div>
             <div className="flex items-center gap-2 mt-1 text-muted-foreground text-sm">
               <User className="h-3 w-3" />
               <span className="font-medium">
@@ -250,7 +268,7 @@ export default function ProjectDetailsPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 shrink-0">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 shrink-0">
         {/* Info Card */}
         <div className="bg-card border rounded-md p-3 shadow-sm">
           <h3 className="font-semibold mb-2 flex items-center gap-2 text-sm">
@@ -266,6 +284,14 @@ export default function ProjectDetailsPage() {
             </div>
           )}
         </div>
+
+        {/* Payment Status Card */}
+        {project.payment_status && (
+          <PaymentStatusChanger
+            projectId={projectId}
+            currentStatus={project.payment_status}
+          />
+        )}
 
         {/* Notes Card */}
         <div className="bg-card border rounded-md p-3 shadow-sm md:col-span-2 flex flex-col">

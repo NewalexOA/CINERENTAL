@@ -1,5 +1,5 @@
 import api from '../lib/axios';
-import { Project, ProjectCreate, ProjectUpdate } from '@/types/project';
+import { Project, ProjectCreate, ProjectUpdate, ProjectPaymentStatus } from '@/types/project';
 
 export interface ProjectSearchParams {
   page?: number;
@@ -48,5 +48,13 @@ export const projectsService = {
 
   delete: async (id: number) => {
     await api.delete(`/projects/${id}`);
+  },
+
+  updatePaymentStatus: async (id: number, paymentStatus: ProjectPaymentStatus, captchaCode: string) => {
+    const response = await api.patch<Project>(`/projects/${id}/payment-status`, {
+      payment_status: paymentStatus,
+      captcha_code: captchaCode
+    });
+    return response.data;
   }
 };
