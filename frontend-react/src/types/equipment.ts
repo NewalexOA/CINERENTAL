@@ -11,11 +11,11 @@ export enum EquipmentStatus {
 export type RentalStatus = 'available' | 'on-project' | 'unavailable';
 
 export interface ActiveProject {
-  project_id: number;
-  project_name: string;
+  id: number;
+  name: string;
+  dates: string;
   start_date: string;
   end_date: string;
-  booking_status: string;
 }
 
 export interface Equipment {
