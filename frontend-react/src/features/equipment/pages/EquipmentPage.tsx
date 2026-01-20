@@ -232,6 +232,7 @@ export default function EquipmentPage() {
                     rentalStatus={item.rental_status}
                     rentalStatusDisplay={item.rental_status_display}
                     activeProjects={item.active_projects}
+                    equipmentStatus={item.status}
                   />
                 </TableCell>
                 <TableCell className="py-1 text-right">

@@ -4,10 +4,10 @@ import {
   HoverCardContent,
   HoverCardTrigger,
 } from '../../../components/ui/hover-card';
-import { ActiveProject, RentalStatus } from '../../../types/equipment';
+import { ActiveProject, RentalStatus, EquipmentStatus } from '../../../types/equipment';
 import { format, parseISO, isAfter, isBefore, isWithinInterval } from 'date-fns';
 import { ru } from 'date-fns/locale';
-import { Calendar, ExternalLink, Info } from 'lucide-react';
+import { Info } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { cn } from '../../../lib/utils';
 
@@ -15,15 +15,28 @@ interface RentalStatusBadgeProps {
   rentalStatus?: RentalStatus;
   rentalStatusDisplay?: string;
   activeProjects?: ActiveProject[];
+  equipmentStatus?: EquipmentStatus;
 }
 
 const statusConfig: Record<
   RentalStatus,
-  { variant: 'success' | 'default' | 'destructive'; label: string }
+  { variant: 'success' | 'default' | 'destructive' | 'warning' | 'secondary'; label: string }
 > = {
   available: { variant: 'success', label: 'Свободен' },
   'on-project': { variant: 'default', label: 'На проекте' },
   unavailable: { variant: 'destructive', label: 'Недоступен' },
+};
+
+// Equipment status config for unavailable items
+const equipmentStatusConfig: Record<
+  EquipmentStatus,
+  { variant: 'success' | 'default' | 'destructive' | 'warning' | 'secondary'; label: string }
+> = {
+  [EquipmentStatus.AVAILABLE]: { variant: 'success', label: 'Доступно' },
+  [EquipmentStatus.RENTED]: { variant: 'default', label: 'В аренде' },
+  [EquipmentStatus.MAINTENANCE]: { variant: 'warning', label: 'Обслуживание' },
+  [EquipmentStatus.BROKEN]: { variant: 'destructive', label: 'Сломано' },
+  [EquipmentStatus.RETIRED]: { variant: 'secondary', label: 'Списано' },
 };
 
 type ProjectDateStatus = 'past' | 'current' | 'future';
@@ -96,9 +109,17 @@ export function RentalStatusBadge({
   rentalStatus = 'available',
   rentalStatusDisplay,
   activeProjects = [],
+  equipmentStatus,
 }: RentalStatusBadgeProps) {
-  const config = statusConfig[rentalStatus];
-  const displayText = rentalStatusDisplay || config.label;
+  // For unavailable status, show actual equipment status if provided
+  let config = statusConfig[rentalStatus];
+  let displayText = rentalStatusDisplay || config.label;
+
+  if (rentalStatus === 'unavailable' && equipmentStatus && equipmentStatus !== EquipmentStatus.AVAILABLE) {
+    const eqConfig = equipmentStatusConfig[equipmentStatus];
+    config = eqConfig;
+    displayText = eqConfig.label;
+  }
 
   // If not on project or no projects, show simple badge
   if (rentalStatus !== 'on-project' || activeProjects.length === 0) {
@@ -112,37 +133,36 @@ export function RentalStatusBadge({
     );
   }
 
-  const sortedProjects = sortProjectsByDate(activeProjects);
+  // Filter out past projects - only show current and future
+  const activeOnly = activeProjects.filter((p) => {
+    const status = getProjectDateStatus(p.start_date, p.end_date);
+    return status !== 'past';
+  });
+
+  const sortedProjects = sortProjectsByDate(activeOnly);
 
   return (
     <HoverCard openDelay={200} closeDelay={100}>
       <HoverCardTrigger asChild>
-        <Badge
-          variant={config.variant}
-          className="px-1.5 py-0 text-[10px] h-5 cursor-pointer hover:opacity-80 transition-opacity gap-1"
-        >
-          {displayText}
-          {activeProjects.length > 1 && (
-            <span className="opacity-70">({activeProjects.length})</span>
-          )}
-          <Info className="h-3 w-3 opacity-70" />
-        </Badge>
+        <span className="inline-flex">
+          <Badge
+            variant={config.variant}
+            className="px-1.5 py-0 text-[10px] h-5 cursor-pointer hover:opacity-80 transition-opacity gap-1"
+          >
+            {displayText}
+            <Info className="h-3 w-3 opacity-70" />
+          </Badge>
+        </span>
       </HoverCardTrigger>
       <HoverCardContent
-        className="w-72 p-0"
+        className="w-72 p-3"
         align="start"
         sideOffset={8}
       >
-        <div className="p-3 border-b">
-          <h4 className="text-xs font-medium text-foreground">
-            Активные проекты
-          </h4>
-          <p className="text-[10px] text-muted-foreground mt-0.5">
-            Оборудование задействовано в {activeProjects.length}{' '}
-            {activeProjects.length === 1 ? 'проекте' : 'проектах'}
-          </p>
-        </div>
-        <div className="max-h-64 overflow-y-auto">
+        <h4 className="text-sm font-semibold text-foreground mb-3">
+          Активные проекты:
+        </h4>
+        <div className="space-y-3">
           {sortedProjects.map((project) => {
             const dateStatus = getProjectDateStatus(
               project.start_date,
@@ -152,45 +172,21 @@ export function RentalStatusBadge({
 
             return (
               <Link
-                key={project.project_id}
-                to={`/projects/${project.project_id}`}
-                className="flex items-start justify-between p-3 hover:bg-muted/50 transition-colors border-b last:border-b-0 group"
+                key={project.id}
+                to={`/projects/${project.id}`}
+                className="block hover:opacity-80 transition-opacity"
               >
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-1.5">
-                    <span
-                      className={cn(
-                        'text-xs truncate',
-                        dateConfig.className
-                      )}
-                    >
-                      {project.project_name}
-                    </span>
-                    <ExternalLink className="h-3 w-3 opacity-0 group-hover:opacity-50 transition-opacity flex-shrink-0" />
-                  </div>
-                  <div className="flex items-center gap-1 mt-1 text-[10px] text-muted-foreground">
-                    <Calendar className="h-3 w-3" />
-                    <span>
-                      {format(parseISO(project.start_date), 'd MMM', {
-                        locale: ru,
-                      })}{' '}
-                      –{' '}
-                      {format(parseISO(project.end_date), 'd MMM yyyy', {
-                        locale: ru,
-                      })}
-                    </span>
-                  </div>
+                <div className={cn('font-medium', dateConfig.className)}>
+                  {project.name}
                 </div>
-                <Badge
-                  variant="outline"
-                  className={cn(
-                    'text-[9px] px-1.5 py-0 h-4 ml-2 flex-shrink-0',
-                    dateStatus === 'current' && 'border-primary text-primary',
-                    dateStatus === 'past' && 'border-muted-foreground/30'
+                <div className="text-sm text-muted-foreground">
+                  {format(parseISO(project.start_date), 'd', { locale: ru })}
+                  {' - '}
+                  {format(parseISO(project.end_date), 'd MMMM', { locale: ru })}
+                  {dateStatus === 'current' && (
+                    <span className="text-primary"> (текущий)</span>
                   )}
-                >
-                  {dateConfig.label}
-                </Badge>
+                </div>
               </Link>
             );
           })}
