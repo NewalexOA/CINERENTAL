@@ -56,9 +56,10 @@ export default function CategoriesPage() {
     }
   });
 
-  // Filter root categories and apply search
+  // Filter root categories, sort by ID, and apply search
   const filteredCategories = categories
     ?.filter(cat => !cat.parent_id) // Show only root categories
+    .sort((a, b) => a.id - b.id) // Sort by ID (matches legacy frontend)
     .filter(cat =>
       cat.name.toLowerCase().includes(search.toLowerCase()) ||
       cat.description?.toLowerCase().includes(search.toLowerCase())
