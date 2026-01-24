@@ -1,173 +1,191 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { categoriesService } from '../../../services/categories';
-import { Category, CategoryCreate, CategoryUpdate } from '../../../types/category';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from "@tanstack/react-query";
+import { useState } from "react";
+import { toast } from "sonner";
+import { RefreshCw } from "lucide-react";
+import { categoriesService } from "../../../services/categories";
+import { CategoryCreate } from "../../../types/category";
+import { Button } from "../../../components/ui/button";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow
-} from '../../../components/ui/table';
-import { Button } from '../../../components/ui/button';
-import { CategoryFormDialog } from '../components/CategoryFormDialog';
-import { SubcategoriesDialog } from '../components/SubcategoriesDialog';
-import { ClientDeleteDialog } from '../../clients/components/ClientDeleteDialog'; // Reuse
-import { Plus, Pencil, Trash2, Search, FolderTree } from 'lucide-react';
-import { useState } from 'react';
+  ResizablePanelGroup,
+  ResizablePanel,
+  ResizableHandle,
+} from "../../../components/ui/resizable";
+import { CategoryTreeView } from "../components/CategoryTreeView";
+import { CategoryEditPanel } from "../components/CategoryEditPanel";
 
 export default function CategoriesPage() {
   const queryClient = useQueryClient();
-  const [search, setSearch] = useState('');
 
-  // Dialog states
-  const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [editingCategory, setEditingCategory] = useState<Category | null>(null);
-  const [deletingCategory, setDeletingCategory] = useState<Category | null>(null);
-  const [subcategoriesParent, setSubcategoriesParent] = useState<Category | null>(null);
+  // Selection and edit state
+  const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
+  const [isCreating, setIsCreating] = useState(false);
+  const [newCategoryParentId, setNewCategoryParentId] = useState<number | null>(null);
+  const [mutationError, setMutationError] = useState<string | null>(null);
 
-  const { data: categories, isLoading, error } = useQuery({
-    queryKey: ['categories'],
-    queryFn: categoriesService.getAllWithCount
+  // Fetch all categories
+  const {
+    data: categories = [],
+    isLoading,
+    error,
+    refetch,
+  } = useQuery({
+    queryKey: ["categories"],
+    queryFn: categoriesService.getAllWithCount,
+    placeholderData: keepPreviousData,
+    staleTime: 30_000, // 30 seconds - categories change infrequently
   });
+
+  // Find selected category
+  const selectedCategory = selectedCategoryId
+    ? categories.find((c) => c.id === selectedCategoryId) || null
+    : null;
 
   // Mutations
   const createMutation = useMutation({
     mutationFn: (data: CategoryCreate) => categoriesService.create(data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['categories'] });
-      setIsCreateOpen(false);
-    }
+    onSuccess: (newCategory) => {
+      setMutationError(null);
+      queryClient.invalidateQueries({ queryKey: ["categories"] });
+      setSelectedCategoryId(newCategory.id);
+      setIsCreating(false);
+      setNewCategoryParentId(null);
+      toast.success("Категория создана");
+    },
+    onError: (error: Error) => {
+      setMutationError(error.message);
+      toast.error(`Ошибка создания: ${error.message}`);
+    },
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: number; data: CategoryUpdate }) => categoriesService.update(id, data),
+    mutationFn: ({ id, data }: { id: number; data: Partial<CategoryCreate> }) =>
+      categoriesService.update(id, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['categories'] });
-      setEditingCategory(null);
-    }
+      setMutationError(null);
+      queryClient.invalidateQueries({ queryKey: ["categories"] });
+      toast.success("Категория обновлена");
+    },
+    onError: (error: Error) => {
+      setMutationError(error.message);
+      toast.error(`Ошибка обновления: ${error.message}`);
+    },
   });
 
   const deleteMutation = useMutation({
     mutationFn: (id: number) => categoriesService.delete(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['categories'] });
-      setDeletingCategory(null);
-    }
+      setMutationError(null);
+      queryClient.invalidateQueries({ queryKey: ["categories"] });
+      setSelectedCategoryId(null);
+      toast.success("Категория удалена");
+    },
+    onError: (error: Error) => {
+      setMutationError(error.message);
+      toast.error(`Ошибка удаления: ${error.message}`);
+    },
   });
 
-  // Filter root categories, sort by ID, and apply search
-  const filteredCategories = categories
-    ?.filter(cat => !cat.parent_id) // Show only root categories
-    .sort((a, b) => a.id - b.id) // Sort by ID (matches legacy frontend)
-    .filter(cat =>
-      cat.name.toLowerCase().includes(search.toLowerCase()) ||
-      cat.description?.toLowerCase().includes(search.toLowerCase())
-    );
+  // Handlers
+  const handleSelect = (id: number) => {
+    setMutationError(null);
+    setSelectedCategoryId(id);
+    setIsCreating(false);
+    setNewCategoryParentId(null);
+  };
 
-  return (
-    <div className="h-full flex flex-col space-y-4">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4 flex-1">
-          <h1 className="text-2xl font-bold tracking-tight mr-4">Категории</h1>
-          <div className="relative w-64">
-            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-            <input
-              placeholder="Поиск категорий..."
-              className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 pl-8 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-          </div>
-        </div>
-        <Button onClick={() => setIsCreateOpen(true)}>
-          <Plus className="mr-2 h-4 w-4" /> Добавить категорию
+  const handleAddChild = (parentId: number | null) => {
+    setMutationError(null);
+    setSelectedCategoryId(null);
+    setIsCreating(true);
+    setNewCategoryParentId(parentId);
+  };
+
+  const handleSave = (data: CategoryCreate & { id?: number }) => {
+    if (data.id) {
+      // Update
+      const { id, ...updateData } = data;
+      updateMutation.mutate({ id, data: updateData });
+    } else {
+      // Create
+      createMutation.mutate(data);
+    }
+  };
+
+  const handleDelete = () => {
+    if (selectedCategoryId) {
+      deleteMutation.mutate(selectedCategoryId);
+    }
+  };
+
+  const handleCancel = () => {
+    setIsCreating(false);
+    setNewCategoryParentId(null);
+  };
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="h-full flex items-center justify-center">
+        <div className="text-muted-foreground">Загрузка категорий...</div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center gap-4">
+        <div className="text-destructive">Ошибка загрузки категорий</div>
+        <Button variant="outline" onClick={() => refetch()}>
+          <RefreshCw className="h-4 w-4 mr-2" />
+          Повторить
         </Button>
       </div>
+    );
+  }
 
-      <div className="border rounded-md flex-1 overflow-auto bg-card">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-[80px]">ID</TableHead>
-              <TableHead>Название</TableHead>
-              <TableHead>Оборудование</TableHead>
-              <TableHead className="text-right">Действия</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {isLoading ? (
-              <TableRow>
-                <TableCell colSpan={4} className="h-24 text-center">Загрузка...</TableCell>
-              </TableRow>
-            ) : error ? (
-              <TableRow>
-                <TableCell colSpan={4} className="h-24 text-center text-destructive">Ошибка загрузки</TableCell>
-              </TableRow>
-            ) : filteredCategories?.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={4} className="h-24 text-center">Категории не найдены</TableCell>
-              </TableRow>
-            ) : (
-              filteredCategories?.map((cat) => (
-                <TableRow key={cat.id}>
-                  <TableCell>{cat.id}</TableCell>
-                  <TableCell className="font-medium">
-                    <div className="flex flex-col">
-                      <span>{cat.name}</span>
-                      {cat.description && <span className="text-xs text-muted-foreground truncate max-w-[300px]">{cat.description}</span>}
-                    </div>
-                  </TableCell>
-                  <TableCell>{cat.equipment_count || 0}</TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-2">
-                      <Button variant="outline" size="sm" onClick={() => setSubcategoriesParent(cat)}>
-                        <FolderTree className="h-3 w-3 mr-2" />
-                        Подкатегории
-                      </Button>
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setEditingCategory(cat)}>
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => setDeletingCategory(cat)}>
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
+  return (
+    <div className="h-full flex flex-col">
+      {/* Header */}
+      <div className="flex items-center justify-between p-4 border-b">
+        <h1 className="text-2xl font-bold tracking-tight">Категории</h1>
       </div>
 
-      {/* Dialogs */}
-      <CategoryFormDialog
-        open={isCreateOpen}
-        onOpenChange={setIsCreateOpen}
-        onSubmit={async (data) => { await createMutation.mutateAsync(data); }}
-        isLoading={createMutation.isPending}
-      />
+      {/* Split View */}
+      <ResizablePanelGroup direction="horizontal" className="flex-1">
+        {/* Left Panel - Tree */}
+        <ResizablePanel defaultSize={40} minSize={25} maxSize={60}>
+          <div className="h-full border-r bg-muted/30">
+            <CategoryTreeView
+              categories={categories}
+              selectedId={selectedCategoryId}
+              onSelect={handleSelect}
+              onAddChild={handleAddChild}
+            />
+          </div>
+        </ResizablePanel>
 
-      <CategoryFormDialog
-        open={!!editingCategory}
-        onOpenChange={(val) => !val && setEditingCategory(null)}
-        category={editingCategory}
-        onSubmit={async (data) => { if (editingCategory) await updateMutation.mutateAsync({ id: editingCategory.id, data: data as any }); }}
-        isLoading={updateMutation.isPending}
-      />
+        <ResizableHandle withHandle />
 
-      <ClientDeleteDialog
-        open={!!deletingCategory}
-        onOpenChange={(val) => !val && setDeletingCategory(null)}
-        onConfirm={async () => { if (deletingCategory) await deleteMutation.mutateAsync(deletingCategory.id); }}
-        isLoading={deleteMutation.isPending}
-      />
-
-      <SubcategoriesDialog
-        open={!!subcategoriesParent}
-        onOpenChange={(val) => !val && setSubcategoriesParent(null)}
-        parentCategory={subcategoriesParent}
-      />
+        {/* Right Panel - Edit */}
+        <ResizablePanel defaultSize={60} minSize={40}>
+          <CategoryEditPanel
+            category={selectedCategory}
+            isCreating={isCreating}
+            parentId={newCategoryParentId}
+            allCategories={categories}
+            onSave={handleSave}
+            onDelete={handleDelete}
+            onCancel={handleCancel}
+            isLoading={
+              createMutation.isPending ||
+              updateMutation.isPending ||
+              deleteMutation.isPending
+            }
+            error={mutationError}
+          />
+        </ResizablePanel>
+      </ResizablePanelGroup>
     </div>
   );
 }
