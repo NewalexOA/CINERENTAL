@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import { categoriesService } from '../../../services/categories';
-import { Category, CategoryCreate, CategoryUpdate } from '../../../types/category';
+import { Category, CategoryCreate } from '../../../types/category';
 import {
   Dialog,
   DialogContent,
@@ -20,7 +21,7 @@ import {
 } from '../../../components/ui/table';
 import { Plus, Pencil, Trash2 } from 'lucide-react';
 import { CategoryFormDialog } from './CategoryFormDialog';
-import { ClientDeleteDialog } from '../../clients/components/ClientDeleteDialog'; // Reuse delete dialog
+import { ConfirmDeleteDialog } from '../../../components/shared/ConfirmDeleteDialog';
 
 interface SubcategoriesDialogProps {
   open: boolean;
@@ -42,32 +43,57 @@ export function SubcategoriesDialog({
   const { data: subcategories, isLoading } = useQuery({
     queryKey: ['subcategories', parentCategory?.id],
     queryFn: () => parentCategory ? categoriesService.getSubcategories(parentCategory.id) : Promise.resolve([]),
-    enabled: !!parentCategory && open
+    enabled: !!parentCategory && open,
+    staleTime: 30_000, // 30 seconds
   });
 
   const createMutation = useMutation({
     mutationFn: (data: CategoryCreate) => categoriesService.create(data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['subcategories', parentCategory?.id] });
+    onSuccess: async () => {
+      // Await invalidations to prevent race conditions
+      await queryClient.invalidateQueries({ queryKey: ['subcategories', parentCategory?.id] });
+      await queryClient.invalidateQueries({ queryKey: ['categories'] });
       setIsAddOpen(false);
-    }
+      toast.success('Подкатегория создана');
+    },
+    onError: (error: Error) => {
+      toast.error(`Ошибка создания: ${error.message}`);
+    },
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: number; data: CategoryUpdate }) => categoriesService.update(id, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['subcategories', parentCategory?.id] });
+    mutationFn: ({ id, data }: { id: number; data: Partial<CategoryCreate> }) => categoriesService.update(id, data),
+    onSuccess: async () => {
+      // Await invalidations to prevent race conditions
+      await queryClient.invalidateQueries({ queryKey: ['subcategories', parentCategory?.id] });
+      await queryClient.invalidateQueries({ queryKey: ['categories'] });
       setEditingSub(null);
-    }
+      toast.success('Подкатегория обновлена');
+    },
+    onError: (error: Error) => {
+      toast.error(`Ошибка обновления: ${error.message}`);
+    },
   });
 
   const deleteMutation = useMutation({
     mutationFn: (id: number) => categoriesService.delete(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['subcategories', parentCategory?.id] });
+    onSuccess: async () => {
+      // Await invalidations to prevent race conditions
+      await queryClient.invalidateQueries({ queryKey: ['subcategories', parentCategory?.id] });
+      await queryClient.invalidateQueries({ queryKey: ['categories'] });
       setDeletingSub(null);
-    }
+      toast.success('Подкатегория удалена');
+    },
+    onError: (error: Error) => {
+      toast.error(`Ошибка удаления: ${error.message}`);
+    },
   });
+
+  // Memoize sorted subcategories
+  const sortedSubcategories = useMemo(
+    () => [...(subcategories || [])].sort((a, b) => a.id - b.id),
+    [subcategories]
+  );
 
   return (
     <>
@@ -97,21 +123,35 @@ export function SubcategoriesDialog({
                   <TableRow>
                     <TableCell colSpan={3} className="text-center py-4">Загрузка...</TableCell>
                   </TableRow>
-                ) : subcategories?.length === 0 ? (
+                ) : sortedSubcategories.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={3} className="text-center py-4 text-muted-foreground">Нет подкатегорий</TableCell>
                   </TableRow>
                 ) : (
-                  [...(subcategories || [])].sort((a, b) => a.id - b.id).map((sub) => (
+                  sortedSubcategories.map((sub) => (
                     <TableRow key={sub.id}>
                       <TableCell>{sub.id}</TableCell>
                       <TableCell className="font-medium">{sub.name}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
-                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setEditingSub(sub)}>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => setEditingSub(sub)}
+                            disabled={updateMutation.isPending || deleteMutation.isPending}
+                            aria-label={`Редактировать ${sub.name}`}
+                          >
                             <Pencil className="h-4 w-4" />
                           </Button>
-                          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => setDeletingSub(sub)}>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-destructive hover:text-destructive"
+                            onClick={() => setDeletingSub(sub)}
+                            disabled={updateMutation.isPending || deleteMutation.isPending}
+                            aria-label={`Удалить ${sub.name}`}
+                          >
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
@@ -145,17 +185,25 @@ export function SubcategoriesDialog({
           open={!!editingSub}
           onOpenChange={(val) => !val && setEditingSub(null)}
           category={editingSub}
-          onSubmit={async (data) => { await updateMutation.mutateAsync({ id: editingSub.id, data: data as any }); }}
+          onSubmit={async (data) => { await updateMutation.mutateAsync({ id: editingSub.id, data }); }}
           isLoading={updateMutation.isPending}
         />
       )}
 
       {deletingSub && (
-        <ClientDeleteDialog
+        <ConfirmDeleteDialog
           open={!!deletingSub}
           onOpenChange={(val) => !val && setDeletingSub(null)}
-          onConfirm={() => deleteMutation.mutateAsync(deletingSub.id)}
+          onConfirm={async () => {
+            try {
+              await deleteMutation.mutateAsync(deletingSub.id);
+            } catch {
+              // Error already handled in onError callback
+            }
+          }}
           isLoading={deleteMutation.isPending}
+          title="Удалить подкатегорию"
+          description={`Вы уверены, что хотите удалить подкатегорию "${deletingSub.name}"? Это действие нельзя отменить.`}
         />
       )}
     </>
