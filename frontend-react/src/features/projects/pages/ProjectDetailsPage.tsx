@@ -233,9 +233,9 @@ export default function ProjectDetailsPage() {
             <div className="flex items-center gap-2 mt-1 text-muted-foreground text-sm">
               <User className="h-3 w-3" />
               <span className="font-medium">
-                {project.client ? (
+                {project.client_name ? (
                   <Link to={`/clients/${project.client_id}`} className="hover:underline text-foreground hover:text-primary transition-colors">
-                    {project.client.name}
+                    {project.client_name}
                   </Link>
                 ) : 'Нет клиента'}
               </span>
