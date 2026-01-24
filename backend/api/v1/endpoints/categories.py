@@ -10,9 +10,20 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.api.v1.decorators import typed_delete, typed_get, typed_post, typed_put
+from backend.api.v1.decorators import (
+    typed_delete,
+    typed_get,
+    typed_patch,
+    typed_post,
+    typed_put,
+)
 from backend.core.database import get_db
-from backend.exceptions import BusinessError, NotFoundError
+from backend.exceptions import (
+    BusinessError,
+    ConflictError,
+    NotFoundError,
+    ValidationError,
+)
 from backend.schemas import (
     CategoryCreate,
     CategoryResponse,
@@ -24,6 +35,51 @@ from backend.services import CategoryService
 categories_router: APIRouter = APIRouter()
 
 
+async def _update_category_impl(
+    category_id: int,
+    category: CategoryUpdate,
+    session: AsyncSession,
+) -> CategoryResponse:
+    """Shared implementation for PUT and PATCH category updates.
+
+    Args:
+        category_id: Category ID
+        category: Category data to update
+        session: Database session
+
+    Returns:
+        Updated category
+
+    Raises:
+        HTTPException: If category not found or validation fails
+    """
+    service = CategoryService(session)
+    try:
+        db_category = await service.update_category(
+            category_id=category_id,
+            name=category.name,
+            description=category.description,
+            parent_id=category.parent_id,
+            show_in_print_overview=category.show_in_print_overview,
+        )
+        return CategoryResponse.model_validate(db_category)
+    except NotFoundError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e),
+        ) from e
+    except ConflictError as e:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=str(e),
+        ) from e
+    except (ValidationError, BusinessError) as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        ) from e
+
+
 @typed_post(
     categories_router,
     '/',
@@ -32,13 +88,13 @@ categories_router: APIRouter = APIRouter()
 )
 async def create_category(
     category: CategoryCreate,
-    db: AsyncSession = Depends(get_db),
+    session: AsyncSession = Depends(get_db),
 ) -> CategoryResponse:
     """Create a new category.
 
     Args:
         category: Category data
-        db: Database session
+        session: Database session
 
     Returns:
         Created category
@@ -47,7 +103,7 @@ async def create_category(
         HTTPException: If category with given name already exists
     """
     try:
-        service = CategoryService(db)
+        service = CategoryService(session)
         db_category = await service.create_category(
             name=category.name,
             description=category.description or '',
@@ -55,7 +111,12 @@ async def create_category(
             show_in_print_overview=category.show_in_print_overview,
         )
         return CategoryResponse.model_validate(db_category)
-    except BusinessError as e:
+    except ConflictError as e:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=str(e),
+        ) from e
+    except (ValidationError, BusinessError) as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e),
@@ -100,14 +161,31 @@ async def get_categories_with_equipment_count(
         List of categories with equipment count
     """
     service = CategoryService(session)
-    try:
-        categories = await service.get_with_equipment_count()
-        return [CategoryWithEquipmentCount.model_validate(c) for c in categories]
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=str(e),
-        )
+    categories = await service.get_with_equipment_count()
+    return [CategoryWithEquipmentCount.model_validate(c) for c in categories]
+
+
+@typed_get(
+    categories_router,
+    '/search/{query}',
+    response_model=List[CategoryResponse],
+)
+async def search_categories(
+    query: str,
+    session: AsyncSession = Depends(get_db),
+) -> List[CategoryResponse]:
+    """Search categories by name or description.
+
+    Args:
+        query: Search query
+        session: Database session
+
+    Returns:
+        List of categories matching the search query
+    """
+    category_service = CategoryService(session)
+    categories = await category_service.search_categories(query)
+    return [CategoryResponse.model_validate(c) for c in categories]
 
 
 @typed_get(
@@ -164,36 +242,33 @@ async def update_category(
     Raises:
         HTTPException: If category not found or if new name already exists
     """
-    service = CategoryService(session)
-    try:
-        db_category = await service.update_category(
-            category_id=category_id,
-            name=category.name,
-            description=category.description,
-            parent_id=category.parent_id,
-            show_in_print_overview=category.show_in_print_overview,
-        )
-        return CategoryResponse.model_validate(db_category)
-    except ValueError as e:
-        if 'not found' in str(e).lower():
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=str(e),
-            ) from e
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e),
-        ) from e
-    except BusinessError as e:
-        if 'not found' in str(e).lower():
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=str(e),
-            ) from e
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e),
-        ) from e
+    return await _update_category_impl(category_id, category, session)
+
+
+@typed_patch(
+    categories_router,
+    '/{category_id}',
+    response_model=CategoryResponse,
+)
+async def patch_category(
+    category_id: int,
+    category: CategoryUpdate,
+    session: AsyncSession = Depends(get_db),
+) -> CategoryResponse:
+    """Partially update category.
+
+    Args:
+        category_id: Category ID
+        category: Partial category data to update
+        session: Database session
+
+    Returns:
+        Updated category
+
+    Raises:
+        HTTPException: If category not found or if new name already exists
+    """
+    return await _update_category_impl(category_id, category, session)
 
 
 @typed_delete(
@@ -227,35 +302,16 @@ async def delete_category(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=str(e),
         ) from e
-    except BusinessError as e:
+    except ConflictError as e:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=str(e),
+        ) from e
+    except (ValidationError, BusinessError) as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e),
         ) from e
-
-
-@typed_get(
-    categories_router,
-    '/search/{query}',
-    response_model=List[CategoryResponse],
-)
-async def search_categories(
-    query: str,
-    session: AsyncSession = Depends(get_db),
-) -> List[CategoryResponse]:
-    """Search categories by name or description.
-
-    Args:
-        query: Search query
-        session: Database session
-
-    Returns:
-        List of categories matching the search query
-    """
-    # Search categories
-    category_service = CategoryService(session)
-    categories = await category_service.search_categories(query)
-    return [CategoryResponse.model_validate(c) for c in categories]
 
 
 @typed_get(

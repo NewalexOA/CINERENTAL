@@ -1,5 +1,5 @@
 import api from '../lib/axios';
-import { Category, CategoryCreate, CategoryUpdate } from '@/types/category';
+import { Category, CategoryCreate } from '@/types/category';
 
 export const categoriesService = {
   getAll: async () => {
@@ -27,13 +27,12 @@ export const categoriesService = {
     return response.data;
   },
 
-  update: async (id: number, data: CategoryUpdate) => {
+  update: async (id: number, data: Partial<CategoryCreate>) => {
     const response = await api.patch<Category>(`/categories/${id}`, data);
     return response.data;
   },
 
-  delete: async (id: number) => {
-    const response = await api.delete(`/categories/${id}`);
-    return response.data;
+  delete: async (id: number): Promise<void> => {
+    await api.delete<void>(`/categories/${id}`);
   }
 };
