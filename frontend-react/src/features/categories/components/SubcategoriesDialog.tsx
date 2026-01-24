@@ -102,7 +102,7 @@ export function SubcategoriesDialog({
                     <TableCell colSpan={3} className="text-center py-4 text-muted-foreground">Нет подкатегорий</TableCell>
                   </TableRow>
                 ) : (
-                  subcategories?.map((sub) => (
+                  [...(subcategories || [])].sort((a, b) => a.id - b.id).map((sub) => (
                     <TableRow key={sub.id}>
                       <TableCell>{sub.id}</TableCell>
                       <TableCell className="font-medium">{sub.name}</TableCell>

@@ -18,7 +18,7 @@ export const categoriesService = {
   },
 
   getSubcategories: async (parentId: number) => {
-    const response = await api.get<Category[]>('/categories/', { params: { parent_id: parentId } });
+    const response = await api.get<Category[]>(`/categories/${parentId}/subcategories`);
     return response.data;
   },
 
