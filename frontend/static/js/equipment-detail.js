@@ -48,7 +48,7 @@ async function loadCategories() {
     formSelect.disabled = true;
 
     try {
-        const categories = await api.get('/categories');
+        const categories = await api.get('/categories/');
 
         // Build tree structure
         const categoryTree = buildCategoryTree(categories);

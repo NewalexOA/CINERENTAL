@@ -122,6 +122,8 @@ services:
     restart: unless-stopped
     ports:
       - "5173:5173"
+    environment:
+      - BACKEND_URL=http://web:8000
     depends_on:
       web:
         condition: service_healthy

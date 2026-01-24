@@ -97,7 +97,7 @@ async def get_clients(
 
 @typed_get(
     clients_router,
-    '/{client_id}/',
+    '/{client_id}',
     response_model=ClientResponse,
 )
 async def get_client(
@@ -186,7 +186,7 @@ async def create_client(
 
 @typed_put(
     clients_router,
-    '/{client_id}/',
+    '/{client_id}',
     response_model=ClientResponse,
 )
 async def update_client(
@@ -237,7 +237,7 @@ async def update_client(
 
 @typed_patch(
     clients_router,
-    '/{client_id}/',
+    '/{client_id}',
     response_model=ClientResponse,
 )
 async def patch_client(
@@ -299,7 +299,7 @@ async def patch_client(
 
 @typed_delete(
     clients_router,
-    '/{client_id}/',
+    '/{client_id}',
     status_code=http_status.HTTP_204_NO_CONTENT,
 )
 async def delete_client(
@@ -351,7 +351,7 @@ async def delete_client(
 
 @typed_get(
     clients_router,
-    '/{client_id}/bookings/',
+    '/{client_id}/bookings',
     response_model=List[BookingResponse],
 )
 async def get_client_bookings(

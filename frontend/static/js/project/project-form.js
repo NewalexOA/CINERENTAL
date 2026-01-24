@@ -36,7 +36,7 @@ export function initializeEditProjectModal() {
                     const requestId = ++clientSelectState.requestId;
                     const searchParams = term ? { query: term } : {};
 
-                    api.get('/clients', searchParams)
+                    api.get('/clients/', searchParams)
                         .then((clients) => {
                             if (requestId !== clientSelectState.requestId) {
                                 return;

@@ -94,7 +94,7 @@ async function performSearch(query) {
         showLocalLoader();
 
         const searchParams = { query: trimmedQuery };
-        const clients = await api.get('/clients', searchParams);
+        const clients = await api.get('/clients/', searchParams);
 
         // Ignore stale responses that finished after a newer request was started
         if (requestId !== currentSearchRequestId) {
@@ -180,7 +180,7 @@ async function loadClientsWithoutGlobalLoader() {
 
         showLocalLoader();
 
-        const clients = await api.get('/clients');
+        const clients = await api.get('/clients/');
         const container = document.getElementById('clientsGrid');
 
         allClients = clients || [];
@@ -381,7 +381,7 @@ function initCrudActions() {
             saveButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Сохранение...';
 
             try {
-                await api.post('/clients', data);
+                await api.post('/clients/', data);
                 showToast('Клиент успешно добавлен', 'success');
 
                 const modal = bootstrap.Modal.getInstance(document.getElementById('addClientModal'));
