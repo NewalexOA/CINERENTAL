@@ -66,7 +66,7 @@ export async function initializeCategoryFilter() {
     if (!categoryFilterSelect) return;
 
     try {
-        const categories = await api.get('/categories');
+        const categories = await api.get('/categories/');
 
         // Clear existing options except the first one
         while (categoryFilterSelect.options.length > 1) {
