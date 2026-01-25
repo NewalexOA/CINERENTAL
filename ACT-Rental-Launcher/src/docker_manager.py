@@ -129,72 +129,117 @@ class DockerManager:
 
             # Check if it's a build command which might need real-time output
             if 'build' in command and capture_output:
-                self.logger.debug(
-                    'Выполнение команды сборки с выводом в реальном времени'
+                self.logger.debug('Выполнение команды сборки с использованием QProcess')
+                # Use QProcess for build commands - handles signals correctly in PyQt
+                # Unlike subprocess, QProcess won't be killed by Qt signal handling
+                from PyQt5.QtCore import QProcess, QProcessEnvironment
+
+                build_log_path = os.path.join(self.log_folder, 'build_output.log')
+                output_lines = []
+
+                qprocess = QProcess()
+                qprocess.setWorkingDirectory(cwd)
+
+                # Set up environment
+                qenv = QProcessEnvironment.systemEnvironment()
+                for key, value in env.items():
+                    qenv.insert(key, value)
+                qprocess.setProcessEnvironment(qenv)
+
+                # Merge stdout and stderr
+                qprocess.setProcessChannelMode(QProcess.MergedChannels)
+
+                # Start the process using shell
+                qprocess.start('/bin/sh', ['-c', command])
+
+                self.logger.info(
+                    f'Начинаю сборку с QProcess, PID={qprocess.processId()}'
                 )
-                with open(
-                    os.path.join(self.log_folder, 'build_output.log'), 'w'
-                ) as build_log:
-                    process = subprocess.Popen(
-                        command,
-                        shell=True,
-                        stdout=subprocess.PIPE,
-                        stderr=subprocess.PIPE,
-                        text=True,
-                        env=env,
-                        bufsize=1,
-                        universal_newlines=True,
-                    )
 
-                    stdout_lines = []
-                    stderr_lines = []
-
-                    # Process stdout
-                    if process.stdout:
-                        for line in process.stdout:
-                            line = line.rstrip()
-                            stdout_lines.append(line)
+                # Wait for process to finish, reading output periodically
+                # UTF-8 encoding is critical for py2app (default may be ASCII)
+                with open(build_log_path, 'w', encoding='utf-8') as build_log:
+                    while not qprocess.waitForFinished(100):  # 100ms timeout
+                        # Read available output
+                        while qprocess.canReadLine():
+                            line_bytes = qprocess.readLine()
+                            line = (
+                                bytes(line_bytes)
+                                .decode('utf-8', errors='replace')
+                                .rstrip()
+                            )
+                            output_lines.append(line)
                             build_log.write(line + '\n')
                             build_log.flush()
                             self.logger.debug(f'BUILD OUT: {line}')
-                    else:
-                        self.logger.warning('No stdout from build process')
 
-                    # Process stderr
-                    if process.stderr:
-                        for line in process.stderr:
+                    # Read any remaining output after process finishes
+                    remaining = qprocess.readAll()
+                    if remaining:
+                        for line in (
+                            bytes(remaining)
+                            .decode('utf-8', errors='replace')
+                            .split('\n')
+                        ):
                             line = line.rstrip()
-                            stderr_lines.append(line)
-                            build_log.write(f'ERROR: {line}\n')
-                            build_log.flush()
-                            self.logger.error(f'BUILD ERROR: {line}')
-                    else:
-                        self.logger.warning('No stderr from build process')
+                            if line:
+                                output_lines.append(line)
+                                build_log.write(line + '\n')
 
-                    process.wait()
-                    returncode = process.returncode
-
-                    # Create a CompletedProcess-like object for compatibility
-                    result = subprocess.CompletedProcess(
-                        args=command,
-                        returncode=returncode,
-                        stdout='\n'.join(stdout_lines),
-                        stderr='\n'.join(stderr_lines),
+                    self.logger.info(
+                        f'Чтение вывода завершено, получено {len(output_lines)} строк'
                     )
+                    build_log.write(
+                        f'\n--- Чтение завершено, {len(output_lines)} строк ---\n'
+                    )
+                    build_log.flush()
 
-                    if returncode == 0:
-                        self.logger.debug(
-                            f'Команда сборки выполнена успешно: {command}'
-                        )
-                    else:
-                        self.logger.warning(
-                            f'Команда сборки завершилась с ошибкой '
-                            f'(код {returncode}): {command}'
-                        )
-                        self.logger.warning(f'Stderr: {result.stderr}')
+                returncode = qprocess.exitCode()
+                exit_status = qprocess.exitStatus()
 
-                    os.chdir(cwd)
-                    return result
+                # Write diagnostic info
+                import time as time_module
+
+                diag_file = os.path.join(self.log_folder, 'build_diagnostic.log')
+                with open(diag_file, 'a', encoding='utf-8') as diag:
+                    timestamp = time_module.strftime('%Y-%m-%d %H:%M:%S')
+                    diag.write(f'\n=== BUILD DIAGNOSTIC (QProcess) {timestamp} ===\n')
+                    diag.write(f'PID: {qprocess.processId()}\n')
+                    diag.write(f'Return code: {returncode}\n')
+                    diag.write(f'Exit status: {exit_status}\n')
+                    diag.write(f'Lines captured: {len(output_lines)}\n')
+                    diag.write('Last 3 lines:\n')
+                    for line in output_lines[-3:]:
+                        diag.write(f'  {line}\n')
+                    diag.flush()
+
+                # Check if process crashed
+                if exit_status == QProcess.CrashExit:
+                    self.logger.warning('Процесс сборки был аварийно завершён')
+
+                self.logger.info(
+                    f'Сборка завершена с кодом {returncode}, '
+                    f'получено {len(output_lines)} строк вывода'
+                )
+
+                # Create a CompletedProcess-like object for compatibility
+                result = subprocess.CompletedProcess(
+                    args=command,
+                    returncode=returncode,
+                    stdout='\n'.join(output_lines),
+                    stderr='',
+                )
+
+                if returncode == 0:
+                    self.logger.debug(f'Команда сборки выполнена успешно: {command}')
+                else:
+                    self.logger.warning(
+                        f'СБОРКА ОШИБКА: код={returncode}, строк={len(output_lines)}'
+                    )
+                    self.logger.warning(f'Output: {result.stdout[-500:]}')
+
+                os.chdir(cwd)
+                return result
             else:
                 # Standard execution for non-build commands
                 result = subprocess.run(
@@ -229,10 +274,15 @@ class DockerManager:
                 self.logger.error(f'Stderr: {e.stderr}')
             if hasattr(e, 'stdout') and e.stdout:
                 self.logger.debug(f'Stdout: {e.stdout}')
+            os.chdir(cwd)
             return e
         except Exception as e:
+            import traceback
+
             self.logger.error(f'Неожиданная ошибка при выполнении команды: {command}')
             self.logger.error(f'Сообщение: {str(e)}')
+            self.logger.error(f'Traceback: {traceback.format_exc()}')
+            os.chdir(cwd)
             return None
 
     def is_docker_running(self) -> bool:
@@ -672,11 +722,24 @@ class DockerManager:
 
         # Rebuild images
         self.logger.info('Пересборка образов...')
-        build_command = f'{docker_compose_cmd} build --no-cache'
+        # Use --progress=plain for line-by-line output that can be properly captured
+        # Note: --progress is a global docker compose flag, must come before subcommand
+        # docker_compose_cmd is like "docker compose -f file.yml"
+        # We need: "docker compose --progress=plain -f file.yml build --no-cache"
+        build_command = (
+            docker_compose_cmd.replace(
+                'docker compose', 'docker compose --progress=plain'
+            )
+            + ' build --no-cache'
+        )
         self.logger.info(f'Команда сборки: {build_command}')
 
         # Save the build command for debugging
-        with open(os.path.join(self.log_folder, 'last_build_command.txt'), 'w') as f:
+        with open(
+            os.path.join(self.log_folder, 'last_build_command.txt'),
+            'w',
+            encoding='utf-8',
+        ) as f:
             f.write(f'Working directory: {current_after_chdir}\n')
             f.write(f'Command: {build_command}\n')
             f.write(f'Timestamp: {time.strftime("%Y-%m-%d %H:%M:%S")}\n')
@@ -684,39 +747,35 @@ class DockerManager:
         result_build = self.run_command(build_command)
 
         if not result_build or result_build.returncode != 0:
-            stderr = (
-                result_build.stderr
-                if result_build and hasattr(result_build, 'stderr')
+            # Since stderr is combined into stdout, use stdout for error output
+            output = (
+                result_build.stdout
+                if result_build
+                and hasattr(result_build, 'stdout')
+                and result_build.stdout
                 else 'Неизвестная ошибка'
             )
-            error_msg = f'Ошибка при пересборке образов: {stderr}'
+            error_msg = 'Ошибка при пересборке образов'
             self.logger.error(error_msg)
 
-            # If error output is too long, write it to a separate file
-            if len(stderr) > 200:
+            # Write full output to error log file
+            if output and len(output) > 200:
                 error_log_file = os.path.join(self.log_folder, 'build_error.log')
                 try:
                     with open(error_log_file, 'w', encoding='utf-8') as f:
-                        f.write(stderr)
+                        f.write(output)
                     self.logger.error(
                         f'Подробный лог ошибки записан в {error_log_file}'
                     )
                 except Exception as e:
                     self.logger.error(f'Не удалось записать лог ошибки: {str(e)}')
 
-            # Also check if we have any stdout
-            if result_build and hasattr(result_build, 'stdout') and result_build.stdout:
-                stdout_log_file = os.path.join(self.log_folder, 'build_stdout.log')
-                try:
-                    with open(stdout_log_file, 'w', encoding='utf-8') as f:
-                        f.write(result_build.stdout)
-                    self.logger.info(f'Вывод сборки записан в {stdout_log_file}')
-                except Exception as e:
-                    self.logger.error(f'Не удалось записать вывод сборки: {str(e)}')
+            # Get last 500 chars for error message
+            error_snippet = output[-500:] if output else 'Неизвестная ошибка'
 
             return False, (
-                f'Ошибка при пересборке образов: {stderr[:200]}... '
-                f'(смотрите полный лог в {self.log_folder})'
+                f'Ошибка при пересборке образов:\n{error_snippet}\n\n'
+                f'(полный лог в {self.log_folder})'
             )
 
         self.logger.info('Пересборка успешно завершена!')
