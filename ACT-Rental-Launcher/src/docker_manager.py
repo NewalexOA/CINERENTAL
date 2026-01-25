@@ -725,12 +725,13 @@ class DockerManager:
         # Use --progress=plain for line-by-line output that can be properly captured
         # Note: --progress is a global docker compose flag, must come before subcommand
         # docker_compose_cmd is like "docker compose -f file.yml"
-        # We need: "docker compose --progress=plain -f file.yml build --no-cache"
+        # We need: "docker compose --progress=plain -f file.yml build"
+        # Using cache for faster rebuilds (remove --no-cache)
         build_command = (
             docker_compose_cmd.replace(
                 'docker compose', 'docker compose --progress=plain'
             )
-            + ' build --no-cache'
+            + ' build'
         )
         self.logger.info(f'Команда сборки: {build_command}')
 
