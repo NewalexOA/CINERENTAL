@@ -45,7 +45,10 @@ OPTIONS: dict[str, Any] = {
         'NSHighResolutionCapable': True,
         'NSRequiresAquaSystemAppearance': False,
         'LSBackgroundOnly': False,
-        'LSEnvironment': {'PYTHONIOENCODING': 'UTF-8'},
+        'LSEnvironment': {
+            'PYTHONIOENCODING': 'UTF-8',
+            'PATH': '/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin',
+        },
         'LSUIElement': False,
         'NSPrincipalClass': 'NSApplication',
         'NSAppleScriptEnabled': False,
