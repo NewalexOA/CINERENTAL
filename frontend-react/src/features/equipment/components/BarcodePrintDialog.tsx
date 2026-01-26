@@ -35,6 +35,22 @@ export function BarcodePrintDialog({ open, onOpenChange, barcode, serialNumber }
 
     try {
       bwipjs.toCanvas(canvas, options);
+
+      // Add 1mm padding for DataMatrix (quiet zone)
+      if (barcodeType === 'datamatrix') {
+        const padding = 12; // ~1mm at 300 DPI print resolution
+        const paddedCanvas = document.createElement('canvas');
+        paddedCanvas.width = canvas.width + padding * 2;
+        paddedCanvas.height = canvas.height + padding * 2;
+        const ctx = paddedCanvas.getContext('2d');
+        if (ctx) {
+          ctx.fillStyle = 'white';
+          ctx.fillRect(0, 0, paddedCanvas.width, paddedCanvas.height);
+          ctx.drawImage(canvas, padding, padding);
+          return paddedCanvas.toDataURL('image/png');
+        }
+      }
+
       return canvas.toDataURL('image/png');
     } catch (err) {
       console.error('Barcode generation error:', err);

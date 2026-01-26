@@ -298,8 +298,20 @@ class BarcodeService:
                 data=barcode_value,
             )
 
+            # Add 0.5mm padding on all sides
+            # At 300 DPI: 0.5mm = (0.5 / 25.4) * 300 ≈ 6 pixels
+            dpi = 300
+            padding_mm = 0.5
+            padding_px = int((padding_mm / 25.4) * dpi)
+
+            # Create new image with padding (white background)
+            new_width = image.width + 2 * padding_px
+            new_height = image.height + 2 * padding_px
+            padded_image = Image.new('RGB', (new_width, new_height), 'white')
+            padded_image.paste(image, (padding_px, padding_px))
+
             buffer = io.BytesIO()
-            image.save(buffer, format='PNG')
+            padded_image.save(buffer, format='PNG', dpi=(dpi, dpi))
             buffer.seek(0)
 
             return buffer.getvalue(), 'image/png'
