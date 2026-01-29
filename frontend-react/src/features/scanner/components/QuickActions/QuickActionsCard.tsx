@@ -1,0 +1,156 @@
+/**
+ * QuickActionsCard Component
+ * Quick action buttons for scanned equipment operations
+ */
+
+import { Settings, History, Plus } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+
+interface QuickActionsCardProps {
+  hasEquipment: boolean;
+  onUpdateStatus: () => void;
+  onViewHistory: () => void;
+  onCreateProject?: () => void;
+  itemCount?: number;
+}
+
+/**
+ * QuickActionsCard
+ *
+ * Provides quick access to common scanner operations
+ *
+ * Features:
+ * - Update Status: Modify equipment status
+ * - View History: Show equipment booking history
+ * - Create Project: Start new project with scanned items
+ * - Conditional enabling based on session state
+ * - Item count badge on create project button
+ *
+ * @example
+ * <QuickActionsCard
+ *   hasEquipment={true}
+ *   onUpdateStatus={() => openStatusSheet()}
+ *   onViewHistory={() => openHistoryPanel()}
+ *   onCreateProject={() => navigate('/projects/create')}
+ *   itemCount={5}
+ * />
+ */
+export function QuickActionsCard({
+  hasEquipment,
+  onUpdateStatus,
+  onViewHistory,
+  onCreateProject,
+  itemCount = 0,
+}: QuickActionsCardProps) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-lg">Quick Actions</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-2">
+        {/* Update Status Button */}
+        <Button
+          onClick={onUpdateStatus}
+          disabled={!hasEquipment}
+          variant="outline"
+          className="w-full justify-start"
+          size="lg"
+        >
+          <Settings className="h-5 w-5 mr-3" />
+          <span>Update Status</span>
+        </Button>
+
+        {/* View History Button */}
+        <Button
+          onClick={onViewHistory}
+          disabled={!hasEquipment}
+          variant="outline"
+          className="w-full justify-start"
+          size="lg"
+        >
+          <History className="h-5 w-5 mr-3" />
+          <span>View History</span>
+        </Button>
+
+        {/* Create Project Button */}
+        {onCreateProject && (
+          <Button
+            onClick={onCreateProject}
+            disabled={itemCount === 0}
+            variant="default"
+            className="w-full justify-start relative"
+            size="lg"
+          >
+            <Plus className="h-5 w-5 mr-3" />
+            <span>Create Project</span>
+            {itemCount > 0 && (
+              <Badge
+                variant="secondary"
+                className="ml-auto"
+              >
+                {itemCount}
+              </Badge>
+            )}
+          </Button>
+        )}
+
+        {/* Help Text */}
+        <div className="pt-2">
+          <p className="text-xs text-muted-foreground">
+            {!hasEquipment && itemCount === 0 && (
+              'Scan equipment to enable actions'
+            )}
+            {hasEquipment && itemCount === 0 && (
+              'Scan more equipment to create a project'
+            )}
+            {itemCount > 0 && (
+              `${itemCount} item${itemCount === 1 ? '' : 's'} ready for project`
+            )}
+          </p>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+/**
+ * Accessibility:
+ * - Semantic button elements with clear labels
+ * - Disabled state with visual and functional feedback
+ * - Icon + text labels for clarity
+ * - Keyboard navigation support
+ * - ARIA labels for icon-only elements
+ *
+ * Performance:
+ * - No heavy computations
+ * - Simple conditional rendering
+ * - CSS-based styling (no JS animations)
+ *
+ * Usage:
+ *
+ * // Basic usage
+ * <QuickActionsCard
+ *   hasEquipment={sessionItems.length > 0}
+ *   onUpdateStatus={() => setStatusSheetOpen(true)}
+ *   onViewHistory={() => setHistoryPanelOpen(true)}
+ * />
+ *
+ * // With project creation
+ * <QuickActionsCard
+ *   hasEquipment={sessionItems.length > 0}
+ *   onUpdateStatus={() => setStatusSheetOpen(true)}
+ *   onViewHistory={() => setHistoryPanelOpen(true)}
+ *   onCreateProject={() => navigate('/projects/create')}
+ *   itemCount={sessionItems.length}
+ * />
+ *
+ * // Disabled state
+ * <QuickActionsCard
+ *   hasEquipment={false}
+ *   onUpdateStatus={() => {}}
+ *   onViewHistory={() => {}}
+ *   itemCount={0}
+ * />
+ */
