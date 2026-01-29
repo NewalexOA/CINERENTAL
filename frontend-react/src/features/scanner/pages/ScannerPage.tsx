@@ -10,7 +10,6 @@ import {
   SessionSearch,
   SessionEmptyState,
   ScanHistoryFeed,
-  ScannerStatusCard,
   QuickActionsCard,
   SessionManagementPanel,
   EquipmentHistoryPanel,
@@ -44,7 +43,6 @@ import {
   ScanFeedbackType,
   ScanHistoryEntry,
   SessionItem,
-  ScannerStatus,
   SCANNER_CONSTANTS,
   ServerScanSession,
 } from '../types/scanner.types';
@@ -90,8 +88,6 @@ export default function ScannerPage() {
   const [feedbackType, setFeedbackType] = useState<ScanFeedbackType | undefined>();
   const [scanHistory, setScanHistory] = useState<ScanHistoryEntry[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [scannerStatus, setScannerStatus] = useState<ScannerStatus>('active');
-
   // Panel states
   const [sessionPanelOpen, setSessionPanelOpen] = useState(false);
   const [historyPanelOpen, setHistoryPanelOpen] = useState(false);
@@ -232,21 +228,10 @@ export default function ScannerPage() {
   }, [lookedUpEquipment, lookupError, lookupBarcode, activeSession, addEquipment, triggerFeedback]);
 
   // Barcode scanner hook
-  const { isActive, error: scannerError } = useBarcodeScanner({
+  useBarcodeScanner({
     onScan: processBarcode,
     autoStart: true,
   });
-
-  // Update scanner status based on hook state
-  useEffect(() => {
-    if (scannerError) {
-      setScannerStatus('error');
-    } else if (isActive) {
-      setScannerStatus('active');
-    } else {
-      setScannerStatus('inactive');
-    }
-  }, [isActive, scannerError]);
 
   /**
    * Handle manual barcode submission
@@ -508,11 +493,6 @@ export default function ScannerPage() {
 
       {/* Right Column - Info & Actions */}
       <div className="w-full lg:w-80 flex flex-col gap-6">
-        <ScannerStatusCard
-          status={scannerStatus}
-          error={scannerError?.message}
-        />
-
         <QuickActionsCard
           hasEquipment={!!lastScannedEquipment}
           onUpdateStatus={handleUpdateStatus}

@@ -3,7 +3,7 @@
  * Display scanner operational status and instructions
  */
 
-import { Scan, AlertCircle, CheckCircle2, RefreshCw } from 'lucide-react';
+import { Scan, AlertCircle, RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -22,30 +22,22 @@ const statusConfig: Record<
     label: string;
     description: string;
     dotColor: string;
-    icon: React.ComponentType<{ className?: string }>;
-    iconColor: string;
   }
 > = {
   active: {
     label: 'Готов к сканированию',
     description: 'Наведите сканер на штрих-код и нажмите кнопку',
     dotColor: 'bg-green-500',
-    icon: CheckCircle2,
-    iconColor: 'text-green-600',
   },
   inactive: {
     label: 'Сканер неактивен',
     description: 'Сканер не прослушивает ввод',
     dotColor: 'bg-gray-400',
-    icon: Scan,
-    iconColor: 'text-gray-400',
   },
   error: {
     label: 'Ошибка сканера',
     description: 'Произошла ошибка сканера',
     dotColor: 'bg-red-500',
-    icon: AlertCircle,
-    iconColor: 'text-red-600',
   },
 };
 
@@ -110,7 +102,6 @@ export function ScannerStatusCard({
   onRetry,
 }: ScannerStatusCardProps) {
   const config = statusConfig[status];
-  const Icon = config.icon;
   const recommendations = status === 'error' ? getRecommendations(error) : [];
 
   return (
@@ -119,26 +110,6 @@ export function ScannerStatusCard({
         <CardTitle className="text-lg">Статус сканера</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Scanner Icon Area */}
-        <div className="flex items-center justify-center py-6">
-          <div className="relative">
-            {/* Pulsing background for active state */}
-            {status === 'active' && (
-              <div className="absolute inset-0 rounded-full bg-green-100 animate-ping opacity-75" />
-            )}
-
-            {/* Icon container */}
-            <div
-              className={cn(
-                'relative rounded-full p-6 bg-muted',
-                status === 'active' && 'bg-green-50'
-              )}
-            >
-              <Icon className={cn('h-12 w-12', config.iconColor)} />
-            </div>
-          </div>
-        </div>
-
         {/* Status Information */}
         <div className="text-center space-y-2">
           {/* Status indicator dot + label */}
