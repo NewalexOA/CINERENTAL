@@ -20,6 +20,7 @@ export interface SessionItem {
   quantity: number; // 1 for serialized, >=1 for non-serialized
   replacement_cost?: number;
   status?: string;
+  addedAt?: string; // ISO timestamp of when item was added/last scanned
 }
 
 /**
@@ -209,8 +210,8 @@ export const SCANNER_CONSTANTS = {
   BUFFER_RESET_MS: 100,
   /** Minimum barcode length to process */
   MIN_BARCODE_LENGTH: 3,
-  /** Auto-sync interval in milliseconds */
-  AUTO_SYNC_INTERVAL_MS: 60000,
+  /** Debounce delay before syncing session changes to server (ms) */
+  SYNC_DEBOUNCE_MS: 1500,
   /** Session expiry in days */
   SESSION_EXPIRY_DAYS: 7,
   /** Maximum scan history entries to keep */

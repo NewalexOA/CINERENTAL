@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import api from '@/lib/axios';
 import {
   ScanSession,
   ScanSessionPayload,
@@ -33,28 +34,23 @@ interface UseSessionSyncOptions {
   onSyncSuccess?: (serverSession: ServerScanSession) => void;
   /** Callback when sync fails */
   onSyncError?: (error: Error) => void;
-  /** Enable auto-sync interval */
+  /** Enable auto-sync on session changes */
   enableAutoSync?: boolean;
   /** Enable beforeunload sync */
   enableBeforeUnload?: boolean;
 }
 
 /**
- * API functions placeholder - will be implemented by another agent
- * These functions should be imported from '../api/scanSessionsApi'
+ * API functions for session sync
  */
-interface ScanSessionsApi {
-  createScanSession: (payload: ScanSessionPayload) => Promise<ServerScanSession>;
-  updateScanSession: (id: number, payload: ScanSessionPayload) => Promise<ServerScanSession>;
-}
-
-// Placeholder API - replace with actual import when available
-const scanSessionsApi: ScanSessionsApi = {
-  createScanSession: async () => {
-    throw new Error('API not implemented');
+const syncApi = {
+  create: async (payload: ScanSessionPayload): Promise<ServerScanSession> => {
+    const response = await api.post<ServerScanSession>('/scan-sessions/', payload);
+    return response.data;
   },
-  updateScanSession: async () => {
-    throw new Error('API not implemented');
+  update: async (id: number, payload: ScanSessionPayload): Promise<ServerScanSession> => {
+    const response = await api.put<ServerScanSession>(`/scan-sessions/${id}`, payload);
+    return response.data;
   },
 };
 
@@ -112,7 +108,7 @@ function calculateSyncStatus(
  *
  * Features:
  * - Sync session to server (POST if new, PUT if has serverSessionId)
- * - Auto-sync interval using AUTO_SYNC_INTERVAL_MS constant
+ * - Debounced auto-sync on every session change (updatedAt)
  * - Manual sync trigger
  * - beforeunload sync attempt
  * - Error handling with retry
@@ -124,12 +120,9 @@ function calculateSyncStatus(
  *   session: activeSession,
  *   enableAutoSync: true,
  *   onSyncSuccess: (serverSession) => {
- *     console.log('Synced:', serverSession.id);
+ *     markSynced(serverSession.id);
  *   },
  * });
- *
- * // Manual sync
- * await syncNow();
  * ```
  */
 export function useSessionSync({
@@ -143,16 +136,26 @@ export function useSessionSync({
   const [lastSyncedAt, setLastSyncedAt] = useState<Date | null>(null);
   const [syncError, setSyncError] = useState<Error | null>(null);
 
-  const autoSyncIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const isSyncingRef = useRef(false);
+  // Store latest session in ref so performSync always uses current data
+  const sessionRef = useRef(session);
+  sessionRef.current = session;
+
+  const onSyncSuccessRef = useRef(onSyncSuccess);
+  onSyncSuccessRef.current = onSyncSuccess;
+
+  const onSyncErrorRef = useRef(onSyncError);
+  onSyncErrorRef.current = onSyncError;
 
   const syncStatus = calculateSyncStatus(session, isSyncing, syncError);
 
   /**
-   * Perform sync operation
+   * Perform sync operation using latest session from ref
    */
   const performSync = useCallback(async (): Promise<void> => {
-    if (!session) {
+    const currentSession = sessionRef.current;
+
+    if (!currentSession) {
       return;
     }
 
@@ -162,7 +165,7 @@ export function useSessionSync({
     }
 
     // Only sync if session has changes or never synced
-    if (!session.dirty && session.syncedWithServer) {
+    if (!currentSession.dirty && currentSession.syncedWithServer) {
       return;
     }
 
@@ -171,74 +174,61 @@ export function useSessionSync({
     setSyncError(null);
 
     try {
-      const payload = sessionToPayload(session);
+      const payload = sessionToPayload(currentSession);
       let serverSession: ServerScanSession;
 
-      if (session.serverSessionId) {
+      if (currentSession.serverSessionId) {
         // Update existing server session
-        serverSession = await scanSessionsApi.updateScanSession(
-          session.serverSessionId,
+        serverSession = await syncApi.update(
+          currentSession.serverSessionId,
           payload
         );
       } else {
         // Create new server session
-        serverSession = await scanSessionsApi.createScanSession(payload);
+        serverSession = await syncApi.create(payload);
       }
 
       // Update local session with server details
-      if (onSyncSuccess) {
-        onSyncSuccess(serverSession);
-      }
+      onSyncSuccessRef.current?.(serverSession);
 
       setLastSyncedAt(new Date());
       setSyncError(null);
     } catch (error) {
-      const syncError = error instanceof Error ? error : new Error('Sync failed');
-      setSyncError(syncError);
-
-      if (onSyncError) {
-        onSyncError(syncError);
-      }
-
-      console.error('Session sync failed:', syncError);
+      const syncErr = error instanceof Error ? error : new Error('Sync failed');
+      setSyncError(syncErr);
+      onSyncErrorRef.current?.(syncErr);
     } finally {
       isSyncingRef.current = false;
       setIsSyncing(false);
     }
-  }, [session, onSyncSuccess, onSyncError]);
+  }, []);
 
   /**
    * Manually trigger sync
    */
   const syncNow = useCallback(async (): Promise<void> => {
-    await performSync();
+    try {
+      await performSync();
+    } catch (error) {
+      console.error('Session sync failed:', error);
+    }
   }, [performSync]);
 
   /**
-   * Setup auto-sync interval
+   * Debounced sync on every session change (updatedAt)
+   * Triggers after SYNC_DEBOUNCE_MS of inactivity
    */
   useEffect(() => {
-    if (!enableAutoSync || !session) {
+    if (!enableAutoSync || !session || !session.dirty) {
       return;
     }
 
-    // Clear existing interval
-    if (autoSyncIntervalRef.current) {
-      clearInterval(autoSyncIntervalRef.current);
-    }
-
-    // Setup new interval
-    autoSyncIntervalRef.current = setInterval(() => {
+    const timeoutId = setTimeout(() => {
       performSync();
-    }, SCANNER_CONSTANTS.AUTO_SYNC_INTERVAL_MS);
+    }, SCANNER_CONSTANTS.SYNC_DEBOUNCE_MS);
 
-    return () => {
-      if (autoSyncIntervalRef.current) {
-        clearInterval(autoSyncIntervalRef.current);
-        autoSyncIntervalRef.current = null;
-      }
-    };
-  }, [enableAutoSync, session, performSync]);
+    return () => clearTimeout(timeoutId);
+  }, [enableAutoSync, session?.updatedAt, performSync]);
 
   /**
    * Sync on beforeunload
@@ -249,12 +239,9 @@ export function useSessionSync({
     }
 
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      // Only prompt if session has unsaved changes
       if (session.dirty) {
         e.preventDefault();
         e.returnValue = '';
-
-        // Attempt sync (may not complete in time)
         performSync();
       }
     };
@@ -266,20 +253,6 @@ export function useSessionSync({
     };
   }, [enableBeforeUnload, session, performSync]);
 
-  /**
-   * Initial sync when session becomes available
-   */
-  useEffect(() => {
-    if (session && session.dirty) {
-      // Debounce initial sync
-      const timeoutId = setTimeout(() => {
-        performSync();
-      }, 1000);
-
-      return () => clearTimeout(timeoutId);
-    }
-  }, [session?.id]); // Only trigger on session ID change
-
   return {
     isSyncing,
     lastSyncedAt,
@@ -288,9 +261,3 @@ export function useSessionSync({
     syncStatus,
   };
 }
-
-/**
- * Update this export when API is implemented:
- * export { scanSessionsApi } from '../api/scanSessionsApi';
- */
-export { scanSessionsApi };

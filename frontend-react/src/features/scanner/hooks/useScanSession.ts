@@ -40,6 +40,8 @@ interface UseScanSession {
   markDirty: () => void;
   /** Mark session as saved */
   markClean: () => void;
+  /** Mark session as synced with server */
+  markSynced: (serverSessionId: number) => void;
 }
 
 /**
@@ -224,7 +226,7 @@ export function useScanSession(): UseScanSession {
         }
 
         // Add new serialized item
-        session.items.push({ ...equipment, quantity: 1 });
+        session.items.push({ ...equipment, quantity: 1, addedAt: new Date().toISOString() });
         session.updatedAt = new Date().toISOString();
         session.dirty = true;
 
@@ -241,6 +243,7 @@ export function useScanSession(): UseScanSession {
 
         if (existingIndex !== -1) {
           session.items[existingIndex].quantity += equipment.quantity || 1;
+          session.items[existingIndex].addedAt = new Date().toISOString();
           session.updatedAt = new Date().toISOString();
           session.dirty = true;
 
@@ -252,7 +255,7 @@ export function useScanSession(): UseScanSession {
         }
 
         // Add new non-serialized item
-        session.items.push({ ...equipment, quantity: equipment.quantity || 1 });
+        session.items.push({ ...equipment, quantity: equipment.quantity || 1, addedAt: new Date().toISOString() });
         session.updatedAt = new Date().toISOString();
         session.dirty = true;
 
@@ -464,6 +467,28 @@ export function useScanSession(): UseScanSession {
     setSessions([...allSessions]);
   }, [activeSessionId]);
 
+  /**
+   * Mark session as synced with server
+   */
+  const markSynced = useCallback(
+    (serverSessionId: number) => {
+      if (!activeSessionId) return;
+
+      const allSessions = loadSessions();
+      const sessionIndex = allSessions.findIndex((s) => s.id === activeSessionId);
+
+      if (sessionIndex === -1) return;
+
+      allSessions[sessionIndex].dirty = false;
+      allSessions[sessionIndex].syncedWithServer = true;
+      allSessions[sessionIndex].serverSessionId = serverSessionId;
+
+      saveSessions(allSessions);
+      setSessions([...allSessions]);
+    },
+    [activeSessionId]
+  );
+
   // Sync state on mount and when localStorage changes
   useEffect(() => {
     const handleStorageChange = () => {
@@ -491,5 +516,6 @@ export function useScanSession(): UseScanSession {
     renameSession,
     markDirty,
     markClean,
+    markSynced,
   };
 }

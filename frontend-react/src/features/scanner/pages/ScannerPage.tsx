@@ -1,8 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { Box } from 'lucide-react';
-
 // Components
 import {
   ScanResultCard,
@@ -82,6 +81,7 @@ function equipmentToSessionItem(equipment: Equipment): SessionItem {
  */
 export default function ScannerPage() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { addItem, clearCart } = useCart();
 
   // State
@@ -110,12 +110,17 @@ export default function ScannerPage() {
     deleteSession,
     renameSession,
     setActiveSession,
+    markSynced,
   } = useScanSession();
 
   // Server sync
   const { syncNow, isSyncing, syncStatus } = useSessionSync({
     session: activeSession,
     enableAutoSync: true,
+    onSyncSuccess: (serverSession) => {
+      markSynced(serverSession.id);
+      queryClient.invalidateQueries({ queryKey: ['scan-sessions'] });
+    },
   });
 
   // Feedback
@@ -364,7 +369,7 @@ export default function ScannerPage() {
   });
 
   // Filter session items by search term
-  const filteredItems = activeSession?.items.filter((item) => {
+  const filteredItems = (activeSession?.items.filter((item) => {
     if (!searchTerm) return true;
     const term = searchTerm.toLowerCase();
     return (
@@ -373,10 +378,15 @@ export default function ScannerPage() {
       item.category_name.toLowerCase().includes(term) ||
       (item.serial_number && item.serial_number.toLowerCase().includes(term))
     );
-  }) || [];
+  }) || []).sort((a, b) => {
+    // Newest first by addedAt timestamp
+    const timeA = a.addedAt ? new Date(a.addedAt).getTime() : 0;
+    const timeB = b.addedAt ? new Date(b.addedAt).getTime() : 0;
+    return timeB - timeA;
+  });
 
   return (
-    <div className="h-full flex flex-col lg:flex-row gap-6 p-4 lg:p-6">
+    <div className="flex flex-col lg:flex-row gap-6 p-4 lg:p-6">
       {/* Left Column - Main Content */}
       <div className="flex-1 flex flex-col gap-6 min-w-0">
         {/* Manual Entry */}
@@ -406,7 +416,7 @@ export default function ScannerPage() {
         />
 
         {/* Session Card */}
-        <Card className="flex-1 flex flex-col min-h-0">
+        <Card className="flex flex-col">
           {activeSession ? (
             <>
               <CardHeader className="pb-4">
@@ -435,7 +445,7 @@ export default function ScannerPage() {
                 />
               </CardHeader>
 
-              <CardContent className="flex-1 flex flex-col min-h-0 pt-0">
+              <CardContent className="pt-0">
                 <SessionSearch
                   value={searchTerm}
                   onChange={setSearchTerm}
@@ -443,7 +453,7 @@ export default function ScannerPage() {
                   filteredCount={filteredItems.length}
                 />
 
-                <div className="flex-1 overflow-auto mt-4 -mx-6 px-6">
+                <div className="mt-4">
                   {activeSession.items.length === 0 ? (
                     <SessionEmptyState type="no_items" />
                   ) : (
@@ -469,21 +479,13 @@ export default function ScannerPage() {
                 </div>
               </CardContent>
 
-              <CardFooter className="flex gap-2 pt-4 border-t">
+              <CardFooter className="pt-4 border-t">
                 <Button
                   variant="outline"
                   onClick={clearSession}
                   disabled={activeSession.items.length === 0}
                 >
                   Очистить
-                </Button>
-                <Button
-                  className="flex-1"
-                  onClick={handleCreateProject}
-                  disabled={activeSession.items.length === 0}
-                >
-                  <Box className="mr-2 h-4 w-4" />
-                  Создать проект ({activeSession.items.length})
                 </Button>
               </CardFooter>
             </>
@@ -498,6 +500,7 @@ export default function ScannerPage() {
                     toast.success(`Сессия "${name}" создана`);
                   }
                 }}
+                onManageSessions={() => setSessionPanelOpen(true)}
               />
             </CardContent>
           )}

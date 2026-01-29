@@ -104,9 +104,7 @@ async def get_scan_sessions(
     if user_id:
         result = await service.get_user_sessions(user_id)
     else:
-        # We'll use an empty placeholder since the original service doesn't support
-        # getting all sessions without a user
-        result = []
+        result = await service.get_all_sessions()
 
     return [
         ScanSessionResponse.model_validate(session, from_attributes=True)
