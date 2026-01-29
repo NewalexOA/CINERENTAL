@@ -1,186 +1,588 @@
-import { useState } from 'react';
-import { useBarcodeScanner } from '../../../hooks/useBarcodeScanner';
-import { useLocalStorage } from '../../../hooks/useLocalStorage';
-import { equipmentService } from '../../../services/equipment';
-import { Equipment } from '../../../types/equipment';
-import { Button } from '../../../components/ui/button';
-import { Input } from '../../../components/ui/input';
-import { Badge } from '../../../components/ui/badge';
-import { toast } from 'sonner';
-import { ScanBarcode, Trash2, Box, Info, History } from 'lucide-react';
-import { useCart } from '../../../context/CartContext';
+import { useState, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
+import { Box } from 'lucide-react';
 
-export default function ScannerPage() {
-  const [lastScanned, setLastScanned] = useState<Equipment | null>(null);
-  const [manualBarcode, setManualBarcode] = useState('');
-  const [isScanning, setIsScanning] = useState(false);
-  const [session, setSession] = useLocalStorage<{ items: Equipment[] }>('scanner_session', { items: [] });
-  
-  const { addItem, clearCart } = useCart();
-  const navigate = useNavigate();
+// Components
+import {
+  ScanResultCard,
+  SessionHeader,
+  SessionTable,
+  SessionSearch,
+  SessionEmptyState,
+  ScanHistoryFeed,
+  ScannerStatusCard,
+  QuickActionsCard,
+  SessionManagementPanel,
+  EquipmentHistoryPanel,
+  StatusUpdateSheet,
+} from '../components';
 
-  const processBarcode = async (barcode: string) => {
-    if (!barcode) return;
-    setIsScanning(true);
-    try {
-      const equipment = await equipmentService.getByBarcode(barcode);
-      setLastScanned(equipment);
-      addToSession(equipment);
-      toast.success(`Отсканировано: ${equipment.name}`);
-    } catch (error) {
-      toast.error(`Штрихкод не найден: ${barcode}`);
-      setLastScanned(null);
-    } finally {
-      setIsScanning(false);
-    }
+// Hooks
+import {
+  useBarcodeScanner,
+  useScanSession,
+  useSessionSync,
+  useScanFeedback,
+  useKeyboardShortcuts,
+} from '../hooks';
+
+// API
+import {
+  useEquipmentByBarcode,
+  useUpdateEquipmentStatus,
+  useScanSessions,
+} from '../api';
+
+// UI Components
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+
+// Types
+import { Equipment, EquipmentStatus } from '@/types/equipment';
+import {
+  ScanFeedbackType,
+  ScanHistoryEntry,
+  SessionItem,
+  ScannerStatus,
+  SCANNER_CONSTANTS,
+  ServerScanSession,
+} from '../types/scanner.types';
+
+// Context
+import { useCart } from '@/context/CartContext';
+
+/**
+ * Convert Equipment to SessionItem
+ */
+function equipmentToSessionItem(equipment: Equipment): SessionItem {
+  return {
+    equipment_id: equipment.id,
+    name: equipment.name,
+    barcode: equipment.barcode,
+    serial_number: equipment.serial_number || null,
+    category_id: equipment.category_id || null,
+    category_name: equipment.category_name || 'Без категории',
+    quantity: 1,
+    replacement_cost: equipment.replacement_cost,
+    status: equipment.status,
   };
+}
 
-  useBarcodeScanner({
-    onScan: processBarcode
+/**
+ * Scanner Page Component
+ *
+ * Main page for barcode scanning operations with:
+ * - HID scanner support
+ * - Session management (localStorage + server sync)
+ * - Equipment lookup and display
+ * - Keyboard shortcuts
+ * - Sound/visual feedback
+ */
+export default function ScannerPage() {
+  const navigate = useNavigate();
+  const { addItem, clearCart } = useCart();
+
+  // State
+  const [manualBarcode, setManualBarcode] = useState('');
+  const [lastScannedEquipment, setLastScannedEquipment] = useState<Equipment | null>(null);
+  const [feedbackType, setFeedbackType] = useState<ScanFeedbackType | undefined>();
+  const [scanHistory, setScanHistory] = useState<ScanHistoryEntry[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [scannerStatus, setScannerStatus] = useState<ScannerStatus>('active');
+
+  // Panel states
+  const [sessionPanelOpen, setSessionPanelOpen] = useState(false);
+  const [historyPanelOpen, setHistoryPanelOpen] = useState(false);
+  const [statusSheetOpen, setStatusSheetOpen] = useState(false);
+  const [selectedEquipmentId, setSelectedEquipmentId] = useState<number | null>(null);
+
+  // Session management
+  const {
+    activeSession,
+    sessions,
+    createSession,
+    addEquipment,
+    removeEquipment,
+    decrementQuantity,
+    clearSession,
+    deleteSession,
+    renameSession,
+    setActiveSession,
+  } = useScanSession();
+
+  // Server sync
+  const { syncNow, isSyncing, syncStatus } = useSessionSync({
+    session: activeSession,
+    enableAutoSync: true,
   });
 
-  const addToSession = (item: Equipment) => {
-    setSession(prev => {
-      return { ...prev, items: [item, ...prev.items] };
-    });
-  };
+  // Feedback
+  const { triggerFeedback } = useScanFeedback();
 
-  const clearSession = () => {
-    if (confirm('Очистить текущую сессию?')) {
-      setSession({ items: [] });
+  // Server sessions
+  const { data: serverSessions = [] } = useScanSessions();
+
+  // Equipment status update
+  const updateStatusMutation = useUpdateEquipmentStatus();
+
+  // Equipment lookup state
+  const [lookupBarcode, setLookupBarcode] = useState<string | null>(null);
+  const {
+    data: lookedUpEquipment,
+    isLoading: isLookingUp,
+    error: lookupError,
+  } = useEquipmentByBarcode(lookupBarcode || '', {
+    enabled: !!lookupBarcode,
+  });
+
+  /**
+   * Process barcode scan
+   */
+  const processBarcode = useCallback(
+    (barcode: string) => {
+      if (!barcode) return;
+      setLookupBarcode(barcode);
+    },
+    []
+  );
+
+  /**
+   * Handle equipment lookup result
+   */
+  useEffect(() => {
+    if (!lookupBarcode) return;
+
+    if (lookupError) {
+      // Equipment not found
+      const historyEntry: ScanHistoryEntry = {
+        id: `scan_${Date.now()}`,
+        barcode: lookupBarcode,
+        equipment: null,
+        timestamp: new Date().toISOString(),
+        result: 'not_found',
+        message: 'Оборудование не найдено',
+      };
+
+      setScanHistory((prev) => [historyEntry, ...prev].slice(0, SCANNER_CONSTANTS.MAX_HISTORY_ENTRIES));
+      setFeedbackType('not_found');
+      triggerFeedback('not_found');
+      toast.error(`Штрих-код не найден: ${lookupBarcode}`);
+      setLookupBarcode(null);
+      return;
+    }
+
+    if (lookedUpEquipment) {
+      setLastScannedEquipment(lookedUpEquipment);
+
+      // Add to session if active
+      if (activeSession) {
+        const sessionItem = equipmentToSessionItem(lookedUpEquipment);
+        const result = addEquipment(sessionItem);
+
+        let feedback: ScanFeedbackType = 'success';
+        let message = `Добавлено: ${lookedUpEquipment.name}`;
+
+        if (result === 'duplicate') {
+          feedback = 'duplicate';
+          message = 'Уже в сессии';
+        } else if (result === 'incremented') {
+          feedback = 'quantity_updated';
+          message = 'Количество увеличено';
+        }
+
+        const historyEntry: ScanHistoryEntry = {
+          id: `scan_${Date.now()}`,
+          barcode: lookupBarcode,
+          equipment: sessionItem,
+          timestamp: new Date().toISOString(),
+          result: feedback,
+          message,
+        };
+
+        setScanHistory((prev) => [historyEntry, ...prev].slice(0, SCANNER_CONSTANTS.MAX_HISTORY_ENTRIES));
+        setFeedbackType(feedback);
+        triggerFeedback(feedback);
+        toast.success(message);
+      } else {
+        // No active session - just show equipment
+        const historyEntry: ScanHistoryEntry = {
+          id: `scan_${Date.now()}`,
+          barcode: lookupBarcode,
+          equipment: equipmentToSessionItem(lookedUpEquipment),
+          timestamp: new Date().toISOString(),
+          result: 'success',
+          message: 'Найдено (нет активной сессии)',
+        };
+
+        setScanHistory((prev) => [historyEntry, ...prev].slice(0, SCANNER_CONSTANTS.MAX_HISTORY_ENTRIES));
+        setFeedbackType('success');
+        triggerFeedback('success');
+        toast.info('Создайте сессию для добавления оборудования');
+      }
+
+      setLookupBarcode(null);
+    }
+  }, [lookedUpEquipment, lookupError, lookupBarcode, activeSession, addEquipment, triggerFeedback]);
+
+  // Barcode scanner hook
+  const { isActive, error: scannerError } = useBarcodeScanner({
+    onScan: processBarcode,
+    autoStart: true,
+  });
+
+  // Update scanner status based on hook state
+  useEffect(() => {
+    if (scannerError) {
+      setScannerStatus('error');
+    } else if (isActive) {
+      setScannerStatus('active');
+    } else {
+      setScannerStatus('inactive');
+    }
+  }, [isActive, scannerError]);
+
+  /**
+   * Handle manual barcode submission
+   */
+  const handleManualSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (manualBarcode.trim()) {
+      processBarcode(manualBarcode.trim());
+      setManualBarcode('');
     }
   };
 
-  const handleManualSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    processBarcode(manualBarcode);
-    setManualBarcode('');
-  };
-
+  /**
+   * Handle create project from session
+   */
   const handleCreateProject = () => {
-    if (session.items.length === 0) return;
-    
+    if (!activeSession || activeSession.items.length === 0) return;
+
     if (confirm('Создать проект из текущей сессии? Корзина будет очищена.')) {
       clearCart();
-      // Add items from session to cart
-      // We iterate in reverse to keep chronological order if session is [newest...oldest]
-      // Actually scanner usually adds to top list, so reversing restores scan order.
-      [...session.items].reverse().forEach(item => addItem(item));
-      
-      toast.success('Товары добавлены в корзину');
+
+      // Add items to cart in reverse order to maintain scan order
+      [...activeSession.items].reverse().forEach((item) => {
+        addItem({
+          id: item.equipment_id,
+          name: item.name,
+          barcode: item.barcode,
+          serial_number: item.serial_number || undefined,
+          category_id: item.category_id || undefined,
+          category_name: item.category_name,
+          replacement_cost: item.replacement_cost || 0,
+          status: item.status || 'AVAILABLE',
+        } as Equipment);
+      });
+
+      toast.success('Оборудование добавлено в корзину');
       navigate('/projects/new');
     }
   };
 
+  /**
+   * Handle view equipment history
+   */
+  const handleViewHistory = () => {
+    if (lastScannedEquipment) {
+      setSelectedEquipmentId(lastScannedEquipment.id);
+      setHistoryPanelOpen(true);
+    }
+  };
+
+  /**
+   * Handle update equipment status
+   */
+  const handleUpdateStatus = () => {
+    if (lastScannedEquipment) {
+      setSelectedEquipmentId(lastScannedEquipment.id);
+      setStatusSheetOpen(true);
+    }
+  };
+
+  /**
+   * Handle status update confirmation
+   */
+  const handleStatusUpdateConfirm = async (status: string) => {
+    if (!selectedEquipmentId) return;
+
+    try {
+      await updateStatusMutation.mutateAsync({
+        equipmentId: selectedEquipmentId,
+        status: status as EquipmentStatus,
+      });
+      toast.success('Статус обновлен');
+      setStatusSheetOpen(false);
+
+      // Update last scanned equipment if same
+      if (lastScannedEquipment?.id === selectedEquipmentId) {
+        setLastScannedEquipment((prev) =>
+          prev ? { ...prev, status: status as Equipment['status'] } : null
+        );
+      }
+    } catch {
+      toast.error('Ошибка обновления статуса');
+    }
+  };
+
+  /**
+   * Handle load server session
+   */
+  const handleLoadServerSession = (serverSession: ServerScanSession) => {
+    createSession(serverSession.name);
+    serverSession.items.forEach((item) => addEquipment(item));
+    setSessionPanelOpen(false);
+    toast.success(`Сессия "${serverSession.name}" загружена`);
+  };
+
+  // Keyboard shortcuts
+  useKeyboardShortcuts({
+    onNewSession: () => {
+      const name = prompt('Название новой сессии:');
+      if (name) {
+        createSession(name);
+        toast.success(`Сессия "${name}" создана`);
+      }
+    },
+    onLoadSession: () => setSessionPanelOpen(true),
+    onSync: () => {
+      syncNow();
+      toast.info('Синхронизация...');
+    },
+    onCreateProject: handleCreateProject,
+    onClearResult: () => {
+      setLastScannedEquipment(null);
+      setFeedbackType(undefined);
+    },
+    onFocusSearch: () => {
+      const searchInput = document.querySelector<HTMLInputElement>('[data-search-input]');
+      searchInput?.focus();
+    },
+    enabled: true,
+  });
+
+  // Filter session items by search term
+  const filteredItems = activeSession?.items.filter((item) => {
+    if (!searchTerm) return true;
+    const term = searchTerm.toLowerCase();
+    return (
+      item.name.toLowerCase().includes(term) ||
+      item.barcode.toLowerCase().includes(term) ||
+      item.category_name.toLowerCase().includes(term) ||
+      (item.serial_number && item.serial_number.toLowerCase().includes(term))
+    );
+  }) || [];
+
   return (
-    <div className="h-full flex flex-col gap-4 p-4 md:flex-row">
-      {/* Left Panel: Scan Result & Actions */}
-      <div className="flex-1 flex flex-col gap-4">
+    <div className="h-full flex flex-col lg:flex-row gap-6 p-4 lg:p-6">
+      {/* Left Column - Main Content */}
+      <div className="flex-1 flex flex-col gap-6 min-w-0">
         {/* Manual Entry */}
-        <div className="bg-card border rounded-lg p-4 shadow-sm">
-          <form onSubmit={handleManualSubmit} className="flex gap-2">
-            <Input 
-              placeholder="Ввод штрихкода вручную..." 
-              value={manualBarcode}
-              onChange={(e) => setManualBarcode(e.target.value)}
-              autoFocus
-            />
-            <Button type="submit" disabled={isScanning}>
-              <ScanBarcode className="mr-2 h-4 w-4" />
-              Найти
-            </Button>
-          </form>
-        </div>
+        <Card>
+          <CardContent className="pt-6">
+            <form onSubmit={handleManualSubmit} className="flex gap-2">
+              <Input
+                placeholder="Введите штрих-код вручную..."
+                value={manualBarcode}
+                onChange={(e) => setManualBarcode(e.target.value)}
+                className="font-mono"
+              />
+              <Button type="submit" disabled={isLookingUp || !manualBarcode.trim()}>
+                Найти
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
 
-        {/* Result Card */}
-        <div className="bg-card border rounded-lg p-6 shadow-sm flex-1 flex flex-col justify-center items-center text-center">
-          {lastScanned ? (
-            <div className="space-y-4 w-full">
-              <Badge variant={lastScanned.status === 'AVAILABLE' ? 'success' : 'secondary'} className="mb-2">
-                {lastScanned.status}
-              </Badge>
-              <h2 className="text-3xl font-bold tracking-tight">{lastScanned.name}</h2>
-              <p className="text-muted-foreground text-lg">{lastScanned.category_name}</p>
-              
-              <div className="grid grid-cols-2 gap-4 text-left bg-muted/20 p-4 rounded-md mt-4">
-                <div>
-                  <span className="text-xs text-muted-foreground block">Штрихкод</span>
-                  <span className="font-mono">{lastScanned.barcode}</span>
-                </div>
-                <div>
-                  <span className="text-xs text-muted-foreground block">Серийный номер</span>
-                  <span className="font-mono">{lastScanned.serial_number || '-'}</span>
-                </div>
-                <div>
-                  <span className="text-xs text-muted-foreground block">Стоимость</span>
-                  <span>{lastScanned.replacement_cost} ₽</span>
-                </div>
-                <div>
-                  <span className="text-xs text-muted-foreground block">ID</span>
-                  <span>{lastScanned.id}</span>
-                </div>
-              </div>
+        {/* Scan Result */}
+        <ScanResultCard
+          equipment={lastScannedEquipment}
+          isLoading={isLookingUp}
+          feedbackType={feedbackType}
+          onViewHistory={handleViewHistory}
+          onUpdateStatus={handleUpdateStatus}
+        />
 
-              <div className="flex gap-2 justify-center mt-6">
-                <Button variant="outline">
-                  <Info className="mr-2 h-4 w-4" /> История
+        {/* Session Card */}
+        <Card className="flex-1 flex flex-col min-h-0">
+          {activeSession ? (
+            <>
+              <CardHeader className="pb-4">
+                <SessionHeader
+                  sessionName={activeSession.name}
+                  itemCount={activeSession.items.length}
+                  syncStatus={syncStatus}
+                  onNewSession={() => {
+                    const name = prompt('Название новой сессии:');
+                    if (name) {
+                      createSession(name);
+                      toast.success(`Сессия "${name}" создана`);
+                    }
+                  }}
+                  onLoadSession={() => setSessionPanelOpen(true)}
+                  onManageSessions={() => setSessionPanelOpen(true)}
+                  onRenameSession={() => {
+                    const name = prompt('Новое название:', activeSession.name);
+                    if (name && name !== activeSession.name) {
+                      renameSession(name);
+                      toast.success('Сессия переименована');
+                    }
+                  }}
+                  onSync={syncNow}
+                  isSyncing={isSyncing}
+                />
+              </CardHeader>
+
+              <CardContent className="flex-1 flex flex-col min-h-0 pt-0">
+                <SessionSearch
+                  value={searchTerm}
+                  onChange={setSearchTerm}
+                  totalCount={activeSession.items.length}
+                  filteredCount={filteredItems.length}
+                />
+
+                <div className="flex-1 overflow-auto mt-4 -mx-6 px-6">
+                  {activeSession.items.length === 0 ? (
+                    <SessionEmptyState type="no_items" />
+                  ) : (
+                    <SessionTable
+                      items={filteredItems}
+                      searchTerm={searchTerm}
+                      onRemoveItem={removeEquipment}
+                      onIncrementQuantity={(id) => {
+                        const item = activeSession.items.find(
+                          (i) => i.equipment_id === id && !i.serial_number
+                        );
+                        if (item) {
+                          addEquipment({ ...item, quantity: 1 });
+                        }
+                      }}
+                      onDecrementQuantity={decrementQuantity}
+                      onItemClick={(item) => {
+                        setSelectedEquipmentId(item.equipment_id);
+                        setHistoryPanelOpen(true);
+                      }}
+                    />
+                  )}
+                </div>
+              </CardContent>
+
+              <CardFooter className="flex gap-2 pt-4 border-t">
+                <Button
+                  variant="outline"
+                  onClick={clearSession}
+                  disabled={activeSession.items.length === 0}
+                >
+                  Очистить
                 </Button>
-              </div>
-            </div>
+                <Button
+                  className="flex-1"
+                  onClick={handleCreateProject}
+                  disabled={activeSession.items.length === 0}
+                >
+                  <Box className="mr-2 h-4 w-4" />
+                  Создать проект ({activeSession.items.length})
+                </Button>
+              </CardFooter>
+            </>
           ) : (
-            <div className="text-muted-foreground py-10">
-              <ScanBarcode className="h-24 w-24 mx-auto mb-4 opacity-20" />
-              <p className="text-lg">Готов к сканированию</p>
-              <p className="text-sm">Используйте сканер или введите код вручную</p>
-            </div>
+            <CardContent className="flex-1 flex items-center justify-center">
+              <SessionEmptyState
+                type="no_session"
+                onCreateSession={() => {
+                  const name = prompt('Название сессии:');
+                  if (name) {
+                    createSession(name);
+                    toast.success(`Сессия "${name}" создана`);
+                  }
+                }}
+              />
+            </CardContent>
           )}
-        </div>
+        </Card>
       </div>
 
-      {/* Right Panel: Session List */}
-      <div className="w-full md:w-96 flex flex-col gap-4">
-        <div className="bg-card border rounded-lg flex flex-col h-full shadow-sm overflow-hidden">
-          <div className="p-4 border-b bg-muted/40 flex justify-between items-center">
-            <div className="font-semibold flex items-center gap-2">
-              <History className="h-4 w-4" />
-              Сессия ({session.items.length})
-            </div>
-            <Button variant="ghost" size="sm" onClick={clearSession} disabled={session.items.length === 0}>
-              <Trash2 className="h-4 w-4 text-destructive" />
-            </Button>
-          </div>
-          
-          <div className="flex-1 overflow-auto p-0">
-            {session.items.length === 0 ? (
-              <div className="text-center text-muted-foreground py-8 px-4">
-                Нет отсканированных элементов
-              </div>
-            ) : (
-              <div className="divide-y">
-                {session.items.map((item, idx) => (
-                  <div key={`${item.id}-${idx}`} className="p-3 flex justify-between items-center hover:bg-muted/50 transition-colors">
-                    <div className="overflow-hidden">
-                      <div className="font-medium truncate">{item.name}</div>
-                      <div className="text-xs text-muted-foreground flex gap-2">
-                        <span>{item.barcode}</span>
-                        <span>•</span>
-                        <span>{item.category_name}</span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-          
-          <div className="p-4 border-t bg-muted/40">
-             <Button className="w-full" disabled={session.items.length === 0} onClick={handleCreateProject}>
-               <Box className="mr-2 h-4 w-4" /> Создать проект
-             </Button>
-          </div>
-        </div>
+      {/* Right Column - Info & Actions */}
+      <div className="w-full lg:w-80 flex flex-col gap-6">
+        <ScannerStatusCard
+          status={scannerStatus}
+          error={scannerError?.message}
+        />
+
+        <QuickActionsCard
+          hasEquipment={!!lastScannedEquipment}
+          onUpdateStatus={handleUpdateStatus}
+          onViewHistory={handleViewHistory}
+          onCreateProject={handleCreateProject}
+          itemCount={activeSession?.items.length || 0}
+        />
+
+        <Card className="flex-1 min-h-0">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">История сканирования</CardTitle>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <ScanHistoryFeed
+              entries={scanHistory}
+              maxEntries={10}
+              onEntryClick={(entry) => {
+                if (entry.equipment) {
+                  setSelectedEquipmentId(entry.equipment.equipment_id);
+                  setHistoryPanelOpen(true);
+                }
+              }}
+            />
+          </CardContent>
+        </Card>
       </div>
+
+      {/* Panels */}
+      <SessionManagementPanel
+        open={sessionPanelOpen}
+        onOpenChange={setSessionPanelOpen}
+        sessions={sessions}
+        activeSessionId={activeSession?.id || null}
+        serverSessions={serverSessions}
+        onLoadSession={setActiveSession}
+        onLoadServerSession={handleLoadServerSession}
+        onDeleteSession={deleteSession}
+        onCreateSession={(name) => {
+          createSession(name);
+          setSessionPanelOpen(false);
+          toast.success(`Сессия "${name}" создана`);
+        }}
+        onCleanExpired={() => {
+          toast.info('Очистка устаревших сессий...');
+        }}
+        onResetAll={() => {
+          if (confirm('Удалить ВСЕ локальные сессии? Это действие нельзя отменить.')) {
+            sessions.forEach((s) => deleteSession(s.id));
+            toast.success('Все сессии удалены');
+          }
+        }}
+      />
+
+      <EquipmentHistoryPanel
+        open={historyPanelOpen}
+        onOpenChange={setHistoryPanelOpen}
+        equipmentId={selectedEquipmentId}
+        equipmentName={
+          lastScannedEquipment?.id === selectedEquipmentId
+            ? lastScannedEquipment?.name
+            : undefined
+        }
+      />
+
+      <StatusUpdateSheet
+        open={statusSheetOpen}
+        onOpenChange={setStatusSheetOpen}
+        equipmentId={selectedEquipmentId}
+        currentStatus={lastScannedEquipment?.status || 'AVAILABLE'}
+        onStatusUpdate={handleStatusUpdateConfirm}
+        isUpdating={updateStatusMutation.isPending}
+      />
     </div>
   );
 }
