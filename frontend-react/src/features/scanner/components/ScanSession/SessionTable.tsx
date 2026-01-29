@@ -36,12 +36,12 @@ export function SessionTable({
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Name</TableHead>
-            <TableHead>Category</TableHead>
-            <TableHead>Barcode</TableHead>
-            <TableHead>Serial Number</TableHead>
-            <TableHead className="text-center">Quantity</TableHead>
-            <TableHead className="text-right">Actions</TableHead>
+            <TableHead>Название</TableHead>
+            <TableHead>Категория</TableHead>
+            <TableHead>Штрих-код</TableHead>
+            <TableHead>Серийный номер</TableHead>
+            <TableHead className="text-center">Кол-во</TableHead>
+            <TableHead className="text-right">Действия</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>

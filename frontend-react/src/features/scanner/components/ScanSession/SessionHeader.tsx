@@ -36,25 +36,25 @@ const getSyncStatusConfig = (status: SyncStatus) => {
     case 'synced':
       return {
         color: 'bg-green-500',
-        label: 'Synced',
+        label: 'Синхронизировано',
         variant: 'success' as const,
       };
     case 'dirty':
       return {
         color: 'bg-yellow-500',
-        label: 'Unsaved changes',
+        label: 'Несохранённые изменения',
         variant: 'warning' as const,
       };
     case 'error':
       return {
         color: 'bg-red-500',
-        label: 'Sync failed',
+        label: 'Ошибка синхронизации',
         variant: 'destructive' as const,
       };
     case 'local_only':
       return {
         color: 'bg-gray-400',
-        label: 'Local only',
+        label: 'Только локально',
         variant: 'secondary' as const,
       };
   }
@@ -85,12 +85,12 @@ export function SessionHeader({
             size="icon"
             onClick={onRenameSession}
             className="h-8 w-8"
-            title="Rename session"
+            title="Переименовать сессию"
           >
             <Edit2 className="h-4 w-4" />
           </Button>
         </div>
-        <Badge variant="secondary">{itemCount} items</Badge>
+        <Badge variant="secondary">{itemCount} шт.</Badge>
         <div className="flex items-center gap-2">
           <div
             className={cn(
@@ -111,7 +111,7 @@ export function SessionHeader({
           className="gap-2"
         >
           <FolderPlus className="h-4 w-4" />
-          New
+          Новая
         </Button>
         <Button
           variant="outline"
@@ -120,7 +120,7 @@ export function SessionHeader({
           className="gap-2"
         >
           <FolderOpen className="h-4 w-4" />
-          Load
+          Загрузить
         </Button>
         <Button
           variant="outline"
@@ -129,7 +129,7 @@ export function SessionHeader({
           className="gap-2"
         >
           <Settings className="h-4 w-4" />
-          Manage
+          Управление
         </Button>
         <Button
           variant="default"
@@ -141,7 +141,7 @@ export function SessionHeader({
           <RefreshCw
             className={cn('h-4 w-4', isSyncing && 'animate-spin')}
           />
-          {isSyncing ? 'Syncing...' : 'Sync'}
+          {isSyncing ? 'Синхр...' : 'Синхр.'}
         </Button>
       </div>
     </div>

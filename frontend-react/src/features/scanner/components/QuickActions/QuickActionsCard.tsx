@@ -47,7 +47,7 @@ export function QuickActionsCard({
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-lg">Quick Actions</CardTitle>
+        <CardTitle className="text-lg">Быстрые действия</CardTitle>
       </CardHeader>
       <CardContent className="space-y-2">
         {/* Update Status Button */}
@@ -59,7 +59,7 @@ export function QuickActionsCard({
           size="lg"
         >
           <Settings className="h-5 w-5 mr-3" />
-          <span>Update Status</span>
+          <span>Изменить статус</span>
         </Button>
 
         {/* View History Button */}
@@ -71,7 +71,7 @@ export function QuickActionsCard({
           size="lg"
         >
           <History className="h-5 w-5 mr-3" />
-          <span>View History</span>
+          <span>История</span>
         </Button>
 
         {/* Create Project Button */}
@@ -84,7 +84,7 @@ export function QuickActionsCard({
             size="lg"
           >
             <Plus className="h-5 w-5 mr-3" />
-            <span>Create Project</span>
+            <span>Создать проект</span>
             {itemCount > 0 && (
               <Badge
                 variant="secondary"
@@ -100,13 +100,13 @@ export function QuickActionsCard({
         <div className="pt-2">
           <p className="text-xs text-muted-foreground">
             {!hasEquipment && itemCount === 0 && (
-              'Scan equipment to enable actions'
+              'Отсканируйте оборудование для выполнения действий'
             )}
             {hasEquipment && itemCount === 0 && (
-              'Scan more equipment to create a project'
+              'Отсканируйте ещё оборудование для создания проекта'
             )}
             {itemCount > 0 && (
-              `${itemCount} item${itemCount === 1 ? '' : 's'} ready for project`
+              `${itemCount} шт. готово для проекта`
             )}
           </p>
         </div>
