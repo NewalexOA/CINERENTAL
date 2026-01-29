@@ -46,6 +46,14 @@ class ScanSessionService:
         )
         return await self.repository.create(session)
 
+    async def get_all_sessions(self) -> List[ScanSession]:
+        """Get all non-deleted scan sessions.
+
+        Returns:
+            List of scan sessions
+        """
+        return await self.repository.get_all_active()
+
     async def get_session(self, session_id: int) -> Optional[ScanSession]:
         """Get scan session by ID.
 

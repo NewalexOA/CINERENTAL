@@ -24,6 +24,21 @@ class ScanSessionRepository(BaseRepository[ScanSession]):
         """
         super().__init__(session, ScanSession)
 
+    async def get_all_active(self) -> List[ScanSession]:
+        """Get all non-deleted scan sessions.
+
+        Returns:
+            List of scan sessions
+        """
+        query = (
+            select(self.model)
+            .where(self.model.deleted_at.is_(None))
+            .order_by(self.model.created_at.desc())
+        )
+
+        result = await self.session.execute(query)
+        return list(result.scalars().all())
+
     async def get_by_user(self, user_id: int) -> List[ScanSession]:
         """Get all scan sessions for a user OR sessions with no user_id.
 
