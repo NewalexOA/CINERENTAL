@@ -27,22 +27,22 @@ const statusConfig: Record<
   }
 > = {
   active: {
-    label: 'Ready to Scan',
-    description: 'Point scanner at barcode and scan',
+    label: 'Готов к сканированию',
+    description: 'Наведите сканер на штрих-код и нажмите кнопку',
     dotColor: 'bg-green-500',
     icon: CheckCircle2,
     iconColor: 'text-green-600',
   },
   inactive: {
-    label: 'Scanner Inactive',
-    description: 'Scanner is not currently listening',
+    label: 'Сканер неактивен',
+    description: 'Сканер не прослушивает ввод',
     dotColor: 'bg-gray-400',
     icon: Scan,
     iconColor: 'text-gray-400',
   },
   error: {
-    label: 'Scanner Error',
-    description: 'An error occurred with the scanner',
+    label: 'Ошибка сканера',
+    description: 'Произошла ошибка сканера',
     dotColor: 'bg-red-500',
     icon: AlertCircle,
     iconColor: 'text-red-600',
@@ -52,19 +52,19 @@ const statusConfig: Record<
 // Error recommendations
 const errorRecommendations: Record<string, string[]> = {
   connection: [
-    'Check if the scanner is properly connected',
-    'Try unplugging and reconnecting the scanner',
-    'Verify USB port is functioning',
+    'Проверьте подключение сканера',
+    'Попробуйте отключить и подключить сканер заново',
+    'Убедитесь, что USB-порт работает',
   ],
   permission: [
-    'Grant browser permission to use input devices',
-    'Check browser security settings',
-    'Try refreshing the page',
+    'Предоставьте браузеру разрешение на использование устройств ввода',
+    'Проверьте настройки безопасности браузера',
+    'Попробуйте обновить страницу',
   ],
   default: [
-    'Check scanner connection',
-    'Refresh the page and try again',
-    'Contact support if the issue persists',
+    'Проверьте подключение сканера',
+    'Обновите страницу и попробуйте снова',
+    'Обратитесь в поддержку, если проблема сохраняется',
   ],
 };
 
@@ -116,7 +116,7 @@ export function ScannerStatusCard({
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-lg">Scanner Status</CardTitle>
+        <CardTitle className="text-lg">Статус сканера</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         {/* Scanner Icon Area */}
@@ -179,7 +179,7 @@ export function ScannerStatusCard({
             {recommendations.length > 0 && (
               <div className="rounded-md bg-blue-50 border border-blue-200 p-3">
                 <p className="text-xs font-medium text-blue-900 mb-2">
-                  Recommendations:
+                  Рекомендации:
                 </p>
                 <ul className="space-y-1 text-xs text-blue-800">
                   {recommendations.map((rec, index) => (
@@ -201,7 +201,7 @@ export function ScannerStatusCard({
                 size="sm"
               >
                 <RefreshCw className="h-4 w-4 mr-2" />
-                Retry Connection
+                Повторить подключение
               </Button>
             )}
           </div>
@@ -213,11 +213,11 @@ export function ScannerStatusCard({
             <div className="flex gap-2">
               <Scan className="h-4 w-4 text-blue-600 flex-shrink-0 mt-0.5" />
               <div className="text-xs text-blue-800 space-y-1">
-                <p className="font-medium">How to scan:</p>
+                <p className="font-medium">Как сканировать:</p>
                 <ol className="list-decimal list-inside space-y-0.5 ml-1">
-                  <li>Point the scanner at the barcode</li>
-                  <li>Press the scanner trigger</li>
-                  <li>Wait for the confirmation sound/light</li>
+                  <li>Наведите сканер на штрих-код</li>
+                  <li>Нажмите кнопку сканера</li>
+                  <li>Дождитесь звукового/светового подтверждения</li>
                 </ol>
               </div>
             </div>

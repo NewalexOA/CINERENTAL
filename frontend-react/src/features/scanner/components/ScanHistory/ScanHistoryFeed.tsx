@@ -5,6 +5,7 @@
 
 import { motion, AnimatePresence } from 'framer-motion';
 import { formatDistanceToNow } from 'date-fns';
+import { ru } from 'date-fns/locale';
 import { Check, X, Plus, AlertCircle, AlertTriangle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
@@ -24,27 +25,27 @@ const resultConfig: Record<
   success: {
     icon: Check,
     color: 'text-green-600',
-    label: 'Added',
+    label: 'Добавлено',
   },
   duplicate: {
     icon: AlertTriangle,
     color: 'text-yellow-600',
-    label: 'Duplicate',
+    label: 'Дубликат',
   },
   quantity_updated: {
     icon: Plus,
     color: 'text-blue-600',
-    label: 'Quantity Updated',
+    label: 'Кол-во обновлено',
   },
   not_found: {
     icon: X,
     color: 'text-red-600',
-    label: 'Not Found',
+    label: 'Не найдено',
   },
   error: {
     icon: AlertCircle,
     color: 'text-red-600',
-    label: 'Error',
+    label: 'Ошибка',
   },
 };
 
@@ -78,7 +79,7 @@ export function ScanHistoryFeed({
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-lg">Scan History</CardTitle>
+        <CardTitle className="text-lg">История сканирования</CardTitle>
       </CardHeader>
       <CardContent className="p-0">
         {displayEntries.length === 0 ? (
@@ -86,9 +87,9 @@ export function ScanHistoryFeed({
             <div className="rounded-full bg-muted p-3 mb-3">
               <AlertCircle className="h-6 w-6 text-muted-foreground" />
             </div>
-            <p className="text-sm text-muted-foreground">No scans yet</p>
+            <p className="text-sm text-muted-foreground">Сканирований пока нет</p>
             <p className="text-xs text-muted-foreground mt-1">
-              Scan equipment to see history
+              Отсканируйте оборудование для отображения истории
             </p>
           </div>
         ) : (
@@ -147,7 +148,7 @@ export function ScanHistoryFeed({
                               ) : (
                                 <>
                                   <p className="font-medium text-sm">
-                                    Unknown Equipment
+                                    Неизвестное оборудование
                                   </p>
                                   <p className="text-xs text-muted-foreground mt-0.5">
                                     {entry.barcode}
@@ -165,6 +166,7 @@ export function ScanHistoryFeed({
                             <div className="text-xs text-muted-foreground whitespace-nowrap">
                               {formatDistanceToNow(new Date(entry.timestamp), {
                                 addSuffix: true,
+                                locale: ru,
                               })}
                             </div>
                           </div>

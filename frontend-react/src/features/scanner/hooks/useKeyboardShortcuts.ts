@@ -98,36 +98,36 @@ export function useKeyboardShortcuts(
     {
       key: 'n',
       ctrlKey: true,
-      description: 'Create new session',
+      description: 'Создать новую сессию',
       action: onNewSession,
     },
     {
       key: 'l',
       ctrlKey: true,
-      description: 'Load session',
+      description: 'Загрузить сессию',
       action: onLoadSession,
     },
     {
       key: 's',
       ctrlKey: true,
-      description: 'Sync to server',
+      description: 'Синхронизировать с сервером',
       action: onSync,
     },
     {
       key: 'p',
       ctrlKey: true,
-      description: 'Create project from session',
+      description: 'Создать проект из сессии',
       action: onCreateProject,
     },
     {
       key: 'Escape',
-      description: 'Clear scan result / Close panel',
+      description: 'Очистить результат / Закрыть панель',
       action: onClearResult,
     },
     {
       key: 'f',
       ctrlKey: true,
-      description: 'Focus search input',
+      description: 'Перейти к поиску',
       action: onFocusSearch,
     },
   ];

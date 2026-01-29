@@ -5,6 +5,7 @@
 
 import { useState } from 'react';
 import { format } from 'date-fns';
+import { ru } from 'date-fns/locale';
 import { motion } from 'framer-motion';
 import {
   Sheet,
@@ -93,12 +94,12 @@ export function EquipmentHistoryPanel({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-full sm:max-w-2xl">
         <SheetHeader>
-          <SheetTitle>Equipment History</SheetTitle>
+          <SheetTitle>История оборудования</SheetTitle>
           <SheetDescription>
             {equipmentName ? (
               <span className="font-medium text-foreground">{equipmentName}</span>
             ) : (
-              'Select equipment to view history'
+              'Выберите оборудование для просмотра истории'
             )}
           </SheetDescription>
         </SheetHeader>
@@ -107,18 +108,18 @@ export function EquipmentHistoryPanel({
           <div className="flex flex-col items-center justify-center py-12 text-center">
             <Package className="h-12 w-12 text-muted-foreground mb-3" />
             <p className="text-sm text-muted-foreground">
-              No equipment selected
+              Оборудование не выбрано
             </p>
             <p className="text-xs text-muted-foreground mt-1">
-              Scan or select equipment to view its history
+              Отсканируйте или выберите оборудование для просмотра истории
             </p>
           </div>
         ) : (
           <div className="mt-6">
             <Tabs defaultValue="timeline" className="w-full">
               <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="timeline">Status Timeline</TabsTrigger>
-                <TabsTrigger value="bookings">Booking History</TabsTrigger>
+                <TabsTrigger value="timeline">Хронология статусов</TabsTrigger>
+                <TabsTrigger value="bookings">История бронирований</TabsTrigger>
               </TabsList>
 
               {/* Status Timeline Tab */}
@@ -132,10 +133,10 @@ export function EquipmentHistoryPanel({
                     <div className="flex flex-col items-center justify-center py-12 text-center">
                       <History className="h-12 w-12 text-muted-foreground mb-3" />
                       <p className="text-sm text-muted-foreground">
-                        No status history available
+                        История статусов отсутствует
                       </p>
                       <p className="text-xs text-muted-foreground mt-1">
-                        Status changes will appear here
+                        Изменения статуса будут отображаться здесь
                       </p>
                     </div>
                   ) : (
@@ -168,7 +169,7 @@ export function EquipmentHistoryPanel({
                                 {entry.previous_status && (
                                   <>
                                     <span className="text-xs text-muted-foreground">
-                                      from
+                                      из
                                     </span>
                                     <Badge
                                       variant={getStatusBadgeVariant(
@@ -184,7 +185,8 @@ export function EquipmentHistoryPanel({
                                 <Clock className="h-3 w-3" />
                                 {format(
                                   new Date(entry.changed_at),
-                                  'MMM d, yyyy HH:mm'
+                                  'd MMM yyyy, HH:mm',
+                                  { locale: ru }
                                 )}
                               </div>
                             </div>
@@ -192,7 +194,7 @@ export function EquipmentHistoryPanel({
                             {entry.changed_by && (
                               <div className="flex items-center gap-1 text-xs text-muted-foreground">
                                 <User className="h-3 w-3" />
-                                Changed by {entry.changed_by}
+                                Изменил: {entry.changed_by}
                               </div>
                             )}
 
@@ -220,10 +222,10 @@ export function EquipmentHistoryPanel({
                     <div className="flex flex-col items-center justify-center py-12 text-center">
                       <Calendar className="h-12 w-12 text-muted-foreground mb-3" />
                       <p className="text-sm text-muted-foreground">
-                        No booking history available
+                        История бронирований отсутствует
                       </p>
                       <p className="text-xs text-muted-foreground mt-1">
-                        Bookings for this equipment will appear here
+                        Бронирования этого оборудования будут отображаться здесь
                       </p>
                     </div>
                   ) : (
@@ -259,7 +261,7 @@ export function EquipmentHistoryPanel({
                                 </Button>
                               </div>
                               <p className="text-sm text-muted-foreground">
-                                Client: {booking.client_name}
+                                Клиент: {booking.client_name}
                               </p>
                             </div>
                             <Badge variant={getBookingStatusBadge(booking.status)}>
@@ -272,14 +274,14 @@ export function EquipmentHistoryPanel({
                             <div className="flex items-center gap-1">
                               <Calendar className="h-3 w-3" />
                               <span>
-                                {format(new Date(booking.start_date), 'MMM d, yyyy')}
+                                {format(new Date(booking.start_date), 'd MMM yyyy', { locale: ru })}
                               </span>
                             </div>
                             <span>→</span>
                             <div className="flex items-center gap-1">
                               <Calendar className="h-3 w-3" />
                               <span>
-                                {format(new Date(booking.end_date), 'MMM d, yyyy')}
+                                {format(new Date(booking.end_date), 'd MMM yyyy', { locale: ru })}
                               </span>
                             </div>
                           </div>

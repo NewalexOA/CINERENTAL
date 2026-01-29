@@ -5,6 +5,7 @@
 
 import { useState } from 'react';
 import { format } from 'date-fns';
+import { ru } from 'date-fns/locale';
 import {
   Sheet,
   SheetContent,
@@ -107,7 +108,7 @@ export function SessionManagementPanel({
       return (
         <Badge variant="success" className="gap-1">
           <CheckCircle2 className="h-3 w-3" />
-          Synced
+          Синхр.
         </Badge>
       );
     }
@@ -115,14 +116,14 @@ export function SessionManagementPanel({
       return (
         <Badge variant="warning" className="gap-1">
           <Upload className="h-3 w-3" />
-          Pending
+          Ожидает
         </Badge>
       );
     }
     return (
       <Badge variant="secondary" className="gap-1">
         <Cloud className="h-3 w-3" />
-        Local
+        Локально
       </Badge>
     );
   };
@@ -130,21 +131,21 @@ export function SessionManagementPanel({
   return (
     <>
       <Sheet open={open} onOpenChange={onOpenChange}>
-        <SheetContent side="right" className="w-full sm:max-w-2xl">
+        <SheetContent side="right" className="w-full sm:max-w-4xl">
           <SheetHeader>
-            <SheetTitle>Session Management</SheetTitle>
+            <SheetTitle>Управление сессиями</SheetTitle>
             <SheetDescription>
-              Manage local and server scan sessions
+              Управление локальными и серверными сессиями сканирования
             </SheetDescription>
           </SheetHeader>
 
           <div className="mt-6 space-y-6">
             {/* Create New Session */}
             <div className="space-y-2">
-              <h3 className="text-sm font-medium">Create New Session</h3>
+              <h3 className="text-sm font-medium">Создать новую сессию</h3>
               <div className="flex gap-2">
                 <Input
-                  placeholder="Session name..."
+                  placeholder="Название сессии..."
                   value={newSessionName}
                   onChange={(e) => setNewSessionName(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && handleCreateSession()}
@@ -156,7 +157,7 @@ export function SessionManagementPanel({
                   size="default"
                 >
                   <Plus className="h-4 w-4 mr-1" />
-                  Create
+                  Создать
                 </Button>
               </div>
             </div>
@@ -165,10 +166,10 @@ export function SessionManagementPanel({
             <Tabs defaultValue="local" className="w-full">
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="local">
-                  Local Sessions ({sessions.length})
+                  Локальные ({sessions.length})
                 </TabsTrigger>
                 <TabsTrigger value="server">
-                  Server Sessions ({serverSessions?.length || 0})
+                  Серверные ({serverSessions?.length || 0})
                 </TabsTrigger>
               </TabsList>
 
@@ -179,22 +180,22 @@ export function SessionManagementPanel({
                     <div className="flex flex-col items-center justify-center py-12 text-center">
                       <Cloud className="h-12 w-12 text-muted-foreground mb-3" />
                       <p className="text-sm text-muted-foreground">
-                        No local sessions found
+                        Локальные сессии не найдены
                       </p>
                       <p className="text-xs text-muted-foreground mt-1">
-                        Create a new session to get started
+                        Создайте новую сессию для начала работы
                       </p>
                     </div>
                   ) : (
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead>Name</TableHead>
-                          <TableHead>Created</TableHead>
-                          <TableHead>Updated</TableHead>
-                          <TableHead className="text-right">Items</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead className="text-right">Actions</TableHead>
+                          <TableHead>Название</TableHead>
+                          <TableHead>Создано</TableHead>
+                          <TableHead>Обновлено</TableHead>
+                          <TableHead className="text-right">Элем.</TableHead>
+                          <TableHead>Статус</TableHead>
+                          <TableHead className="text-right">Действия</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -214,20 +215,22 @@ export function SessionManagementPanel({
                                   variant="default"
                                   className="ml-2 text-xs"
                                 >
-                                  Active
+                                  Активная
                                 </Badge>
                               )}
                             </TableCell>
                             <TableCell className="text-xs text-muted-foreground">
                               {format(
                                 new Date(session.createdAt),
-                                'MMM d, HH:mm'
+                                'd MMM, HH:mm',
+                                { locale: ru }
                               )}
                             </TableCell>
                             <TableCell className="text-xs text-muted-foreground">
                               {format(
                                 new Date(session.updatedAt),
-                                'MMM d, HH:mm'
+                                'd MMM, HH:mm',
+                                { locale: ru }
                               )}
                             </TableCell>
                             <TableCell className="text-right">
@@ -236,23 +239,25 @@ export function SessionManagementPanel({
                             <TableCell>{getSyncStatusBadge(session)}</TableCell>
                             <TableCell className="text-right">
                               <div className="flex justify-end gap-1">
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => onLoadSession(session.id)}
-                                  disabled={
-                                    session.id === activeSessionId || isLoading
-                                  }
-                                >
-                                  Load
-                                </Button>
+                                {session.id === activeSessionId ? (
+                                  <span className="inline-flex items-center px-3 py-1 text-xs text-muted-foreground">
+                                    Активная
+                                  </span>
+                                ) : (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => onLoadSession(session.id)}
+                                    disabled={isLoading}
+                                  >
+                                    Загрузить
+                                  </Button>
+                                )}
                                 <Button
                                   variant="ghost"
                                   size="sm"
                                   onClick={() => handleDeleteSession(session.id)}
-                                  disabled={
-                                    session.id === activeSessionId || isLoading
-                                  }
+                                  disabled={isLoading}
                                 >
                                   <Trash2 className="h-4 w-4 text-destructive" />
                                 </Button>
@@ -277,21 +282,21 @@ export function SessionManagementPanel({
                     <div className="flex flex-col items-center justify-center py-12 text-center">
                       <Cloud className="h-12 w-12 text-muted-foreground mb-3" />
                       <p className="text-sm text-muted-foreground">
-                        No server sessions found
+                        Серверные сессии не найдены
                       </p>
                       <p className="text-xs text-muted-foreground mt-1">
-                        Sync local sessions to see them here
+                        Синхронизируйте локальные сессии, чтобы увидеть их здесь
                       </p>
                     </div>
                   ) : (
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead>Name</TableHead>
-                          <TableHead>Created</TableHead>
-                          <TableHead>Updated</TableHead>
-                          <TableHead className="text-right">Items</TableHead>
-                          <TableHead className="text-right">Actions</TableHead>
+                          <TableHead>Название</TableHead>
+                          <TableHead>Создано</TableHead>
+                          <TableHead>Обновлено</TableHead>
+                          <TableHead className="text-right">Элем.</TableHead>
+                          <TableHead className="text-right">Действия</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -303,13 +308,15 @@ export function SessionManagementPanel({
                             <TableCell className="text-xs text-muted-foreground">
                               {format(
                                 new Date(session.created_at),
-                                'MMM d, HH:mm'
+                                'd MMM, HH:mm',
+                                { locale: ru }
                               )}
                             </TableCell>
                             <TableCell className="text-xs text-muted-foreground">
                               {format(
                                 new Date(session.updated_at),
-                                'MMM d, HH:mm'
+                                'd MMM, HH:mm',
+                                { locale: ru }
                               )}
                             </TableCell>
                             <TableCell className="text-right">
@@ -322,7 +329,7 @@ export function SessionManagementPanel({
                                 onClick={() => onLoadServerSession(session)}
                                 disabled={isLoading}
                               >
-                                Load
+                                Загрузить
                               </Button>
                             </TableCell>
                           </TableRow>
@@ -343,7 +350,7 @@ export function SessionManagementPanel({
                 className="flex-1"
               >
                 <Trash2 className="h-4 w-4 mr-2" />
-                Clean Expired
+                Очистить устаревшие
               </Button>
               <Button
                 variant="destructive"
@@ -352,7 +359,7 @@ export function SessionManagementPanel({
                 className="flex-1"
               >
                 <XCircle className="h-4 w-4 mr-2" />
-                Reset All
+                Сбросить всё
               </Button>
             </div>
           </div>
@@ -366,16 +373,16 @@ export function SessionManagementPanel({
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Session?</AlertDialogTitle>
+            <AlertDialogTitle>Удалить сессию?</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. This session and all its items will
-              be permanently deleted from local storage.
+              Это действие нельзя отменить. Сессия и все её элементы будут
+              безвозвратно удалены из локального хранилища.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>Отмена</AlertDialogCancel>
             <AlertDialogAction onClick={confirmDeleteSession}>
-              Delete
+              Удалить
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -385,14 +392,14 @@ export function SessionManagementPanel({
       <AlertDialog open={showResetConfirm} onOpenChange={setShowResetConfirm}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Reset All Sessions?</AlertDialogTitle>
+            <AlertDialogTitle>Сбросить все сессии?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete all local sessions, scan history, and
-              settings. This action cannot be undone.
+              Все локальные сессии, история сканирования и настройки будут
+              безвозвратно удалены. Это действие нельзя отменить.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>Отмена</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => {
                 onResetAll();
@@ -400,7 +407,7 @@ export function SessionManagementPanel({
               }}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              Reset All
+              Сбросить всё
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

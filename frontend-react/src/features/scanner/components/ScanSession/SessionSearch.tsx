@@ -70,7 +70,7 @@ export function SessionSearch({
         <Input
           ref={inputRef}
           type="text"
-          placeholder="Search by name, barcode, category... (Cmd+F)"
+          placeholder="Поиск по названию, штрих-коду, категории... (Cmd+F)"
           value={localValue}
           onChange={(e) => setLocalValue(e.target.value)}
           className="pl-9 pr-9"
@@ -81,7 +81,7 @@ export function SessionSearch({
             size="icon"
             onClick={handleClear}
             className="absolute right-1 top-1/2 h-7 w-7 -translate-y-1/2"
-            title="Clear search"
+            title="Очистить поиск"
           >
             <X className="h-4 w-4" />
           </Button>
@@ -92,12 +92,12 @@ export function SessionSearch({
       <div className="text-sm text-muted-foreground whitespace-nowrap">
         {value ? (
           <span>
-            Showing <strong>{filteredCount}</strong> of{' '}
-            <strong>{totalCount}</strong> items
+            Показано <strong>{filteredCount}</strong> из{' '}
+            <strong>{totalCount}</strong>
           </span>
         ) : (
           <span>
-            <strong>{totalCount}</strong> items
+            Всего: <strong>{totalCount}</strong>
           </span>
         )}
       </div>
