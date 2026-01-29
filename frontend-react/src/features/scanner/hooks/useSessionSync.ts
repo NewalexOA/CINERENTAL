@@ -55,18 +55,14 @@ const syncApi = {
 };
 
 /**
- * Convert local session to server payload
+ * Convert local session to server payload.
+ * Only sends equipment_id + quantity — server enriches from current DB state.
  */
 function sessionToPayload(session: ScanSession): ScanSessionPayload {
   return {
     name: session.name,
     items: session.items.map((item) => ({
       equipment_id: item.equipment_id,
-      barcode: item.barcode,
-      name: item.name,
-      category_id: item.category_id,
-      category_name: item.category_name,
-      serial_number: item.serial_number || null,
       quantity: item.quantity,
     })),
   };

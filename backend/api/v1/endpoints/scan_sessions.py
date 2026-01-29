@@ -79,7 +79,8 @@ async def create_scan_session(
         items=items,
         user_id=None,  # Make user_id always None for demo purposes
     )
-    return ScanSessionResponse.model_validate(result, from_attributes=True)
+    enriched = await service.enrich_session(result)
+    return ScanSessionResponse.model_validate(enriched)
 
 
 @typed_get(
@@ -102,14 +103,15 @@ async def get_scan_sessions(
         List[ScanSessionResponse]: List of scan sessions
     """
     if user_id:
-        result = await service.get_user_sessions(user_id)
+        sessions = await service.get_user_sessions(user_id)
     else:
-        result = await service.get_all_sessions()
+        sessions = await service.get_all_sessions()
 
-    return [
-        ScanSessionResponse.model_validate(session, from_attributes=True)
-        for session in result
-    ]
+    result = []
+    for session in sessions:
+        enriched = await service.enrich_session(session)
+        result.append(ScanSessionResponse.model_validate(enriched))
+    return result
 
 
 @typed_get(
@@ -137,7 +139,8 @@ async def get_scan_session(
     session = await service.get_session(session_id)
     if not session:
         raise NotFoundError(f'Scan session with ID {session_id} not found')
-    return ScanSessionResponse.model_validate(session, from_attributes=True)
+    enriched = await service.enrich_session(session)
+    return ScanSessionResponse.model_validate(enriched)
 
 
 @typed_put(
@@ -173,7 +176,8 @@ async def update_scan_session(
     )
     if not session:
         raise NotFoundError(f'Scan session with ID {session_id} not found')
-    return ScanSessionResponse.model_validate(session, from_attributes=True)
+    enriched = await service.enrich_session(session)
+    return ScanSessionResponse.model_validate(enriched)
 
 
 @typed_delete(

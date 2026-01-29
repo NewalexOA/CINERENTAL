@@ -72,20 +72,15 @@ export interface ServerScanSession {
 }
 
 /**
- * Payload for creating/updating server session
+ * Payload for creating/updating server session.
+ * Only IDs + quantity — server enriches from current DB state on read.
  */
 export interface ScanSessionPayload {
   name: string;
   items: Array<{
     equipment_id: number;
-    barcode: string;
-    name: string;
-    category_id: number | null;
-    category_name: string | null;
-    serial_number?: string | null;
-    quantity?: number;
+    quantity: number;
   }>;
-  user_id?: number | null;
 }
 
 // ============================================================================
