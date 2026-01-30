@@ -19,10 +19,16 @@ import {
   SelectValue
 } from '../../../components/ui/select';
 import { Input } from '../../../components/ui/input';
+import {
+  Dialog,
+  DialogContent,
+} from '../../../components/ui/dialog';
 import { EquipmentFormDialog } from '../components/EquipmentFormDialog';
 import { EquipmentDeleteDialog } from '../components/EquipmentDeleteDialog';
 import { RentalStatusBadge } from '../components/RentalStatusBadge';
-import { Plus, Search, QrCode, Pencil, Trash2 } from 'lucide-react';
+import { Plus, Search, QrCode, Pencil, Trash2, ScanLine } from 'lucide-react';
+import { useScanSession } from '../../scanner/hooks/useScanSession';
+import type { SessionItem } from '../../scanner/types/scanner.types';
 import { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -49,6 +55,7 @@ export default function EquipmentPage() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editingEquipment, setEditingEquipment] = useState<Equipment | null>(null);
   const [deletingEquipment, setDeletingEquipment] = useState<Equipment | null>(null);
+  const [scanSessionEquipment, setScanSessionEquipment] = useState<Equipment | null>(null);
 
   const { data: categories } = useQuery({
     queryKey: ['categories'],
@@ -107,6 +114,41 @@ export default function EquipmentPage() {
       console.error(err);
     }
   });
+
+  // Scan session
+  const { activeSession, addEquipment: addToSession } = useScanSession();
+
+  const handleAddToScanSession = (item: Equipment) => {
+    if (!activeSession) {
+      toast.error('Нет активной сессии сканирования. Откройте страницу сканера и создайте сессию.');
+      return;
+    }
+    setScanSessionEquipment(item);
+  };
+
+  const confirmAddToScanSession = () => {
+    if (!scanSessionEquipment || !activeSession) return;
+
+    const sessionItem: SessionItem = {
+      equipment_id: scanSessionEquipment.id,
+      name: scanSessionEquipment.name,
+      barcode: scanSessionEquipment.barcode,
+      serial_number: scanSessionEquipment.serial_number || null,
+      category_id: scanSessionEquipment.category_id,
+      category_name: scanSessionEquipment.category_name || scanSessionEquipment.category?.name || '',
+      quantity: 1,
+    };
+
+    const result = addToSession(sessionItem);
+    if (result === 'added') {
+      toast.success(`"${scanSessionEquipment.name}" добавлено в сессию`);
+    } else if (result === 'incremented') {
+      toast.success(`Количество "${scanSessionEquipment.name}" увеличено`);
+    } else if (result === 'duplicate') {
+      toast.warning(`"${scanSessionEquipment.name}" уже в сессии`);
+    }
+    setScanSessionEquipment(null);
+  };
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearch(e.target.value);
@@ -237,6 +279,9 @@ export default function EquipmentPage() {
                 </TableCell>
                 <TableCell className="py-1 text-right">
                   <div className="flex justify-end gap-1">
+                    <Button variant="ghost" size="icon" className="h-6 w-6 text-green-600 hover:text-green-700" title="В сессию сканирования" onClick={() => handleAddToScanSession(item)}>
+                      <ScanLine className="h-3 w-3" />
+                    </Button>
                     <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setEditingEquipment(item)}>
                       <Pencil className="h-3 w-3" />
                     </Button>
@@ -292,6 +337,26 @@ export default function EquipmentPage() {
         onConfirm={handleDelete}
         isLoading={deleteMutation.isPending}
       />
+
+      <Dialog open={!!scanSessionEquipment} onOpenChange={(val) => !val && setScanSessionEquipment(null)}>
+        <DialogContent className="sm:max-w-sm">
+          <div className="flex flex-col items-center text-center gap-5 pt-4 pb-2">
+            <p className="text-sm leading-relaxed">
+              Добавить <strong>{scanSessionEquipment?.name}</strong>
+              <br />
+              в сессию <strong>{activeSession?.name}</strong>?
+            </p>
+            <div className="flex gap-3 w-full">
+              <Button variant="outline" className="flex-1" onClick={() => setScanSessionEquipment(null)}>
+                Отмена
+              </Button>
+              <Button className="flex-1" onClick={confirmAddToScanSession}>
+                Добавить
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
