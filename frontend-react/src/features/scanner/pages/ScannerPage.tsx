@@ -33,7 +33,6 @@ import {
 } from '../api';
 
 // UI Components
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
@@ -370,25 +369,21 @@ export default function ScannerPage() {
   });
 
   return (
-    <div className="flex flex-col lg:flex-row gap-6 p-4 lg:p-6">
+    <div className="h-full flex flex-col lg:flex-row gap-4">
       {/* Left Column - Main Content */}
-      <div className="flex-1 flex flex-col gap-6 min-w-0">
+      <div className="flex-1 flex flex-col gap-4 min-w-0 overflow-auto">
         {/* Manual Entry */}
-        <Card>
-          <CardContent className="pt-6">
-            <form onSubmit={handleManualSubmit} className="flex gap-2">
-              <Input
-                placeholder="Введите штрих-код вручную..."
-                value={manualBarcode}
-                onChange={(e) => setManualBarcode(e.target.value)}
-                className="font-mono"
-              />
-              <Button type="submit" disabled={isLookingUp || !manualBarcode.trim()}>
-                Найти
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
+        <form onSubmit={handleManualSubmit} className="flex gap-2">
+          <Input
+            placeholder="Введите штрих-код вручную..."
+            value={manualBarcode}
+            onChange={(e) => setManualBarcode(e.target.value)}
+            className="font-mono"
+          />
+          <Button type="submit" disabled={isLookingUp || !manualBarcode.trim()}>
+            Найти
+          </Button>
+        </form>
 
         {/* Scan Result */}
         <ScanResultCard
@@ -399,12 +394,11 @@ export default function ScannerPage() {
           onUpdateStatus={handleUpdateStatus}
         />
 
-        {/* Session Card */}
-        <Card className="flex flex-col">
+        {/* Session */}
+        <div className="border rounded-md flex flex-col bg-card">
           {activeSession ? (
             <>
-              <CardHeader className="pb-4">
-                <SessionHeader
+              <SessionHeader
                   sessionName={activeSession.name}
                   itemCount={activeSession.items.length}
                   syncStatus={syncStatus}
@@ -427,9 +421,8 @@ export default function ScannerPage() {
                   onSync={syncNow}
                   isSyncing={isSyncing}
                 />
-              </CardHeader>
 
-              <CardContent className="pt-0">
+              <div className="px-4 pb-4">
                 <SessionSearch
                   value={searchTerm}
                   onChange={setSearchTerm}
@@ -461,9 +454,9 @@ export default function ScannerPage() {
                     />
                   )}
                 </div>
-              </CardContent>
+              </div>
 
-              <CardFooter className="pt-4 border-t">
+              <div className="px-4 py-3 border-t">
                 <Button
                   variant="outline"
                   onClick={clearSession}
@@ -471,10 +464,10 @@ export default function ScannerPage() {
                 >
                   Очистить
                 </Button>
-              </CardFooter>
+              </div>
             </>
           ) : (
-            <CardContent className="flex-1 flex items-center justify-center">
+            <div className="flex items-center justify-center p-8">
               <SessionEmptyState
                 type="no_session"
                 onCreateSession={() => {
@@ -486,13 +479,13 @@ export default function ScannerPage() {
                 }}
                 onManageSessions={() => setSessionPanelOpen(true)}
               />
-            </CardContent>
+            </div>
           )}
-        </Card>
+        </div>
       </div>
 
       {/* Right Column - Info & Actions */}
-      <div className="w-full lg:w-80 flex flex-col gap-6">
+      <div className="w-full lg:w-80 flex flex-col gap-4">
         <QuickActionsCard
           hasEquipment={!!lastScannedEquipment}
           onUpdateStatus={handleUpdateStatus}
@@ -501,23 +494,19 @@ export default function ScannerPage() {
           itemCount={activeSession?.items.length || 0}
         />
 
-        <Card className="flex-1 min-h-0">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">История сканирования</CardTitle>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <ScanHistoryFeed
-              entries={scanHistory}
-              maxEntries={10}
-              onEntryClick={(entry) => {
-                if (entry.equipment) {
-                  setSelectedEquipmentId(entry.equipment.equipment_id);
-                  setHistoryPanelOpen(true);
-                }
-              }}
-            />
-          </CardContent>
-        </Card>
+        <div className="flex-1 min-h-0">
+          <h3 className="text-sm font-medium mb-2">История сканирования</h3>
+          <ScanHistoryFeed
+            entries={scanHistory}
+            maxEntries={10}
+            onEntryClick={(entry) => {
+              if (entry.equipment) {
+                setSelectedEquipmentId(entry.equipment.equipment_id);
+                setHistoryPanelOpen(true);
+              }
+            }}
+          />
+        </div>
       </div>
 
       {/* Panels */}

@@ -7,7 +7,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { formatDistanceToNow } from 'date-fns';
 import { ru } from 'date-fns/locale';
 import { Check, X, Plus, AlertCircle, AlertTriangle } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import type { ScanHistoryEntry, ScanFeedbackType } from '../../types/scanner.types';
 
@@ -77,12 +76,8 @@ export function ScanHistoryFeed({
   const displayEntries = entries.slice(-maxEntries).reverse();
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-lg">История сканирования</CardTitle>
-      </CardHeader>
-      <CardContent className="p-0">
-        {displayEntries.length === 0 ? (
+    <div>
+      {displayEntries.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 px-6 text-center">
             <div className="rounded-full bg-muted p-3 mb-3">
               <AlertCircle className="h-6 w-6 text-muted-foreground" />
@@ -191,8 +186,7 @@ export function ScanHistoryFeed({
             </AnimatePresence>
           </div>
         )}
-      </CardContent>
-    </Card>
+    </div>
   );
 }
 

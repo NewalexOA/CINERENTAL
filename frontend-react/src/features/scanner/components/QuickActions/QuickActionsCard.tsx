@@ -4,7 +4,6 @@
  */
 
 import { Settings, History, Plus } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 
@@ -45,11 +44,9 @@ export function QuickActionsCard({
   itemCount = 0,
 }: QuickActionsCardProps) {
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-lg">Быстрые действия</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-2">
+    <div>
+      <h3 className="text-sm font-medium mb-2">Быстрые действия</h3>
+      <div className="space-y-2">
         {/* Update Status Button */}
         <Button
           onClick={onUpdateStatus}
@@ -110,8 +107,8 @@ export function QuickActionsCard({
             )}
           </p>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }
 
