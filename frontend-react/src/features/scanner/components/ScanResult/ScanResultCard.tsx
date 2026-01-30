@@ -2,7 +2,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ScanBarcode, History, Settings } from 'lucide-react';
 import { Equipment, EquipmentStatus } from '@/types/equipment';
 import { ScanFeedbackType } from '../../types/scanner.types';
-import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -146,14 +145,14 @@ export function ScanResultCard({
   return (
     <AnimatePresence mode="wait">
       {isLoading ? (
-        <Card className="w-full">
-          <CardHeader className="space-y-2">
+        <div className="border rounded-md w-full">
+          <div className="p-4 space-y-2">
             <div className="flex items-start justify-between">
               <div className="h-6 w-24 bg-muted animate-pulse rounded" />
               <div className="h-6 w-20 bg-muted animate-pulse rounded-full" />
             </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
+          </div>
+          <div className="px-4 pb-4 space-y-4">
             <div className="h-8 w-3/4 bg-muted animate-pulse rounded" />
             <div className="h-5 w-1/2 bg-muted animate-pulse rounded" />
             <div className="grid grid-cols-2 gap-4 mt-6">
@@ -164,12 +163,12 @@ export function ScanResultCard({
                 </div>
               ))}
             </div>
-          </CardContent>
-          <CardFooter className="gap-2">
+          </div>
+          <div className="px-4 pb-4 flex gap-2">
             <div className="h-10 w-32 bg-muted animate-pulse rounded-md" />
             <div className="h-10 w-40 bg-muted animate-pulse rounded-md" />
-          </CardFooter>
-        </Card>
+          </div>
+        </div>
       ) : equipment ? (
         <motion.div
           key={equipment.id}
@@ -178,8 +177,8 @@ export function ScanResultCard({
           exit={{ opacity: 0, scale: 0.95 }}
           transition={animation.transition}
         >
-          <Card className="w-full">
-            <CardHeader>
+          <div className="border rounded-md w-full">
+            <div className="p-4">
               <div className="flex items-start justify-between">
                 <div className="flex-1">
                   <h2 className="text-2xl font-semibold tracking-tight">{equipment.name}</h2>
@@ -191,9 +190,9 @@ export function ScanResultCard({
                   {getStatusDisplayText(equipment.status)}
                 </Badge>
               </div>
-            </CardHeader>
+            </div>
 
-            <CardContent>
+            <div className="px-4 pb-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <p className="text-sm text-muted-foreground">Штрих-код</p>
@@ -241,9 +240,9 @@ export function ScanResultCard({
                   <p className="text-sm text-yellow-600 dark:text-yellow-500">{equipment.notes}</p>
                 </div>
               )}
-            </CardContent>
+            </div>
 
-            <CardFooter className="flex gap-2">
+            <div className="px-4 pb-4 flex gap-2">
               <Button
                 variant="outline"
                 onClick={onViewHistory}
@@ -262,8 +261,8 @@ export function ScanResultCard({
                 <Settings className="mr-2 h-4 w-4" />
                 Изменить статус
               </Button>
-            </CardFooter>
-          </Card>
+            </div>
+          </div>
         </motion.div>
       ) : (
         <motion.div
@@ -273,8 +272,8 @@ export function ScanResultCard({
           exit={{ opacity: 0 }}
           transition={{ duration: 0.3 }}
         >
-          <Card className="w-full">
-            <CardContent className={cn(
+          <div className="border rounded-md w-full">
+            <div className={cn(
               "flex flex-col items-center justify-center py-12",
               "text-muted-foreground"
             )}>
@@ -283,8 +282,8 @@ export function ScanResultCard({
               <p className="text-sm text-center max-w-sm">
                 Используйте сканер штрих-кодов или введите код вручную для просмотра информации об оборудовании
               </p>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </motion.div>
       )}
     </AnimatePresence>
