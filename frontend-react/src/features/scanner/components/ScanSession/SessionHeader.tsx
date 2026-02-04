@@ -58,10 +58,7 @@ export function SessionHeader({
 
   return (
     <div className="flex items-center gap-3 border-b bg-card px-4 py-3">
-      {/* Session info */}
-      <h2 className="text-sm font-semibold truncate max-w-[200px]" title={sessionName}>
-        {sessionName}
-      </h2>
+      {/* Edit button + Session name */}
       <Button
         variant="ghost"
         size="icon"
@@ -71,14 +68,16 @@ export function SessionHeader({
       >
         <Edit2 className="h-3.5 w-3.5" />
       </Button>
+      <h2 className="text-sm font-semibold truncate flex-1 min-w-0" title={sessionName}>
+        {sessionName}
+      </h2>
+
+      {/* Count and status - grouped with action buttons */}
       <Badge variant="secondary" className="shrink-0 whitespace-nowrap">{itemCount} шт.</Badge>
       <div
         className={cn('h-2.5 w-2.5 shrink-0 rounded-full', statusConfig.color)}
         title={statusConfig.label}
       />
-
-      {/* Spacer */}
-      <div className="flex-1" />
 
       {/* Actions */}
       <div className="flex items-center gap-1.5 shrink-0">
