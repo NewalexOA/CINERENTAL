@@ -21,7 +21,7 @@ interface UseScanSession {
   /** Set active session by ID */
   setActiveSession: (id: string) => void;
   /** Create new session with given name and optional initial items */
-  createSession: (name: string, items?: SessionItem[]) => ScanSession;
+  createSession: (name: string, items?: SessionItem[], serverSessionId?: number) => ScanSession;
   /** Add equipment to current session */
   addEquipment: (equipment: SessionItem) => AddEquipmentResult;
   /** Remove equipment from current session */
@@ -169,17 +169,20 @@ export function useScanSession(): UseScanSession {
 
   /**
    * Create new session
+   * @param name - Session name
+   * @param initialItems - Optional initial items
+   * @param serverSessionId - Optional server session ID (when loading from server)
    */
-  const createSession = useCallback((name: string, initialItems?: SessionItem[]): ScanSession => {
+  const createSession = useCallback((name: string, initialItems?: SessionItem[], serverSessionId?: number): ScanSession => {
     const newSession: ScanSession = {
       id: generateSessionId(),
       name,
       items: initialItems ? initialItems.map((item) => ({ ...item, addedAt: new Date().toISOString() })) : [],
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-      syncedWithServer: false,
-      serverSessionId: null,
-      dirty: initialItems ? true : false,
+      syncedWithServer: !!serverSessionId,
+      serverSessionId: serverSessionId ?? null,
+      dirty: serverSessionId ? false : (initialItems ? true : false),
     };
 
     const allSessions = loadSessions();

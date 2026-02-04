@@ -320,7 +320,7 @@ export default function ScannerPage() {
    * Handle load server session
    */
   const handleLoadServerSession = (serverSession: ServerScanSession) => {
-    createSession(serverSession.name, serverSession.items);
+    createSession(serverSession.name, serverSession.items, serverSession.id);
     setSessionPanelOpen(false);
     toast.success(`Сессия "${serverSession.name}" загружена`);
   };
