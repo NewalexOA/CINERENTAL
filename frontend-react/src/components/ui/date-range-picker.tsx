@@ -108,8 +108,8 @@ export function DateTimeRangePicker({
   }
 
   const handleOpenChange = (isOpen: boolean) => {
-    if (!isOpen && localDate?.from && !localDate?.to) {
-      // Popover closing with incomplete selection — reset to external date
+    if (!isOpen && (!localDate || (localDate.from && !localDate.to))) {
+      // Popover closing with incomplete or cleared selection — reset to external date
       setLocalDate(date)
     }
     setOpen(isOpen)
