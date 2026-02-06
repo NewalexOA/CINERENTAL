@@ -28,8 +28,11 @@ export function DateTimeRangePicker({
 }: DateTimeRangePickerProps) {
   const [startTime, setStartTime] = React.useState("00:00")
   const [endTime, setEndTime] = React.useState("23:59")
+  const [open, setOpen] = React.useState(false)
+  // Local state buffers intermediate selection (when only "from" is picked)
+  const [localDate, setLocalDate] = React.useState<DateRange | undefined>(date)
 
-  // Sync internal time state with external date prop if available
+  // Sync internal time state with external date prop
   React.useEffect(() => {
     if (date?.from) {
       setStartTime(format(date.from, "HH:mm"))
@@ -39,9 +42,16 @@ export function DateTimeRangePicker({
     }
   }, [date?.from, date?.to])
 
+  // Sync local date with external date when popover opens or external date changes
+  React.useEffect(() => {
+    if (!open) {
+      setLocalDate(date)
+    }
+  }, [date, open])
+
   const handleDateSelect = (selectedDate: DateRange | undefined) => {
     if (!selectedDate) {
-      setDate(undefined)
+      setLocalDate(undefined)
       return
     }
 
@@ -58,17 +68,26 @@ export function DateTimeRangePicker({
       newTo = setMinutes(setHours(newTo, hours), minutes)
     }
 
-    setDate({ from: newFrom, to: newTo })
+    const newRange = { from: newFrom, to: newTo }
+    setLocalDate(newRange)
+
+    // Propagate to parent only when both dates are selected
+    if (newFrom && newTo) {
+      setDate(newRange)
+    }
   }
 
   const handleTimeChange = (type: 'start' | 'end', value: string) => {
     if (type === 'start') setStartTime(value)
     else setEndTime(value)
 
-    if (!date?.from) return
+    const currentFrom = localDate?.from
+    const currentTo = localDate?.to
 
-    let newFrom = date.from
-    let newTo = date.to
+    if (!currentFrom) return
+
+    let newFrom = currentFrom
+    let newTo = currentTo
 
     if (type === 'start' && newFrom) {
       const [hours, minutes] = value.split(':').map(Number)
@@ -78,16 +97,26 @@ export function DateTimeRangePicker({
     if (type === 'end' && newTo) {
       const [hours, minutes] = value.split(':').map(Number)
       newTo = setMinutes(setHours(newTo, hours), minutes)
-    } else if (type === 'end' && !newTo && newFrom) {
-       // If we set end time but no end date selected, assume same day?
-       // For now, do nothing until date is picked.
     }
 
-    setDate({ from: newFrom, to: newTo })
+    const newRange = { from: newFrom, to: newTo }
+    setLocalDate(newRange)
+
+    if (newFrom && newTo) {
+      setDate(newRange)
+    }
+  }
+
+  const handleOpenChange = (isOpen: boolean) => {
+    if (!isOpen && localDate?.from && !localDate?.to) {
+      // Popover closing with incomplete selection — reset to external date
+      setLocalDate(date)
+    }
+    setOpen(isOpen)
   }
 
   return (
-    <Popover>
+    <Popover open={open} onOpenChange={handleOpenChange}>
       <PopoverTrigger asChild>
         <Button
           id="date"
@@ -119,8 +148,8 @@ export function DateTimeRangePicker({
           <Calendar
             initialFocus
             mode="range"
-            defaultMonth={date?.from}
-            selected={date}
+            defaultMonth={localDate?.from}
+            selected={localDate}
             onSelect={handleDateSelect}
             numberOfMonths={2}
           />
@@ -130,9 +159,9 @@ export function DateTimeRangePicker({
                  <Label className="text-xs text-muted-foreground">Время начала</Label>
                  <div className="relative">
                    <Clock className="absolute left-2 top-2.5 h-3 w-3 text-muted-foreground" />
-                   <Input 
-                     type="time" 
-                     value={startTime} 
+                   <Input
+                     type="time"
+                     value={startTime}
                      onChange={(e) => handleTimeChange('start', e.target.value)}
                      className="h-8 pl-7 text-xs"
                    />
@@ -142,9 +171,9 @@ export function DateTimeRangePicker({
                  <Label className="text-xs text-muted-foreground">Время окончания</Label>
                  <div className="relative">
                    <Clock className="absolute left-2 top-2.5 h-3 w-3 text-muted-foreground" />
-                   <Input 
-                     type="time" 
-                     value={endTime} 
+                   <Input
+                     type="time"
+                     value={endTime}
                      onChange={(e) => handleTimeChange('end', e.target.value)}
                      className="h-8 pl-7 text-xs"
                    />
