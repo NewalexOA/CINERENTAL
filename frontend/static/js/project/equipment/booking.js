@@ -229,7 +229,7 @@ export async function addSelectedEquipmentToProject() {
             total_amount: total_amount
         };
 
-        const booking = await api.post('/bookings', bookingPayload);
+        const booking = await api.post('/bookings/', bookingPayload);
         await api.post(`/projects/${projectId}/bookings/${booking.id}`);
 
         await refreshProjectData(updateProjectData);
