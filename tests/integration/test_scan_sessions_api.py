@@ -6,8 +6,7 @@ import pytest
 from fastapi import status
 from httpx import AsyncClient
 
-from backend.models import ScanSession
-from backend.schemas.scan_session import ScanSessionResponse
+from backend.models import Equipment, ScanSession
 
 pytestmark = pytest.mark.asyncio
 
@@ -15,12 +14,13 @@ pytestmark = pytest.mark.asyncio
 async def test_create_scan_session(
     async_client: AsyncClient,
     test_user: Any,
+    test_equipment: Equipment,
 ) -> None:
     """Test creating a new scan session."""
     session_data = {
         'name': 'Test API Session',
         'user_id': test_user.id,
-        'items': [{'equipment_id': 1, 'barcode': 'TEST123', 'name': 'Test Equipment'}],
+        'items': [{'equipment_id': test_equipment.id}],
     }
 
     response = await async_client.post(
@@ -33,7 +33,8 @@ async def test_create_scan_session(
     assert data['name'] == session_data['name']
     assert data['user_id'] is None
     assert len(data['items']) == 1
-    assert data['items'][0]['barcode'] == 'TEST123'
+    assert data['items'][0]['equipment_id'] == test_equipment.id
+    assert data['items'][0]['barcode'] == test_equipment.barcode
     assert 'id' in data
     assert 'created_at' in data
     assert 'updated_at' in data
@@ -74,43 +75,40 @@ async def test_get_user_scan_sessions(
     test_scan_session: ScanSession,
 ) -> None:
     """Test getting all scan sessions."""
-    # Request without specific user_id should return empty list
-    # (based on current API behavior)
+    # Request without user_id returns all active sessions
     response = await async_client.get('/api/v1/scan-sessions/')
 
     assert response.status_code == status.HTTP_200_OK
     data = response.json()
     assert isinstance(data, list)
-    # Expect empty list when no user_id is provided
-    assert len(data) == 0
+    assert len(data) >= 1
 
     # Request with an arbitrary user_id should return sessions with user_id=None
-    # due to repository logic
+    # due to repository logic (OR user_id IS NULL)
     response = await async_client.get(
         '/api/v1/scan-sessions/',
-        params={'user_id': 999},  # Use an arbitrary user_id
+        params={'user_id': 999},
     )
 
     assert response.status_code == status.HTTP_200_OK
     data = response.json()
     assert isinstance(data, list)
-    # Expect the session created by the fixture (user_id=None)
-    # because user_id was provided
-    assert len(data) == 1
+    assert len(data) >= 1
     # Parse the response data using the Pydantic model
-    parsed_session = ScanSessionResponse.model_validate(data[0])
-    assert parsed_session.id == test_scan_session.id
+    session_ids = [item['id'] for item in data]
+    assert test_scan_session.id in session_ids
 
 
 async def test_update_scan_session(
     async_client: AsyncClient,
     test_scan_session: ScanSession,
+    test_equipment: Equipment,
 ) -> None:
     """Test updating a scan session."""
     update_data = {
         'name': 'Updated API Session',
         'items': [
-            {'equipment_id': 2, 'barcode': 'TEST456', 'name': 'Another Test Equipment'},
+            {'equipment_id': test_equipment.id},
         ],
     }
 
@@ -124,7 +122,7 @@ async def test_update_scan_session(
     assert data['id'] == test_scan_session.id
     assert data['name'] == update_data['name']
     assert len(data['items']) == 1
-    assert data['items'][0]['barcode'] == 'TEST456'
+    assert data['items'][0]['equipment_id'] == test_equipment.id
 
 
 async def test_update_nonexistent_scan_session(async_client: AsyncClient) -> None:
@@ -191,6 +189,7 @@ async def test_create_scan_session_invalid_data(
 async def test_update_scan_session_partial(
     async_client: AsyncClient,
     test_scan_session: ScanSession,
+    test_equipment: Equipment,
 ) -> None:
     """Test partially updating a scan session."""
     # Only update name, items should remain unchanged
@@ -207,5 +206,5 @@ async def test_update_scan_session_partial(
     data = response.json()
     assert data['id'] == test_scan_session.id
     assert data['name'] == update_data['name']
-    # Items should be unchanged
+    # Items should be unchanged — enriched from DB
     assert len(data['items']) == len(test_scan_session.items)

@@ -191,7 +191,7 @@ async def test_get_document_by_id(
     test_document: Document,
 ) -> None:
     """Test getting a document by ID."""
-    response = await async_client.get(f'/api/v1/documents/{test_document.id}/')
+    response = await async_client.get(f'/api/v1/documents/{test_document.id}')
 
     assert response.status_code == http_status.HTTP_200_OK
     result = response.json()
@@ -209,7 +209,7 @@ async def test_get_document_by_id_not_found(
     async_client: AsyncClient,
 ) -> None:
     """Test getting a non-existent document."""
-    response = await async_client.get('/api/v1/documents/9999/')
+    response = await async_client.get('/api/v1/documents/9999')
 
     assert response.status_code == http_status.HTTP_404_NOT_FOUND
 
@@ -226,7 +226,7 @@ async def test_update_document(
     }
 
     response = await async_client.put(
-        f'/api/v1/documents/{test_document.id}/',
+        f'/api/v1/documents/{test_document.id}',
         json=data,
     )
 
@@ -248,7 +248,7 @@ async def test_update_document_not_found(
     }
 
     response = await async_client.put(
-        '/api/v1/documents/9999/',
+        '/api/v1/documents/9999',
         json=data,
     )
 
@@ -268,7 +268,7 @@ async def test_update_document_invalid_status_transition(
     }
 
     response = await async_client.put(
-        f'/api/v1/documents/{test_document.id}/',
+        f'/api/v1/documents/{test_document.id}',
         json=data,
     )
 
@@ -280,7 +280,7 @@ async def test_update_document_invalid_status_transition(
     }
 
     response = await async_client.put(
-        f'/api/v1/documents/{test_document.id}/',
+        f'/api/v1/documents/{test_document.id}',
         json=data,
     )
 
@@ -292,7 +292,7 @@ async def test_update_document_invalid_status_transition(
     }
 
     response = await async_client.put(
-        f'/api/v1/documents/{test_document.id}/',
+        f'/api/v1/documents/{test_document.id}',
         json=data,
     )
 
@@ -304,7 +304,7 @@ async def test_update_document_invalid_status_transition(
     }
 
     response = await async_client.put(
-        f'/api/v1/documents/{test_document.id}/',
+        f'/api/v1/documents/{test_document.id}',
         json=data,
     )
 
@@ -334,12 +334,12 @@ async def test_delete_document(
         mime_type='application/pdf',
     )
 
-    response = await async_client.delete(f'/api/v1/documents/{document.id}/')
+    response = await async_client.delete(f'/api/v1/documents/{document.id}')
 
     assert response.status_code == http_status.HTTP_204_NO_CONTENT
 
     # Verify document is deleted
-    response = await async_client.get(f'/api/v1/documents/{document.id}/')
+    response = await async_client.get(f'/api/v1/documents/{document.id}')
     assert response.status_code == http_status.HTTP_404_NOT_FOUND
 
 
@@ -348,7 +348,7 @@ async def test_delete_document_not_found(
     async_client: AsyncClient,
 ) -> None:
     """Test deleting a non-existent document."""
-    response = await async_client.delete('/api/v1/documents/9999/')
+    response = await async_client.delete('/api/v1/documents/9999')
 
     assert response.status_code == http_status.HTTP_404_NOT_FOUND
 
@@ -360,7 +360,7 @@ async def test_get_client_documents(
 ) -> None:
     """Test getting documents for a client."""
     response = await async_client.get(
-        f'/api/v1/documents/client/{test_document.client_id}/'
+        f'/api/v1/documents/client/{test_document.client_id}'
     )
 
     assert response.status_code == http_status.HTTP_200_OK
@@ -378,7 +378,7 @@ async def test_get_booking_documents(
 ) -> None:
     """Test getting documents for a booking."""
     response = await async_client.get(
-        f'/api/v1/documents/booking/{test_document.booking_id}/'
+        f'/api/v1/documents/booking/{test_document.booking_id}'
     )
 
     assert response.status_code == http_status.HTTP_200_OK
@@ -396,7 +396,7 @@ async def test_change_document_status(
 ) -> None:
     """Test changing document status."""
     response = await async_client.post(
-        f'/api/v1/documents/{test_document.id}/status/',
+        f'/api/v1/documents/{test_document.id}/status',
         params={'status': 'PENDING'},
     )
 
@@ -408,7 +408,7 @@ async def test_change_document_status(
 
     # Test another valid transition
     response = await async_client.post(
-        f'/api/v1/documents/{test_document.id}/status/',
+        f'/api/v1/documents/{test_document.id}/status',
         params={'status': 'UNDER_REVIEW'},
     )
 
@@ -437,7 +437,7 @@ async def test_change_document_status_invalid_transition(
 
     # Then try to change to DRAFT (invalid transition from APPROVED)
     response = await async_client.post(
-        f'/api/v1/documents/{test_document.id}/status/',
+        f'/api/v1/documents/{test_document.id}/status',
         params={'status': 'DRAFT'},
     )
 
@@ -450,7 +450,7 @@ async def test_change_document_status_not_found(
 ) -> None:
     """Test changing status of a non-existent document."""
     response = await async_client.post(
-        '/api/v1/documents/9999/status/',
+        '/api/v1/documents/9999/status',
         params={'status': 'PENDING'},
     )
 
