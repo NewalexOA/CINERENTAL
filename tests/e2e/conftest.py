@@ -4,7 +4,7 @@ import asyncio
 import os
 import time
 from decimal import Decimal
-from typing import AsyncGenerator, Dict, Generator, Tuple
+from typing import AsyncGenerator, Dict, Generator
 
 import pytest
 import pytest_asyncio
@@ -382,7 +382,7 @@ async def api_request_context(
 @pytest.fixture
 async def test_page(
     page: Page,
-    test_equipment: Tuple[Equipment, Dict],
+    test_equipment: Equipment,
 ) -> AsyncGenerator[Page, None]:
     """Configure page for testing."""
     # Get base URL from environment variable or use default
@@ -410,14 +410,13 @@ async def test_page(
         await page.wait_for_selector('#searchInput', state='visible', timeout=10000)
         logger.info('Search input element found')
     except Exception as e:
-        # If the search input is not found, continue anyway with a warning
-        logger.warning(f'Search input not found, but continuing test: {str(e)}')
-        # Take a screenshot for debugging
+        # Take a screenshot and dump HTML for debugging
+        logger.warning(f'Search input not found: {str(e)}')
         await page.screenshot(path='/app/debug_screenshot.png')
-        # Dump HTML for debugging
         html_content = await page.content()
         with open('/app/debug_html.txt', 'w') as f:
-            f.write(html_content[:5000])  # Save first 5000 chars for inspection
+            f.write(html_content[:5000])
+        pytest.fail(f'#searchInput not found on /equipment page within 10s: {str(e)}')
 
     yield page
 

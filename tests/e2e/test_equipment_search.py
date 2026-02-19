@@ -1,29 +1,15 @@
 """E2E tests for equipment search functionality."""
 
-from typing import Callable
-
 import pytest
 from playwright.async_api import Page, expect
-
-TestFunc = Callable[[Page], None]
 
 pytestmark = pytest.mark.asyncio(scope='function')
 
 
 async def test_search_input_exists(test_page: Page) -> None:
     """Test that search input exists and is visible."""
-    # Take a screenshot for debugging
-    await test_page.screenshot(path='/app/debug_initial_search.png')
-
-    # Try with a generic selector first, which is more reliable
-    search_input = test_page.locator('input[placeholder*="Поиск"]')
-
-    # Verify the element exists and is visible
-    if await search_input.count() > 0:
-        await expect(search_input.first).to_be_visible()
-        print('Search input found and visible on the page')
-    else:
-        print('No search input found on the page')
+    search_input = test_page.locator('#searchInput')
+    await expect(search_input).to_be_visible()
 
 
 async def test_search_as_user_types(test_page: Page) -> None:
@@ -79,14 +65,8 @@ async def test_search_debounce(test_page: Page) -> None:
     search_input = test_page.locator('#searchInput')
     results_table = test_page.locator('table tbody tr')
 
-    # Type quickly
-    await search_input.type('s', delay=50)
-    await test_page.wait_for_timeout(50)  # Wait between keystrokes
-    await search_input.type('o', delay=50)
-    await test_page.wait_for_timeout(50)
-    await search_input.type('n', delay=50)
-    await test_page.wait_for_timeout(50)
-    await search_input.type('y', delay=50)
+    # Type quickly character by character
+    await search_input.press_sequentially('sony', delay=50)
 
     # Wait for debounce and results to load
     await test_page.wait_for_timeout(300)  # Wait for debounce
