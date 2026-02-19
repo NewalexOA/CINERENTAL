@@ -106,11 +106,14 @@ class CategoryService:
             Updated category
 
         Raises:
-            ValueError: If category not found
+            NotFoundError: If category not found
         """
         category = await self.repository.get(category_id)
         if not category:
-            raise ValueError(f'Category with ID {category_id} not found')
+            raise NotFoundError(
+                f'Category with ID {category_id} not found',
+                details={'category_id': category_id},
+            )
 
         # Check name uniqueness if changing
         if name and name != category.name:
