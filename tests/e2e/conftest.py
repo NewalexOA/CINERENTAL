@@ -393,7 +393,7 @@ async def test_page(
 
     # Navigate to the equipment page and wait for it to be ready
     # Use the base_url obtained from environment
-    equipment_url = f'{base_url}/equipment'  # Assuming /equipment is the correct path
+    equipment_url = f'{base_url}/equipment/'
     logger.info(f'Navigating to E2E test URL: {equipment_url}')
 
     # Capture debug information about the test environment
