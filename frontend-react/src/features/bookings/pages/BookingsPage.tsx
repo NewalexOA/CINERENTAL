@@ -1,22 +1,22 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { bookingsService, BookingStatus, PaymentStatus } from '../../../services/bookings';
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow
 } from '../../../components/ui/table';
 import { Button } from '../../../components/ui/button';
 import { Input } from '../../../components/ui/input';
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
 } from '../../../components/ui/select';
 import { Checkbox } from '../../../components/ui/checkbox';
 import { Badge } from '../../../components/ui/badge';
@@ -45,7 +45,7 @@ const paymentStatusMap: Record<string, { label: string, variant: "default" | "se
 export default function BookingsPage() {
   const [page, setPage] = useState(1);
   const [size, setSize] = useState(20);
-  
+
   // Filters
   const [clientSearch, setClientSearch] = useState('');
   const [equipmentSearch, setEquipmentSearch] = useState('');
@@ -94,25 +94,25 @@ export default function BookingsPage() {
             <X className="mr-1 h-3 w-3" /> Сбросить
           </Button>
         </div>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2">
           <div className="space-y-1">
             <div className="relative">
               <Search className="absolute left-2 top-2 h-3 w-3 text-muted-foreground" />
-              <Input 
-                placeholder="Поиск клиента..." 
-                className="h-7 pl-7 text-xs" 
+              <Input
+                placeholder="Поиск клиента..."
+                className="h-7 pl-7 text-xs"
                 value={clientSearch}
                 onChange={(e) => { setClientSearch(e.target.value); setPage(1); }}
               />
             </div>
           </div>
-          
+
           <div className="space-y-1">
             <div className="relative">
               <Search className="absolute left-2 top-2 h-3 w-3 text-muted-foreground" />
-              <Input 
-                placeholder="Поиск оборудования..." 
+              <Input
+                placeholder="Поиск оборудования..."
                 className="h-7 pl-7 text-xs"
                 value={equipmentSearch}
                 onChange={(e) => { setEquipmentSearch(e.target.value); setPage(1); }}
@@ -121,8 +121,8 @@ export default function BookingsPage() {
           </div>
 
           <div className="space-y-1">
-             <Select 
-               value={bookingStatus} 
+             <Select
+               value={bookingStatus}
                onValueChange={(val) => { setBookingStatus(val as BookingStatus | 'all'); setPage(1); }}
              >
                <SelectTrigger className="h-7 text-xs">
@@ -138,8 +138,8 @@ export default function BookingsPage() {
           </div>
 
           <div className="space-y-1">
-             <Select 
-               value={paymentStatus} 
+             <Select
+               value={paymentStatus}
                onValueChange={(val) => { setPaymentStatus(val as PaymentStatus | 'all'); setPage(1); }}
              >
                <SelectTrigger className="h-7 text-xs">
@@ -153,7 +153,7 @@ export default function BookingsPage() {
                </SelectContent>
              </Select>
           </div>
-          
+
           <div className="space-y-1 lg:col-span-2">
             <DateTimeRangePicker
                date={{
@@ -171,10 +171,10 @@ export default function BookingsPage() {
           </div>
 
           <div className="flex items-center space-x-2 pt-1">
-             <Checkbox 
-               id="active" 
-               checked={activeOnly} 
-               onCheckedChange={(checked) => { setActiveOnly(checked as boolean); setPage(1); }} 
+             <Checkbox
+               id="active"
+               checked={activeOnly}
+               onCheckedChange={(checked) => { setActiveOnly(checked as boolean); setPage(1); }}
                className="h-4 w-4"
              />
              <label htmlFor="active" className="text-xs font-medium leading-none cursor-pointer">
@@ -244,13 +244,13 @@ export default function BookingsPage() {
         </Table>
       </div>
 
-      <PaginationControls 
+      <PaginationControls
         currentPage={page}
         totalPages={data?.pages || 1}
         pageSize={size}
         totalItems={data?.total || 0}
         onPageChange={setPage}
-        onPageSizeChange={setSize}
+        onPageSizeChange={(s) => { setSize(s); setPage(1); }}
         disabled={isLoading}
       />
     </div>

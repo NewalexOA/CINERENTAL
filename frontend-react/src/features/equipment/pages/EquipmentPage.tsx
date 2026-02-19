@@ -309,7 +309,7 @@ export default function EquipmentPage() {
         pageSize={size}
         totalItems={data?.total || 0}
         onPageChange={setPage}
-        onPageSizeChange={setSize}
+        onPageSizeChange={(s) => { setSize(s); setPage(1); }}
         disabled={isLoading}
       />
 

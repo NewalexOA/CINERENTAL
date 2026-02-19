@@ -2,22 +2,22 @@ import { useQuery } from '@tanstack/react-query';
 import { equipmentService } from '../../../services/equipment';
 import { categoriesService } from '../../../services/categories';
 import { EquipmentStatus, Equipment } from '../../../types/equipment';
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow
 } from '../../../components/ui/table';
 import { Button } from '../../../components/ui/button';
 import { Input } from '../../../components/ui/input';
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
 } from '../../../components/ui/select';
 import { Search, QrCode, Plus } from 'lucide-react';
 import { useState, useMemo } from 'react';
@@ -55,7 +55,7 @@ export function EquipmentPicker({ onAdd }: EquipmentPickerProps) {
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearch(e.target.value);
-    setPage(1); 
+    setPage(1);
   };
 
   if (error) return <div className="p-4 text-center text-destructive">Ошибка загрузки</div>;
@@ -72,9 +72,9 @@ export function EquipmentPicker({ onAdd }: EquipmentPickerProps) {
             onChange={handleSearchChange}
           />
         </div>
-        
-        <Select 
-          value={categoryId ? String(categoryId) : "all"} 
+
+        <Select
+          value={categoryId ? String(categoryId) : "all"}
           onValueChange={(val) => { setCategoryId(val === 'all' ? '' : Number(val)); setPage(1); }}
         >
           <SelectTrigger className="w-full h-7 text-xs">
@@ -135,13 +135,13 @@ export function EquipmentPicker({ onAdd }: EquipmentPickerProps) {
         </Table>
       </div>
 
-      <PaginationControls 
+      <PaginationControls
         currentPage={page}
         totalPages={data?.pages || 1}
         pageSize={size}
         totalItems={data?.total || 0}
         onPageChange={setPage}
-        onPageSizeChange={setSize}
+        onPageSizeChange={(s) => { setSize(s); setPage(1); }}
         disabled={isLoading}
       />
     </div>

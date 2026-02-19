@@ -37,7 +37,6 @@ export function PaginationControls({
             value={String(pageSize)}
             onValueChange={(val) => {
                 onPageSizeChange(Number(val));
-                onPageChange(1); // Reset to first page on size change
             }}
             disabled={disabled}
           >
