@@ -2,6 +2,105 @@
 
 This document lists notable changes to the ACT-Rental application.
 
+## [0.17.0-beta.1] - 2026-02-19
+
+### Complete React Frontend Migration
+
+Full migration of all 6 core modules from legacy Jinja2/Bootstrap/Vanilla JS to React 18 + TypeScript + Vite + shadcn/ui. 94 commits, 183 files changed, ~29,500 lines added.
+
+### Clients Module Migration
+
+- **Full CRUD Implementation:** Migrated clients list with paginated table, detail pages, search, and delete confirmation dialogs to React with TanStack Query for server state management.
+- **Client Form Dialog:** React Hook Form + Zod validation with all fields optional except name, matching the backend PATCH endpoint for partial updates.
+
+### Categories Module Migration
+
+- **Tree View with Split Panel:** Implemented hierarchical category management with CategoryTreeView, CategoryTreeNode, and CategoryEditPanel components. Collapsible tree nodes with inline editing and subcategories dialog.
+- **Backend Enhancement:** Added subcategories API endpoint with hierarchical sorting, improved category sorting logic and error handling utilities.
+
+### Equipment Module Migration
+
+- **Full CRUD with Barcode System:** Migrated equipment list, detail pages, and form dialogs. Added client-side barcode generation using bwip-js and print dialog with DataMatrix/Code128 support.
+- **Rental Status Badge:** Implemented RentalStatusBadge component with hover card showing active projects for rented equipment. Backend updated to include PENDING bookings in active project queries.
+- **Scanner Integration:** Added equipment-to-scan-session button on equipment detail page for direct scanner workflow integration.
+
+### Projects Module Migration
+
+- **Dual View Modes:** Card and table views with localStorage persistence for view mode preference. Card view with collapsible status groups (DRAFT, ACTIVE, COMPLETED, CANCELLED) and controlled expand/collapse state.
+- **Cart-Based Project Creation:** NewProjectPage with EquipmentPicker, item-level date management, and batch booking API integration. Inline booking editing on project details page.
+- **Payment Status Management:** PaymentStatusChanger component with 4-digit captcha verification, matching the backend `PATCH /projects/{id}/payment-status` endpoint.
+- **Client Filter:** Search-as-you-type client popover with debounced API search and quick selection.
+- **URL State Persistence:** All filters (status, payment status, client, search, pagination) persisted in URL params for shareable links and browser back/forward support. See dedicated section below.
+
+### Bookings Module Migration
+
+- **Paginated List:** BookingsPage with status filters, date range selection, and configurable pagination. TanStack Query integration for automatic cache management.
+
+### Scanner Module Migration
+
+- **HID Barcode Scanner Integration:** Complete scanner page with barcode input capture, scan result cards with equipment details, and scan history feed with chronological event tracking.
+- **Session Management:** Local scan sessions with server sync via REST API. Session table with item management (add/remove), normalized storage (equipment IDs only), and duplicate server session prevention on load.
+- **UX Features:** Keyboard shortcuts for common operations, sound feedback for successful/failed scans, equipment history panel with rental information, status update sheet for equipment condition changes.
+- **Compact Layout:** Flattened scanner page layout with compact session header, removed status card for cleaner interface. Full Russian localization.
+
+### URL State Persistence Infrastructure
+
+- **Generic `useUrlState` Hook:** TypeScript hook wrapping React Router's `useSearchParams` with localStorage sync. Typed schema definition with NaN-safe number parsing, `Number(null) === 0` guard, and synchronous initialization from localStorage via `useMemo` to prevent double API fetches.
+- **Priority Chain:** URL params → localStorage → schema defaults. Page number excluded from localStorage (`persist: false`) to prevent stale page numbers on fresh navigation.
+- **Debounced Search:** Search input with 300ms debounce and ref guard (`lastCommittedSearch`) to prevent feedback loops between URL state and input field. Browser back/forward properly restores search input value.
+- **PaginationControls Refactor:** Removed internal `onPageChange(1)` from page size change handler. All 4 consumers (Equipment, Bookings, Clients, EquipmentPicker) updated to explicitly reset page on size change.
+- **Card Group Persistence:** Collapsible StatusGroup component refactored from uncontrolled (`defaultOpen`) to controlled (`isOpen`/`onOpenChange`). Expanded/collapsed state persisted in localStorage via `useLocalStorage` hook.
+
+### UI/UX Improvements
+
+- **Project Status Badges:** Updated color scheme — active=green (`success`), completed=blue (`info` variant, new), cancelled=grey (`secondary`). Added `info` variant to Badge component (`bg-sky-500`).
+- **Payment Status Indicators:** Replaced text badges with colored dot indicators — red-600 (unpaid), amber-400 (partially paid), green-500 (paid). Tooltip on hover for accessibility.
+- **Uniform Badge Width:** `min-w-[70px]` with centered text on status badges in both card and table views for visual alignment.
+- **Date Range Picker Fixes:** Fixed inability to change start date after initial selection. Fixed cleared selection reset causing stale state.
+- **Shared Components:** MainLayout with sidebar navigation and dynamic page titles, ConfirmDeleteDialog, DateTimeRangePicker, PaginationControls with configurable page sizes.
+
+### Testing Infrastructure
+
+- **Vitest Setup:** Installed vitest 4.x, @testing-library/react, @testing-library/jest-dom, @testing-library/user-event, jsdom. Created `vitest.config.ts` with path aliases and jsdom environment. Added `npm run test` and `npm run test:watch` scripts.
+- **useUrlState Tests (16):** Defaults, URL parsing, NaN protection, `Number(null)` guard, clean URLs, unknown param preservation, batch updates, localStorage write/restore/priority/cleanup/corruption recovery, setParams stability, nullable strings.
+- **PaginationControls Tests (6):** Rendering, page navigation, page size change interactions.
+- **StatusGroup Tests (3):** Controlled open/close behavior, empty state rendering.
+
+### DevOps & Docker
+
+- **React Frontend Containerization:** Added `Dockerfile` (production with nginx) and `Dockerfile.dev` (development with Vite HMR) for the React frontend. Updated `docker-compose.yml` and `docker-compose.prod.yml` with frontend service configuration. Added nginx.conf for SPA routing.
+- **Docker Cache Optimization:** Enabled Docker layer caching for faster image rebuilds in macOS launcher. Fixed Docker build failures in py2app macOS bundle.
+- **Healthcheck Tuning:** Updated healthcheck intervals and removed python-jose dependency (CVE mitigation).
+
+### Backend Changes
+
+- **Clients API:** Added PATCH endpoint for partial client updates with optional fields (all except name).
+- **Categories API:** New subcategories endpoint with hierarchical sorting.
+- **Scan Sessions:** Server sync improvements with atomic session loading, duplicate prevention, and normalized storage.
+- **Trailing Slash Standardization:** Standardized trailing slash convention across all API routes and Jinja2 templates for consistent behavior.
+- **Equipment Repository:** PENDING bookings now included in active project queries for accurate rental status display.
+- **Barcode:** Added quiet zone padding to DataMatrix barcode for improved scanner readability.
+
+### macOS Launcher
+
+- **Backup Portability:** Fixed cross-machine backup restore issues with absolute path handling and Docker volume restoration.
+- **Build Fixes:** Resolved Docker build failures in py2app bundle with proper PATH environment setup.
+
+### Technical Improvements & Bug Fixes (0.17.0-beta.1)
+
+- Initialized React 18 frontend with Vite, TypeScript, TanStack Query, React Router, and shadcn/ui component library
+- Resolved ESM path alias issues with relative imports and URL-based resolution in Vite config
+- Fixed TypeScript type issues across React components with proper generic typing
+- Added comprehensive `.gitignore` and `.dockerignore` for React frontend
+- Fixed import loops and missing UI components (tabs, collapsible, command, hover-card, sheet, drawer, radio-group)
+- Implemented compact UI with configurable pagination across all list pages
+- Fixed dynamic page titles in MainLayout using React Router location
+- Fixed client name display and date formatting on projects page
+- Removed node_modules from git tracking and configured proper gitignore patterns
+- Fixed lint issues in calendar component and service files
+- Added migration status tracking document (MIGRATION_STATUS.md)
+- Added scanner migration plan documentation with legacy analysis
+
 ## [0.16.0-beta.2] - 2026-01-07
 
 ### Project Payment Status Tracking System
