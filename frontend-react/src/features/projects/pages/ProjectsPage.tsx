@@ -54,16 +54,28 @@ import {
   User,
   Loader2
 } from 'lucide-react';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { toast } from 'sonner';
 import { PaginationControls } from '../../../components/ui/pagination-controls';
 import { format, parseISO } from 'date-fns';
 import { cn } from '../../../lib/utils';
 import { useDebounce } from '../../../hooks/useDebounce';
+import { useUrlState } from '../../../hooks/useUrlState';
+import { useLocalStorage } from '../../../hooks/useLocalStorage';
 
 type ViewMode = 'table' | 'card';
 
 const VIEW_STORAGE_KEY = 'projectsViewMode';
+
+const projectsUrlSchema = {
+  page:          { type: 'number', default: 1, persist: false },
+  size:          { type: 'number', default: 20 },
+  search:        { type: 'string', default: '' },
+  status:        { type: 'string', default: '' },
+  paymentStatus: { type: 'string', default: '' },
+  clientId:      { type: 'number', default: null },
+  clientName:    { type: 'string', default: null },
+} as const;
 
 const statusMap: Record<string, { label: string, variant: "default" | "secondary" | "destructive" | "outline" | "success" | "warning" }> = {
   [ProjectStatus.DRAFT]: { label: 'Черновик', variant: 'secondary' },
@@ -140,16 +152,15 @@ interface StatusGroupProps {
   status: ProjectStatus;
   projects: Project[];
   onNavigate: (id: number) => void;
-  defaultOpen?: boolean;
+  isOpen: boolean;
+  onOpenChange: (open: boolean) => void;
 }
 
-function StatusGroup({ status, projects, onNavigate, defaultOpen = true }: StatusGroupProps) {
-  const [isOpen, setIsOpen] = useState(defaultOpen);
-
+function StatusGroup({ status, projects, onNavigate, isOpen, onOpenChange }: StatusGroupProps) {
   if (projects.length === 0) return null;
 
   return (
-    <Collapsible open={isOpen} onOpenChange={setIsOpen} className="space-y-2">
+    <Collapsible open={isOpen} onOpenChange={onOpenChange} className="space-y-2">
       <CollapsibleTrigger asChild>
         <Button
           variant="ghost"
@@ -185,20 +196,42 @@ function StatusGroup({ status, projects, onNavigate, defaultOpen = true }: Statu
 export default function ProjectsPage() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
-  const [page, setPage] = useState(1);
-  const [size, setSize] = useState(20);
-  const [search, setSearch] = useState('');
-  const [status, setStatus] = useState<ProjectStatus | ''>('');
-  const [paymentStatus, setPaymentStatus] = useState<ProjectPaymentStatus | ''>('');
-  const [clientId, setClientId] = useState<number | null>(null);
+  const { values: urlState, setParams } = useUrlState(projectsUrlSchema, {
+    storageKey: 'projects-filters',
+  });
+  const { page, size, status, paymentStatus, clientId, clientName: selectedClientName } = urlState;
+
+  const [searchInput, setSearchInput] = useState(urlState.search);
+  const debouncedSearch = useDebounce(searchInput, 300);
+  const lastCommittedSearch = useRef(urlState.search);
+
+  // Effect 1: Debounced input → URL
+  useEffect(() => {
+    if (debouncedSearch !== lastCommittedSearch.current) {
+      lastCommittedSearch.current = debouncedSearch;
+      setParams({ search: debouncedSearch, page: 1 });
+    }
+  }, [debouncedSearch, setParams]);
+
+  // Effect 2: URL → local input (browser back/forward only)
+  useEffect(() => {
+    if (urlState.search !== lastCommittedSearch.current) {
+      lastCommittedSearch.current = urlState.search;
+      setSearchInput(urlState.search);
+    }
+  }, [urlState.search]);
+
   const [clientPopoverOpen, setClientPopoverOpen] = useState(false);
   const [clientSearch, setClientSearch] = useState('');
   const debouncedClientSearch = useDebounce(clientSearch, 300);
-  const [selectedClientName, setSelectedClientName] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
     const saved = localStorage.getItem(VIEW_STORAGE_KEY);
     return (saved === 'card' || saved === 'table') ? saved : 'table';
   });
+  const [groupExpanded, setGroupExpanded] = useLocalStorage<Record<string, boolean>>(
+    'projects-card-groups',
+    { DRAFT: true, ACTIVE: true, COMPLETED: false, CANCELLED: false }
+  );
 
   useEffect(() => {
     localStorage.setItem(VIEW_STORAGE_KEY, viewMode);
@@ -214,11 +247,11 @@ export default function ProjectsPage() {
   });
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ['projects', page, size, search, status, paymentStatus, clientId],
+    queryKey: ['projects', page, size, urlState.search, status, paymentStatus, clientId],
     queryFn: () => projectsService.getPaginated({
       page,
       size,
-      query: search || undefined,
+      query: urlState.search || undefined,
       project_status: status || undefined,
       payment_status: paymentStatus || undefined,
       client_id: clientId || undefined,
@@ -236,11 +269,6 @@ export default function ProjectsPage() {
       console.error(err);
     }
   });
-
-  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearch(e.target.value);
-    setPage(1);
-  };
 
   const handleDelete = async (e: React.MouseEvent, id: number) => {
     e.stopPropagation();
@@ -275,8 +303,8 @@ export default function ProjectsPage() {
             <Input
               placeholder="Поиск проектов..."
               className="h-7 pl-7 text-xs"
-              value={search}
-              onChange={handleSearchChange}
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
             />
           </div>
 
@@ -328,11 +356,9 @@ export default function ProjectsPage() {
                       <CommandItem
                         value="all"
                         onSelect={() => {
-                          setClientId(null);
-                          setSelectedClientName(null);
+                          setParams({ clientId: null, clientName: null, page: 1 });
                           setClientPopoverOpen(false);
                           setClientSearch('');
-                          setPage(1);
                         }}
                         className="text-xs"
                       >
@@ -345,11 +371,9 @@ export default function ProjectsPage() {
                         key={client.id}
                         value={client.name}
                         onSelect={() => {
-                          setClientId(client.id);
-                          setSelectedClientName(client.name);
+                          setParams({ clientId: client.id, clientName: client.name, page: 1 });
                           setClientPopoverOpen(false);
                           setClientSearch('');
-                          setPage(1);
                         }}
                         className="text-xs"
                       >
@@ -365,7 +389,7 @@ export default function ProjectsPage() {
 
           <Select
             value={status || "all"}
-            onValueChange={(val) => { setStatus(val === 'all' ? '' : val as ProjectStatus); setPage(1); }}
+            onValueChange={(val) => { setParams({ status: val === 'all' ? '' : val, page: 1 }); }}
           >
             <SelectTrigger className="w-[140px] h-7 text-xs">
               <SelectValue placeholder="Все статусы" />
@@ -380,7 +404,7 @@ export default function ProjectsPage() {
 
           <Select
             value={paymentStatus || "all"}
-            onValueChange={(val) => { setPaymentStatus(val === 'all' ? '' : val as ProjectPaymentStatus); setPage(1); }}
+            onValueChange={(val) => { setParams({ paymentStatus: val === 'all' ? '' : val, page: 1 }); }}
           >
             <SelectTrigger className="w-[140px] h-7 text-xs">
               <SelectValue placeholder="Вся оплата" />
@@ -511,7 +535,8 @@ export default function ProjectsPage() {
                 status={statusKey}
                 projects={groupedProjects[statusKey] || []}
                 onNavigate={handleNavigate}
-                defaultOpen={statusKey === ProjectStatus.DRAFT || statusKey === ProjectStatus.ACTIVE}
+                isOpen={groupExpanded[statusKey] ?? true}
+                onOpenChange={(open) => setGroupExpanded(prev => ({ ...prev, [statusKey]: open }))}
               />
             ))
           )}
@@ -523,8 +548,8 @@ export default function ProjectsPage() {
         totalPages={data?.pages || 1}
         pageSize={size}
         totalItems={data?.total || 0}
-        onPageChange={setPage}
-        onPageSizeChange={setSize}
+        onPageChange={(p) => setParams({ page: p })}
+        onPageSizeChange={(s) => setParams({ size: s, page: 1 })}
         disabled={isLoading}
       />
     </div>

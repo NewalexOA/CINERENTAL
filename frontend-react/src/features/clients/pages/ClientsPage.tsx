@@ -307,7 +307,7 @@ export default function ClientsPage() {
         pageSize={pageSize}
         totalItems={totalItems}
         onPageChange={setPage}
-        onPageSizeChange={setPageSize}
+        onPageSizeChange={(s) => { setPageSize(s); setPage(1); }}
       />
 
       {/* Dialogs */}
