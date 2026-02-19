@@ -251,6 +251,11 @@ class BarcodeService:
             # Convert to grayscale and find dark pixels
             gray = image.convert('L')
             pixels = gray.load()
+            if pixels is None:
+                raise ValidationError(
+                    'Failed to load barcode image pixels',
+                    details={'barcode': barcode_value},
+                )
             width, height = gray.size
 
             # Find bounding box of dark content (barcode)
@@ -261,19 +266,22 @@ class BarcodeService:
 
             for x in range(width):
                 for y in range(height):
-                    if pixels[x, y] < 250:  # Not white (threshold 250)
+                    pixel = pixels[x, y]
+                    value = pixel if isinstance(pixel, (int, float)) else pixel[0]
+                    if value < 250:  # Not white (threshold 250)
                         left = min(left, x)
                         right = max(right, x)
                         top = min(top, y)
                         bottom = max(bottom, y)
 
             # Crop to bounding box if found
+            cropped: Image.Image = image
             if right > left and bottom > top:
-                image = image.crop((left, top, right + 1, bottom + 1))
+                cropped = image.crop((left, top, right + 1, bottom + 1))
 
             # Save cropped image to final buffer
             buffer = io.BytesIO()
-            image.save(buffer, format='PNG')
+            cropped.save(buffer, format='PNG')
             buffer.seek(0)
 
             return buffer.getvalue(), 'image/png'
