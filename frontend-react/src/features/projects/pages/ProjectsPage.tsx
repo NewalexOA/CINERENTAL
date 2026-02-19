@@ -77,17 +77,17 @@ const projectsUrlSchema = {
   clientName:    { type: 'string', default: null },
 } as const;
 
-const statusMap: Record<string, { label: string, variant: "default" | "secondary" | "destructive" | "outline" | "success" | "warning" }> = {
+const statusMap: Record<string, { label: string, variant: "default" | "secondary" | "destructive" | "outline" | "success" | "warning" | "info" }> = {
   [ProjectStatus.DRAFT]: { label: 'Черновик', variant: 'secondary' },
-  [ProjectStatus.ACTIVE]: { label: 'Активен', variant: 'default' },
-  [ProjectStatus.COMPLETED]: { label: 'Завершен', variant: 'success' },
-  [ProjectStatus.CANCELLED]: { label: 'Отменен', variant: 'destructive' },
+  [ProjectStatus.ACTIVE]: { label: 'Активен', variant: 'success' },
+  [ProjectStatus.COMPLETED]: { label: 'Завершен', variant: 'info' },
+  [ProjectStatus.CANCELLED]: { label: 'Отменен', variant: 'secondary' },
 };
 
-const paymentStatusMap: Record<string, { label: string, variant: "default" | "secondary" | "destructive" | "outline" | "success" | "warning" }> = {
-  [ProjectPaymentStatus.UNPAID]: { label: 'Не оплачен', variant: 'destructive' },
-  [ProjectPaymentStatus.PARTIALLY_PAID]: { label: 'Частично', variant: 'warning' },
-  [ProjectPaymentStatus.PAID]: { label: 'Оплачен', variant: 'success' },
+const paymentStatusMap: Record<string, { label: string, color: string }> = {
+  [ProjectPaymentStatus.UNPAID]: { label: 'Не оплачен', color: 'bg-red-600' },
+  [ProjectPaymentStatus.PARTIALLY_PAID]: { label: 'Частично оплачен', color: 'bg-amber-400' },
+  [ProjectPaymentStatus.PAID]: { label: 'Оплачен', color: 'bg-green-500' },
 };
 
 const statusOrder = [
@@ -113,7 +113,7 @@ function ProjectCard({ project, onNavigate }: ProjectCardProps) {
           <CardTitle className="text-sm font-medium line-clamp-2">{project.name}</CardTitle>
           <Badge
             variant={statusMap[project.status]?.variant || 'outline'}
-            className="px-1.5 py-0 text-[10px] h-5 shrink-0"
+            className="px-1.5 py-0 text-[10px] h-5 shrink-0 min-w-[70px] justify-center"
           >
             {statusMap[project.status]?.label || project.status}
           </Badge>
@@ -134,13 +134,11 @@ function ProjectCard({ project, onNavigate }: ProjectCardProps) {
               {format(parseISO(project.start_date), "dd.MM.yyyy")} - {format(parseISO(project.end_date), "dd.MM.yyyy")}
             </span>
           </div>
-          {project.payment_status && (
-            <Badge
-              variant={paymentStatusMap[project.payment_status]?.variant || 'outline'}
-              className="px-1.5 py-0 text-[10px] h-5 shrink-0"
-            >
-              {paymentStatusMap[project.payment_status]?.label || project.payment_status}
-            </Badge>
+          {project.payment_status && paymentStatusMap[project.payment_status] && (
+            <span
+              className={cn("h-3 w-3 rounded-full shrink-0", paymentStatusMap[project.payment_status].color)}
+              title={paymentStatusMap[project.payment_status].label}
+            />
           )}
         </div>
       </CardContent>
@@ -483,13 +481,14 @@ export default function ProjectsPage() {
                   </TableCell>
                   <TableCell className="py-1">
                     <div className="flex gap-1">
-                      <Badge variant={statusMap[item.status]?.variant || 'outline'} className="px-1.5 py-0 text-[10px] h-5">
+                      <Badge variant={statusMap[item.status]?.variant || 'outline'} className="px-1.5 py-0 text-[10px] h-5 min-w-[70px] justify-center">
                         {statusMap[item.status]?.label || item.status}
                       </Badge>
-                      {item.payment_status && (
-                        <Badge variant={paymentStatusMap[item.payment_status]?.variant || 'outline'} className="px-1.5 py-0 text-[10px] h-5">
-                          {paymentStatusMap[item.payment_status]?.label || item.payment_status}
-                        </Badge>
+                      {item.payment_status && paymentStatusMap[item.payment_status] && (
+                        <span
+                          className={cn("h-3 w-3 rounded-full", paymentStatusMap[item.payment_status].color)}
+                          title={paymentStatusMap[item.payment_status].label}
+                        />
                       )}
                     </div>
                   </TableCell>
