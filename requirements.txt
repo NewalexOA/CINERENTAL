@@ -52,7 +52,7 @@ markupsafe==3.0.2
     #   mako
 passlib==1.7.4
     # via act-rental (pyproject.toml)
-pyasn1==0.4.8
+pyasn1==0.6.3
     # via
     #   python-jose
     #   rsa
