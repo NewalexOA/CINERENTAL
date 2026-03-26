@@ -1,7 +1,7 @@
 export enum ClientStatus {
-  ACTIVE = 'active',
-  ARCHIVED = 'archived',
-  BLOCKED = 'blocked'
+  ACTIVE = 'ACTIVE',
+  ARCHIVED = 'ARCHIVED',
+  BLOCKED = 'BLOCKED'
 }
 
 export interface Client {

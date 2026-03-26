@@ -267,7 +267,7 @@ export default function ScannerPage() {
       });
 
       toast.success('Оборудование добавлено в корзину');
-      navigate('/projects/new');
+      navigate('/projects/new', { state: { sessionName: activeSession.name.trim() || undefined } });
     }
   };
 

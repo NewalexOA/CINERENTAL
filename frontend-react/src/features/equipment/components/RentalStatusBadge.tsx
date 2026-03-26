@@ -126,7 +126,7 @@ export function RentalStatusBadge({
     return (
       <Badge
         variant={config.variant}
-        className="px-1.5 py-0 text-[10px] h-5"
+        className="px-1.5 py-0 text-[10px] h-5 whitespace-nowrap"
       >
         {displayText}
       </Badge>
@@ -147,7 +147,7 @@ export function RentalStatusBadge({
         <span className="inline-flex">
           <Badge
             variant={config.variant}
-            className="px-1.5 py-0 text-[10px] h-5 cursor-pointer hover:opacity-80 transition-opacity gap-1"
+            className="px-1.5 py-0 text-[10px] h-5 whitespace-nowrap cursor-pointer hover:opacity-80 transition-opacity gap-1"
           >
             {displayText}
             <Info className="h-3 w-3 opacity-70" />
