@@ -2,23 +2,29 @@
 
 # Script to extract extended data from SQL dump to JSON format
 #
-# Usage: ./extract_from_sql_dump.sh [path_to_sql_dump]
+# Usage (from project root): ./backend/scripts/extract_from_sql_dump.sh [path_to_sql_dump]
 #
 # If no SQL dump path is provided, the script will automatically search for
 # *.sql files in the backend/scripts/ directory and use the first found file.
 # This makes it easy to work with any SQL dump you place in the scripts folder.
 #
 # Examples:
-#   ./extract_from_sql_dump.sh                           # Auto-detect first *.sql file
-#   ./extract_from_sql_dump.sh my_backup.sql             # Use specific file
-#   ./extract_from_sql_dump.sh /path/to/backup.sql       # Use file from any location
+#   ./backend/scripts/extract_from_sql_dump.sh                           # Auto-detect first *.sql file
+#   ./backend/scripts/extract_from_sql_dump.sh backend/scripts/dump.sql  # Use specific file
+#   ./backend/scripts/extract_from_sql_dump.sh /path/to/backup.sql       # Use file from any location
 
 set -e  # Exit on any error
 
+# Check if running from project root
+if [ ! -d "backend/scripts" ]; then
+    echo -e "\033[0;31m[ERROR]\033[0m This script must be run from the project root directory"
+    echo "Usage: ./backend/scripts/extract_from_sql_dump.sh [path_to_sql_dump]"
+    exit 1
+fi
+
 # Function to find first SQL file in backend/scripts/ directory
 find_sql_file() {
-    local script_dir="$(dirname "$0")"
-    local sql_files=($(find "$script_dir" -name "*.sql" -type f | sort))
+    local sql_files=($(find backend/scripts -name "*.sql" -type f | sort))
 
     if [ ${#sql_files[@]} -eq 0 ]; then
         return 1  # No SQL files found
@@ -72,8 +78,7 @@ log_error() {
 
 # Function to list available SQL files
 list_sql_files() {
-    local script_dir="$(dirname "$0")"
-    local sql_files=($(find "$script_dir" -name "*.sql" -type f | sort))
+    local sql_files=($(find backend/scripts -name "*.sql" -type f | sort))
 
     if [ ${#sql_files[@]} -gt 0 ]; then
         log_info "Available SQL files in backend/scripts/:"
@@ -166,20 +171,32 @@ main() {
 
     # Step 4: Extract data to JSON using our Python script
     log_info "Step 4: Extracting data to JSON..."
-    TEMP_DATABASE_URL="postgresql://postgres:postgres@localhost:$TEMP_DB_PORT/$TEMP_DB_NAME"
+    # SQL dump creates and switches to 'act-rental' database
+    TEMP_DATABASE_URL="postgresql://postgres:postgres@localhost:$TEMP_DB_PORT/act-rental"
 
-    if python backend/scripts/extract_extended_data.py --database-url "$TEMP_DATABASE_URL"; then
+    # Use Python from venv if available, otherwise system Python
+    PYTHON_CMD="python"
+    if [ -f ".venv/bin/python" ]; then
+        PYTHON_CMD=".venv/bin/python"
+        log_info "Using Python from virtual environment"
+    elif [ -f "venv/bin/python" ]; then
+        PYTHON_CMD="venv/bin/python"
+        log_info "Using Python from virtual environment"
+    fi
+
+    if $PYTHON_CMD backend/scripts/extract_extended_data.py --database-url "$TEMP_DATABASE_URL"; then
         log_info "Data extraction completed successfully!"
 
         # Check if JSON file was created
-        if [ -f "backend/scripts/extended_data.json" ]; then
-            JSON_SIZE=$(du -h backend/scripts/extended_data.json | cut -f1)
-            log_info "Created JSON file: backend/scripts/extended_data.json ($JSON_SIZE)"
+        JSON_FILE="backend/scripts/extended_data.json"
+        if [ -f "$JSON_FILE" ]; then
+            JSON_SIZE=$(du -h "$JSON_FILE" | cut -f1)
+            log_info "Created JSON file: $JSON_FILE ($JSON_SIZE)"
 
             # Show summary from JSON
             if command -v jq >/dev/null 2>&1; then
                 log_info "Data summary:"
-                jq -r '.summary | to_entries[] | "  \(.key): \(.value)"' backend/scripts/extended_data.json
+                jq -r '.summary | to_entries[] | "  \(.key): \(.value)"' "$JSON_FILE"
             fi
         else
             log_warn "JSON file was not created"

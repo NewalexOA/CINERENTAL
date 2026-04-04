@@ -632,10 +632,10 @@ async def test_user(db_session: AsyncSession) -> AsyncGenerator[User, None]:
 
 @pytest_asyncio.fixture
 async def test_scan_session(
-    db_session: AsyncSession, test_user: User
+    db_session: AsyncSession, test_user: User, test_equipment: Equipment
 ) -> AsyncGenerator[ScanSession, None]:
     """Create a test scan session for testing."""
-    items = [{'equipment_id': 1, 'barcode': 'TEST123', 'name': 'Test Equipment'}]
+    items = [{'equipment_id': test_equipment.id, 'quantity': 1}]
 
     scan_session = ScanSession.create_with_expiration(
         name='Test Session',

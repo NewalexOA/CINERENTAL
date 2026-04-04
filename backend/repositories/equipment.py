@@ -4,7 +4,7 @@ This module provides database operations for managing rental equipment,
 including inventory tracking, availability status, and maintenance records.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, List, Optional, Protocol, TypeVar, Union
 from uuid import UUID
 
@@ -617,6 +617,7 @@ class EquipmentRepository(BaseRepository[Equipment]):
         if not equipment_ids:
             return []
 
+        now = datetime.now(timezone.utc)
         query = (
             select(
                 Booking.equipment_id,
@@ -628,7 +629,13 @@ class EquipmentRepository(BaseRepository[Equipment]):
             .join(Project, Booking.project_id == Project.id)
             .where(
                 Booking.equipment_id.in_(equipment_ids),
-                Booking.booking_status == BookingStatus.ACTIVE,
+                Booking.booking_status.in_(
+                    [
+                        BookingStatus.PENDING,  # Черновик
+                        BookingStatus.ACTIVE,  # Активен
+                    ]
+                ),
+                Booking.end_date >= now,  # Only current and future bookings
             )
             .order_by(Booking.start_date)
         )

@@ -1,6 +1,6 @@
 # ACT-Rental - Cinema Equipment Rental Management System
 
-[![Version](https://img.shields.io/badge/version-0.16.0--beta.2-blue)](https://github.com/NewalexOA/CINERENTAL/releases/tag/v0.16.0-beta.2)
+[![Version](https://img.shields.io/badge/version-0.17.0--beta.1-blue)](https://github.com/NewalexOA/CINERENTAL/releases/tag/v0.17.0-beta.1)
 [![Python](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/downloads/release/python-3120/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.109.0-009688.svg?logo=fastapi)](https://fastapi.tiangolo.com)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
@@ -23,53 +23,68 @@ ACT-Rental is a comprehensive system for managing cinema equipment rentals. It a
 
 ## Features
 
-- Equipment management with hierarchical categories
+- Equipment management with hierarchical categories and tree view
 - Client management with fast search functionality
-- Booking system with quantity support
-- Barcode scanner integration
-- Real-time equipment status updates
+- Booking system with quantity support and availability checking
+- Barcode scanner integration (HID scanner + scan sessions with server sync)
+- Real-time equipment status updates with rental status badges
 - Document generation (rental agreements, handover acts)
+- Project management with card/table views, URL state persistence, and payment tracking
+- React frontend with TypeScript, URL-shareable filter state, and vitest testing
 - Local static asset management for reliable operation
-- Bootstrap-based responsive UI
+- macOS desktop launcher for Docker stack management
 
 ## Tech Stack
 
-- Backend: FastAPI
-- Frontend: Bootstrap
+- Backend: FastAPI + Python 3.12
+- Frontend (Legacy): Jinja2 + Bootstrap + Vanilla JS
+- Frontend (New): React 18 + TypeScript + Vite + shadcn/ui + TanStack Query
 - Database: PostgreSQL
 - Cache: Redis
 - Containerization: Docker
+- Testing: pytest (backend), Vitest + Testing Library (frontend)
 
 ## Project Structure
 
 ```text
 act-rental/
-├── backend/             # Backend application
-│   ├── api/            # API endpoints and routers
-│   │   └── v1/        # API version 1
-│   ├── core/          # Core functionality and config
-│   ├── models/        # Database models
-│   ├── schemas/       # Pydantic schemas
-│   ├── services/      # Business logic layer
-│   └── repositories/  # Database access layer
-├── docs/              # Project documentation
+├── backend/              # Backend application
+│   ├── api/             # API endpoints and routers
+│   │   └── v1/         # API version 1
+│   ├── core/           # Core functionality and config
+│   ├── models/         # Database models
+│   ├── schemas/        # Pydantic schemas
+│   ├── services/       # Business logic layer
+│   └── repositories/   # Database access layer
+├── docs/               # Project documentation
 │   ├── architecture.md       # System architecture
 │   ├── code_style.md        # Coding standards
 │   ├── development_plan.md  # Development roadmap
-│   └── project_structure.md # Project organization
-├── frontend/          # Frontend application
-│   ├── static/       # Static assets (CSS, JS, images)
-│   └── templates/    # Jinja2 HTML templates
-├── tests/            # Test suite
-│   ├── unit/        # Unit tests
-│   ├── integration/ # Integration tests
-│   ├── e2e/         # End-to-end tests
-│   └── factories/   # Test data factories
-├── docker/          # Docker configuration files
-├── migrations/       # Alembic migration scripts
-├── scripts/          # Utility scripts (backups, maintenance)
-├── pyproject.toml    # Project metadata and dependencies definition
-└── requirements.txt  # Python dependencies (potentially generated or for specific use cases)
+│   ├── project_structure.md # Project organization
+│   └── specs/               # Technical specifications
+├── frontend/           # Legacy frontend (Jinja2 + Bootstrap)
+│   ├── static/        # Static assets (CSS, JS, images)
+│   └── templates/     # Jinja2 HTML templates
+├── frontend-react/     # New React frontend (migration in progress)
+│   ├── src/
+│   │   ├── components/  # Shared UI components (shadcn/ui)
+│   │   ├── features/    # Feature modules (clients, equipment, projects, bookings, scanner, categories)
+│   │   ├── hooks/       # Custom React hooks (useUrlState, useDebounce, etc.)
+│   │   ├── services/    # API service layer
+│   │   └── types/       # TypeScript type definitions
+│   ├── vitest.config.ts # Test configuration
+│   └── package.json
+├── ACT-Rental-Launcher/ # macOS desktop launcher (PyQt5)
+├── tests/              # Backend test suite
+│   ├── unit/          # Unit tests
+│   ├── integration/   # Integration tests
+│   ├── e2e/           # End-to-end tests
+│   └── factories/     # Test data factories
+├── docker/            # Docker configuration files
+├── migrations/        # Alembic migration scripts
+├── scripts/           # Utility scripts (backups, maintenance)
+├── pyproject.toml     # Project metadata and dependencies
+└── requirements.txt   # Python dependencies
 ```
 
 ## Prerequisites
@@ -115,7 +130,20 @@ act-rental/
 docker compose up
 ```
 
+### React Frontend Development
+
+```bash
+cd frontend-react
+npm install
+npm run dev      # Start Vite dev server on port 5173
+npm run build    # Production build (tsc + vite build)
+npm run test     # Run vitest test suite
+npm run lint     # Run ESLint
+```
+
 ## Testing
+
+### Backend Testing
 
 To run the entire test suite, including unit, integration, and E2E tests with coverage reporting, use the following Make command:
 
@@ -141,6 +169,16 @@ docker compose -f docker-compose.test.yml run --rm test python -m pytest tests/i
 # Example: Run tests matching a keyword expression (-k)
 docker compose -f docker-compose.test.yml run --rm test python -m pytest -k "test_create_booking"
 ```
+
+### Frontend Testing
+
+```bash
+cd frontend-react
+npm run test          # Single run (CI)
+npm run test:watch    # Watch mode (development)
+```
+
+Test suite includes 25 tests covering `useUrlState` hook, `PaginationControls`, and `StatusGroup` components.
 
 ## CI/CD with GitHub Actions
 

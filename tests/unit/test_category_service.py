@@ -3,6 +3,7 @@
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from backend.exceptions import NotFoundError
 from backend.models.category import Category
 from backend.services.category import CategoryService
 from tests.conftest import async_fixture, async_test
@@ -83,7 +84,7 @@ class TestCategoryService:
         category_service: CategoryService,
     ) -> None:
         """Test updating a nonexistent category."""
-        with pytest.raises(ValueError, match='Category with ID 999 not found'):
+        with pytest.raises(NotFoundError, match='Category with ID 999 not found'):
             await category_service.update_category(
                 999,
                 name='Updated Category',

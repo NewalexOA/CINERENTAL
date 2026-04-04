@@ -290,9 +290,60 @@ print_success() { echo -e "${GREEN}[SUCCESS]${NC} $1"; }
 print_warning() { echo -e "${YELLOW}[WARNING]${NC} $1"; }
 print_error() { echo -e "${RED}[ERROR]${NC} $1"; }
 
+# Function to find project root directory
+find_project_root() {
+    local current_dir=$(pwd)
+
+    # Method 1: Check current directory and parents
+    for i in {1..5}; do
+        if [[ -f "$current_dir/docker-compose.yml" ]] || [[ -f "$current_dir/docker-compose.prod.yml" ]]; then
+            echo "$current_dir"
+            return 0
+        fi
+        current_dir=$(dirname "$current_dir")
+        if [[ "$current_dir" == "/" ]]; then
+            break
+        fi
+    done
+
+    # Method 2: Try common paths
+    local common_paths=(
+        "$HOME/Documents/GitHub/CINERENTAL"
+        "$HOME/Github/CINERENTAL"
+        "$HOME/github/CINERENTAL"
+        "$HOME/Projects/CINERENTAL"
+        "$HOME/Documents/Projects/CINERENTAL"
+    )
+
+    for path in "${common_paths[@]}"; do
+        if [[ -f "$path/docker-compose.yml" ]] || [[ -f "$path/docker-compose.prod.yml" ]]; then
+            echo "$path"
+            return 0
+        fi
+    done
+
+    return 1
+}
+
 PROJECT_NAME="act-rental"
 BACKUP_DIR=$(cd "$(dirname "$0")" && pwd)
-PROJECT_DIR="/Users/actrental/Documents/GitHub/CINERENTAL"
+
+# Try to find project directory
+print_status "Поиск директории проекта ACT-Rental..."
+PROJECT_DIR=$(find_project_root)
+
+if [[ -z "$PROJECT_DIR" ]]; then
+    print_error "Не удалось найти директорию проекта ACT-Rental!"
+    print_error "Пожалуйста, укажите путь к проекту вручную:"
+    read -p "Путь к проекту: " PROJECT_DIR
+
+    if [[ ! -d "$PROJECT_DIR" ]] || [[ ! -f "$PROJECT_DIR/docker-compose.yml" && ! -f "$PROJECT_DIR/docker-compose.prod.yml" ]]; then
+        print_error "Указанный путь не содержит проект ACT-Rental"
+        exit 1
+    fi
+fi
+
+print_success "Проект найден: $PROJECT_DIR"
 
 # Change to project directory for docker compose commands
 cd "$PROJECT_DIR" || {
