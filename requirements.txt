@@ -18,9 +18,9 @@ bcrypt==4.3.0
     # via passlib
 click==8.1.8
     # via uvicorn
-cryptography==46.0.5
+cryptography==46.0.6
     # via python-jose
-ecdsa==0.19.1
+ecdsa==0.19.2
     # via python-jose
 factory-boy==3.3.1
     # via test factories
@@ -50,6 +50,7 @@ markupsafe==3.0.2
     #   mako
 passlib==1.7.4
     # via act-rental (pyproject.toml)
+pillow==12.1.0
 pyasn1==0.6.3
     # via
     #   python-barcode
