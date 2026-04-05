@@ -1,46 +1,64 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useCart } from '../../../context/CartContext';
 import { EquipmentPicker } from '../../equipment/components/EquipmentPicker';
 import { Button } from '../../../components/ui/button';
 import { Input } from '../../../components/ui/input';
 import { Label } from '../../../components/ui/label';
 import { Textarea } from '../../../components/ui/textarea';
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow
 } from '../../../components/ui/table';
-import { Trash2, Save } from 'lucide-react';
+import { Trash2, Save, Check, ChevronsUpDown } from 'lucide-react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { projectsService } from '../../../services/projects';
 import { clientsService } from '../../../services/clients';
 import { equipmentService } from '../../../services/equipment';
 import { bookingsService } from '../../../services/bookings';
 import { toast } from 'sonner';
-import { useNavigate } from 'react-router-dom';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/ui/select';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { Popover, PopoverContent, PopoverTrigger } from '../../../components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '../../../components/ui/command';
+import { cn } from '../../../lib/utils';
 import { ProjectStatus } from '../../../types/project';
+import { ClientStatus } from '../../../types/client';
 import { DateTimeRangePicker } from '../../../components/ui/date-range-picker';
 import { parseISO } from 'date-fns';
 
 export default function NewProjectPage() {
   const { items, addItem, removeItem, updateQuantity, updateItemDates, clearCart, dates, setDates } = useCart();
   const navigate = useNavigate();
-  
-  // Project Form State
-  const [name, setName] = useState('');
+  const location = useLocation();
+
+  // Project Form State — pre-fill with session name if navigated from scanner
+  const rawState = location.state;
+  const [name, setName] = useState(
+    rawState !== null && typeof rawState === 'object' && 'sessionName' in rawState && typeof (rawState as Record<string, unknown>).sessionName === 'string'
+      ? ((rawState as Record<string, unknown>).sessionName as string).trim()
+      : ''
+  );
   const [clientId, setClientId] = useState('');
+  const [clientOpen, setClientOpen] = useState(false);
   const [description, setDescription] = useState('');
-  
+
   const [isApplyingDates, setIsApplyingDates] = useState(false);
 
   const { data: clients } = useQuery({
-    queryKey: ['clients'],
-    queryFn: clientsService.getAll
+    queryKey: ['clients', 'active'],
+    queryFn: async () => {
+      const all = await clientsService.getAll();
+      return all.filter(c => c.status === ClientStatus.ACTIVE);
+    }
   });
+
+  const selectedClient = useMemo(
+    () => clients?.find(c => String(c.id) === clientId),
+    [clients, clientId]
+  );
 
   const applyProjectDatesToAll = async () => {
     if (!dates.start || !dates.end) {
@@ -66,7 +84,7 @@ export default function NewProjectPage() {
     }
 
     setIsApplyingDates(false);
-    
+
     if (conflictsCount > 0) {
       toast.warning(`Применено с конфликтами: ${conflictsCount} позиций недоступны.`);
     } else {
@@ -97,10 +115,10 @@ export default function NewProjectPage() {
           quantity: i.quantity,
           total_amount: 0 // Logic for price calculation needed
         }));
-        
+
         await bookingsService.createBatch(bookingsData, project.id);
       }
-      
+
       return project;
     },
     onSuccess: () => {
@@ -140,27 +158,48 @@ export default function NewProjectPage() {
               <Label htmlFor="name">Название проекта *</Label>
               <Input id="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Например: Съемка клипа" />
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="client">Клиент *</Label>
-              <Select value={clientId} onValueChange={setClientId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Выберите клиента" />
-                </SelectTrigger>
-                <SelectContent>
-                  {clients?.map((client) => (
-                    <SelectItem key={client.id} value={String(client.id)}>{client.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Popover open={clientOpen} onOpenChange={setClientOpen}>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" role="combobox" aria-expanded={clientOpen} className="w-full justify-between font-normal">
+                    {selectedClient?.name ?? 'Поиск клиента...'}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" aria-hidden="true" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                  <Command>
+                    <CommandInput placeholder="Введите имя клиента..." />
+                    <CommandList>
+                      <CommandEmpty>Клиент не найден</CommandEmpty>
+                      <CommandGroup>
+                        {clients?.map((client) => (
+                          <CommandItem
+                            key={client.id}
+                            value={`${client.id}-${client.name}`}
+                            onSelect={() => {
+                              setClientId(String(client.id));
+                              setClientOpen(false);
+                            }}
+                          >
+                            <Check className={cn('mr-2 h-4 w-4', clientId === String(client.id) ? 'opacity-100' : 'opacity-0')} />
+                            {client.name}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             </div>
 
             <div className="space-y-2">
               <Label>Период проекта *</Label>
-              <DateTimeRangePicker 
-                 date={{ 
-                   from: dates.start ? parseISO(dates.start) : undefined, 
-                   to: dates.end ? parseISO(dates.end) : undefined 
+              <DateTimeRangePicker
+                 date={{
+                   from: dates.start ? parseISO(dates.start) : undefined,
+                   to: dates.end ? parseISO(dates.end) : undefined
                  }}
                  setDate={(range) => {
                    setDates({
@@ -188,7 +227,7 @@ export default function NewProjectPage() {
               <Button variant="ghost" size="sm" onClick={clearCart} className="text-destructive">Очистить</Button>
             </div>
           </div>
-          
+
           <div className="flex-1 overflow-auto border rounded-md">
             <Table>
               <TableHeader>
@@ -210,10 +249,10 @@ export default function NewProjectPage() {
                       <div className="text-xs text-muted-foreground">{item.category_name}</div>
                     </TableCell>
                     <TableCell>
-                      <DateTimeRangePicker 
-                         date={{ 
-                           from: item.start_date ? parseISO(item.start_date) : undefined, 
-                           to: item.end_date ? parseISO(item.end_date) : undefined 
+                      <DateTimeRangePicker
+                         date={{
+                           from: item.start_date ? parseISO(item.start_date) : undefined,
+                           to: item.end_date ? parseISO(item.end_date) : undefined
                          }}
                          setDate={(range) => {
                            updateItemDates(item.id, {
@@ -225,12 +264,15 @@ export default function NewProjectPage() {
                       />
                     </TableCell>
                     <TableCell>
-                      <Input 
-                        type="number" 
-                        min="1" 
-                        className="h-8 w-16" 
-                        value={item.quantity} 
-                        onChange={(e) => updateQuantity(item.id, parseInt(e.target.value))}
+                      <Input
+                        type="number"
+                        min="1"
+                        className="h-8 w-16"
+                        value={item.quantity}
+                        onChange={(e) => {
+                          const val = parseInt(e.target.value, 10);
+                          if (!isNaN(val) && val > 0) updateQuantity(item.id, val);
+                        }}
                       />
                     </TableCell>
                     <TableCell className="text-right">{item.replacement_cost * item.quantity} ₽</TableCell>

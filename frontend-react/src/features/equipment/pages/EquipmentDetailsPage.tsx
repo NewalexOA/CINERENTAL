@@ -3,11 +3,14 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { equipmentService } from '../../../services/equipment';
 import { categoriesService } from '../../../services/categories';
 import { Button } from '../../../components/ui/button';
-import { ArrowLeft, QrCode, Tag, DollarSign, Calendar, Save, Pencil, Trash2, Copy, RotateCw, Printer } from 'lucide-react';
+import { ArrowLeft, QrCode, Tag, DollarSign, Calendar, Save, Pencil, Trash2, Copy, RotateCw, Printer, Search, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Input } from '../../../components/ui/input';
+import { DateTimeRangePicker } from '../../../components/ui/date-range-picker';
+import { DateRange } from 'react-day-picker';
 import { Badge } from '../../../components/ui/badge';
 import { Textarea } from '../../../components/ui/textarea';
 import { toast } from 'sonner';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { EquipmentFormDialog } from '../components/EquipmentFormDialog';
 import { EquipmentDeleteDialog } from '../components/EquipmentDeleteDialog';
 import { BarcodePrintDialog } from '../components/BarcodePrintDialog';
@@ -47,6 +50,12 @@ export default function EquipmentDetailsPage() {
     queryFn: () => equipmentService.getById(equipmentId),
     enabled: !!equipmentId
   });
+
+  // Booking history filters
+  const [bookingSearch, setBookingSearch] = useState('');
+  const [bookingDateRange, setBookingDateRange] = useState<DateRange | undefined>();
+  const [bookingPage, setBookingPage] = useState(1);
+  const bookingsPerPage = 10;
 
   const { data: bookings } = useQuery({
     queryKey: ['equipment-bookings', equipmentId],
@@ -143,6 +152,42 @@ export default function EquipmentDetailsPage() {
   const handlePrintBarcode = () => {
     setIsPrintOpen(true);
   };
+
+  const filteredBookings = useMemo(() => {
+    if (!bookings) return [];
+    const activeStatuses = [BookingStatus.ACTIVE, BookingStatus.CONFIRMED, BookingStatus.PENDING, BookingStatus.OVERDUE];
+    const searchLower = bookingSearch.toLowerCase().trim();
+
+    return [...bookings]
+      .filter((b) => {
+        if (searchLower) {
+          const matchesProject = (b.project_name || '').toLowerCase().includes(searchLower);
+          const matchesClient = (b.client_name || '').toLowerCase().includes(searchLower);
+          if (!matchesProject && !matchesClient) return false;
+        }
+        if (bookingDateRange?.from) {
+          const bEnd = parseISO(b.end_date);
+          if (bEnd < bookingDateRange.from) return false;
+        }
+        if (bookingDateRange?.to) {
+          const bStart = parseISO(b.start_date);
+          if (bStart > bookingDateRange.to) return false;
+        }
+        return true;
+      })
+      .sort((a, b) => {
+        const aActive = activeStatuses.includes(a.booking_status as BookingStatus) ? 0 : 1;
+        const bActive = activeStatuses.includes(b.booking_status as BookingStatus) ? 0 : 1;
+        if (aActive !== bActive) return aActive - bActive;
+        return new Date(b.start_date).getTime() - new Date(a.start_date).getTime();
+      });
+  }, [bookings, bookingSearch, bookingDateRange]);
+
+  const totalBookingPages = Math.max(1, Math.ceil(filteredBookings.length / bookingsPerPage));
+  const paginatedBookings = filteredBookings.slice((bookingPage - 1) * bookingsPerPage, bookingPage * bookingsPerPage);
+
+  // Reset page when filters change
+  useEffect(() => { setBookingPage(1); }, [bookingSearch, bookingDateRange]);
 
   const bookingStatusMap: Record<string, { label: string, variant: "default" | "secondary" | "destructive" | "outline" | "success" | "warning" }> = {
     [BookingStatus.PENDING]: { label: 'Ожидание', variant: 'secondary' },
@@ -246,11 +291,28 @@ export default function EquipmentDetailsPage() {
 
         {/* Booking History */}
         <div className="bg-card border rounded-md shadow-sm flex flex-col">
-          <div className="p-3 border-b">
+          <div className="p-3 border-b space-y-2">
             <h3 className="font-semibold text-sm">История бронирований</h3>
+            <div className="flex items-center gap-2">
+              <div className="relative flex-1">
+                <Search className="absolute left-2 top-2 h-3.5 w-3.5 text-muted-foreground" />
+                <Input
+                  value={bookingSearch}
+                  onChange={(e) => setBookingSearch(e.target.value)}
+                  placeholder="Проект или клиент..."
+                  className="h-7 pl-7 text-xs"
+                />
+              </div>
+              <DateTimeRangePicker
+                date={bookingDateRange}
+                setDate={setBookingDateRange}
+                placeholder="Фильтр по датам"
+                className="h-7"
+              />
+            </div>
           </div>
           <div className="flex-1 overflow-auto max-h-[400px]">
-            {bookings && bookings.length > 0 ? (
+            {paginatedBookings.length > 0 ? (
               <Table className="text-xs">
                 <TableHeader>
                   <TableRow className="h-8">
@@ -261,7 +323,7 @@ export default function EquipmentDetailsPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {bookings.map((booking) => (
+                  {paginatedBookings.map((booking) => (
                     <TableRow key={booking.id} className="h-8 hover:bg-muted/50">
                       <TableCell className="py-1 font-medium">
                         {booking.project_name ? (
@@ -284,7 +346,7 @@ export default function EquipmentDetailsPage() {
                         </div>
                       </TableCell>
                       <TableCell className="py-1">
-                        <Badge variant={bookingStatusMap[booking.booking_status]?.variant || 'outline'} className="text-[10px] h-4 px-1 w-fit">
+                        <Badge variant={bookingStatusMap[booking.booking_status]?.variant || 'outline'} className="text-[10px] h-4 px-1 w-fit whitespace-nowrap">
                           {bookingStatusMap[booking.booking_status]?.label || booking.booking_status}
                         </Badge>
                       </TableCell>
@@ -294,10 +356,24 @@ export default function EquipmentDetailsPage() {
               </Table>
             ) : (
               <div className="p-4 text-center text-muted-foreground text-sm">
-                Нет истории бронирований
+                {bookings && bookings.length > 0 ? 'Ничего не найдено' : 'Нет истории бронирований'}
               </div>
             )}
           </div>
+          {filteredBookings.length > bookingsPerPage && (
+            <div className="p-2 border-t flex items-center justify-between text-xs text-muted-foreground">
+              <span>Всего: {filteredBookings.length}</span>
+              <div className="flex items-center gap-1">
+                <Button variant="ghost" size="icon" className="h-6 w-6" disabled={bookingPage <= 1} onClick={() => setBookingPage(p => p - 1)}>
+                  <ChevronLeft className="h-3.5 w-3.5" />
+                </Button>
+                <span>{bookingPage} / {totalBookingPages}</span>
+                <Button variant="ghost" size="icon" className="h-6 w-6" disabled={bookingPage >= totalBookingPages} onClick={() => setBookingPage(p => p + 1)}>
+                  <ChevronRight className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

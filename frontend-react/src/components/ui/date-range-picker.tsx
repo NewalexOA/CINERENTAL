@@ -1,6 +1,6 @@
 import * as React from "react"
 import { Calendar as CalendarIcon, Clock } from "lucide-react"
-import { format, setHours, setMinutes } from "date-fns"
+import { format, setHours, setMinutes, parse, isValid, startOfDay } from "date-fns"
 import { DateRange } from "react-day-picker"
 import { cn } from "../../lib/utils"
 import { Button } from "./button"
@@ -12,6 +12,35 @@ import {
 } from "./popover"
 import { Input } from "./input"
 import { Label } from "./label"
+
+const DISPLAY_FORMAT = "dd.MM.yy HH:mm"
+const PARSE_FORMATS = [
+  "dd.MM.yyyy HH:mm",
+  "dd.MM.yyyy",
+  "dd.MM.yy HH:mm",
+  "dd.MM.yy",
+  "dd/MM/yyyy HH:mm",
+  "dd/MM/yyyy",
+  "dd/MM/yy HH:mm",
+  "dd/MM/yy",
+  "yyyy-MM-dd HH:mm",
+  "yyyy-MM-dd",
+]
+
+function tryParseDate(input: string): Date | null {
+  const trimmed = input.trim()
+  if (!trimmed) return null
+  const ref = startOfDay(new Date())
+  for (const fmt of PARSE_FORMATS) {
+    const result = parse(trimmed, fmt, ref)
+    if (isValid(result)) return result
+  }
+  return null
+}
+
+function formatDisplay(d: Date): string {
+  return format(d, DISPLAY_FORMAT)
+}
 
 interface DateTimeRangePickerProps {
   date?: DateRange
@@ -26,28 +55,81 @@ export function DateTimeRangePicker({
   className,
   placeholder = "Выберите период"
 }: DateTimeRangePickerProps) {
-  const [startTime, setStartTime] = React.useState("00:00")
-  const [endTime, setEndTime] = React.useState("23:59")
   const [open, setOpen] = React.useState(false)
   // Local state buffers intermediate selection (when only "from" is picked)
   const [localDate, setLocalDate] = React.useState<DateRange | undefined>(date)
 
-  // Sync internal time state with external date prop
+  // Text input state
+  const [inputValue, setInputValue] = React.useState("")
+  const [inputError, setInputError] = React.useState(false)
+
+  // Derive time from localDate instead of separate state
+  const startTime = localDate?.from ? format(localDate.from, "HH:mm") : "00:00"
+  const endTime = localDate?.to ? format(localDate.to, "HH:mm") : "23:59"
+
+  // Sync display text with external date
   React.useEffect(() => {
     if (date?.from) {
-      setStartTime(format(date.from, "HH:mm"))
-    }
-    if (date?.to) {
-      setEndTime(format(date.to, "HH:mm"))
+      const fromStr = formatDisplay(date.from)
+      const toStr = date.to ? formatDisplay(date.to) : ""
+      setInputValue(toStr ? `${fromStr} - ${toStr}` : fromStr)
+    } else {
+      setInputValue("")
     }
   }, [date?.from, date?.to])
 
-  // Sync local date with external date when popover opens or external date changes
+  // Sync local date with external date when popover opens
   React.useEffect(() => {
-    if (!open) {
+    if (open) {
       setLocalDate(date)
     }
-  }, [date, open])
+  }, [open]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleInputCommit = (value: string) => {
+    const trimmed = value.trim()
+    if (!trimmed) {
+      setLocalDate(undefined)
+      setDate(undefined)
+      setInputError(false)
+      return
+    }
+
+    // Split on en-dash/em-dash (any spacing), or hyphen with spaces around it
+    const parts = trimmed.split(/\s*[–—]\s*|\s+-\s+/)
+    if (parts.length === 2) {
+      const from = tryParseDate(parts[0])
+      const to = tryParseDate(parts[1])
+      if (from && to && from <= to) {
+        const newRange = { from, to }
+        setLocalDate(newRange)
+        setDate(newRange)
+        setInputError(false)
+        return
+      }
+    } else if (parts.length === 1) {
+      const from = tryParseDate(parts[0])
+      if (from) {
+        const newRange = { from, to: undefined }
+        setLocalDate(newRange)
+        setDate(newRange)
+        setInputError(false)
+        return
+      }
+    }
+
+    setInputError(true)
+  }
+
+  const handleInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      handleInputCommit(inputValue)
+    }
+  }
+
+  const handleInputBlur = () => {
+    handleInputCommit(inputValue)
+  }
 
   const handleDateSelect = (selectedDate: DateRange | undefined) => {
     if (!selectedDate) {
@@ -59,13 +141,13 @@ export function DateTimeRangePicker({
     let newTo = selectedDate.to
 
     if (newFrom) {
-      const [hours, minutes] = startTime.split(':').map(Number)
-      newFrom = setMinutes(setHours(newFrom, hours), minutes)
+      const [h, m] = startTime.split(':').map(Number)
+      newFrom = setMinutes(setHours(newFrom, h), m)
     }
 
     if (newTo) {
-      const [hours, minutes] = endTime.split(':').map(Number)
-      newTo = setMinutes(setHours(newTo, hours), minutes)
+      const [h, m] = endTime.split(':').map(Number)
+      newTo = setMinutes(setHours(newTo, h), m)
     }
 
     const newRange = { from: newFrom, to: newTo }
@@ -78,8 +160,10 @@ export function DateTimeRangePicker({
   }
 
   const handleTimeChange = (type: 'start' | 'end', value: string) => {
-    if (type === 'start') setStartTime(value)
-    else setEndTime(value)
+    const [hoursStr, minutesStr] = value.split(':')
+    const hours = parseInt(hoursStr, 10)
+    const minutes = parseInt(minutesStr, 10)
+    if (isNaN(hours) || isNaN(minutes)) return
 
     const currentFrom = localDate?.from
     const currentTo = localDate?.to
@@ -89,13 +173,11 @@ export function DateTimeRangePicker({
     let newFrom = currentFrom
     let newTo = currentTo
 
-    if (type === 'start' && newFrom) {
-      const [hours, minutes] = value.split(':').map(Number)
+    if (type === 'start') {
       newFrom = setMinutes(setHours(newFrom, hours), minutes)
     }
 
     if (type === 'end' && newTo) {
-      const [hours, minutes] = value.split(':').map(Number)
       newTo = setMinutes(setHours(newTo, hours), minutes)
     }
 
@@ -116,73 +198,74 @@ export function DateTimeRangePicker({
   }
 
   return (
-    <Popover open={open} onOpenChange={handleOpenChange}>
-      <PopoverTrigger asChild>
-        <Button
-          id="date"
-          variant={"outline"}
-          className={cn(
-            "w-full justify-start text-left font-normal truncate px-2",
-            !date && "text-muted-foreground",
-            className
-          )}
-        >
-          <CalendarIcon className="mr-2 h-3.5 w-3.5 shrink-0" />
-          <span className="truncate">
-            {date?.from ? (
-              date.to ? (
-                <>
-                  {format(date.from, "dd.MM HH:mm")} - {format(date.to, "dd.MM HH:mm")}
-                </>
-              ) : (
-                format(date.from, "dd.MM HH:mm")
-              )
-            ) : (
-              <span>{placeholder}</span>
-            )}
-          </span>
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-auto p-0" align="start">
-        <div className="flex flex-col">
-          <Calendar
-            initialFocus
-            mode="range"
-            defaultMonth={localDate?.from}
-            selected={localDate}
-            onSelect={handleDateSelect}
-            numberOfMonths={2}
-          />
-          <div className="border-t p-3 bg-muted/20">
-            <div className="flex items-center gap-4">
-               <div className="flex flex-col gap-1.5 flex-1">
-                 <Label className="text-xs text-muted-foreground">Время начала</Label>
-                 <div className="relative">
-                   <Clock className="absolute left-2 top-2.5 h-3 w-3 text-muted-foreground" />
-                   <Input
-                     type="time"
-                     value={startTime}
-                     onChange={(e) => handleTimeChange('start', e.target.value)}
-                     className="h-8 pl-7 text-xs"
-                   />
+    <div className={cn("flex items-center gap-1", className)}>
+      <Input
+        value={inputValue}
+        onChange={(e) => { setInputValue(e.target.value); setInputError(false) }}
+        onBlur={handleInputBlur}
+        onKeyDown={handleInputKeyDown}
+        placeholder={placeholder}
+        maxLength={40}
+        aria-invalid={inputError || undefined}
+        className={cn(
+          "h-9 text-xs flex-1 min-w-0",
+          inputError && "border-destructive focus-visible:ring-destructive"
+        )}
+      />
+      <Popover open={open} onOpenChange={handleOpenChange}>
+        <PopoverTrigger asChild>
+          <Button
+            variant="outline"
+            size="icon"
+            className="h-9 w-9 shrink-0"
+            aria-label="Открыть календарь"
+            aria-haspopup="dialog"
+            aria-expanded={open}
+          >
+            <CalendarIcon className="h-3.5 w-3.5" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-auto p-0" align="start">
+          <div className="flex flex-col">
+            <Calendar
+              initialFocus
+              mode="range"
+              defaultMonth={localDate?.from}
+              selected={localDate}
+              onSelect={handleDateSelect}
+              numberOfMonths={2}
+            />
+            <div className="border-t p-3 bg-muted/20">
+              <div className="flex items-center gap-4">
+                 <div className="flex flex-col gap-1.5 flex-1">
+                   <Label className="text-xs text-muted-foreground">Время начала</Label>
+                   <div className="relative">
+                     <Clock className="absolute left-2 top-2.5 h-3 w-3 text-muted-foreground" />
+                     <Input
+                       type="time"
+                       value={startTime}
+                       onChange={(e) => handleTimeChange('start', e.target.value)}
+                       className="h-8 pl-7 text-xs"
+                     />
+                   </div>
                  </div>
-               </div>
-               <div className="flex flex-col gap-1.5 flex-1">
-                 <Label className="text-xs text-muted-foreground">Время окончания</Label>
-                 <div className="relative">
-                   <Clock className="absolute left-2 top-2.5 h-3 w-3 text-muted-foreground" />
-                   <Input
-                     type="time"
-                     value={endTime}
-                     onChange={(e) => handleTimeChange('end', e.target.value)}
-                     className="h-8 pl-7 text-xs"
-                   />
+                 <div className="flex flex-col gap-1.5 flex-1">
+                   <Label className="text-xs text-muted-foreground">Время окончания</Label>
+                   <div className="relative">
+                     <Clock className="absolute left-2 top-2.5 h-3 w-3 text-muted-foreground" />
+                     <Input
+                       type="time"
+                       value={endTime}
+                       onChange={(e) => handleTimeChange('end', e.target.value)}
+                       className="h-8 pl-7 text-xs"
+                     />
+                   </div>
                  </div>
-               </div>
+              </div>
             </div>
           </div>
-        </div>
-      </PopoverContent>
-    </Popover>
+        </PopoverContent>
+      </Popover>
+    </div>
   )
 }
