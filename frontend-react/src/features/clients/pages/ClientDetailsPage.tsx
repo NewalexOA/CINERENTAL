@@ -5,16 +5,17 @@ import { projectsService } from '@/services/projects';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Mail, Phone, Building } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { format, parseISO } from 'date-fns';
+import { DATE_FORMAT } from '@/lib/date-formats';
 
 export default function ClientDetailsPage() {
   const { id } = useParams<{ id: string }>();
@@ -72,7 +73,7 @@ export default function ClientDetailsPage() {
             {/* Address placeholder if needed */}
             <div className="pt-2 border-t mt-2 flex justify-between items-center text-xs text-muted-foreground">
               <span>ID: {client.id}</span>
-              <span>Создан: {client.created_at ? format(parseISO(client.created_at), 'dd.MM.yyyy') : '-'}</span>
+              <span>Создан: {client.created_at ? format(parseISO(client.created_at), DATE_FORMAT) : '-'}</span>
             </div>
           </div>
         </div>
@@ -95,14 +96,14 @@ export default function ClientDetailsPage() {
                 </TableHeader>
                 <TableBody>
                   {projects?.items.map((project) => (
-                    <TableRow 
-                      key={project.id} 
+                    <TableRow
+                      key={project.id}
                       className="cursor-pointer hover:bg-muted/50"
                       onClick={() => navigate(`/projects/${project.id}`)}
                     >
                       <TableCell className="font-medium">{project.name}</TableCell>
                       <TableCell>
-                        {format(parseISO(project.start_date), 'dd.MM.yyyy')} - {format(parseISO(project.end_date), 'dd.MM.yyyy')}
+                        {format(parseISO(project.start_date), DATE_FORMAT)} - {format(parseISO(project.end_date), DATE_FORMAT)}
                       </TableCell>
                       <TableCell>
                         <Badge variant="outline">{project.status}</Badge>

@@ -8,11 +8,11 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Optional
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from backend.models import BookingStatus, PaymentStatus
 from backend.schemas.equipment import EquipmentResponse
-from backend.schemas.project import ProjectBase
+from backend.schemas.project import ProjectBase, _validate_year
 
 
 class BookingBase(BaseModel):
@@ -41,6 +41,14 @@ class BookingBase(BaseModel):
         title='Project ID',
         description='ID of the project this booking belongs to',
     )
+
+    @field_validator('start_date', 'end_date')
+    @classmethod
+    def validate_year(cls, v: datetime) -> datetime:
+        """Validate that year is within the acceptable range."""
+        result = _validate_year(v)
+        assert result is not None
+        return result
 
     model_config = ConfigDict(
         from_attributes=True,
@@ -79,6 +87,12 @@ class BookingUpdate(BaseModel):
         title='Project ID',
         description='ID of the project this booking belongs to',
     )
+
+    @field_validator('start_date', 'end_date')
+    @classmethod
+    def validate_year(cls, v: Optional[datetime]) -> Optional[datetime]:
+        """Validate that year is within the acceptable range."""
+        return _validate_year(v)
 
     model_config = ConfigDict(
         from_attributes=True,

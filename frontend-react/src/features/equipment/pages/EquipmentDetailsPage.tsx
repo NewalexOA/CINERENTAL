@@ -24,6 +24,7 @@ import {
   TableRow
 } from '../../../components/ui/table';
 import { format, parseISO } from 'date-fns';
+import { DATE_FORMAT } from '../../../lib/date-formats';
 import { BookingStatus } from '../../../services/bookings';
 import { EquipmentStatus } from '../../../types/equipment';
 
@@ -342,7 +343,7 @@ export default function EquipmentDetailsPage() {
                       <TableCell className="py-1 text-[10px] text-muted-foreground">
                         <div className="flex items-center gap-1">
                           <Calendar className="h-3 w-3" />
-                          {format(parseISO(booking.start_date), 'dd.MM.yy')} - {format(parseISO(booking.end_date), 'dd.MM.yy')}
+                          {format(parseISO(booking.start_date), DATE_FORMAT)} - {format(parseISO(booking.end_date), DATE_FORMAT)}
                         </div>
                       </TableCell>
                       <TableCell className="py-1">

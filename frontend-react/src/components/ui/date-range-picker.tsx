@@ -3,6 +3,7 @@ import { Calendar as CalendarIcon, Clock } from "lucide-react"
 import { format, setHours, setMinutes, parse, isValid, startOfDay } from "date-fns"
 import { DateRange } from "react-day-picker"
 import { cn } from "../../lib/utils"
+import { DATE_TIME_FORMAT, DATE_PARSE_FORMATS } from "../../lib/date-formats"
 import { Button } from "./button"
 import { Calendar } from "./calendar"
 import {
@@ -13,25 +14,11 @@ import {
 import { Input } from "./input"
 import { Label } from "./label"
 
-const DISPLAY_FORMAT = "dd.MM.yy HH:mm"
-const PARSE_FORMATS = [
-  "dd.MM.yyyy HH:mm",
-  "dd.MM.yyyy",
-  "dd.MM.yy HH:mm",
-  "dd.MM.yy",
-  "dd/MM/yyyy HH:mm",
-  "dd/MM/yyyy",
-  "dd/MM/yy HH:mm",
-  "dd/MM/yy",
-  "yyyy-MM-dd HH:mm",
-  "yyyy-MM-dd",
-]
-
 function tryParseDate(input: string): Date | null {
   const trimmed = input.trim()
   if (!trimmed) return null
   const ref = startOfDay(new Date())
-  for (const fmt of PARSE_FORMATS) {
+  for (const fmt of DATE_PARSE_FORMATS) {
     const result = parse(trimmed, fmt, ref)
     if (isValid(result)) return result
   }
@@ -39,7 +26,7 @@ function tryParseDate(input: string): Date | null {
 }
 
 function formatDisplay(d: Date): string {
-  return format(d, DISPLAY_FORMAT)
+  return format(d, DATE_TIME_FORMAT)
 }
 
 interface DateTimeRangePickerProps {

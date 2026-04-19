@@ -22,6 +22,7 @@ import { Checkbox } from '../../../components/ui/checkbox';
 import { Badge } from '../../../components/ui/badge';
 import { Search, X, Calendar as CalendarIcon } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
+import { DATE_TIME_FORMAT } from '../../../lib/date-formats';
 import { DateTimeRangePicker } from '../../../components/ui/date-range-picker';
 import { PaginationControls } from '../../../components/ui/pagination-controls';
 
@@ -214,7 +215,7 @@ export default function BookingsPage() {
                   <div className="flex flex-col text-[10px]">
                      <span className="flex items-center gap-1">
                        <CalendarIcon className="h-3 w-3 text-muted-foreground" />
-                       {format(parseISO(item.start_date), "dd.MM HH:mm")} - {format(parseISO(item.end_date), "dd.MM HH:mm")}
+                       {format(parseISO(item.start_date), DATE_TIME_FORMAT)} - {format(parseISO(item.end_date), DATE_TIME_FORMAT)}
                      </span>
                   </div>
                 </TableCell>
