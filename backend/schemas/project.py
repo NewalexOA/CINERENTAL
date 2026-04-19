@@ -8,9 +8,16 @@ from datetime import datetime
 from enum import Enum
 from typing import List, Optional
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from backend.models import ProjectPaymentStatus, ProjectStatus
+
+
+def _validate_year(v: Optional[datetime]) -> Optional[datetime]:
+    """Reject datetimes with year outside the acceptable range (2020-2100)."""
+    if v is not None and (v.year < 2020 or v.year > 2100):
+        raise ValueError(f'Year {v.year} is outside the acceptable range (2020-2100)')
+    return v
 
 
 class DateRange(BaseModel):
@@ -47,6 +54,14 @@ class ProjectBase(BaseModel):
         None, title='Notes', description='Additional notes for the project'
     )
 
+    @field_validator('start_date', 'end_date')
+    @classmethod
+    def validate_year(cls, v: datetime) -> datetime:
+        """Validate that year is within the acceptable range."""
+        result = _validate_year(v)
+        assert result is not None
+        return result
+
     model_config = ConfigDict(
         from_attributes=True,
         ser_json_bytes='utf8',
@@ -76,6 +91,14 @@ class BookingCreateForProject(BaseModel):
         description='Quantity of equipment items in this booking',
     )
 
+    @field_validator('start_date', 'end_date')
+    @classmethod
+    def validate_year(cls, v: datetime) -> datetime:
+        """Validate that year is within the acceptable range."""
+        result = _validate_year(v)
+        assert result is not None
+        return result
+
 
 class ProjectCreateWithBookings(ProjectCreate):
     """Create project with bookings request schema."""
@@ -99,6 +122,12 @@ class ProjectUpdate(BaseModel):
     end_date: Optional[datetime] = Field(None, title='End Date')
     status: Optional[ProjectStatus] = Field(None, title='Status')
     notes: Optional[str] = Field(None, title='Notes')
+
+    @field_validator('start_date', 'end_date')
+    @classmethod
+    def validate_year(cls, v: Optional[datetime]) -> Optional[datetime]:
+        """Validate that year is within the acceptable range."""
+        return _validate_year(v)
 
     model_config = ConfigDict(
         from_attributes=True,

@@ -58,6 +58,7 @@ import { useState, useEffect, useMemo, useRef } from 'react';
 import { toast } from 'sonner';
 import { PaginationControls } from '../../../components/ui/pagination-controls';
 import { format, parseISO } from 'date-fns';
+import { DATE_FORMAT } from '../../../lib/date-formats';
 import { cn } from '../../../lib/utils';
 import { useDebounce } from '../../../hooks/useDebounce';
 import { useUrlState } from '../../../hooks/useUrlState';
@@ -131,7 +132,7 @@ function ProjectCard({ project, onNavigate }: ProjectCardProps) {
           <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
             <Calendar className="h-3 w-3" />
             <span>
-              {format(parseISO(project.start_date), "dd.MM.yyyy")} - {format(parseISO(project.end_date), "dd.MM.yyyy")}
+              {format(parseISO(project.start_date), DATE_FORMAT)} - {format(parseISO(project.end_date), DATE_FORMAT)}
             </span>
           </div>
           {project.payment_status && paymentStatusMap[project.payment_status] && (
@@ -476,7 +477,7 @@ export default function ProjectsPage() {
                   </TableCell>
                   <TableCell className="py-1">
                     <div className="text-[10px] whitespace-nowrap">
-                      {format(parseISO(item.start_date), "dd.MM.yyyy")} - {format(parseISO(item.end_date), "dd.MM.yyyy")}
+                      {format(parseISO(item.start_date), DATE_FORMAT)} - {format(parseISO(item.end_date), DATE_FORMAT)}
                     </div>
                   </TableCell>
                   <TableCell className="py-1">

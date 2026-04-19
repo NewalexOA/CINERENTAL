@@ -33,6 +33,7 @@ import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { DateRange } from 'react-day-picker';
 import { format, isSameDay, parseISO } from 'date-fns';
+import { DATE_TIME_FORMAT } from '../../../lib/date-formats';
 import { DateTimeRangePicker } from '../../../components/ui/date-range-picker';
 
 const statusMap: Record<string, { label: string, variant: "default" | "secondary" | "destructive" | "outline" | "success" | "warning" }> = {
@@ -275,7 +276,7 @@ export default function ProjectDetailsPage() {
             <CalendarIcon className="h-3 w-3 text-primary" /> Даты проекта
           </h3>
           <p className="text-sm font-medium">
-            {format(parseISO(project.start_date), 'dd.MM.yyyy HH:mm')} - {format(parseISO(project.end_date), 'dd.MM.yyyy HH:mm')}
+            {format(parseISO(project.start_date), DATE_TIME_FORMAT)} - {format(parseISO(project.end_date), DATE_TIME_FORMAT)}
           </p>
           {project.description && (
             <div className="mt-2">
