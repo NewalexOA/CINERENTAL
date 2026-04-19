@@ -2,6 +2,23 @@
 
 This document lists notable changes to the ACT-Rental application.
 
+## [0.17.0-beta.2] - 2026-04-19
+
+### Bug Fixes
+
+- **Date Year Parsing Fix:** Fixed critical data integrity bug where project/booking dates in 2026 were being saved as year 0026 in the database. Root cause was asymmetric format/parse in `DateTimeRangePicker`: display format used 2-digit year (`dd.MM.yy`) while parser tried 4-digit format first, interpreting `26` as year `0026`. Changed `DISPLAY_FORMAT` to `dd.MM.yyyy HH:mm` and removed 2-digit year fallbacks from parse formats.
+
+### Architectural Improvements
+
+- **Centralized Date Format Constants:** Introduced `frontend-react/src/lib/date-formats.ts` exposing `DATE_FORMAT`, `DATE_TIME_FORMAT`, `DATE_SHORT_FORMAT`, and `DATE_PARSE_FORMATS`. Refactored 6 pages/components to import these constants instead of inline format strings, eliminating format drift.
+- **Backend Year-Range Validation:** Added reusable Pydantic `field_validator` on `start_date`/`end_date` fields in `ProjectBase`, `ProjectUpdate`, `BookingBase`, `BookingUpdate`, and `BookingCreateForProject`, rejecting years outside 2020–2100 as defense in depth against future frontend bugs.
+- **BookingsPage Year Display:** Booking list dates now include the year to disambiguate bookings spanning year boundaries.
+
+### DevOps
+
+- **Configurable Docker Host Ports:** Added `WEB_HOST_PORT`, `POSTGRES_HOST_PORT`, `REDIS_HOST_PORT`, `FRONTEND_HOST_PORT` environment variables to both `docker-compose.yml` and `docker-compose.prod.yml`. Defaults preserved — allows overriding host ports without modifying compose files when local services conflict (e.g. existing postgres on 5432). Prod file preserves `127.0.0.1:` binding for db/redis (security).
+- **.gitignore Fix:** Added explicit negation `!frontend-react/src/lib/` to prevent the Python `lib/` ignore pattern from catching frontend library files.
+
 ## [0.17.0-beta.1] - 2026-02-19
 
 ### Complete React Frontend Migration
