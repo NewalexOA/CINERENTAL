@@ -13,7 +13,7 @@ services:
     command: ./docker/start.sh
     restart: unless-stopped
     ports:
-      - "8000:8000"
+      - "${WEB_HOST_PORT:-8000}:8000"
     env_file:
       - .env.production
     environment:
@@ -63,7 +63,7 @@ services:
       - POSTGRES_HOST_AUTH_METHOD=${POSTGRES_HOST_AUTH_METHOD:-scram-sha-256}
       - PGDATA=/var/lib/postgresql/data/pgdata
     ports:
-      - "127.0.0.1:5432:5432"
+      - "127.0.0.1:${POSTGRES_HOST_PORT:-5432}:5432"
     deploy:
       resources:
         limits:
@@ -94,7 +94,7 @@ services:
           exec redis-server --appendonly yes
         fi
     ports:
-      - "127.0.0.1:6379:6379"  # Local access only
+      - "127.0.0.1:${REDIS_HOST_PORT:-6379}:6379"  # Local access only
     volumes:
       - type: volume
         source: redis_data
@@ -121,7 +121,7 @@ services:
       target: production
     restart: unless-stopped
     ports:
-      - "5173:5173"
+      - "${FRONTEND_HOST_PORT:-5173}:5173"
     environment:
       - BACKEND_URL=http://web:8000
     depends_on:

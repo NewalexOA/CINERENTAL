@@ -12,7 +12,7 @@ services:
         INSTALL_PLAYWRIGHT: false
     command: ./docker/start.sh
     ports:
-      - "8000:8000"
+      - "${WEB_HOST_PORT:-8000}:8000"
     environment:
       - ENVIRONMENT=${ENVIRONMENT:-production}
       - POSTGRES_SERVER=db
@@ -67,7 +67,7 @@ services:
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
       - POSTGRES_HOST_AUTH_METHOD=${POSTGRES_HOST_AUTH_METHOD:-md5}
     ports:
-      - "5432:5432"
+      - "${POSTGRES_HOST_PORT:-5432}:5432"
     deploy:
       resources:
         limits:
@@ -96,7 +96,7 @@ services:
     environment:
       - REDIS_PASSWORD=${REDIS_PASSWORD:-}
     ports:
-      - "6379:6379"
+      - "${REDIS_HOST_PORT:-6379}:6379"
     volumes:
       - redis_data:/data
     deploy:
@@ -117,7 +117,7 @@ services:
       context: ./frontend-react
       dockerfile: Dockerfile.dev
     ports:
-      - "5173:5173"
+      - "${FRONTEND_HOST_PORT:-5173}:5173"
     environment:
       - BACKEND_URL=http://web:8000
       - NODE_ENV=development
