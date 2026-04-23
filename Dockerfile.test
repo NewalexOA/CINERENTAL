@@ -54,9 +54,9 @@ RUN apt-get update && \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# Install uv
-RUN curl -LsSf https://astral.sh/uv/install.sh | sh && \
-    echo 'export PATH="/root/.local/bin:$PATH"' >> ~/.bashrc
+# Install uv from PyPI (more reliable than astral.sh shell installer,
+# which silently succeeds when piped to sh on TLS/network failure)
+RUN pip install --no-cache-dir uv
 
 # Copy requirements and source code
 COPY requirements.txt .
@@ -69,10 +69,8 @@ COPY tests/ ./tests/
 
 
 # Install Python dependencies
-RUN export PATH="/root/.local/bin:$PATH" && \
-    uv pip install --system .
-RUN export PATH="/root/.local/bin:$PATH" && \
-    uv pip install --system \
+RUN uv pip install --system .
+RUN uv pip install --system \
     pytest==7.4.0 \
     pytest-asyncio==0.21.1 \
     pytest-cov==4.1.0 \
@@ -90,8 +88,7 @@ RUN export PATH="/root/.local/bin:$PATH" && \
 COPY docker/ ./docker/
 
 # Install Playwright browser
-RUN export PATH="/root/.local/bin:$PATH" && \
-    playwright install chromium
+RUN playwright install chromium
 
 # Make scripts executable
 RUN chmod +x docker/wait-for.sh docker/run-tests.sh
