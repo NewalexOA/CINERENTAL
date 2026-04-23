@@ -2,6 +2,26 @@
 
 This document lists notable changes to the ACT-Rental application.
 
+## [0.17.0-beta.3] - 2026-04-23
+
+### Bug Fixes
+
+- **Year-Range Validator Broke Read Endpoints:** Fixed a regression introduced in 0.17.0-beta.2 where the Pydantic `@field_validator` on `ProjectBase`/`BookingBase` also ran when FastAPI serialized responses via `ProjectResponse`, `BookingResponse`, `ProjectWithBookings`, and `BookingWithDetails` (all inherit the Base classes with `from_attributes=True`). Any existing row with an out-of-range year (e.g. legacy `0026` rows from the pre-0.17.0-beta.2 bug) caused list endpoints to return 500 instead of data.
+
+### Architectural Improvements
+
+- **Reusable `YearRangeMixin`:** Replaced per-class duplicated validators with a single `YearRangeMixin` applied only to input schemas (`ProjectCreate`, `ProjectUpdate`, `BookingCreate`, `BookingUpdate`, `BookingCreateForProject`). Uses `check_fields=False` so the mixin works for both required and optional date fields without per-schema customization.
+- **Base-Schema Documentation:** Added explicit docstring warnings on `ProjectBase` and `BookingBase` noting they must not be used directly as request body types.
+
+### Database Migrations
+
+- **Legacy Bad-Year Scrub (`8a7f2b1c9d4e`):** Alembic migration that remaps `projects`/`bookings` rows with `start_date` or `end_date` year in the narrow window `20..30` (matching the known bug signature of the early 2026 frontend regression) by adding 2000 years. Creates a dedicated audit table (`_scrub_8a7f2b1c9d4e_audit`) capturing original values per row so the change is persistent, queryable, and reversible. Pre-flight check rejects any row with year in `100..2019` or `> 2100` — these don't match the bug signature and need manual review before the follow-up CHECK migration can run. Emits `RAISE NOTICE` per affected row. Adds `lock_timeout`/`statement_timeout` guards against indefinite blocking.
+- **Year-Range CHECK Constraints (`b9c3e4f2a6d8`):** Adds four database-level CHECK constraints (`projects_start_date_year_chk`, `projects_end_date_year_chk`, `bookings_start_date_year_chk`, `bookings_end_date_year_chk`) enforcing `EXTRACT(YEAR FROM column) BETWEEN 2020 AND 2100` as defense in depth against any application-layer bypass. Uses the `NOT VALID` + `VALIDATE CONSTRAINT` pattern — `ADD CONSTRAINT ... NOT VALID` holds `AccessExclusiveLock` only for the catalog write; `VALIDATE CONSTRAINT` then scans rows under `ShareUpdateExclusiveLock` which permits concurrent reads and writes.
+
+### Testing
+
+- **Regression Test Coverage:** Added `tests/unit/test_year_range_validation.py` covering (a) response schemas tolerating legacy bad-year data, (b) create/update schemas rejecting out-of-range years, (c) boundary cases (2019 rejected, 2020 accepted, 2100 accepted, 2101 rejected), and (d) `None` pass-through on optional update fields.
+
 ## [0.17.0-beta.2] - 2026-04-19
 
 ### Bug Fixes

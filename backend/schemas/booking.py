@@ -8,15 +8,19 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Optional
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field
 
 from backend.models import BookingStatus, PaymentStatus
 from backend.schemas.equipment import EquipmentResponse
-from backend.schemas.project import ProjectBase, _validate_year
+from backend.schemas.project import ProjectBase, YearRangeMixin
 
 
 class BookingBase(BaseModel):
-    """Base booking schema."""
+    """Base booking schema — shared fields for request and response models.
+
+    Do NOT use directly as a request body. Year-range validation lives on
+    input schemas (BookingCreate / BookingUpdate) via YearRangeMixin.
+    """
 
     equipment_id: int = Field(
         ..., title='Equipment ID', description='ID of the equipment being booked'
@@ -50,19 +54,11 @@ class BookingBase(BaseModel):
     )
 
 
-class BookingCreate(BookingBase):
+class BookingCreate(BookingBase, YearRangeMixin):
     """Create booking request schema."""
 
-    @field_validator('start_date', 'end_date')
-    @classmethod
-    def validate_year(cls, v: datetime) -> datetime:
-        """Validate that year is within the acceptable range."""
-        result = _validate_year(v)
-        assert result is not None
-        return result
 
-
-class BookingUpdate(BaseModel):
+class BookingUpdate(YearRangeMixin):
     """Update booking request schema."""
 
     start_date: Optional[datetime] = Field(
@@ -85,12 +81,6 @@ class BookingUpdate(BaseModel):
         title='Project ID',
         description='ID of the project this booking belongs to',
     )
-
-    @field_validator('start_date', 'end_date')
-    @classmethod
-    def validate_year(cls, v: Optional[datetime]) -> Optional[datetime]:
-        """Validate that year is within the acceptable range."""
-        return _validate_year(v)
 
     model_config = ConfigDict(
         from_attributes=True,
