@@ -42,14 +42,6 @@ class BookingBase(BaseModel):
         description='ID of the project this booking belongs to',
     )
 
-    @field_validator('start_date', 'end_date')
-    @classmethod
-    def validate_year(cls, v: datetime) -> datetime:
-        """Validate that year is within the acceptable range."""
-        result = _validate_year(v)
-        assert result is not None
-        return result
-
     model_config = ConfigDict(
         from_attributes=True,
         ser_json_bytes='utf8',
@@ -61,7 +53,13 @@ class BookingBase(BaseModel):
 class BookingCreate(BookingBase):
     """Create booking request schema."""
 
-    pass
+    @field_validator('start_date', 'end_date')
+    @classmethod
+    def validate_year(cls, v: datetime) -> datetime:
+        """Validate that year is within the acceptable range."""
+        result = _validate_year(v)
+        assert result is not None
+        return result
 
 
 class BookingUpdate(BaseModel):
