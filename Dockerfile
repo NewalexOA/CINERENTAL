@@ -34,14 +34,12 @@ RUN if [ -f "docker/pip.conf" ]; then mkdir -p /etc/pip && cp docker/pip.conf /e
 # ARG to control environment type
 ARG ENV_TYPE=prod
 
-# Install uv
-RUN curl -LsSf https://astral.sh/uv/install.sh | sh && \
-    echo 'export PATH="/root/.local/bin:$PATH"' >> ~/.bashrc && \
-    export PATH="/root/.local/bin:$PATH"
+# Install uv from PyPI (more reliable than astral.sh shell installer,
+# which silently succeeds when piped to sh on TLS/network failure)
+RUN pip install --no-cache-dir uv
 
 # Install dependencies based on environment type
-RUN export PATH="/root/.local/bin:$PATH" && \
-    uv pip install --system . && \
+RUN uv pip install --system . && \
     uv pip install --system psycopg2-binary && \
     if [ "$ENV_TYPE" = "dev" ]; then \
         echo "Installing development-specific dependencies (e.g., faker for seeding)..." && \
@@ -55,7 +53,6 @@ RUN export PATH="/root/.local/bin:$PATH" && \
 # Install Playwright if needed
 ARG INSTALL_PLAYWRIGHT=false
 RUN if [ "$INSTALL_PLAYWRIGHT" = "true" ]; then \
-        export PATH="/root/.local/bin:$PATH" && \
         uv pip install --system playwright && \
         playwright install chromium; \
     fi
