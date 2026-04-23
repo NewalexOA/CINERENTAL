@@ -20,6 +20,20 @@ def _validate_year(v: Optional[datetime]) -> Optional[datetime]:
     return v
 
 
+class YearRangeMixin(BaseModel):
+    """Enforces year range on declared start_date/end_date fields.
+
+    Apply to INPUT schemas only. Never mix into a Base or Response class,
+    since response models hydrate from legacy DB rows that may contain
+    out-of-range years from before this validation existed.
+    """
+
+    @field_validator('start_date', 'end_date', check_fields=False)
+    @classmethod
+    def _validate_year_range(cls, v: Optional[datetime]) -> Optional[datetime]:
+        return _validate_year(v)
+
+
 class DateRange(BaseModel):
     """Date range schema for future multi-period support."""
 
@@ -35,7 +49,11 @@ class DateRange(BaseModel):
 
 
 class ProjectBase(BaseModel):
-    """Base project schema."""
+    """Base project schema — shared fields for request and response models.
+
+    Do NOT use directly as a request body. Year-range validation lives on
+    input schemas (ProjectCreate / ProjectUpdate) via YearRangeMixin.
+    """
 
     name: str = Field(..., title='Project Name', description='Name of the project')
     client_id: int = Field(
@@ -54,14 +72,6 @@ class ProjectBase(BaseModel):
         None, title='Notes', description='Additional notes for the project'
     )
 
-    @field_validator('start_date', 'end_date')
-    @classmethod
-    def validate_year(cls, v: datetime) -> datetime:
-        """Validate that year is within the acceptable range."""
-        result = _validate_year(v)
-        assert result is not None
-        return result
-
     model_config = ConfigDict(
         from_attributes=True,
         ser_json_bytes='utf8',
@@ -70,7 +80,7 @@ class ProjectBase(BaseModel):
     )
 
 
-class ProjectCreate(ProjectBase):
+class ProjectCreate(ProjectBase, YearRangeMixin):
     """Create project request schema."""
 
     status: ProjectStatus = Field(default=ProjectStatus.DRAFT, title='Project Status')
@@ -79,7 +89,7 @@ class ProjectCreate(ProjectBase):
     )
 
 
-class BookingCreateForProject(BaseModel):
+class BookingCreateForProject(YearRangeMixin):
     """Booking schema for project creation."""
 
     equipment_id: int = Field(..., title='Equipment ID')
@@ -91,14 +101,6 @@ class BookingCreateForProject(BaseModel):
         description='Quantity of equipment items in this booking',
     )
 
-    @field_validator('start_date', 'end_date')
-    @classmethod
-    def validate_year(cls, v: datetime) -> datetime:
-        """Validate that year is within the acceptable range."""
-        result = _validate_year(v)
-        assert result is not None
-        return result
-
 
 class ProjectCreateWithBookings(ProjectCreate):
     """Create project with bookings request schema."""
@@ -108,7 +110,7 @@ class ProjectCreateWithBookings(ProjectCreate):
     )
 
 
-class ProjectUpdate(BaseModel):
+class ProjectUpdate(YearRangeMixin):
     """Update project request schema.
 
     Note: payment_status is not included here as it requires captcha validation
@@ -122,12 +124,6 @@ class ProjectUpdate(BaseModel):
     end_date: Optional[datetime] = Field(None, title='End Date')
     status: Optional[ProjectStatus] = Field(None, title='Status')
     notes: Optional[str] = Field(None, title='Notes')
-
-    @field_validator('start_date', 'end_date')
-    @classmethod
-    def validate_year(cls, v: Optional[datetime]) -> Optional[datetime]:
-        """Validate that year is within the acceptable range."""
-        return _validate_year(v)
 
     model_config = ConfigDict(
         from_attributes=True,
