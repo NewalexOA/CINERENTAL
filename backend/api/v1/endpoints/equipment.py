@@ -367,6 +367,7 @@ async def get_equipment(
             'status': equipment.status,
             'created_at': equipment.created_at,
             'updated_at': equipment.updated_at,
+            'notes': equipment.notes,
             'category_name': (
                 equipment.category.name if equipment.category else 'Без категории'
             ),

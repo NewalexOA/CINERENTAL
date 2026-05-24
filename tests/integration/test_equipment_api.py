@@ -145,6 +145,43 @@ async def test_get_equipment_by_id(
     assert response.status_code == 200
     result = response.json()
     assert result['id'] == test_equipment.id
+    # Ensure every EquipmentResponse field is present, including notes.
+    # Without this assertion a missing key in the manual equipment_dict
+    # silently degrades to schema defaults (e.g. notes -> None).
+    required_fields = {
+        'id',
+        'name',
+        'description',
+        'category_id',
+        'barcode',
+        'serial_number',
+        'replacement_cost',
+        'status',
+        'created_at',
+        'updated_at',
+        'notes',
+        'category_name',
+    }
+    missing = required_fields - result.keys()
+    assert not missing, f'Missing fields in GET /equipment/{{id}}: {missing}'
+
+
+@async_test
+async def test_get_equipment_by_id_returns_notes(
+    async_client: AsyncClient,
+    test_equipment: Equipment,
+) -> None:
+    """Notes written via PATCH must be visible in subsequent GET."""
+    notes_text = 'Lens has a scratch on the front element'
+    patch_response = await async_client.patch(
+        f'/api/v1/equipment/{test_equipment.id}/notes',
+        json={'notes': notes_text},
+    )
+    assert patch_response.status_code == 200
+
+    get_response = await async_client.get(f'/api/v1/equipment/{test_equipment.id}')
+    assert get_response.status_code == 200
+    assert get_response.json()['notes'] == notes_text
 
 
 @async_test
