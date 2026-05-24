@@ -32,7 +32,7 @@ import { ArrowLeft, Trash2, Plus, Calendar as CalendarIcon, User, Printer, Minus
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { DateRange } from 'react-day-picker';
-import { format, isSameDay, parseISO } from 'date-fns';
+import { format, isSameMinute, isValid, parseISO } from 'date-fns';
 import { DATE_TIME_FORMAT } from '../../../lib/date-formats';
 import { DateTimeRangePicker } from '../../../components/ui/date-range-picker';
 
@@ -59,6 +59,7 @@ export default function ProjectDetailsPage() {
   const [isEditProjectOpen, setIsEditProjectOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [notes, setNotes] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Edit Form State
   const [editForm, setEditForm] = useState({
@@ -98,21 +99,12 @@ export default function ProjectDetailsPage() {
   // Mutations
   const updateProjectMutation = useMutation({
     mutationFn: (data: Partial<ProjectCreate>) => projectsService.update(projectId, { id: projectId, ...data }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['project', projectId] });
-      toast.success('Проект обновлен');
-      setIsEditProjectOpen(false);
-    },
-    onError: (err) => {
-      toast.error('Ошибка при обновлении проекта');
-      console.error(err);
-    }
   });
 
   const deleteProjectMutation = useMutation({
     mutationFn: () => projectsService.delete(projectId),
     onSuccess: () => {
-      toast.success('Проект удален');
+      toast.success('Проект удален', { duration: 2000 });
       navigate('/projects');
     },
     onError: (err) => {
@@ -125,7 +117,7 @@ export default function ProjectDetailsPage() {
     mutationFn: (data: BookingCreate) => bookingsService.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['project', projectId] });
-      toast.success('Оборудование добавлено');
+      toast.success('Оборудование добавлено', { duration: 2000 });
     },
     onError: (err) => {
       toast.error('Ошибка при добавлении оборудования');
@@ -137,7 +129,7 @@ export default function ProjectDetailsPage() {
     mutationFn: (bookingId: number) => bookingsService.delete(bookingId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['project', projectId] });
-      toast.success('Бронирование удалено');
+      toast.success('Бронирование удалено', { duration: 2000 });
     },
     onError: (err) => {
       toast.error('Ошибка при обновлении бронирования');
@@ -149,7 +141,7 @@ export default function ProjectDetailsPage() {
     mutationFn: ({ id, data }: { id: number; data: BookingUpdate }) => bookingsService.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['project', projectId] });
-      toast.success('Бронирование обновлено');
+      toast.success('Бронирование обновлено', { duration: 2000 });
     },
     onError: (err) => {
       toast.error('Ошибка при обновлении бронирования');
@@ -171,15 +163,27 @@ export default function ProjectDetailsPage() {
   };
 
   const handleDateUpdate = (bookingId: number, range: DateRange | undefined) => {
-    if (range?.from && range?.to) {
-      updateBookingMutation.mutate({
-        id: bookingId,
-        data: {
-          start_date: range.from.toISOString(),
-          end_date: range.to.toISOString()
-        }
-      });
+    if (!range?.from || !range?.to) return;
+
+    // The picker re-commits the current value on blur (even without a change),
+    // so skip the request when dates are effectively unchanged — avoids a
+    // redundant PUT, availability re-check, and toast on every field blur.
+    const booking = project?.bookings?.find(b => b.id === bookingId);
+    if (
+      booking &&
+      isSameMinute(range.from, parseISO(booking.start_date)) &&
+      isSameMinute(range.to, parseISO(booking.end_date))
+    ) {
+      return;
     }
+
+    updateBookingMutation.mutate({
+      id: bookingId,
+      data: {
+        start_date: range.from.toISOString(),
+        end_date: range.to.toISOString()
+      }
+    });
   };
 
   const handleQuantityChange = (bookingId: number, currentQuantity: number, change: 1 | -1) => {
@@ -194,18 +198,125 @@ export default function ProjectDetailsPage() {
   };
 
   const handleSaveNotes = () => {
-    updateProjectMutation.mutate({ notes: notes });
+    updateProjectMutation.mutate({ notes: notes }, {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ['project', projectId] });
+        toast.success('Заметки сохранены', { duration: 2000 });
+      },
+      onError: () => toast.error('Ошибка сохранения заметок'),
+    });
   };
 
-  const handleEditSubmit = (e: React.FormEvent) => {
+  const handleEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    updateProjectMutation.mutate({
-      name: editForm.name,
-      client_id: Number(editForm.client_id),
-      start_date: editForm.start_date,
-      end_date: editForm.end_date,
-      description: editForm.description
-    });
+    if (!project || isSubmitting) return;
+
+    setIsSubmitting(true);
+
+    // Validate dates
+    const parsedOldStart = parseISO(project.start_date);
+    const parsedOldEnd = parseISO(project.end_date);
+    const parsedNewStart = parseISO(editForm.start_date);
+    const parsedNewEnd = parseISO(editForm.end_date);
+
+    if (!isValid(parsedOldStart) || !isValid(parsedOldEnd) ||
+        !isValid(parsedNewStart) || !isValid(parsedNewEnd)) {
+      toast.error('Некорректный формат даты');
+      setIsSubmitting(false);
+      return;
+    }
+
+    const datesChanged =
+      !isSameMinute(parsedNewStart, parsedOldStart) ||
+      !isSameMinute(parsedNewEnd, parsedOldEnd);
+
+    try {
+      // 1. Update project
+      await updateProjectMutation.mutateAsync({
+        name: editForm.name,
+        // Guard against Number('') === 0 wiping client_id if the field is empty
+        client_id: editForm.client_id ? Number(editForm.client_id) : project.client_id,
+        start_date: editForm.start_date,
+        end_date: editForm.end_date,
+        description: editForm.description,
+      });
+
+      // 2. Cascade booking dates if project dates changed
+      if (datesChanged && project.bookings?.length) {
+        const matching = project.bookings.filter(b =>
+          isSameMinute(parseISO(b.start_date), parsedOldStart) &&
+          isSameMinute(parseISO(b.end_date), parsedOldEnd)
+        );
+        const customDatesCount = project.bookings.length - matching.length;
+
+        let updatedCount = 0;
+        const failedItems: { name: string; barcode: string }[] = [];
+
+        // Sequential loop — one PUT /bookings/{id} per matching booking
+        for (const b of matching) {
+          try {
+            await bookingsService.update(b.id, {
+              start_date: editForm.start_date,
+              end_date: editForm.end_date,
+            });
+            updatedCount += 1;
+          } catch (err) {
+            failedItems.push({
+              name: b.equipment_name || `Позиция #${b.equipment_id}`,
+              barcode: b.barcode || '—',
+            });
+            console.error(`Failed to cascade booking ${b.id}:`, err);
+          }
+        }
+
+        const failedCount = failedItems.length;
+
+        // Results (mirrors legacy showBookingUpdateResults)
+        if (failedCount > 0) {
+          // Persistent toast (no auto-dismiss) listing the conflicting items
+          // so the manager can review each one. Closed manually.
+          toast.error(
+            updatedCount > 0
+              ? `Обновлено ${updatedCount}, конфликт дат у ${failedCount}. Проверьте вручную:`
+              : `Конфликт дат: не удалось обновить ${failedCount} позиций. Проверьте вручную:`,
+            {
+              description: (
+                <ul className="mt-1 list-disc pl-4 space-y-0.5">
+                  {failedItems.map((it, i) => (
+                    <li key={`${it.barcode}-${i}`}>
+                      {it.name} — <span className="font-mono select-all">{it.barcode}</span>
+                    </li>
+                  ))}
+                </ul>
+              ),
+              duration: Infinity,
+              closeButton: true,
+            }
+          );
+        }
+        if (updatedCount > 0 && customDatesCount === 0 && failedCount === 0) {
+          toast.success(`Обновлены даты для ${updatedCount} позиций`, { duration: 2000 });
+        } else if (updatedCount > 0 && customDatesCount > 0 && failedCount === 0) {
+          toast.warning(
+            `Обновлено: ${updatedCount}. Индивидуальные даты: ${customDatesCount}`
+          );
+        } else if (updatedCount === 0 && customDatesCount > 0 && failedCount === 0) {
+          toast.info(`${customDatesCount} позиций имеют индивидуальные даты`);
+        }
+      } else {
+        toast.success('Проект обновлен', { duration: 2000 });
+      }
+
+      // Always refresh from server so the UI reflects true post-update state
+      queryClient.invalidateQueries({ queryKey: ['project', projectId] });
+      setIsEditProjectOpen(false);
+    } catch (err) {
+      // Project update failed — keep dialog open, form preserved
+      toast.error('Ошибка при обновлении проекта');
+      console.error(err);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   if (isLoading) return <div className="p-8 text-center text-muted-foreground">Загрузка проекта...</div>;
@@ -251,7 +362,16 @@ export default function ProjectDetailsPage() {
              </Button>
              <Select
                value={project.status}
-               onValueChange={(val) => updateProjectMutation.mutate({ status: val as ProjectStatus })}
+               onValueChange={(val) => updateProjectMutation.mutate(
+                 { status: val as ProjectStatus },
+                 {
+                   onSuccess: () => {
+                     queryClient.invalidateQueries({ queryKey: ['project', projectId] });
+                     toast.success('Статус обновлен', { duration: 2000 });
+                   },
+                   onError: () => toast.error('Ошибка обновления статуса'),
+                 }
+               )}
              >
                <SelectTrigger className="w-[130px] h-7 text-xs">
                  <SelectValue />
@@ -342,8 +462,8 @@ export default function ProjectDetailsPage() {
                 <TableRow><TableCell colSpan={5} className="h-24 text-center text-muted-foreground">Нет оборудования</TableCell></TableRow>
               ) : project.bookings?.map((booking) => {
                 const isDifferentDates =
-                  !isSameDay(parseISO(booking.start_date), parseISO(project.start_date)) ||
-                  !isSameDay(parseISO(booking.end_date), parseISO(project.end_date));
+                  !isSameMinute(parseISO(booking.start_date), parseISO(project.start_date)) ||
+                  !isSameMinute(parseISO(booking.end_date), parseISO(project.end_date));
 
                 return (
                   <TableRow key={booking.id} className="h-8">
@@ -411,7 +531,7 @@ export default function ProjectDetailsPage() {
       </Dialog>
 
       {/* Edit Project Dialog */}
-      <Dialog open={isEditProjectOpen} onOpenChange={setIsEditProjectOpen}>
+      <Dialog open={isEditProjectOpen} onOpenChange={(o) => { if (!isSubmitting) setIsEditProjectOpen(o); }}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
             <DialogTitle>Редактировать проект</DialogTitle>
@@ -471,8 +591,10 @@ export default function ProjectDetailsPage() {
             </div>
 
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setIsEditProjectOpen(false)}>Отмена</Button>
-              <Button type="submit">Сохранить</Button>
+              <Button type="button" variant="outline" onClick={() => setIsEditProjectOpen(false)} disabled={isSubmitting}>Отмена</Button>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? 'Сохранение...' : 'Сохранить'}
+              </Button>
             </DialogFooter>
           </form>
         </DialogContent>
