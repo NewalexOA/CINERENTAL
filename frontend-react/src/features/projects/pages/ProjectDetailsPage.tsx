@@ -29,7 +29,7 @@ import { Label } from '../../../components/ui/label';
 import { EquipmentPicker } from '../../equipment/components/EquipmentPicker';
 import { Badge } from '../../../components/ui/badge';
 import { ArrowLeft, Trash2, Plus, Calendar as CalendarIcon, User, Printer, Minus, Save, Edit, AlertTriangle } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { toast } from 'sonner';
 import { DateRange } from 'react-day-picker';
 import { format, isSameMinute, isValid, parseISO } from 'date-fns';
@@ -95,6 +95,18 @@ export default function ProjectDetailsPage() {
       });
     }
   }, [project]);
+
+  // Stable display order (backend returns bookings unordered): group by category,
+  // then by equipment name. Mirrors the print layout's primary ordering and
+  // prevents the list from jumping when a booking is updated.
+  const sortedBookings = useMemo(
+    () =>
+      [...(project?.bookings ?? [])].sort((a, b) =>
+        (a.category_name || '').localeCompare(b.category_name || '') ||
+        (a.equipment_name || '').localeCompare(b.equipment_name || '')
+      ),
+    [project?.bookings]
+  );
 
   // Mutations
   const updateProjectMutation = useMutation({
@@ -458,9 +470,9 @@ export default function ProjectDetailsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {project.bookings?.length === 0 ? (
+              {sortedBookings.length === 0 ? (
                 <TableRow><TableCell colSpan={5} className="h-24 text-center text-muted-foreground">Нет оборудования</TableCell></TableRow>
-              ) : project.bookings?.map((booking) => {
+              ) : sortedBookings.map((booking) => {
                 const isDifferentDates =
                   !isSameMinute(parseISO(booking.start_date), parseISO(project.start_date)) ||
                   !isSameMinute(parseISO(booking.end_date), parseISO(project.end_date));
