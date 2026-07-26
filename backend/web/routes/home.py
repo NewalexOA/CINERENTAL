@@ -6,7 +6,6 @@ This module defines routes for the home/index page.
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse
 from sqlalchemy.ext.asyncio import AsyncSession
-from starlette.templating import _TemplateResponse
 
 from backend.core.database import get_db
 from backend.core.templates import templates
@@ -20,7 +19,7 @@ router = APIRouter()
 async def index(
     request: Request,
     db: AsyncSession = Depends(get_db),
-) -> _TemplateResponse:
+) -> HTMLResponse:
     """Render index page.
 
     Args:
@@ -28,12 +27,13 @@ async def index(
         db: Database session
 
     Returns:
-        _TemplateResponse: Rendered template
+        HTMLResponse: Rendered template
     """
     equipment_service = EquipmentService(db)
     equipment_list = await equipment_service.get_all()
 
     return templates.TemplateResponse(
+        request,
         'index.html',
         {
             'request': request,

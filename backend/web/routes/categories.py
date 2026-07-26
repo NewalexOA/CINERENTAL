@@ -8,7 +8,6 @@ from typing import Any, Dict, List
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse
 from sqlalchemy.ext.asyncio import AsyncSession
-from starlette.templating import _TemplateResponse
 
 from backend.core.database import get_db
 from backend.core.templates import templates
@@ -22,7 +21,7 @@ router = APIRouter()
 async def categories_list(
     request: Request,
     db: AsyncSession = Depends(get_db),
-) -> _TemplateResponse:
+) -> HTMLResponse:
     """Render categories list page.
 
     Args:
@@ -30,12 +29,13 @@ async def categories_list(
         db: Database session
 
     Returns:
-        _TemplateResponse: Rendered template
+        HTMLResponse: Rendered template
     """
     category_service = CategoryService(db)
     categories = await category_service.get_all()
 
     return templates.TemplateResponse(
+        request,
         'categories/list.html',
         {
             'request': request,
