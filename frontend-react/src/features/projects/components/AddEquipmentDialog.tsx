@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { DateRange } from 'react-day-picker';
 import { toast } from 'sonner';
@@ -78,12 +78,19 @@ function AddEquipmentPanel({
   const [isLookingUp, setIsLookingUp] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Mirrors `entries` so a burst of scans composes correctly before React
+  // re-renders, without computing the next cart inside a state updater —
+  // StrictMode invokes updaters twice, which would double every toast.
+  const entriesRef = useRef<CartEntry[]>([]);
+  useEffect(() => {
+    entriesRef.current = entries;
+  }, [entries]);
+
   const push = (equipment: Equipment) => {
-    setEntries((current) => {
-      const { entries: next, outcome } = addToCart(current, equipment);
-      reportOutcome(outcome, equipment.name);
-      return next;
-    });
+    const { entries: next, outcome } = addToCart(entriesRef.current, equipment);
+    entriesRef.current = next;
+    setEntries(next);
+    reportOutcome(outcome, equipment.name);
   };
 
   // Scanning adds straight to the cart — the same immediate feedback the legacy
@@ -154,6 +161,12 @@ function AddEquipmentPanel({
         toast.error(`Не удалось добавить ни одной позиции: ${result.errors[0] ?? ''}`);
         console.error('Не добавлены позиции:', result.errors);
       }
+    } catch (error) {
+      // Per-position failures are collected inside the batch, so reaching here
+      // means the batch itself broke — surface it instead of leaving the dialog
+      // silently stuck.
+      toast.error('Ошибка при добавлении оборудования в проект');
+      console.error(error);
     } finally {
       setIsSubmitting(false);
     }
