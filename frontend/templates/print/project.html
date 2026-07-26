@@ -8,42 +8,41 @@
 </head>
 <body data-project-name="{{ project.name }}" data-client-name="{{ client.name }}" data-start-date="{{ project.start_date }}" data-end-date="{{ project.end_date }}">
     <div class="print-container">
-        <!-- Header -->
-        <header class="print-header">
-            {# Three-column structure #}
-            <div class="header-col header-col-logo">
-                <img src="{{ url_for('static', path='img/logo.png') }}" alt="Логотип" class="company-logo">
-            </div>
-            <div class="header-col header-col-details">
-                <h2 class="project-title">ПРОЕКТ: {{ project.name }}</h2>
-                <div class="project-details">
-                    <div class="detail-row">
-                        <span class="detail-label">Клиент:</span>
-                        <span class="detail-value">{{ client.name }}{% if client.phone %} | {{ client.phone }}{% endif %}</span>
-                    </div>
-                    <div class="detail-row">
-                        <span class="detail-label">Компания:</span>
-                        <span class="detail-value">{{ client.company }}</span>
-                    </div>
-                    <div class="detail-row">
-                        <span class="detail-label">Период:</span>
-                        <span class="detail-value">{{ project.start_date | format_date }} - {{ project.end_date | format_date }}</span>
-                    </div>
-                </div>
-            </div>
-            <div class="header-col header-col-description">
-                {% if project.description %}
-                <div class="description-block">
-                    <div class="description-label-block">Описание:</div>
-                    <div class="description-value">{{ project.description }}</div>
-                </div>
-                {% endif %}
-            </div>
-        </header>
 
-        <!-- Equipment Table -->
-        <section class="equipment-section">
-            <h3 class="section-title">ОБОРУДОВАНИЕ</h3>
+        {# ============================================================= #}
+        {# АКТ приёма-передачи                                           #}
+        {# ============================================================= #}
+        <section class="act act-handover">
+            <header class="act-header">
+                <div class="act-header-logo">
+                    <img src="{{ url_for('static', path='img/logo.png') }}" alt="Логотип" class="company-logo">
+                </div>
+                <div class="act-header-title">
+                    <h1 class="act-title">АКТ</h1>
+                    <div class="act-subtitle">приёма-передачи</div>
+                </div>
+                <div class="act-header-meta">
+                    <div class="act-city">г. Санкт-Петербург</div>
+                    <div class="act-period">
+                        <div class="act-period-row"><span class="act-period-label">с</span> <span class="act-fill">{{ project.start_date | format_date }}</span></div>
+                        <div class="act-period-row"><span class="act-period-label">по</span> <span class="act-fill">{{ project.end_date | format_date }}</span></div>
+                    </div>
+                </div>
+            </header>
+
+            <p class="act-intro">
+                Мы, нижеподписавшиеся, Арендатор <span class="act-fill act-fill-inline">{{ client.name }}{% if client.company %}, {{ client.company }}{% endif %}</span>, с одной стороны
+                и Арендодатель ИП Столбов Иван Юрьевич, с другой стороны, составили настоящий Акт в том, что Арендодатель передал,
+                а Арендатор принял во временное пользование оборудование в соответствии с нижеприведённым списком для производства
+                кинематографического проекта в соответствии с Договором №<span class="act-blank">___________</span>
+                от <span class="act-blank">___________________</span> 20____ г.
+                Заказчик обязуется в случае порчи или утраты оборудования возместить Исполнителю ущерб в размере указанной в акте
+                суммы материальной ответственности. Оборудование проверено и принято в исправном состоянии.
+            </p>
+
+            <h3 class="act-list-title">Список переданного оборудования:</h3>
+
+            <!-- Equipment Table (taken 1-to-1 from previous print template) -->
             <table class="equipment-table">
                 <thead>
                     <tr>
@@ -107,47 +106,81 @@
                     {% endfor %}
                 </tbody>
             </table>
+
+            <div class="act-summary">
+                <span>Всего позиций: <strong>{{ total_items }}</strong></span>
+                <span>Итого сумма материальной ответственности: <strong>{{ total_liability | format_currency }}</strong></span>
+            </div>
+
+            <p class="act-note">
+                Представитель заказчика обязуется выполнять правильные условия транспортировки и эксплуатации.
+                Всё оборудование принято в исправном состоянии.
+            </p>
+
+            <div class="act-signatures">
+                <div class="act-sign-col">
+                    <div class="act-sign-role">Арендатор</div>
+                    <div class="act-sign-line"></div>
+                    <div class="act-sign-hint">Ф.И.О. / подпись</div>
+                    <div class="act-sign-line"></div>
+                    <div class="act-sign-hint">телефон</div>
+                </div>
+                <div class="act-sign-col">
+                    <div class="act-sign-role">Арендодатель</div>
+                    <div class="act-sign-line"></div>
+                    <div class="act-sign-hint">Ф.И.О. / подпись</div>
+                </div>
+            </div>
         </section>
 
-        <!-- Footer -->
-        <footer class="print-footer">
-            <div class="summary-info">
-                <p>Всего позиций: <strong>{{ total_items }}</strong></p>
-
-                {% if project.notes %}
-                <div class="notes-section">
-                    <h4>Примечания:</h4>
-                    <p>{{ project.notes }}</p>
+        {# ============================================================= #}
+        {# АКТ возврата-передачи                                         #}
+        {# ============================================================= #}
+        <section class="act act-return">
+            <header class="act-header">
+                <div class="act-header-logo">
+                    <img src="{{ url_for('static', path='img/logo.png') }}" alt="Логотип" class="company-logo">
                 </div>
-                {% endif %}
-            </div>
-
-            <div class="signatures">
-                <div class="signature-row">
-                    <div class="signature-field">
-                        <span class="signature-label">Менеджер:</span>
-                        <span class="signature-line"></span>
-                    </div>
-                    <div class="signature-field">
-                        <span class="signature-label">Клиент:</span>
-                        <span class="signature-line"></span>
+                <div class="act-header-title">
+                    <h1 class="act-title">АКТ</h1>
+                    <div class="act-subtitle">возврата-передачи</div>
+                </div>
+                <div class="act-header-meta">
+                    <div class="act-city">г. Санкт-Петербург</div>
+                    <div class="act-period">
+                        <div class="act-period-row"><span class="act-blank">«____»</span> <span class="act-blank">______________</span> 20____ г.</div>
                     </div>
                 </div>
-            </div>
+            </header>
 
-            <div class="generation-info">
-                <p>Документ сформирован: {{ generated_at | format_datetime }}</p>
-            </div>
+            <p class="act-intro">
+                Мы, нижеподписавшиеся, Арендатор <span class="act-fill act-fill-inline">{{ client.name }}{% if client.company %}, {{ client.company }}{% endif %}</span>, с одной стороны
+                и Арендодатель ИП Столбов Иван Юрьевич, с другой стороны, составили настоящий Акт в том,
+                что Арендатор передал, а Арендодатель принял оборудование в соответствии с вышеприведённым списком.
+            </p>
 
-            <div class="company-contacts">
-                <p>{{ COMPANY_LEGAL_NAME }} | Тел: {{ COMPANY_PHONE }} | Email: {{ COMPANY_EMAIL }}</p>
-            </div>
+            <p class="act-remarks-label">Замечания и неисправности:</p>
+            <div class="act-remarks-space"></div>
 
-            <!-- Fallback HTML page numbering for browser view -->
-            <div class="page-info">
-                <span class="page-numbers">Страница <span class="page-current"></span> из <span class="page-total"></span></span>
+            <div class="act-signatures">
+                <div class="act-sign-col">
+                    <div class="act-sign-role">Арендатор</div>
+                    <div class="act-sign-line"></div>
+                    <div class="act-sign-hint">Ф.И.О. / подпись</div>
+                </div>
+                <div class="act-sign-col">
+                    <div class="act-sign-role">Арендодатель</div>
+                    <div class="act-sign-line"></div>
+                    <div class="act-sign-hint">Ф.И.О. / подпись</div>
+                </div>
             </div>
-        </footer>
+        </section>
+
+        <!-- Fallback HTML page numbering for browser view -->
+        <div class="page-info">
+            <span class="page-numbers">Страница <span class="page-current"></span> из <span class="page-total"></span></span>
+        </div>
+
     </div>
 
     <!-- Javascript -->

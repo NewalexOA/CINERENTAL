@@ -133,6 +133,154 @@ body {
     display: block;
 }
 
+/* ============================================================= */
+/* АКТ приёма-передачи / возврата-передачи                       */
+/* ============================================================= */
+.act {
+    margin: 0;
+}
+
+.act-return {
+    page-break-before: always;
+    break-before: page;
+    margin-top: 0.6cm;
+}
+
+.act-header {
+    display: flex;
+    align-items: center;
+    gap: 0.4cm;
+    border-bottom: 2px solid #000;
+    padding-bottom: 0.2cm;
+    margin-bottom: 0.35cm;
+}
+
+.act-header-logo {
+    flex: 0 0 auto;
+}
+
+.act-header-title {
+    flex: 1 1 auto;
+    text-align: center;
+}
+
+.act-title {
+    font-size: 20pt;
+    font-weight: bold;
+    letter-spacing: 0.15em;
+    margin: 0;
+    line-height: 1;
+}
+
+.act-subtitle {
+    font-size: 12pt;
+    margin-top: 0.1em;
+}
+
+.act-header-meta {
+    flex: 0 0 auto;
+    text-align: right;
+    font-size: 9pt;
+    min-width: 4.5cm;
+}
+
+.act-city {
+    font-weight: bold;
+    margin-bottom: 0.15em;
+}
+
+.act-period-row {
+    white-space: nowrap;
+}
+
+.act-period-label {
+    display: inline-block;
+    min-width: 1.4em;
+    text-align: left;
+}
+
+.act-fill {
+    font-weight: bold;
+}
+
+.act-fill-inline {
+    border-bottom: 1px solid #000;
+    padding: 0 0.2em;
+}
+
+.act-blank {
+    letter-spacing: 0.05em;
+}
+
+.act-intro {
+    text-align: justify;
+    font-size: 9.5pt;
+    line-height: 1.45;
+    margin: 0 0 0.35cm 0;
+}
+
+.act-list-title {
+    font-size: 11pt;
+    font-weight: bold;
+    margin: 0 0 0.15cm 0;
+}
+
+.act-summary {
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.5cm;
+    font-size: 9.5pt;
+    margin: 0.15cm 0 0.3cm 0;
+}
+
+.act-note {
+    font-size: 9pt;
+    font-style: italic;
+    margin: 0 0 0.5cm 0;
+}
+
+.act-remarks-label {
+    font-size: 10pt;
+    font-weight: bold;
+    margin: 0.4cm 0 0.2cm 0;
+}
+
+.act-remarks-space {
+    height: 2.5cm;
+    border: 1px solid #000;
+    margin-bottom: 0.5cm;
+}
+
+.act-signatures {
+    display: flex;
+    justify-content: space-between;
+    gap: 1cm;
+    margin-top: 0.5cm;
+    page-break-inside: avoid;
+    break-inside: avoid;
+}
+
+.act-sign-col {
+    flex: 1;
+}
+
+.act-sign-role {
+    font-weight: bold;
+    margin-bottom: 0.5cm;
+}
+
+.act-sign-line {
+    border-bottom: 1px solid #000;
+    height: 0.55cm;
+}
+
+.act-sign-hint {
+    font-size: 8pt;
+    color: #555;
+    margin-bottom: 0.35cm;
+}
+
 /* Equipment section styles */
 .equipment-section {
     padding: 0;
