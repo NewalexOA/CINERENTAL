@@ -160,6 +160,15 @@ class BookingInProject(BaseModel):
     serial_number: Optional[str] = None
     barcode: Optional[str] = None
     category_name: Optional[str] = None
+    sort_path: List[int] = Field(
+        default_factory=list,
+        title='Category Sort Path',
+        description=(
+            'Category ancestry as IDs from root to the equipment category. '
+            'Primary ordering key of the print form; exposed so clients can '
+            'reproduce that order.'
+        ),
+    )
     start_date: datetime
     end_date: datetime
     booking_status: str

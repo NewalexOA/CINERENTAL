@@ -150,3 +150,113 @@ class TestCategoryService:
         assert isinstance(categories[0], Category)
         assert hasattr(categories[0], 'equipment_count')
         assert getattr(categories[0], 'equipment_count') == 0
+
+
+class TestSortPathMap:
+    """Tests for the ancestry map used to reproduce the print form ordering."""
+
+    @async_test
+    async def test_root_category_path_is_itself(
+        self,
+        category_service: CategoryService,
+    ) -> None:
+        """Test that a root category maps to a single-element path."""
+        root = await category_service.create_category(
+            name='Root',
+            description='Root category',
+        )
+
+        sort_paths = await category_service.get_sort_path_map()
+
+        assert sort_paths[root.id] == [root.id]
+
+    @async_test
+    async def test_nested_path_runs_from_root_down(
+        self,
+        category_service: CategoryService,
+    ) -> None:
+        """Test that a nested category maps to its full ancestry, root first."""
+        root = await category_service.create_category(
+            name='Root',
+            description='Root category',
+        )
+        child = await category_service.create_category(
+            name='Child',
+            description='Child category',
+            parent_id=root.id,
+        )
+        grandchild = await category_service.create_category(
+            name='Grandchild',
+            description='Grandchild category',
+            parent_id=child.id,
+        )
+
+        sort_paths = await category_service.get_sort_path_map()
+
+        assert sort_paths[grandchild.id] == [root.id, child.id, grandchild.id]
+        assert sort_paths[child.id] == [root.id, child.id]
+        assert sort_paths[root.id] == [root.id]
+
+    @async_test
+    async def test_sibling_branches_stay_independent(
+        self,
+        category_service: CategoryService,
+    ) -> None:
+        """Test that separate branches do not leak into each other's paths."""
+        first_root = await category_service.create_category(
+            name='Cameras',
+            description='First branch',
+        )
+        second_root = await category_service.create_category(
+            name='Light',
+            description='Second branch',
+        )
+        under_first = await category_service.create_category(
+            name='Optics',
+            description='Child of the first branch',
+            parent_id=first_root.id,
+        )
+        under_second = await category_service.create_category(
+            name='Accessories',
+            description='Child of the second branch',
+            parent_id=second_root.id,
+        )
+
+        sort_paths = await category_service.get_sort_path_map()
+
+        assert sort_paths[under_first.id] == [first_root.id, under_first.id]
+        assert sort_paths[under_second.id] == [second_root.id, under_second.id]
+
+    @async_test
+    async def test_matches_print_hierarchy_sort_path(
+        self,
+        category_service: CategoryService,
+    ) -> None:
+        """Test parity with the per-category path the print form builds.
+
+        The two are computed differently — one resolves the whole tree in
+        memory, the other walks it per category — so a divergence would make
+        the project list and the print form disagree on ordering.
+        """
+        root = await category_service.create_category(
+            name='Root',
+            description='Root category',
+        )
+        child = await category_service.create_category(
+            name='Child',
+            description='Child category',
+            parent_id=root.id,
+        )
+        grandchild = await category_service.create_category(
+            name='Grandchild',
+            description='Grandchild category',
+            parent_id=child.id,
+        )
+
+        sort_paths = await category_service.get_sort_path_map()
+
+        for category in (root, child, grandchild):
+            print_path, _ = await category_service.get_print_hierarchy_and_sort_path(
+                category.id
+            )
+            assert sort_paths[category.id] == print_path

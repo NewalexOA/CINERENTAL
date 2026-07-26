@@ -643,3 +643,97 @@ class TestProjectPaymentStatusAPI:
             # Check that payment_status is included in response
             for project in data['items']:
                 assert 'payment_status' in project
+
+
+class TestProjectBookingSortPath:
+    """Tests for the ordering key exposed on project bookings."""
+
+    @pytest.mark.asyncio
+    async def test_booking_response_carries_sort_path(
+        self,
+        async_client: AsyncClient,
+        test_client: Client,
+        test_equipment: Equipment,
+    ) -> None:
+        """Test that a booking exposes its category ancestry.
+
+        The project page sorts by this key to match the print form; without it
+        the client can only sort by the leaf category name, which ignores the
+        category tree.
+        """
+        start_date = datetime.now(timezone.utc) + timedelta(days=1)
+        end_date = start_date + timedelta(days=7)
+
+        create_response = await async_client.post(
+            '/api/v1/projects/',
+            json={
+                'name': 'Project for sort path',
+                'client_id': test_client.id,
+                'start_date': start_date.isoformat(),
+                'end_date': end_date.isoformat(),
+                'bookings': [
+                    {
+                        'equipment_id': test_equipment.id,
+                        'start_date': start_date.isoformat(),
+                        'end_date': end_date.isoformat(),
+                        'quantity': 1,
+                    }
+                ],
+            },
+        )
+        assert create_response.status_code == 201
+        project_id = create_response.json()['id']
+
+        response = await async_client.get(f'/api/v1/projects/{project_id}')
+
+        assert response.status_code == 200
+        bookings = response.json()['bookings']
+        assert len(bookings) == 1
+
+        sort_path = bookings[0]['sort_path']
+        assert isinstance(sort_path, list)
+        # The equipment sits in a category, so its path ends with that category.
+        assert sort_path[-1] == test_equipment.category_id
+
+    @pytest.mark.asyncio
+    async def test_sort_path_matches_category_ancestry(
+        self,
+        async_client: AsyncClient,
+        db_session: AsyncSession,
+        test_client: Client,
+        test_equipment: Equipment,
+    ) -> None:
+        """Test that the exposed path equals the one the print form builds."""
+        from backend.services.category import CategoryService
+
+        start_date = datetime.now(timezone.utc) + timedelta(days=1)
+        end_date = start_date + timedelta(days=7)
+
+        create_response = await async_client.post(
+            '/api/v1/projects/',
+            json={
+                'name': 'Project for sort path parity',
+                'client_id': test_client.id,
+                'start_date': start_date.isoformat(),
+                'end_date': end_date.isoformat(),
+                'bookings': [
+                    {
+                        'equipment_id': test_equipment.id,
+                        'start_date': start_date.isoformat(),
+                        'end_date': end_date.isoformat(),
+                        'quantity': 1,
+                    }
+                ],
+            },
+        )
+        project_id = create_response.json()['id']
+
+        response = await async_client.get(f'/api/v1/projects/{project_id}')
+        api_sort_path = response.json()['bookings'][0]['sort_path']
+
+        category_service = CategoryService(db_session)
+        print_sort_path, _ = await category_service.get_print_hierarchy_and_sort_path(
+            test_equipment.category_id
+        )
+
+        assert api_sort_path == print_sort_path
