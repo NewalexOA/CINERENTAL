@@ -20,7 +20,7 @@
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
 
-    "baseUrl": ".",
+    /* No baseUrl: paths are resolved relative to this file (TS 4.4+) */
     "paths": {
       "@/*": ["./src/*"]
     }
