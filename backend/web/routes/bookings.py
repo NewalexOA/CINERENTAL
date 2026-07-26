@@ -6,7 +6,6 @@ This module defines routes for the bookings web interface.
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import HTMLResponse
 from sqlalchemy.ext.asyncio import AsyncSession
-from starlette.templating import _TemplateResponse
 
 from backend.core.database import get_db
 from backend.core.templates import templates
@@ -23,9 +22,10 @@ router = APIRouter()
 @router.get('/', response_class=HTMLResponse)
 async def list_bookings(
     request: Request, db: AsyncSession = Depends(get_db)
-) -> _TemplateResponse:
+) -> HTMLResponse:
     """Bookings list page."""
     return templates.TemplateResponse(
+        request,
         'bookings/list.html',
         {
             'request': request,
@@ -38,7 +38,7 @@ async def list_bookings(
 @router.get('/{booking_id}', response_class=HTMLResponse)
 async def booking_detail(
     request: Request, booking_id: int, db: AsyncSession = Depends(get_db)
-) -> _TemplateResponse:
+) -> HTMLResponse:
     """Booking detail page."""
     booking_service = BookingService(db)
 
@@ -58,6 +58,7 @@ async def booking_detail(
         )
 
         return templates.TemplateResponse(
+            request,
             'bookings/detail.html',
             {
                 'request': request,

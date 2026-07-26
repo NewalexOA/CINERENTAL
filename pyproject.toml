@@ -9,14 +9,14 @@ readme = "README.md"
 
 [tool.poetry.dependencies]
 python = ">=3.12,<4.0"
-fastapi = "^0.115.6"
+fastapi = "^0.140.0"
 uvicorn = {extras = ["standard"], version = "^0.51.0"}
 websockets = "^16.1.1"
 sqlalchemy = "2.0.51"
 alembic = "^1.13.1"
 pydantic = "^2.5.3"
 pydantic-settings = "^2.1.0"
-redis = {extras = ["hiredis"], version = "^5.0.1"}
+redis = {extras = ["hiredis"], version = "^8.0.1"}
 asyncpg = "^0.31.0"
 # python-jose = {extras = ["cryptography"], version = "^3.3.0"}  # Temporarily removed due to ecdsa CVE, will add back when JWT auth is implemented
 passlib = {extras = ["bcrypt"], version = "^1.7.4"}
@@ -28,7 +28,7 @@ apscheduler = "^3.11.0"
 python-barcode = {extras = ["images"], version = "^0.15.1"}
 segno = "^1.6.1"
 treepoem = "^3.8.0"
-fastapi-pagination = "^0.12.34"
+fastapi-pagination = "^0.15.15"
 
 [tool.poetry.group.dev.dependencies]
 black = "^24.1.0"

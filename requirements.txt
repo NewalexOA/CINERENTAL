@@ -4,6 +4,8 @@ aiofiles==25.1.0
     # via act-rental (pyproject.toml)
 alembic==1.18.5
     # via act-rental (pyproject.toml)
+annotated-doc==0.0.4
+    # via fastapi
 annotated-types==0.8.0
     # via pydantic
 anyio==4.14.2
@@ -18,9 +20,11 @@ bcrypt==5.0.0
     # via passlib
 click==8.4.2
     # via uvicorn
-fastapi==0.115.14
-    # via act-rental (pyproject.toml)
-fastapi-pagination==0.12.34
+fastapi==0.140.0
+    # via
+    #   act-rental (pyproject.toml)
+    #   fastapi-pagination
+fastapi-pagination==0.15.15
     # via act-rental (pyproject.toml)
 greenlet==3.5.4
     # via sqlalchemy
@@ -58,8 +62,6 @@ pydantic-core==2.46.4
     # via pydantic
 pydantic-settings==2.14.2
     # via act-rental (pyproject.toml)
-pyjwt==2.13.0
-    # via redis
 python-barcode==0.15.1
     # via act-rental (pyproject.toml)
 python-dotenv==1.2.2
@@ -70,7 +72,7 @@ python-multipart==0.0.32
     # via act-rental (pyproject.toml)
 pyyaml==6.0.3
     # via uvicorn
-redis==5.3.1
+redis==8.0.1
     # via act-rental (pyproject.toml)
 segno==1.6.6
     # via act-rental (pyproject.toml)
@@ -78,7 +80,7 @@ sqlalchemy==2.0.51
     # via
     #   act-rental (pyproject.toml)
     #   alembic
-starlette==0.46.2
+starlette==1.3.1
     # via fastapi
 treepoem==3.28.0
     # via act-rental (pyproject.toml)
@@ -91,9 +93,11 @@ typing-extensions==4.16.0
     #   pydantic
     #   pydantic-core
     #   sqlalchemy
+    #   starlette
     #   typing-inspection
 typing-inspection==0.4.2
     # via
+    #   fastapi
     #   pydantic
     #   pydantic-settings
 tzlocal==5.4.4
