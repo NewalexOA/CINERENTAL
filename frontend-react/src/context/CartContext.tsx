@@ -9,7 +9,7 @@ export interface CartItem extends Equipment {
 
 interface CartContextType {
   items: CartItem[];
-  addItem: (item: Equipment) => void;
+  addItem: (item: Equipment, quantity?: number) => void;
   removeItem: (id: number) => void;
   updateQuantity: (id: number, quantity: number) => void;
   updateItemDates: (id: number, dates: { start: string | null; end: string | null }) => void;
@@ -25,20 +25,23 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
   const [dates, setDates] = useState<{ start: string | null; end: string | null }>({ start: null, end: null });
 
-  const addItem = (item: Equipment) => {
+  const addItem = (item: Equipment, quantity = 1) => {
+    // Scan sessions hand over non-serialized items with quantity > 1,
+    // so the caller-supplied amount must survive into the cart.
+    const amount = Math.max(1, Math.floor(quantity) || 1);
     setItems((current) => {
       const existing = current.find((i) => i.id === item.id);
       if (existing) {
         return current.map((i) =>
-          i.id === item.id ? { ...i, quantity: i.quantity + 1 } : i
+          i.id === item.id ? { ...i, quantity: i.quantity + amount } : i
         );
       }
       // Initialize with global dates if set
-      return [...current, { 
-        ...item, 
-        quantity: 1, 
-        start_date: dates.start, 
-        end_date: dates.end 
+      return [...current, {
+        ...item,
+        quantity: amount,
+        start_date: dates.start,
+        end_date: dates.end
       }];
     });
   };

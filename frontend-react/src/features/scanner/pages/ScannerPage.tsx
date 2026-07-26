@@ -263,7 +263,7 @@ export default function ScannerPage() {
           category_name: item.category_name,
           replacement_cost: item.replacement_cost || 0,
           status: item.status || 'AVAILABLE',
-        } as Equipment);
+        } as Equipment, item.quantity);
       });
 
       toast.success('Оборудование добавлено в корзину');
