@@ -36,6 +36,8 @@ export interface Booking {
   project_name?: string;
   barcode?: string;
   category_name?: string;
+  /** Category ancestry from root; primary ordering key of the print form. */
+  sort_path?: number[];
   serial_number?: string;
   // Legacy nested structure (deprecated, kept for backwards compatibility)
   equipment?: {

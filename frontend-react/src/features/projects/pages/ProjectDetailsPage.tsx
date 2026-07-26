@@ -26,6 +26,7 @@ import { Textarea } from '../../../components/ui/textarea';
 import { Input } from '../../../components/ui/input';
 import { Label } from '../../../components/ui/label';
 import { AddEquipmentDialog } from '../components/AddEquipmentDialog';
+import { comparePrintOrder } from '../utils/bookingOrder';
 import { Badge } from '../../../components/ui/badge';
 import { ArrowLeft, Trash2, Plus, Calendar as CalendarIcon, User, Printer, Minus, Save, Edit, AlertTriangle } from 'lucide-react';
 import { useState, useEffect, useMemo } from 'react';
@@ -95,15 +96,11 @@ export default function ProjectDetailsPage() {
     }
   }, [project]);
 
-  // Stable display order (backend returns bookings unordered): group by category,
-  // then by equipment name. Mirrors the print layout's primary ordering and
-  // prevents the list from jumping when a booking is updated.
+  // Stable display order (backend returns bookings unordered), matching the
+  // print form key for key: category ancestry, then serial number, then name.
+  // Also prevents the list from jumping when a booking is updated.
   const sortedBookings = useMemo(
-    () =>
-      [...(project?.bookings ?? [])].sort((a, b) =>
-        (a.category_name || '').localeCompare(b.category_name || '') ||
-        (a.equipment_name || '').localeCompare(b.equipment_name || '')
-      ),
+    () => [...(project?.bookings ?? [])].sort(comparePrintOrder),
     [project?.bookings]
   );
 
