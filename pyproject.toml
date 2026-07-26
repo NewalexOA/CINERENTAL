@@ -30,7 +30,7 @@ treepoem = "^3.8.0"
 fastapi-pagination = "^0.15.15"
 
 [tool.poetry.group.dev.dependencies]
-black = "^24.1.0"
+black = ">=24.1,<27.0"
 isort = "^6.0.0"
 flake8 = "^7.0.0"
 mypy = "^1.8.0"
