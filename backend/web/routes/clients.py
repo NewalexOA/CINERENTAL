@@ -6,7 +6,6 @@ This module defines routes for the clients web interface.
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import HTMLResponse
 from sqlalchemy.ext.asyncio import AsyncSession
-from starlette.templating import _TemplateResponse
 
 from backend.core.database import get_db
 from backend.core.templates import templates
@@ -16,16 +15,17 @@ router = APIRouter()
 
 
 @router.get('/', response_class=HTMLResponse)
-async def clients_list(request: Request) -> _TemplateResponse:
+async def clients_list(request: Request) -> HTMLResponse:
     """Render clients list page.
 
     Args:
         request: FastAPI request
 
     Returns:
-        _TemplateResponse: Rendered template
+        HTMLResponse: Rendered template
     """
     return templates.TemplateResponse(
+        request,
         'clients/list.html',
         {'request': request},
     )
@@ -36,7 +36,7 @@ async def client_detail(
     request: Request,
     client_id: int,
     db: AsyncSession = Depends(get_db),
-) -> _TemplateResponse:
+) -> HTMLResponse:
     """Render client detail page.
 
     Args:
@@ -45,7 +45,7 @@ async def client_detail(
         db: Database session
 
     Returns:
-        _TemplateResponse: Rendered template
+        HTMLResponse: Rendered template
 
     Raises:
         HTTPException: If client not found
@@ -57,6 +57,7 @@ async def client_detail(
         raise HTTPException(status_code=404, detail='Client not found')
 
     return templates.TemplateResponse(
+        request,
         'clients/detail.html',
         {
             'request': request,
