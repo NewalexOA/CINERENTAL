@@ -2,6 +2,34 @@
 
 This document lists notable changes to the ACT-Rental application.
 
+## [0.17.0-beta.4] - 2026-07-26
+
+### Bug Fixes
+
+- **Scan Session Quantity Lost on Handover:** Quantity of non-serialized equipment did not survive the path from a scan session to a created project, so every position arrived with quantity 1. The scanner handed session items to the cart one call per position while `addItem` always stored 1; it now takes an amount and adds it to an existing entry instead of incrementing by one.
+- **Repeat Adds Duplicated Equipment Rows:** Adding equipment to an existing project always created a new booking, so adding the same non-serialized item twice left two rows instead of one with quantity 2. A booking covering the same equipment over the same period is now reused. Serialized equipment still gets one booking per item, and bookings whose dates were moved off the project period are left alone so an added unit cannot silently change period.
+- **Project Equipment Order Diverged From the Print Form:** The list sorted by category name then equipment name, which ignored the category tree and the serial-number pass entirely. Live data nests up to five levels, so the two lists disagreed in practice. Ordering now reproduces the print route's three stable passes — category ancestry, then serial number, then name — verified against rendered print output for three projects (195, 174 and 154 positions).
+- **Equipment `notes` Missing From GET Responses:** `notes` was not returned by equipment read endpoints.
+- **Duplicate Cart Toasts:** Cart feedback ran inside a `setEntries` updater, and React StrictMode invokes updaters twice in development, so every add raised two toasts.
+- **Docker Build Fetched `uv` Over the Network:** `Dockerfile` and `Dockerfile.test` installed `uv` through the astral.sh shell installer; both now install it from PyPI, removing a network dependency and an unpinned remote script from the build.
+
+### Features
+
+- **Equipment Cart on the Project Page:** Ported the legacy staging-cart flow to the React project page. Scanning or picking from the catalogue fills a cart instead of booking immediately; positions are unique per equipment with caps of 50 positions and 10 units each, and each position books either the project period or its own date range. The transfer runs as one batch: serialized equipment is availability-checked and rejected with its conflicts, non-serialized merges into a matching booking, a failing position no longer aborts the rest, and the project refreshes once at the end.
+- **Barcode Capture Regardless of Focus:** Scans are captured even while a text field has focus, matching the legacy project page. The scanner-page hook deliberately ignores keystrokes aimed at inputs, so a scan made with the caret in the search box was previously swallowed by that field. Codes that fail validation are now surfaced instead of dropped silently.
+- **Category Sort Path on Project Bookings:** `sort_path` — the category ancestry the print form orders by — is now exposed on `BookingInProject`, so clients can reproduce the print order. Built by `CategoryService.get_sort_path_map()` from a single query with an in-memory tree walk and a guard against `parent_id` cycles, rather than the per-category tree walk the print route uses.
+
+### Testing
+
+- **Scan Session Quantity Round-Trip:** Coverage for the only stored session field that cannot be re-derived from the equipment record — quantity survives create and update, and still defaults to 1 when omitted.
+- **Cart, Batch Transfer and Scan Capture:** Unit coverage for cart limits and stacking rules, per-position dates, batch merging and conflict rejection, and the scan-capture heuristics including capture while an input has focus.
+- **Sort Path Parity:** Unit and integration tests asserting the exposed ancestry equals the path the print form builds, since a divergence would silently reorder the project list.
+
+### Chores
+
+- **Dependency Security Updates:** Merged `cryptography` and `python-multipart` bumps from `main` (#139, #140).
+- **Deprecated `baseUrl` Removed:** Dropped `baseUrl` from the React `tsconfig.json`; it stops functioning in TypeScript 7.0, and `paths` have resolved relative to `tsconfig.json` since TS 4.4, so the `@/` alias is unchanged.
+
 ## [0.17.0-beta.3] - 2026-04-23
 
 ### Bug Fixes
