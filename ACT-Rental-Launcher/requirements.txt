@@ -1,4 +1,4 @@
 PyQt5==5.15.10
 py2app==0.28.8
-setuptools==78.1.1
+setuptools==83.0.0
 wheel==0.46.2
