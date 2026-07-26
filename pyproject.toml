@@ -44,7 +44,7 @@ pytest = "^8.0.0"
 pytest-cov = "^4.1.0"
 pytest-asyncio = "^0.23.5"
 httpx = "^0.25.1"
-faker = "^22.6.0"
+faker = ">=22.6,<41.0"
 factory-boy = "^3.3.0"
 
 [build-system]
