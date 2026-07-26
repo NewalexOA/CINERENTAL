@@ -2,10 +2,9 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { projectsService } from '../../../services/projects';
 import { clientsService } from '../../../services/clients';
-import { bookingsService, BookingCreate, BookingUpdate } from '../../../services/bookings';
+import { bookingsService, BookingUpdate } from '../../../services/bookings';
 import { ProjectStatus, ProjectCreate, ProjectPaymentStatus } from '../../../types/project';
 import { PaymentStatusChanger } from '../components/PaymentStatusChanger';
-import { Equipment } from '../../../types/equipment';
 import { Button } from '../../../components/ui/button';
 import {
   Table,
@@ -26,7 +25,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Textarea } from '../../../components/ui/textarea';
 import { Input } from '../../../components/ui/input';
 import { Label } from '../../../components/ui/label';
-import { EquipmentPicker } from '../../equipment/components/EquipmentPicker';
+import { AddEquipmentDialog } from '../components/AddEquipmentDialog';
 import { Badge } from '../../../components/ui/badge';
 import { ArrowLeft, Trash2, Plus, Calendar as CalendarIcon, User, Printer, Minus, Save, Edit, AlertTriangle } from 'lucide-react';
 import { useState, useEffect, useMemo } from 'react';
@@ -125,18 +124,6 @@ export default function ProjectDetailsPage() {
     }
   });
 
-  const addBookingMutation = useMutation({
-    mutationFn: (data: BookingCreate) => bookingsService.create(data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['project', projectId] });
-      toast.success('Оборудование добавлено', { duration: 2000 });
-    },
-    onError: (err) => {
-      toast.error('Ошибка при добавлении оборудования');
-      console.error(err);
-    }
-  });
-
   const deleteBookingMutation = useMutation({
     mutationFn: (bookingId: number) => bookingsService.delete(bookingId),
     onSuccess: () => {
@@ -160,43 +147,6 @@ export default function ProjectDetailsPage() {
       console.error(err);
     }
   });
-
-  const handleAddEquipment = (item: Equipment) => {
-    if (!project) return;
-
-    // Non-serialized equipment is interchangeable, so adding it again bumps the
-    // quantity of the matching booking instead of creating a duplicate row.
-    // Serialized items stay one booking each. Bookings whose dates were changed
-    // away from the project period are left alone — merging into them would
-    // silently move the added item to a different period.
-    const isSerialized = Boolean(item.serial_number);
-    const existingBooking = isSerialized
-      ? undefined
-      : project.bookings?.find(
-          (booking) =>
-            booking.equipment_id === item.id &&
-            isSameMinute(parseISO(booking.start_date), parseISO(project.start_date)) &&
-            isSameMinute(parseISO(booking.end_date), parseISO(project.end_date))
-        );
-
-    if (existingBooking) {
-      updateBookingMutation.mutate({
-        id: existingBooking.id,
-        data: { quantity: existingBooking.quantity + 1 }
-      });
-      return;
-    }
-
-    addBookingMutation.mutate({
-      project_id: projectId,
-      client_id: project.client_id,
-      equipment_id: item.id,
-      start_date: project.start_date,
-      end_date: project.end_date,
-      quantity: 1,
-      total_amount: 0 // Placeholder
-    });
-  };
 
   const handleDateUpdate = (bookingId: number, range: DateRange | undefined) => {
     if (!range?.from || !range?.to) return;
@@ -555,16 +505,11 @@ export default function ProjectDetailsPage() {
       </div>
 
       {/* Add Equipment Dialog */}
-      <Dialog open={isAddEquipmentOpen} onOpenChange={setIsAddEquipmentOpen}>
-        <DialogContent className="sm:max-w-[900px] h-[85vh] flex flex-col p-0 gap-0">
-          <DialogHeader className="p-3 pb-2 border-b">
-            <DialogTitle className="text-base">Добавить оборудование в проект</DialogTitle>
-          </DialogHeader>
-          <div className="flex-1 overflow-hidden p-2">
-            <EquipmentPicker onAdd={handleAddEquipment} />
-          </div>
-        </DialogContent>
-      </Dialog>
+      <AddEquipmentDialog
+        open={isAddEquipmentOpen}
+        onOpenChange={setIsAddEquipmentOpen}
+        project={project}
+      />
 
       {/* Edit Project Dialog */}
       <Dialog open={isEditProjectOpen} onOpenChange={(o) => { if (!isSubmitting) setIsEditProjectOpen(o); }}>
