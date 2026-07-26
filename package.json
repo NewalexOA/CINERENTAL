@@ -1,5 +1,5 @@
 {
   "dependencies": {
-    "@musistudio/claude-code-router": "^1.0.72"
+    "@musistudio/claude-code-router": "^3.0.16"
   }
 }
