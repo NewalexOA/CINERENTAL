@@ -54,7 +54,7 @@ pydantic==2.13.4
     #   fastapi
     #   fastapi-pagination
     #   pydantic-settings
-pydantic-core==2.46.4
+pydantic-core==2.47.0
     # via pydantic
 pydantic-settings==2.14.2
     # via act-rental (pyproject.toml)
