@@ -208,3 +208,88 @@ async def test_update_scan_session_partial(
     assert data['name'] == update_data['name']
     # Items should be unchanged — enriched from DB
     assert len(data['items']) == len(test_scan_session.items)
+
+
+async def test_create_scan_session_preserves_quantity(
+    async_client: AsyncClient,
+    test_user: Any,
+    test_equipment: Equipment,
+) -> None:
+    """Test that item quantity survives the create round-trip.
+
+    Non-serialized equipment is scanned several times and stored as a single
+    item with quantity > 1. Losing it here makes every project created from
+    the session end up with quantity 1.
+    """
+    session_data = {
+        'name': 'Session with quantity',
+        'user_id': test_user.id,
+        'items': [{'equipment_id': test_equipment.id, 'quantity': 5}],
+    }
+
+    response = await async_client.post(
+        '/api/v1/scan-sessions/',
+        json=session_data,
+    )
+
+    assert response.status_code == status.HTTP_201_CREATED
+    data = response.json()
+    assert len(data['items']) == 1
+    assert data['items'][0]['equipment_id'] == test_equipment.id
+    assert data['items'][0]['quantity'] == 5
+
+    # Quantity must also survive a re-read from the DB
+    get_response = await async_client.get(f'/api/v1/scan-sessions/{data["id"]}')
+
+    assert get_response.status_code == status.HTTP_200_OK
+    assert get_response.json()['items'][0]['quantity'] == 5
+
+
+async def test_update_scan_session_preserves_quantity(
+    async_client: AsyncClient,
+    test_scan_session: ScanSession,
+    test_equipment: Equipment,
+) -> None:
+    """Test that item quantity survives the update round-trip."""
+    update_data = {
+        'name': 'Updated session with quantity',
+        'items': [{'equipment_id': test_equipment.id, 'quantity': 3}],
+    }
+
+    response = await async_client.put(
+        f'/api/v1/scan-sessions/{test_scan_session.id}',
+        json=update_data,
+    )
+
+    assert response.status_code == status.HTTP_200_OK
+    data = response.json()
+    assert len(data['items']) == 1
+    assert data['items'][0]['quantity'] == 3
+
+    get_response = await async_client.get(
+        f'/api/v1/scan-sessions/{test_scan_session.id}'
+    )
+
+    assert get_response.status_code == status.HTTP_200_OK
+    assert get_response.json()['items'][0]['quantity'] == 3
+
+
+async def test_scan_session_quantity_defaults_to_one(
+    async_client: AsyncClient,
+    test_user: Any,
+    test_equipment: Equipment,
+) -> None:
+    """Test that an item sent without quantity still defaults to 1."""
+    session_data = {
+        'name': 'Session without explicit quantity',
+        'user_id': test_user.id,
+        'items': [{'equipment_id': test_equipment.id}],
+    }
+
+    response = await async_client.post(
+        '/api/v1/scan-sessions/',
+        json=session_data,
+    )
+
+    assert response.status_code == status.HTTP_201_CREATED
+    assert response.json()['items'][0]['quantity'] == 1
