@@ -13,7 +13,6 @@ from fastapi.responses import HTMLResponse
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.requests import Request
-from starlette.templating import _TemplateResponse
 
 from backend.core.database import get_db
 from backend.core.templates import templates
@@ -29,7 +28,7 @@ logger = logger.bind(name=__name__)
 async def projects_list(
     request: Request,
     db: AsyncSession = Depends(get_db),
-) -> _TemplateResponse:
+) -> HTMLResponse:
     """Render projects list page.
 
     Args:
@@ -37,9 +36,10 @@ async def projects_list(
         db: Database session
 
     Returns:
-        _TemplateResponse: Rendered template
+        HTMLResponse: Rendered template
     """
     return templates.TemplateResponse(
+        request,
         'projects/index.html',
         {'request': request},
     )
@@ -50,7 +50,7 @@ async def new_project(
     request: Request,
     db: AsyncSession = Depends(get_db),
     session_id: Union[str, None] = None,
-) -> _TemplateResponse:
+) -> HTMLResponse:
     """Render new project creation page.
 
     Args:
@@ -59,9 +59,10 @@ async def new_project(
         session_id: Optional scan session ID to initialize the project
 
     Returns:
-        _TemplateResponse: Rendered template
+        HTMLResponse: Rendered template
     """
     return templates.TemplateResponse(
+        request,
         'projects/new.html',
         {'request': request, 'session_id': session_id},
     )
@@ -72,7 +73,7 @@ async def view_project(
     request: Request,
     project_id: int,
     db: AsyncSession = Depends(get_db),
-) -> _TemplateResponse:
+) -> HTMLResponse:
     """Render project details page.
 
     Args:
@@ -133,13 +134,16 @@ async def view_project(
         logger.debug(f'Template context keys: {log_keys}')
 
         # Pass the project data directly to template
-        return templates.TemplateResponse('projects/view.html', template_context)
+        return templates.TemplateResponse(
+            request, 'projects/view.html', template_context
+        )
     except Exception as e:
         logger.error(f'Error loading project {project_id}: {str(e)}')
         logger.error(f'Error traceback: {traceback.format_exc()}')
 
         # Still render the template but without project data
         return templates.TemplateResponse(
+            request,
             'projects/view.html',
             {
                 'request': request,
@@ -154,7 +158,7 @@ async def print_project(
     request: Request,
     project_id: int,
     db: AsyncSession = Depends(get_db),
-) -> _TemplateResponse:
+) -> HTMLResponse:
     """Render project print form.
 
     Args:
@@ -268,6 +272,7 @@ async def print_project(
         }
 
         return templates.TemplateResponse(
+            request,
             'print/project.html',
             {'request': request, **print_data},
         )
@@ -275,6 +280,7 @@ async def print_project(
         logger.error(f'Error printing project {project_id}: {str(e)}')
         logger.error(f'Error traceback: {traceback.format_exc()}')
         return templates.TemplateResponse(
+            request,
             'print/error.html',
             {'request': request, 'error': str(e)},
         )

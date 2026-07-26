@@ -2,6 +2,32 @@
 
 This document lists notable changes to the ACT-Rental application.
 
+## [0.17.0-beta.5] - 2026-07-26
+
+Dependency refresh, carried out in two stages so that a regression could be
+attributed to one or the other.
+
+### Dependencies
+
+- **Within-major updates:** `uvicorn` 0.27.1 → 0.51.0, `websockets` 12.0 → 16.1.1, `sqlalchemy` 2.0.25 → 2.0.51, `asyncpg` 0.29.0 → 0.31.0, `aiofiles` 23.2.1 → 25.1.0, `python-multipart` 0.0.22 → 0.0.32. `uvicorn` and `websockets` are nominally major jumps but touch no application code: `uvicorn` is launched through CLI flags and `websockets` is never imported, arriving only as a `uvicorn[standard]` extra.
+- **Major updates:** `fastapi` 0.115.14 → 0.140.0, `starlette` 0.46.2 → 1.3.1, `redis` 5.3.1 → 8.0.1, `fastapi-pagination` 0.12.34 → 0.15.15. Only starlette required source changes; the cache layer and the pagination call sites were unaffected despite the major jumps.
+- **Production Requirements Cleanup:** Regenerating `requirements.txt` from `pyproject.toml` dropped `python-jose`, `ecdsa`, `pyasn1` and `cryptography`. `python-jose` had been commented out of `pyproject.toml` over an `ecdsa` CVE, but it and its dependency chain were still installed in production through `make install-prod`. `factory-boy` and `faker` were also dropped — test dependencies that had leaked into the production set.
+- **Unused `passlib` Removed:** `passlib` and `types-passlib` are imported nowhere in the codebase. Like `python-jose`, they are left over from JWT authentication that was never implemented; removing them also drops the `bcrypt` chain.
+
+### Bug Fixes
+
+- **Server-Rendered Pages Broke Under starlette 1.x:** starlette 1.x dropped the legacy `TemplateResponse(name, context)` argument order in favour of `TemplateResponse(request, name, context)`. With the old calls the context dict landed where the template name belongs and Jinja raised `TypeError: unhashable type: 'dict'`, taking every page to a 500. All 15 call sites across 7 route modules now pass `request` first.
+- **Private starlette Symbol:** `_TemplateResponse` is no longer exported by `starlette.templating`. It was only ever used as a return annotation, so handlers are annotated with `HTMLResponse` instead — which `TemplateResponse` subclasses, keeping the annotation accurate.
+
+### Testing
+
+- **Web Route Coverage:** The starlette break passed the entire suite — 371 tests green while every server-rendered page returned 500 — because no test touched a non-API route. `tests/integration/test_web_routes.py` now covers the eight list pages, the project detail page and the printable form.
+
+### Chores
+
+- **Dependabot Configuration:** Added a `/ACT-Rental-Launcher` entry; the launcher pins its own dependencies but only the repository root was configured, so updates for it were never proposed. Removed `auto-merge`/`auto-merge-conditions`, which are not part of the Dependabot schema and referenced a Jenkins check this repository does not run, and `reviewers`, which GitHub has removed in favour of CODEOWNERS — an invalid configuration file is rejected wholesale.
+- **Launcher Dependency:** `setuptools` 78.1.1 → 83.0.0.
+
 ## [0.17.0-beta.4] - 2026-07-26
 
 ### Bug Fixes

@@ -9,7 +9,6 @@ from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
-from starlette.templating import _TemplateResponse
 
 from backend.core.database import get_db
 from backend.core.templates import templates
@@ -31,7 +30,7 @@ async def equipment_list(
     category_id: Optional[int] = None,
     status: Optional[EquipmentStatus] = None,
     query: Optional[str] = None,
-) -> _TemplateResponse:
+) -> HTMLResponse:
     """Render equipment list page.
 
     Args:
@@ -42,7 +41,7 @@ async def equipment_list(
         query: Optional search query
 
     Returns:
-        _TemplateResponse: Rendered template
+        HTMLResponse: Rendered template
     """
     equipment_service = EquipmentService(db)
     category_service = CategoryService(db)
@@ -60,6 +59,7 @@ async def equipment_list(
     equipment_data = prepare_equipment_list_data(equipment_list)
 
     return templates.TemplateResponse(
+        request,
         'equipment/list.html',
         {
             'request': request,
@@ -77,7 +77,7 @@ async def equipment_detail(
     equipment_id: int,
     db: AsyncSession = Depends(get_db),
     category_id: Optional[int] = None,
-) -> _TemplateResponse:
+) -> HTMLResponse:
     """Render equipment detail page.
 
     Args:
@@ -87,7 +87,7 @@ async def equipment_detail(
         category_id: Optional category ID to override equipment's category
 
     Returns:
-        _TemplateResponse: Rendered template
+        HTMLResponse: Rendered template
     """
     equipment_service = EquipmentService(db)
     equipment = await equipment_service.get_equipment(equipment_id)
@@ -171,6 +171,7 @@ async def equipment_detail(
     )
 
     return templates.TemplateResponse(
+        request,
         'equipment/detail.html',
         {
             'request': request,
