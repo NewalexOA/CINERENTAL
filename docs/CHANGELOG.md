@@ -2,6 +2,16 @@
 
 This document lists notable changes to the ACT-Rental application.
 
+## [0.17.0-beta.6] - 2026-07-27
+
+Dependency housekeeping following the refresh in beta.5.
+
+### Chores
+
+- **`python-barcode` 0.15.1 → 0.16.1:** Raised in `pyproject.toml` with `requirements.txt` regenerated to match. The package backs barcode generation and image writing in `backend/services/barcode.py`, so the upgrade was verified by generating a Code128 barcode through `ImageWriter` on the new version in addition to the full suite.
+- **Launcher Pins:** `PyQt5` 5.15.10 → 5.15.11, `py2app` 0.28.8 → 0.28.10, `wheel` 0.46.2 → 0.47.0. The launcher is a PyQt5 application built with py2app and is not exercised by the test suite, so these are patch-level bumps verified by nothing beyond a successful resolution.
+- **Redundant Dependabot Entry Removed:** The `/ACT-Rental-Launcher` entry added in beta.5 was based on a wrong premise — the root `directory: "/"` entry already scans requirements files recursively and had covered the launcher since at least January. The extra entry produced two pull requests per launcher package against the same file.
+
 ## [0.17.0-beta.5] - 2026-07-26
 
 Dependency refresh, carried out in two stages so that a regression could be
