@@ -163,6 +163,30 @@ export default function ProjectDetailsPage() {
 
   const handleAddEquipment = (item: Equipment) => {
     if (!project) return;
+
+    // Non-serialized equipment is interchangeable, so adding it again bumps the
+    // quantity of the matching booking instead of creating a duplicate row.
+    // Serialized items stay one booking each. Bookings whose dates were changed
+    // away from the project period are left alone — merging into them would
+    // silently move the added item to a different period.
+    const isSerialized = Boolean(item.serial_number);
+    const existingBooking = isSerialized
+      ? undefined
+      : project.bookings?.find(
+          (booking) =>
+            booking.equipment_id === item.id &&
+            isSameMinute(parseISO(booking.start_date), parseISO(project.start_date)) &&
+            isSameMinute(parseISO(booking.end_date), parseISO(project.end_date))
+        );
+
+    if (existingBooking) {
+      updateBookingMutation.mutate({
+        id: existingBooking.id,
+        data: { quantity: existingBooking.quantity + 1 }
+      });
+      return;
+    }
+
     addBookingMutation.mutate({
       project_id: projectId,
       client_id: project.client_id,
