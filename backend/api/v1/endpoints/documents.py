@@ -169,7 +169,7 @@ async def get_documents(
 
 @typed_get(
     documents_router,
-    '/{document_id}/',
+    '/{document_id}',
     response_model=DocumentResponse,
 )
 async def get_document(
@@ -208,7 +208,7 @@ async def get_document(
 
 @typed_put(
     documents_router,
-    '/{document_id}/',
+    '/{document_id}',
     response_model=DocumentResponse,
 )
 async def update_document(
@@ -276,7 +276,7 @@ async def update_document(
 
 @typed_delete(
     documents_router,
-    '/{document_id}/',
+    '/{document_id}',
     status_code=http_status.HTTP_204_NO_CONTENT,
 )
 async def delete_document(
@@ -314,7 +314,7 @@ async def delete_document(
 
 @typed_get(
     documents_router,
-    '/client/{client_id}/',
+    '/client/{client_id}',
     response_model=List[DocumentResponse],
 )
 async def get_client_documents(
@@ -346,7 +346,7 @@ async def get_client_documents(
 
 @typed_get(
     documents_router,
-    '/booking/{booking_id}/',
+    '/booking/{booking_id}',
     response_model=List[DocumentResponse],
 )
 async def get_booking_documents(
@@ -378,7 +378,7 @@ async def get_booking_documents(
 
 @typed_post(
     documents_router,
-    '/{document_id}/status/',
+    '/{document_id}/status',
     response_model=DocumentResponse,
 )
 async def change_document_status(

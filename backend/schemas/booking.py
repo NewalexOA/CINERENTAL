@@ -12,11 +12,15 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from backend.models import BookingStatus, PaymentStatus
 from backend.schemas.equipment import EquipmentResponse
-from backend.schemas.project import ProjectBase
+from backend.schemas.project import ProjectBase, YearRangeMixin
 
 
 class BookingBase(BaseModel):
-    """Base booking schema."""
+    """Base booking schema — shared fields for request and response models.
+
+    Do NOT use directly as a request body. Year-range validation lives on
+    input schemas (BookingCreate / BookingUpdate) via YearRangeMixin.
+    """
 
     equipment_id: int = Field(
         ..., title='Equipment ID', description='ID of the equipment being booked'
@@ -50,13 +54,11 @@ class BookingBase(BaseModel):
     )
 
 
-class BookingCreate(BookingBase):
+class BookingCreate(BookingBase, YearRangeMixin):
     """Create booking request schema."""
 
-    pass
 
-
-class BookingUpdate(BaseModel):
+class BookingUpdate(YearRangeMixin):
     """Update booking request schema."""
 
     start_date: Optional[datetime] = Field(

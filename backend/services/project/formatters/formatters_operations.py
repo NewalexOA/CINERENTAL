@@ -13,6 +13,7 @@ from backend.exceptions import NotFoundError
 from backend.exceptions.messages import ProjectErrorMessages
 from backend.repositories import ClientRepository, ProjectRepository
 from backend.repositories.equipment import EquipmentRepository
+from backend.services.category import CategoryService
 
 
 class FormattersOperations:
@@ -67,6 +68,11 @@ class FormattersOperations:
         # Prepare equipment repository for direct lookup
         equipment_repo = EquipmentRepository(self.db_session)
 
+        # Ancestry paths let clients reproduce the print form ordering.
+        # Resolved once per request rather than per booking.
+        category_service = CategoryService(self.db_session)
+        sort_path_map = await category_service.get_sort_path_map()
+
         for booking in project_with_bookings.bookings:
             # Get equipment information
             equipment = None
@@ -78,6 +84,7 @@ class FormattersOperations:
             equipment_name = 'Неизвестно'
             serial_number = None
             quantity = booking.quantity or 1
+            sort_path: List[int] = []
 
             if equipment:
                 equipment_name = equipment.name
@@ -91,6 +98,7 @@ class FormattersOperations:
                 if hasattr(equipment, 'category') and equipment.category:
                     category_name = equipment.category.name
                     category_id = equipment.category.id
+                    sort_path = sort_path_map.get(category_id, [])
 
                 # Convert Decimal to float for JSON serialization
                 replacement_cost_value = 0
@@ -160,6 +168,7 @@ class FormattersOperations:
                 'serial_number': serial_number,
                 'barcode': barcode,
                 'category_name': category_name,
+                'sort_path': sort_path,
                 'quantity': quantity,
                 'payment_status': payment_status,
                 'has_different_dates': has_different_dates,

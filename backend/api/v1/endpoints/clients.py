@@ -11,9 +11,20 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi import status as http_status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.api.v1.decorators import typed_delete, typed_get, typed_post, typed_put
+from backend.api.v1.decorators import (
+    typed_delete,
+    typed_get,
+    typed_patch,
+    typed_post,
+    typed_put,
+)
 from backend.core.database import get_db
-from backend.exceptions import BusinessError, ConflictError, NotFoundError
+from backend.exceptions import (
+    BusinessError,
+    ConflictError,
+    NotFoundError,
+    ValidationError,
+)
 from backend.models import BookingStatus
 from backend.schemas import BookingResponse, ClientCreate, ClientResponse, ClientUpdate
 from backend.services import ClientService
@@ -86,7 +97,7 @@ async def get_clients(
 
 @typed_get(
     clients_router,
-    '/{client_id}/',
+    '/{client_id}',
     response_model=ClientResponse,
 )
 async def get_client(
@@ -175,7 +186,7 @@ async def create_client(
 
 @typed_put(
     clients_router,
-    '/{client_id}/',
+    '/{client_id}',
     response_model=ClientResponse,
 )
 async def update_client(
@@ -224,9 +235,71 @@ async def update_client(
         ) from e
 
 
+@typed_patch(
+    clients_router,
+    '/{client_id}',
+    response_model=ClientResponse,
+)
+async def patch_client(
+    client_id: int,
+    client: ClientUpdate,
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> ClientResponse:
+    """Partially update client details.
+
+    Only updates fields that were explicitly provided in the request.
+    Uses model_dump(exclude_unset=True) for true PATCH semantics.
+
+    Args:
+        client_id: Client ID
+        client: Partial client data to update
+        db: Database session
+
+    Returns:
+        Updated client
+
+    Raises:
+        HTTPException: If client not found or validation fails
+    """
+    try:
+        service = ClientService(db)
+        # Only update fields that were explicitly set in the request
+        # (true PATCH semantics)
+        update_data = client.model_dump(exclude_unset=True)
+        updated_client = await service.update_client(
+            client_id=client_id,
+            name=update_data.get('name'),
+            email=update_data.get('email'),
+            phone=update_data.get('phone'),
+            company=update_data.get('company'),
+            notes=update_data.get('notes'),
+        )
+        return cast(ClientResponse, updated_client)
+    except NotFoundError as e:
+        raise HTTPException(
+            status_code=http_status.HTTP_404_NOT_FOUND,
+            detail=str(e),
+        ) from e
+    except ValidationError as e:
+        raise HTTPException(
+            status_code=http_status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        ) from e
+    except ConflictError as e:
+        raise HTTPException(
+            status_code=http_status.HTTP_409_CONFLICT,
+            detail=str(e),
+        ) from e
+    except BusinessError as e:
+        raise HTTPException(
+            status_code=http_status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        ) from e
+
+
 @typed_delete(
     clients_router,
-    '/{client_id}/',
+    '/{client_id}',
     status_code=http_status.HTTP_204_NO_CONTENT,
 )
 async def delete_client(
@@ -278,7 +351,7 @@ async def delete_client(
 
 @typed_get(
     clients_router,
-    '/{client_id}/bookings/',
+    '/{client_id}/bookings',
     response_model=List[BookingResponse],
 )
 async def get_client_bookings(

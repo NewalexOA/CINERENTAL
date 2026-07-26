@@ -2,6 +2,170 @@
 
 This document lists notable changes to the ACT-Rental application.
 
+## [0.17.0-beta.4] - 2026-07-26
+
+### Bug Fixes
+
+- **Scan Session Quantity Lost on Handover:** Quantity of non-serialized equipment did not survive the path from a scan session to a created project, so every position arrived with quantity 1. The scanner handed session items to the cart one call per position while `addItem` always stored 1; it now takes an amount and adds it to an existing entry instead of incrementing by one.
+- **Repeat Adds Duplicated Equipment Rows:** Adding equipment to an existing project always created a new booking, so adding the same non-serialized item twice left two rows instead of one with quantity 2. A booking covering the same equipment over the same period is now reused. Serialized equipment still gets one booking per item, and bookings whose dates were moved off the project period are left alone so an added unit cannot silently change period.
+- **Project Equipment Order Diverged From the Print Form:** The list sorted by category name then equipment name, which ignored the category tree and the serial-number pass entirely. Live data nests up to five levels, so the two lists disagreed in practice. Ordering now reproduces the print route's three stable passes — category ancestry, then serial number, then name — verified against rendered print output for three projects (195, 174 and 154 positions).
+- **Equipment `notes` Missing From GET Responses:** `notes` was not returned by equipment read endpoints.
+- **Duplicate Cart Toasts:** Cart feedback ran inside a `setEntries` updater, and React StrictMode invokes updaters twice in development, so every add raised two toasts.
+- **Docker Build Fetched `uv` Over the Network:** `Dockerfile` and `Dockerfile.test` installed `uv` through the astral.sh shell installer; both now install it from PyPI, removing a network dependency and an unpinned remote script from the build.
+
+### Features
+
+- **Equipment Cart on the Project Page:** Ported the legacy staging-cart flow to the React project page. Scanning or picking from the catalogue fills a cart instead of booking immediately; positions are unique per equipment with caps of 50 positions and 10 units each, and each position books either the project period or its own date range. The transfer runs as one batch: serialized equipment is availability-checked and rejected with its conflicts, non-serialized merges into a matching booking, a failing position no longer aborts the rest, and the project refreshes once at the end.
+- **Barcode Capture Regardless of Focus:** Scans are captured even while a text field has focus, matching the legacy project page. The scanner-page hook deliberately ignores keystrokes aimed at inputs, so a scan made with the caret in the search box was previously swallowed by that field. Codes that fail validation are now surfaced instead of dropped silently.
+- **Category Sort Path on Project Bookings:** `sort_path` — the category ancestry the print form orders by — is now exposed on `BookingInProject`, so clients can reproduce the print order. Built by `CategoryService.get_sort_path_map()` from a single query with an in-memory tree walk and a guard against `parent_id` cycles, rather than the per-category tree walk the print route uses.
+
+### Testing
+
+- **Scan Session Quantity Round-Trip:** Coverage for the only stored session field that cannot be re-derived from the equipment record — quantity survives create and update, and still defaults to 1 when omitted.
+- **Cart, Batch Transfer and Scan Capture:** Unit coverage for cart limits and stacking rules, per-position dates, batch merging and conflict rejection, and the scan-capture heuristics including capture while an input has focus.
+- **Sort Path Parity:** Unit and integration tests asserting the exposed ancestry equals the path the print form builds, since a divergence would silently reorder the project list.
+
+### Chores
+
+- **Dependency Security Updates:** Merged `cryptography` and `python-multipart` bumps from `main` (#139, #140).
+- **Deprecated `baseUrl` Removed:** Dropped `baseUrl` from the React `tsconfig.json`; it stops functioning in TypeScript 7.0, and `paths` have resolved relative to `tsconfig.json` since TS 4.4, so the `@/` alias is unchanged.
+
+## [0.17.0-beta.3] - 2026-04-23
+
+### Bug Fixes
+
+- **Year-Range Validator Broke Read Endpoints:** Fixed a regression introduced in 0.17.0-beta.2 where the Pydantic `@field_validator` on `ProjectBase`/`BookingBase` also ran when FastAPI serialized responses via `ProjectResponse`, `BookingResponse`, `ProjectWithBookings`, and `BookingWithDetails` (all inherit the Base classes with `from_attributes=True`). Any existing row with an out-of-range year (e.g. legacy `0026` rows from the pre-0.17.0-beta.2 bug) caused list endpoints to return 500 instead of data.
+
+### Architectural Improvements
+
+- **Reusable `YearRangeMixin`:** Replaced per-class duplicated validators with a single `YearRangeMixin` applied only to input schemas (`ProjectCreate`, `ProjectUpdate`, `BookingCreate`, `BookingUpdate`, `BookingCreateForProject`). Uses `check_fields=False` so the mixin works for both required and optional date fields without per-schema customization.
+- **Base-Schema Documentation:** Added explicit docstring warnings on `ProjectBase` and `BookingBase` noting they must not be used directly as request body types.
+
+### Database Migrations
+
+- **Legacy Bad-Year Scrub (`8a7f2b1c9d4e`):** Alembic migration that remaps `projects`/`bookings` rows with `start_date` or `end_date` year in the narrow window `20..30` (matching the known bug signature of the early 2026 frontend regression) by adding 2000 years. Creates a dedicated audit table (`_scrub_8a7f2b1c9d4e_audit`) capturing original values per row so the change is persistent, queryable, and reversible. Pre-flight check rejects any row with year in `100..2019` or `> 2100` — these don't match the bug signature and need manual review before the follow-up CHECK migration can run. Emits `RAISE NOTICE` per affected row. Adds `lock_timeout`/`statement_timeout` guards against indefinite blocking.
+- **Year-Range CHECK Constraints (`b9c3e4f2a6d8`):** Adds four database-level CHECK constraints (`projects_start_date_year_chk`, `projects_end_date_year_chk`, `bookings_start_date_year_chk`, `bookings_end_date_year_chk`) enforcing `EXTRACT(YEAR FROM column) BETWEEN 2020 AND 2100` as defense in depth against any application-layer bypass. Uses the `NOT VALID` + `VALIDATE CONSTRAINT` pattern — `ADD CONSTRAINT ... NOT VALID` holds `AccessExclusiveLock` only for the catalog write; `VALIDATE CONSTRAINT` then scans rows under `ShareUpdateExclusiveLock` which permits concurrent reads and writes.
+
+### Testing
+
+- **Regression Test Coverage:** Added `tests/unit/test_year_range_validation.py` covering (a) response schemas tolerating legacy bad-year data, (b) create/update schemas rejecting out-of-range years, (c) boundary cases (2019 rejected, 2020 accepted, 2100 accepted, 2101 rejected), and (d) `None` pass-through on optional update fields.
+
+## [0.17.0-beta.2] - 2026-04-19
+
+### Bug Fixes
+
+- **Date Year Parsing Fix:** Fixed critical data integrity bug where project/booking dates in 2026 were being saved as year 0026 in the database. Root cause was asymmetric format/parse in `DateTimeRangePicker`: display format used 2-digit year (`dd.MM.yy`) while parser tried 4-digit format first, interpreting `26` as year `0026`. Changed `DISPLAY_FORMAT` to `dd.MM.yyyy HH:mm` and removed 2-digit year fallbacks from parse formats.
+
+### Architectural Improvements
+
+- **Centralized Date Format Constants:** Introduced `frontend-react/src/lib/date-formats.ts` exposing `DATE_FORMAT`, `DATE_TIME_FORMAT`, `DATE_SHORT_FORMAT`, and `DATE_PARSE_FORMATS`. Refactored 6 pages/components to import these constants instead of inline format strings, eliminating format drift.
+- **Backend Year-Range Validation:** Added reusable Pydantic `field_validator` on `start_date`/`end_date` fields in `ProjectBase`, `ProjectUpdate`, `BookingBase`, `BookingUpdate`, and `BookingCreateForProject`, rejecting years outside 2020–2100 as defense in depth against future frontend bugs.
+- **BookingsPage Year Display:** Booking list dates now include the year to disambiguate bookings spanning year boundaries.
+
+### DevOps
+
+- **Configurable Docker Host Ports:** Added `WEB_HOST_PORT`, `POSTGRES_HOST_PORT`, `REDIS_HOST_PORT`, `FRONTEND_HOST_PORT` environment variables to both `docker-compose.yml` and `docker-compose.prod.yml`. Defaults preserved — allows overriding host ports without modifying compose files when local services conflict (e.g. existing postgres on 5432). Prod file preserves `127.0.0.1:` binding for db/redis (security).
+- **.gitignore Fix:** Added explicit negation `!frontend-react/src/lib/` to prevent the Python `lib/` ignore pattern from catching frontend library files.
+
+## [0.17.0-beta.1] - 2026-02-19
+
+### Complete React Frontend Migration
+
+Full migration of all 6 core modules from legacy Jinja2/Bootstrap/Vanilla JS to React 18 + TypeScript + Vite + shadcn/ui. 94 commits, 183 files changed, ~29,500 lines added.
+
+### Clients Module Migration
+
+- **Full CRUD Implementation:** Migrated clients list with paginated table, detail pages, search, and delete confirmation dialogs to React with TanStack Query for server state management.
+- **Client Form Dialog:** React Hook Form + Zod validation with all fields optional except name, matching the backend PATCH endpoint for partial updates.
+
+### Categories Module Migration
+
+- **Tree View with Split Panel:** Implemented hierarchical category management with CategoryTreeView, CategoryTreeNode, and CategoryEditPanel components. Collapsible tree nodes with inline editing and subcategories dialog.
+- **Backend Enhancement:** Added subcategories API endpoint with hierarchical sorting, improved category sorting logic and error handling utilities.
+
+### Equipment Module Migration
+
+- **Full CRUD with Barcode System:** Migrated equipment list, detail pages, and form dialogs. Added client-side barcode generation using bwip-js and print dialog with DataMatrix/Code128 support.
+- **Rental Status Badge:** Implemented RentalStatusBadge component with hover card showing active projects for rented equipment. Backend updated to include PENDING bookings in active project queries.
+- **Scanner Integration:** Added equipment-to-scan-session button on equipment detail page for direct scanner workflow integration.
+
+### Projects Module Migration
+
+- **Dual View Modes:** Card and table views with localStorage persistence for view mode preference. Card view with collapsible status groups (DRAFT, ACTIVE, COMPLETED, CANCELLED) and controlled expand/collapse state.
+- **Cart-Based Project Creation:** NewProjectPage with EquipmentPicker, item-level date management, and batch booking API integration. Inline booking editing on project details page.
+- **Payment Status Management:** PaymentStatusChanger component with 4-digit captcha verification, matching the backend `PATCH /projects/{id}/payment-status` endpoint.
+- **Client Filter:** Search-as-you-type client popover with debounced API search and quick selection.
+- **URL State Persistence:** All filters (status, payment status, client, search, pagination) persisted in URL params for shareable links and browser back/forward support. See dedicated section below.
+
+### Bookings Module Migration
+
+- **Paginated List:** BookingsPage with status filters, date range selection, and configurable pagination. TanStack Query integration for automatic cache management.
+
+### Scanner Module Migration
+
+- **HID Barcode Scanner Integration:** Complete scanner page with barcode input capture, scan result cards with equipment details, and scan history feed with chronological event tracking.
+- **Session Management:** Local scan sessions with server sync via REST API. Session table with item management (add/remove), normalized storage (equipment IDs only), and duplicate server session prevention on load.
+- **UX Features:** Keyboard shortcuts for common operations, sound feedback for successful/failed scans, equipment history panel with rental information, status update sheet for equipment condition changes.
+- **Compact Layout:** Flattened scanner page layout with compact session header, removed status card for cleaner interface. Full Russian localization.
+
+### URL State Persistence Infrastructure
+
+- **Generic `useUrlState` Hook:** TypeScript hook wrapping React Router's `useSearchParams` with localStorage sync. Typed schema definition with NaN-safe number parsing, `Number(null) === 0` guard, and synchronous initialization from localStorage via `useMemo` to prevent double API fetches.
+- **Priority Chain:** URL params → localStorage → schema defaults. Page number excluded from localStorage (`persist: false`) to prevent stale page numbers on fresh navigation.
+- **Debounced Search:** Search input with 300ms debounce and ref guard (`lastCommittedSearch`) to prevent feedback loops between URL state and input field. Browser back/forward properly restores search input value.
+- **PaginationControls Refactor:** Removed internal `onPageChange(1)` from page size change handler. All 4 consumers (Equipment, Bookings, Clients, EquipmentPicker) updated to explicitly reset page on size change.
+- **Card Group Persistence:** Collapsible StatusGroup component refactored from uncontrolled (`defaultOpen`) to controlled (`isOpen`/`onOpenChange`). Expanded/collapsed state persisted in localStorage via `useLocalStorage` hook.
+
+### UI/UX Improvements
+
+- **Project Status Badges:** Updated color scheme — active=green (`success`), completed=blue (`info` variant, new), cancelled=grey (`secondary`). Added `info` variant to Badge component (`bg-sky-500`).
+- **Payment Status Indicators:** Replaced text badges with colored dot indicators — red-600 (unpaid), amber-400 (partially paid), green-500 (paid). Tooltip on hover for accessibility.
+- **Uniform Badge Width:** `min-w-[70px]` with centered text on status badges in both card and table views for visual alignment.
+- **Date Range Picker Fixes:** Fixed inability to change start date after initial selection. Fixed cleared selection reset causing stale state.
+- **Shared Components:** MainLayout with sidebar navigation and dynamic page titles, ConfirmDeleteDialog, DateTimeRangePicker, PaginationControls with configurable page sizes.
+
+### Testing Infrastructure
+
+- **Vitest Setup:** Installed vitest 4.x, @testing-library/react, @testing-library/jest-dom, @testing-library/user-event, jsdom. Created `vitest.config.ts` with path aliases and jsdom environment. Added `npm run test` and `npm run test:watch` scripts.
+- **useUrlState Tests (16):** Defaults, URL parsing, NaN protection, `Number(null)` guard, clean URLs, unknown param preservation, batch updates, localStorage write/restore/priority/cleanup/corruption recovery, setParams stability, nullable strings.
+- **PaginationControls Tests (6):** Rendering, page navigation, page size change interactions.
+- **StatusGroup Tests (3):** Controlled open/close behavior, empty state rendering.
+
+### DevOps & Docker
+
+- **React Frontend Containerization:** Added `Dockerfile` (production with nginx) and `Dockerfile.dev` (development with Vite HMR) for the React frontend. Updated `docker-compose.yml` and `docker-compose.prod.yml` with frontend service configuration. Added nginx.conf for SPA routing.
+- **Docker Cache Optimization:** Enabled Docker layer caching for faster image rebuilds in macOS launcher. Fixed Docker build failures in py2app macOS bundle.
+- **Healthcheck Tuning:** Updated healthcheck intervals and removed python-jose dependency (CVE mitigation).
+
+### Backend Changes
+
+- **Clients API:** Added PATCH endpoint for partial client updates with optional fields (all except name).
+- **Categories API:** New subcategories endpoint with hierarchical sorting.
+- **Scan Sessions:** Server sync improvements with atomic session loading, duplicate prevention, and normalized storage.
+- **Trailing Slash Standardization:** Standardized trailing slash convention across all API routes and Jinja2 templates for consistent behavior.
+- **Equipment Repository:** PENDING bookings now included in active project queries for accurate rental status display.
+- **Barcode:** Added quiet zone padding to DataMatrix barcode for improved scanner readability.
+
+### macOS Launcher
+
+- **Backup Portability:** Fixed cross-machine backup restore issues with absolute path handling and Docker volume restoration.
+- **Build Fixes:** Resolved Docker build failures in py2app bundle with proper PATH environment setup.
+
+### Technical Improvements & Bug Fixes (0.17.0-beta.1)
+
+- Initialized React 18 frontend with Vite, TypeScript, TanStack Query, React Router, and shadcn/ui component library
+- Resolved ESM path alias issues with relative imports and URL-based resolution in Vite config
+- Fixed TypeScript type issues across React components with proper generic typing
+- Added comprehensive `.gitignore` and `.dockerignore` for React frontend
+- Fixed import loops and missing UI components (tabs, collapsible, command, hover-card, sheet, drawer, radio-group)
+- Implemented compact UI with configurable pagination across all list pages
+- Fixed dynamic page titles in MainLayout using React Router location
+- Fixed client name display and date formatting on projects page
+- Removed node_modules from git tracking and configured proper gitignore patterns
+- Fixed lint issues in calendar component and service files
+- Added migration status tracking document (MIGRATION_STATUS.md)
+- Added scanner migration plan documentation with legacy analysis
+
 ## [0.16.0-beta.2] - 2026-01-07
 
 ### Project Payment Status Tracking System

@@ -367,6 +367,7 @@ async def get_equipment(
             'status': equipment.status,
             'created_at': equipment.created_at,
             'updated_at': equipment.updated_at,
+            'notes': equipment.notes,
             'category_name': (
                 equipment.category.name if equipment.category else 'Без категории'
             ),
@@ -715,7 +716,9 @@ async def get_equipment_bookings(
         # Get equipment bookings using the service
         # The repository now loads client, project, AND equipment
         booking_service = BookingService(db)
-        bookings = await booking_service.get_by_equipment(equipment_id)
+        bookings = await booking_service.get_by_equipment(
+            equipment_id, include_deleted=True
+        )
 
         # Use the helper function to correctly format the response
         return [await _booking_to_response(booking) for booking in bookings]

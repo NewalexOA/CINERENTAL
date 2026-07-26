@@ -77,7 +77,7 @@ function initEventListeners() {
  */
 async function loadClients() {
     try {
-        const clients = await api.get('/clients');
+        const clients = await api.get('/clients/');
         const select = document.getElementById('clientSelect');
 
         clients.forEach(client => {
@@ -139,7 +139,7 @@ function initDatePicker() {
  */
 async function loadEquipmentCatalog() {
     try {
-        equipmentCatalog = await api.get('/equipment');
+        equipmentCatalog = await api.get('/equipment/');
         // No need to render list or categories here anymore
     } catch (error) {
         console.error('Error loading equipment catalog:', error);
@@ -412,7 +412,7 @@ async function saveProject() {
         }
 
         // Send API request
-        const result = await api.post('/projects', payload);
+        const result = await api.post('/projects/', payload);
 
         sessionStorage.removeItem('newProjectData');
         toast('Проект успешно создан', 'success');
@@ -447,7 +447,7 @@ async function saveProjectAsDraft() {
         const payload = createProjectPayload('DRAFT');
 
         // Send API request
-        const result = await api.post('/projects', payload);
+        const result = await api.post('/projects/', payload);
 
         // Clear session data
         sessionStorage.removeItem('newProjectData');

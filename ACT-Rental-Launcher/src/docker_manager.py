@@ -6,6 +6,9 @@ import subprocess
 import time
 from typing import Optional, Tuple, Union
 
+from backup import BackupManager
+from backup.backup_utils import get_project_root
+
 
 class DockerManager:
     """Docker container manager for ACT-Rental."""
@@ -23,14 +26,30 @@ class DockerManager:
             compose_file: Docker compose file name
             log_folder: Path to log folder
         """
-        # Use project path if provided, otherwise use correct default path
-        self.project_path = project_path or os.path.expanduser(
-            '~/Documents/GitHub/CINERENTAL'
-        )
+        # Use project path if provided, otherwise try to find it automatically
+        self.project_path: Optional[str] = None
+        if project_path:
+            self.project_path = project_path
+        else:
+            # Try to find project automatically
+            try:
+                self.project_path = get_project_root()
+            except FileNotFoundError:
+                # Fallback to None, will need user to select path
+                pass
+
         self.compose_file = compose_file
 
-        self.log_folder = log_folder or os.path.join(self.project_path, 'logs')
-        os.makedirs(self.log_folder, exist_ok=True)
+        # Setup log folder
+        if self.project_path:
+            self.log_folder = log_folder or os.path.join(self.project_path, 'logs')
+            os.makedirs(self.log_folder, exist_ok=True)
+        else:
+            # Use temporary location if project path not found
+            self.log_folder = log_folder or os.path.expanduser(
+                '~/Library/Logs/ACT-Rental'
+            )
+            os.makedirs(self.log_folder, exist_ok=True)
 
         self.log_file = os.path.join(self.log_folder, 'act-rental_launcher.log')
         self.setup_log_file = os.path.join(self.log_folder, 'setup_output.log')
@@ -41,9 +60,15 @@ class DockerManager:
         # Initialize backup manager (lazy loading)
         self._backup_manager = None
 
-        self.logger.info(
-            f'DockerManager инициализирован. Путь проекта: {self.project_path}'
-        )
+        if self.project_path:
+            self.logger.info(
+                f'DockerManager инициализирован. Путь проекта: {self.project_path}'
+            )
+        else:
+            self.logger.warning(
+                'DockerManager инициализирован без пути к проекту. '
+                'Требуется выбор пути.'
+            )
         self.logger.info(f'Файл docker-compose: {self.compose_file}')
 
     def setup_logger(self) -> None:
@@ -81,6 +106,11 @@ class DockerManager:
         """
         self.logger.debug(f'Выполнение команды: {command}')
 
+        # Check if project path is set
+        if not self.project_path:
+            self.logger.error('Путь к проекту не задан. Невозможно выполнить команду.')
+            return None
+
         try:
             cwd = os.getcwd()
             os.chdir(self.project_path)
@@ -99,72 +129,117 @@ class DockerManager:
 
             # Check if it's a build command which might need real-time output
             if 'build' in command and capture_output:
-                self.logger.debug(
-                    'Выполнение команды сборки с выводом в реальном времени'
+                self.logger.debug('Выполнение команды сборки с использованием QProcess')
+                # Use QProcess for build commands - handles signals correctly in PyQt
+                # Unlike subprocess, QProcess won't be killed by Qt signal handling
+                from PyQt5.QtCore import QProcess, QProcessEnvironment
+
+                build_log_path = os.path.join(self.log_folder, 'build_output.log')
+                output_lines = []
+
+                qprocess = QProcess()
+                qprocess.setWorkingDirectory(cwd)
+
+                # Set up environment
+                qenv = QProcessEnvironment.systemEnvironment()
+                for key, value in env.items():
+                    qenv.insert(key, value)
+                qprocess.setProcessEnvironment(qenv)
+
+                # Merge stdout and stderr
+                qprocess.setProcessChannelMode(QProcess.MergedChannels)
+
+                # Start the process using shell
+                qprocess.start('/bin/sh', ['-c', command])
+
+                self.logger.info(
+                    f'Начинаю сборку с QProcess, PID={qprocess.processId()}'
                 )
-                with open(
-                    os.path.join(self.log_folder, 'build_output.log'), 'w'
-                ) as build_log:
-                    process = subprocess.Popen(
-                        command,
-                        shell=True,
-                        stdout=subprocess.PIPE,
-                        stderr=subprocess.PIPE,
-                        text=True,
-                        env=env,
-                        bufsize=1,
-                        universal_newlines=True,
-                    )
 
-                    stdout_lines = []
-                    stderr_lines = []
-
-                    # Process stdout
-                    if process.stdout:
-                        for line in process.stdout:
-                            line = line.rstrip()
-                            stdout_lines.append(line)
+                # Wait for process to finish, reading output periodically
+                # UTF-8 encoding is critical for py2app (default may be ASCII)
+                with open(build_log_path, 'w', encoding='utf-8') as build_log:
+                    while not qprocess.waitForFinished(100):  # 100ms timeout
+                        # Read available output
+                        while qprocess.canReadLine():
+                            line_bytes = qprocess.readLine()
+                            line = (
+                                bytes(line_bytes)
+                                .decode('utf-8', errors='replace')
+                                .rstrip()
+                            )
+                            output_lines.append(line)
                             build_log.write(line + '\n')
                             build_log.flush()
                             self.logger.debug(f'BUILD OUT: {line}')
-                    else:
-                        self.logger.warning('No stdout from build process')
 
-                    # Process stderr
-                    if process.stderr:
-                        for line in process.stderr:
+                    # Read any remaining output after process finishes
+                    remaining = qprocess.readAll()
+                    if remaining:
+                        for line in (
+                            bytes(remaining)
+                            .decode('utf-8', errors='replace')
+                            .split('\n')
+                        ):
                             line = line.rstrip()
-                            stderr_lines.append(line)
-                            build_log.write(f'ERROR: {line}\n')
-                            build_log.flush()
-                            self.logger.error(f'BUILD ERROR: {line}')
-                    else:
-                        self.logger.warning('No stderr from build process')
+                            if line:
+                                output_lines.append(line)
+                                build_log.write(line + '\n')
 
-                    process.wait()
-                    returncode = process.returncode
-
-                    # Create a CompletedProcess-like object for compatibility
-                    result = subprocess.CompletedProcess(
-                        args=command,
-                        returncode=returncode,
-                        stdout='\n'.join(stdout_lines),
-                        stderr='\n'.join(stderr_lines),
+                    self.logger.info(
+                        f'Чтение вывода завершено, получено {len(output_lines)} строк'
                     )
+                    build_log.write(
+                        f'\n--- Чтение завершено, {len(output_lines)} строк ---\n'
+                    )
+                    build_log.flush()
 
-                    if returncode == 0:
-                        self.logger.debug(
-                            f'Команда сборки выполнена успешно: {command}'
-                        )
-                    else:
-                        self.logger.warning(
-                            f'Команда сборки завершилась с ошибкой '
-                            f'(код {returncode}): {command}'
-                        )
-                        self.logger.warning(f'Stderr: {result.stderr}')
+                returncode = qprocess.exitCode()
+                exit_status = qprocess.exitStatus()
 
-                    os.chdir(cwd)
-                    return result
+                # Write diagnostic info
+                import time as time_module
+
+                diag_file = os.path.join(self.log_folder, 'build_diagnostic.log')
+                with open(diag_file, 'a', encoding='utf-8') as diag:
+                    timestamp = time_module.strftime('%Y-%m-%d %H:%M:%S')
+                    diag.write(f'\n=== BUILD DIAGNOSTIC (QProcess) {timestamp} ===\n')
+                    diag.write(f'PID: {qprocess.processId()}\n')
+                    diag.write(f'Return code: {returncode}\n')
+                    diag.write(f'Exit status: {exit_status}\n')
+                    diag.write(f'Lines captured: {len(output_lines)}\n')
+                    diag.write('Last 3 lines:\n')
+                    for line in output_lines[-3:]:
+                        diag.write(f'  {line}\n')
+                    diag.flush()
+
+                # Check if process crashed
+                if exit_status == QProcess.CrashExit:
+                    self.logger.warning('Процесс сборки был аварийно завершён')
+
+                self.logger.info(
+                    f'Сборка завершена с кодом {returncode}, '
+                    f'получено {len(output_lines)} строк вывода'
+                )
+
+                # Create a CompletedProcess-like object for compatibility
+                result = subprocess.CompletedProcess(
+                    args=command,
+                    returncode=returncode,
+                    stdout='\n'.join(output_lines),
+                    stderr='',
+                )
+
+                if returncode == 0:
+                    self.logger.debug(f'Команда сборки выполнена успешно: {command}')
+                else:
+                    self.logger.warning(
+                        f'СБОРКА ОШИБКА: код={returncode}, строк={len(output_lines)}'
+                    )
+                    self.logger.warning(f'Output: {result.stdout[-500:]}')
+
+                os.chdir(cwd)
+                return result
             else:
                 # Standard execution for non-build commands
                 result = subprocess.run(
@@ -199,10 +274,15 @@ class DockerManager:
                 self.logger.error(f'Stderr: {e.stderr}')
             if hasattr(e, 'stdout') and e.stdout:
                 self.logger.debug(f'Stdout: {e.stdout}')
+            os.chdir(cwd)
             return e
         except Exception as e:
+            import traceback
+
             self.logger.error(f'Неожиданная ошибка при выполнении команды: {command}')
             self.logger.error(f'Сообщение: {str(e)}')
+            self.logger.error(f'Traceback: {traceback.format_exc()}')
+            os.chdir(cwd)
             return None
 
     def is_docker_running(self) -> bool:
@@ -318,6 +398,18 @@ class DockerManager:
         """Start ACT-Rental containers."""
         self.logger.info('Запуск контейнеров ACT-Rental...')
 
+        # Check if project path is set
+        if not self.project_path:
+            self.logger.error('Путь к проекту не задан.')
+            return (
+                False,
+                'Путь к проекту не задан. '
+                'Пожалуйста, выберите папку проекта в настройках.',
+            )
+
+        # Type narrowing: at this point project_path is definitely str, not None
+        project_path: str = self.project_path
+
         if not self.is_docker_running():
             self.logger.error('Docker не запущен. Невозможно запустить контейнеры.')
             return (
@@ -325,11 +417,9 @@ class DockerManager:
                 'Docker не запущен. Пожалуйста, запустите Docker Desktop.',
             )
 
-        compose_path = os.path.join(self.project_path, self.compose_file)
+        compose_path = os.path.join(project_path, self.compose_file)
         if not os.path.exists(compose_path):
-            self.logger.error(
-                f'Файл {self.compose_file} не найден в {self.project_path}'
-            )
+            self.logger.error(f'Файл {self.compose_file} не найден в {project_path}')
             return (
                 False,
                 f'Файл {self.compose_file} не найден. Проверьте путь к проекту.',
@@ -540,6 +630,18 @@ class DockerManager:
         """Rebuild ACT-Rental containers with fresh code."""
         self.logger.info('Пересборка контейнеров ACT-Rental...')
 
+        # Check if project path is set
+        if not self.project_path:
+            self.logger.error('Путь к проекту не задан.')
+            return (
+                False,
+                'Путь к проекту не задан. '
+                'Пожалуйста, выберите папку проекта в настройках.',
+            )
+
+        # Type narrowing: at this point project_path is definitely str, not None
+        project_path: str = self.project_path
+
         if not self.is_docker_running():
             return False, 'Docker не запущен'
 
@@ -564,42 +666,43 @@ class DockerManager:
         # Log the current working directory
         current_dir = os.getcwd()
         self.logger.info(f'Текущий рабочий каталог: {current_dir}')
-        self.logger.info(f'Путь проекта в конфигурации: {self.project_path}')
+        self.logger.info(f'Путь проекта в конфигурации: {project_path}')
 
         # Ensure absolute path
-        if not os.path.isabs(self.project_path):
-            abs_path = os.path.abspath(self.project_path)
+        if not os.path.isabs(project_path):
+            abs_path = os.path.abspath(project_path)
             self.logger.info(f'Преобразование пути проекта в абсолютный: {abs_path}')
+            project_path = abs_path
             self.project_path = abs_path
 
         # Create list of files to check
         files_to_check = ['Dockerfile', self.compose_file, 'app', 'requirements.txt']
 
         for file_name in files_to_check:
-            file_path = os.path.join(self.project_path, file_name)
+            file_path = os.path.join(project_path, file_name)
             if os.path.exists(file_path):
                 self.logger.info(f'✓ Файл/каталог найден: {file_name}')
             else:
                 self.logger.error(f'✗ Файл/каталог не найден: {file_name}')
                 # Continue checking but log the issue
 
-        dockerfile_path = os.path.join(self.project_path, 'Dockerfile')
-        compose_path = os.path.join(self.project_path, self.compose_file)
+        dockerfile_path = os.path.join(project_path, 'Dockerfile')
+        compose_path = os.path.join(project_path, self.compose_file)
 
         if not os.path.exists(dockerfile_path):
-            error_msg = f'Dockerfile не найден в {self.project_path}'
+            error_msg = f'Dockerfile не найден в {project_path}'
             self.logger.error(error_msg)
             return False, error_msg
 
         if not os.path.exists(compose_path):
-            error_msg = f'Файл {self.compose_file} не найден в {self.project_path}'
+            error_msg = f'Файл {self.compose_file} не найден в {project_path}'
             self.logger.error(error_msg)
             return False, error_msg
 
         # Explicitly set working directory for build command
-        self.logger.info(f'Используем каталог проекта для сборки: {self.project_path}')
+        self.logger.info(f'Используем каталог проекта для сборки: {project_path}')
         try:
-            os.chdir(self.project_path)
+            os.chdir(project_path)
             current_after_chdir = os.getcwd()
             self.logger.info(f'Текущий каталог после chdir: {current_after_chdir}')
         except Exception as e:
@@ -619,11 +722,25 @@ class DockerManager:
 
         # Rebuild images
         self.logger.info('Пересборка образов...')
-        build_command = f'{docker_compose_cmd} build --no-cache'
+        # Use --progress=plain for line-by-line output that can be properly captured
+        # Note: --progress is a global docker compose flag, must come before subcommand
+        # docker_compose_cmd is like "docker compose -f file.yml"
+        # We need: "docker compose --progress=plain -f file.yml build"
+        # Using cache for faster rebuilds (remove --no-cache)
+        build_command = (
+            docker_compose_cmd.replace(
+                'docker compose', 'docker compose --progress=plain'
+            )
+            + ' build'
+        )
         self.logger.info(f'Команда сборки: {build_command}')
 
         # Save the build command for debugging
-        with open(os.path.join(self.log_folder, 'last_build_command.txt'), 'w') as f:
+        with open(
+            os.path.join(self.log_folder, 'last_build_command.txt'),
+            'w',
+            encoding='utf-8',
+        ) as f:
             f.write(f'Working directory: {current_after_chdir}\n')
             f.write(f'Command: {build_command}\n')
             f.write(f'Timestamp: {time.strftime("%Y-%m-%d %H:%M:%S")}\n')
@@ -631,39 +748,35 @@ class DockerManager:
         result_build = self.run_command(build_command)
 
         if not result_build or result_build.returncode != 0:
-            stderr = (
-                result_build.stderr
-                if result_build and hasattr(result_build, 'stderr')
+            # Since stderr is combined into stdout, use stdout for error output
+            output = (
+                result_build.stdout
+                if result_build
+                and hasattr(result_build, 'stdout')
+                and result_build.stdout
                 else 'Неизвестная ошибка'
             )
-            error_msg = f'Ошибка при пересборке образов: {stderr}'
+            error_msg = 'Ошибка при пересборке образов'
             self.logger.error(error_msg)
 
-            # If error output is too long, write it to a separate file
-            if len(stderr) > 200:
+            # Write full output to error log file
+            if output and len(output) > 200:
                 error_log_file = os.path.join(self.log_folder, 'build_error.log')
                 try:
                     with open(error_log_file, 'w', encoding='utf-8') as f:
-                        f.write(stderr)
+                        f.write(output)
                     self.logger.error(
                         f'Подробный лог ошибки записан в {error_log_file}'
                     )
                 except Exception as e:
                     self.logger.error(f'Не удалось записать лог ошибки: {str(e)}')
 
-            # Also check if we have any stdout
-            if result_build and hasattr(result_build, 'stdout') and result_build.stdout:
-                stdout_log_file = os.path.join(self.log_folder, 'build_stdout.log')
-                try:
-                    with open(stdout_log_file, 'w', encoding='utf-8') as f:
-                        f.write(result_build.stdout)
-                    self.logger.info(f'Вывод сборки записан в {stdout_log_file}')
-                except Exception as e:
-                    self.logger.error(f'Не удалось записать вывод сборки: {str(e)}')
+            # Get last 500 chars for error message
+            error_snippet = output[-500:] if output else 'Неизвестная ошибка'
 
             return False, (
-                f'Ошибка при пересборке образов: {stderr[:200]}... '
-                f'(смотрите полный лог в {self.log_folder})'
+                f'Ошибка при пересборке образов:\n{error_snippet}\n\n'
+                f'(полный лог в {self.log_folder})'
             )
 
         self.logger.info('Пересборка успешно завершена!')
@@ -673,16 +786,14 @@ class DockerManager:
         )
 
     @property
-    def backup_manager(self):
+    def backup_manager(self) -> Optional[BackupManager]:
         """Get backup manager instance (lazy loading).
 
         Returns:
-            BackupManager instance
+            BackupManager instance or None if initialization failed
         """
         if self._backup_manager is None:
             try:
-                from backup import BackupManager
-
                 self._backup_manager = BackupManager(docker_manager=self)
                 self.logger.info('BackupManager инициализирован')
             except ImportError as e:

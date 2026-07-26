@@ -57,7 +57,7 @@ async def test_create_category_duplicate_name(
         'description': 'Another description',
     }
     response = await async_client.post('/api/v1/categories/', json=data)
-    assert response.status_code == 400
+    assert response.status_code == 409
 
 
 @async_test

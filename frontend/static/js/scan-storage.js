@@ -461,7 +461,7 @@ const scanStorage = {
                 return updatedSession;
             } else {
                 console.log('Создаем новую сессию на сервере');
-                response = await api.post('/scan-sessions', payload);
+                response = await api.post('/scan-sessions/', payload);
                 console.log('Новая сессия создана на сервере с ID:', response.id);
 
                 const updatedSession = this.updateServerSync(sessionId, response.id);

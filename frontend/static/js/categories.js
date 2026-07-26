@@ -239,7 +239,7 @@ async function addCategory() {
 
     try {
         console.log('[Categories] Sending add category request:', data);
-        const response = await api.post('/categories', data);
+        const response = await api.post('/categories/', data);
         console.log('[Categories] Category added successfully:', response);
         showToast('Категория успешно добавлена', 'success');
 

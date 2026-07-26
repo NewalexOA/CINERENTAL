@@ -29,6 +29,7 @@ ENV/
 # IDE
 .idea/
 .vscode/
+.idx/
 *.swp
 *.swo
 .DS_Store
@@ -239,6 +240,11 @@ cython_debug/
 /custom_modes/*
 /ai-docs/*
 
+CLAUDE.md
+.claude/
+GEMINI.md
+.gemini/
+
 # HTMLHint
 .htmlhintrc
 .htmlhintrc.json
@@ -251,10 +257,15 @@ docs/Current_task/*
 !frontend/static/manifest/*
 !frontend/static/js/lib
 !frontend/static/css/lib
+!frontend-react/src/lib/
 /.supercode
 
 # Scripts
 backend/scripts/*.json
 backend/scripts/*.sql
-CLAUDE.md
-/.claude
+
+# Node.js
+node_modules/
+/frontend-react/node_modules/*
+frontend-react/.claude/
+frontend-react/.claude/*

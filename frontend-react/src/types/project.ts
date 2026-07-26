@@ -1,0 +1,47 @@
+import { Client } from './client';
+import { Booking } from '../services/bookings';
+
+export enum ProjectStatus {
+  DRAFT = 'DRAFT',
+  ACTIVE = 'ACTIVE',
+  COMPLETED = 'COMPLETED',
+  CANCELLED = 'CANCELLED'
+}
+
+export enum ProjectPaymentStatus {
+  UNPAID = 'UNPAID',
+  PARTIALLY_PAID = 'PARTIALLY_PAID',
+  PAID = 'PAID'
+}
+
+export interface Project {
+  id: number;
+  name: string;
+  description?: string;
+  client_id: number;
+  start_date: string;
+  end_date: string;
+  status: ProjectStatus;
+  payment_status?: ProjectPaymentStatus;
+  notes?: string;
+  created_at?: string;
+  updated_at?: string;
+  // Relations & Joined Fields
+  client_name?: string;
+  client?: Client;
+  bookings?: Booking[];
+}
+
+export interface ProjectCreate {
+  name: string;
+  client_id: number;
+  start_date: string;
+  end_date: string;
+  description?: string;
+  status?: ProjectStatus;
+  notes?: string;
+}
+
+export type ProjectUpdate = Partial<ProjectCreate> & {
+  id: number;
+};

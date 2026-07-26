@@ -8,9 +8,30 @@ from datetime import datetime
 from enum import Enum
 from typing import List, Optional
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from backend.models import ProjectPaymentStatus, ProjectStatus
+
+
+def _validate_year(v: Optional[datetime]) -> Optional[datetime]:
+    """Reject datetimes with year outside the acceptable range (2020-2100)."""
+    if v is not None and (v.year < 2020 or v.year > 2100):
+        raise ValueError(f'Year {v.year} is outside the acceptable range (2020-2100)')
+    return v
+
+
+class YearRangeMixin(BaseModel):
+    """Enforces year range on declared start_date/end_date fields.
+
+    Apply to INPUT schemas only. Never mix into a Base or Response class,
+    since response models hydrate from legacy DB rows that may contain
+    out-of-range years from before this validation existed.
+    """
+
+    @field_validator('start_date', 'end_date', check_fields=False)
+    @classmethod
+    def _validate_year_range(cls, v: Optional[datetime]) -> Optional[datetime]:
+        return _validate_year(v)
 
 
 class DateRange(BaseModel):
@@ -28,7 +49,11 @@ class DateRange(BaseModel):
 
 
 class ProjectBase(BaseModel):
-    """Base project schema."""
+    """Base project schema — shared fields for request and response models.
+
+    Do NOT use directly as a request body. Year-range validation lives on
+    input schemas (ProjectCreate / ProjectUpdate) via YearRangeMixin.
+    """
 
     name: str = Field(..., title='Project Name', description='Name of the project')
     client_id: int = Field(
@@ -55,7 +80,7 @@ class ProjectBase(BaseModel):
     )
 
 
-class ProjectCreate(ProjectBase):
+class ProjectCreate(ProjectBase, YearRangeMixin):
     """Create project request schema."""
 
     status: ProjectStatus = Field(default=ProjectStatus.DRAFT, title='Project Status')
@@ -64,7 +89,7 @@ class ProjectCreate(ProjectBase):
     )
 
 
-class BookingCreateForProject(BaseModel):
+class BookingCreateForProject(YearRangeMixin):
     """Booking schema for project creation."""
 
     equipment_id: int = Field(..., title='Equipment ID')
@@ -85,7 +110,7 @@ class ProjectCreateWithBookings(ProjectCreate):
     )
 
 
-class ProjectUpdate(BaseModel):
+class ProjectUpdate(YearRangeMixin):
     """Update project request schema.
 
     Note: payment_status is not included here as it requires captcha validation
@@ -135,6 +160,15 @@ class BookingInProject(BaseModel):
     serial_number: Optional[str] = None
     barcode: Optional[str] = None
     category_name: Optional[str] = None
+    sort_path: List[int] = Field(
+        default_factory=list,
+        title='Category Sort Path',
+        description=(
+            'Category ancestry as IDs from root to the equipment category. '
+            'Primary ordering key of the print form; exposed so clients can '
+            'reproduce that order.'
+        ),
+    )
     start_date: datetime
     end_date: datetime
     booking_status: str

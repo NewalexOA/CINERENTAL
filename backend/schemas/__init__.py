@@ -61,7 +61,8 @@ from backend.schemas.project import (
     ProjectWithBookings,
 )
 from backend.schemas.scan_session import (
-    EquipmentItem,
+    EquipmentItemInput,
+    EquipmentItemResponse,
     ScanSessionCreate,
     ScanSessionResponse,
     ScanSessionUpdate,
@@ -124,7 +125,8 @@ __all__ = [
     'DateFilterType',
     'ProjectBookingResponse',
     # Scan Session
-    'EquipmentItem',
+    'EquipmentItemInput',
+    'EquipmentItemResponse',
     'ScanSessionCreate',
     'ScanSessionUpdate',
     'ScanSessionResponse',

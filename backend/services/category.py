@@ -4,7 +4,7 @@ This module implements business logic for managing equipment categories,
 including hierarchy management and validation of category relationships.
 """
 
-from typing import List, Optional, Tuple
+from typing import Dict, List, Optional, Set, Tuple
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -106,11 +106,14 @@ class CategoryService:
             Updated category
 
         Raises:
-            ValueError: If category not found
+            NotFoundError: If category not found
         """
         category = await self.repository.get(category_id)
         if not category:
-            raise ValueError(f'Category with ID {category_id} not found')
+            raise NotFoundError(
+                f'Category with ID {category_id} not found',
+                details={'category_id': category_id},
+            )
 
         # Check name uniqueness if changing
         if name and name != category.name:
@@ -221,6 +224,43 @@ class CategoryService:
             List of categories with equipment count
         """
         return await self.repository.get_all_with_equipment_count()
+
+    async def get_sort_path_map(self) -> Dict[int, List[int]]:
+        """Build a category_id -> root-to-category ancestry path of category IDs.
+
+        This is the same ordering key the print form sorts by, exposed so other
+        responses can reproduce the print order. Unlike
+        get_print_hierarchy_and_sort_path, which walks the tree per category,
+        the whole map is resolved in memory from a single query.
+
+        Returns:
+            Mapping of category ID to its ancestry path, root first.
+        """
+        categories = await self.repository.get_all()
+        parents: Dict[int, Optional[int]] = {
+            category.id: category.parent_id for category in categories
+        }
+        resolved: Dict[int, List[int]] = {}
+
+        def resolve(category_id: int) -> List[int]:
+            cached = resolved.get(category_id)
+            if cached is not None:
+                return cached
+
+            path: List[int] = []
+            seen: Set[int] = set()
+            current: Optional[int] = category_id
+            # `seen` guards against a parent cycle turning this into a hang.
+            while current is not None and current in parents and current not in seen:
+                seen.add(current)
+                path.append(current)
+                current = parents[current]
+
+            path.reverse()
+            resolved[category_id] = path
+            return path
+
+        return {category_id: resolve(category_id) for category_id in parents}
 
     async def get_print_hierarchy_and_sort_path(
         self, category_id: Optional[int]

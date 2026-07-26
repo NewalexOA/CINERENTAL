@@ -103,7 +103,7 @@ async def test_get_client_by_id(
     test_client: Client,
 ) -> None:
     """Test getting client by ID."""
-    response = await async_client.get(f'/api/v1/clients/{test_client.id}/')
+    response = await async_client.get(f'/api/v1/clients/{test_client.id}')
     assert response.status_code == http_status.HTTP_200_OK
 
     client = cast(ClientResponse, response.json())
@@ -116,7 +116,7 @@ async def test_get_client_by_id(
 @async_test
 async def test_get_client_by_id_not_found(async_client: AsyncClient) -> None:
     """Test getting non-existent client."""
-    response = await async_client.get('/api/v1/clients/9999/')
+    response = await async_client.get('/api/v1/clients/9999')
     assert response.status_code == http_status.HTTP_404_NOT_FOUND
 
 
@@ -130,7 +130,7 @@ async def test_update_client(
         'name': 'Updated Name',
     }
 
-    response = await async_client.put(f'/api/v1/clients/{test_client.id}/', json=data)
+    response = await async_client.put(f'/api/v1/clients/{test_client.id}', json=data)
     assert response.status_code == http_status.HTTP_200_OK
 
     client = cast(ClientResponse, response.json())
@@ -145,7 +145,7 @@ async def test_update_client(
 async def test_update_client_not_found(async_client: AsyncClient) -> None:
     """Test updating non-existent client."""
     data = {'name': 'Updated Name'}
-    response = await async_client.put('/api/v1/clients/9999/', json=data)
+    response = await async_client.put('/api/v1/clients/9999', json=data)
     assert response.status_code == http_status.HTTP_404_NOT_FOUND
 
 
@@ -168,7 +168,7 @@ async def test_update_client_duplicate_email(
 
     # Try to update test_client with other_client's email
     data = {'email': other_client.email}
-    response = await async_client.put(f'/api/v1/clients/{test_client.id}/', json=data)
+    response = await async_client.put(f'/api/v1/clients/{test_client.id}', json=data)
     assert response.status_code == http_status.HTTP_409_CONFLICT
     assert 'email' in response.text.lower()
 
@@ -189,18 +189,18 @@ async def test_delete_client(
     await db_session.commit()
     await db_session.refresh(client_to_delete)
 
-    response = await async_client.delete(f'/api/v1/clients/{client_to_delete.id}/')
+    response = await async_client.delete(f'/api/v1/clients/{client_to_delete.id}')
     assert response.status_code == http_status.HTTP_204_NO_CONTENT
 
     # Verify client is deleted
-    response = await async_client.get(f'/api/v1/clients/{client_to_delete.id}/')
+    response = await async_client.get(f'/api/v1/clients/{client_to_delete.id}')
     assert response.status_code == http_status.HTTP_404_NOT_FOUND
 
 
 @async_test
 async def test_delete_client_not_found(async_client: AsyncClient) -> None:
     """Test deleting non-existent client."""
-    response = await async_client.delete('/api/v1/clients/9999/')
+    response = await async_client.delete('/api/v1/clients/9999')
     assert response.status_code == http_status.HTTP_404_NOT_FOUND
 
 
@@ -211,7 +211,7 @@ async def test_get_client_bookings(
     test_booking: Client,
 ) -> None:
     """Test getting client's bookings."""
-    response = await async_client.get(f'/api/v1/clients/{test_client.id}/bookings/')
+    response = await async_client.get(f'/api/v1/clients/{test_client.id}/bookings')
     assert response.status_code == http_status.HTTP_200_OK
 
     bookings = response.json()
@@ -223,7 +223,7 @@ async def test_get_client_bookings(
 @async_test
 async def test_get_client_bookings_not_found(async_client: AsyncClient) -> None:
     """Test getting bookings for non-existent client."""
-    response = await async_client.get('/api/v1/clients/9999/bookings/')
+    response = await async_client.get('/api/v1/clients/9999/bookings')
     assert response.status_code == http_status.HTTP_404_NOT_FOUND
 
 

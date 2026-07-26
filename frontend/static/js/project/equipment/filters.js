@@ -236,7 +236,7 @@ class ProjectEquipmentFilters {
 
     async loadCategories() {
         try {
-            const categories = await api.get('/categories');
+            const categories = await api.get('/categories/');
             const categorySelect = document.getElementById('equipmentCategoryFilter');
 
             if (categorySelect && categories) {

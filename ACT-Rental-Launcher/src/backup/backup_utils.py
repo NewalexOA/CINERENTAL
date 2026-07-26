@@ -131,12 +131,7 @@ def get_project_root() -> str:
         ) or os.path.exists(os.path.join(abs_path, 'docker-compose.prod.yml')):
             return abs_path
 
-    # Method 3: Fallback to known default location
-    default_path = '/Users/actrental/Documents/GitHub/CINERENTAL'
-    if os.path.exists(default_path):
-        return default_path
-
-    # Method 4: Last resort - try common patterns
+    # Method 3: Last resort - try common patterns
     common_paths = [
         os.path.expanduser('~/Documents/GitHub/CINERENTAL'),
         os.path.expanduser('~/Github/CINERENTAL'),

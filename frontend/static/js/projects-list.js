@@ -223,7 +223,7 @@ function initViewToggle() {
 // Load clients for select dropdown
 async function loadClients() {
     try {
-        const clients = await api.get('/clients');
+        const clients = await api.get('/clients/');
         const select = document.getElementById('searchClient');
 
         clients.forEach(client => {
