@@ -19,7 +19,6 @@ pydantic-settings = "^2.1.0"
 redis = {extras = ["hiredis"], version = "^5.0.1"}
 asyncpg = "^0.31.0"
 # python-jose = {extras = ["cryptography"], version = "^3.3.0"}  # Temporarily removed due to ecdsa CVE, will add back when JWT auth is implemented
-passlib = {extras = ["bcrypt"], version = "^1.7.4"}
 python-multipart = ">=0.0.32,<0.0.33"
 jinja2 = "^3.1.2"
 aiofiles = "^25.1.0"
@@ -38,7 +37,6 @@ mypy = "^1.8.0"
 pre-commit = "^3.6.0"
 psycopg2-binary = "^2.9.9"
 types-redis = "^4.6.0.20240106"
-types-passlib = "^1.7.7.20240106"
 # types-python-jose = "^3.3.4.20240106"  # Removed together with python-jose
 
 [tool.poetry.group.test.dependencies]

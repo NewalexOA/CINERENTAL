@@ -14,12 +14,25 @@ updates:
     open-pull-requests-limit: 10
     pull-request-branch-name:
       separator: "/"
-    reviewers:
-      - "NewalexOA"
     assignees:
       - "NewalexOA"
-    auto-merge: true
-    auto-merge-conditions:
-      - "status-success=continuous-integration/jenkins/pr-merge"
-      - "review-count>=1"
-      - "approved"
+
+  # The macOS launcher pins its own dependencies and is not covered by the
+  # root entry above, so updates for it were never proposed.
+  - package-ecosystem: "pip"
+    directory: "/ACT-Rental-Launcher"
+    schedule:
+      interval: "weekly"
+    target-branch: "develop"
+    labels:
+      - "dependencies"
+      - "python"
+      - "launcher"
+    commit-message:
+      prefix: "chore"
+      include: "scope"
+    open-pull-requests-limit: 5
+    pull-request-branch-name:
+      separator: "/"
+    assignees:
+      - "NewalexOA"
