@@ -28,7 +28,7 @@ greenlet==3.5.4
     # via sqlalchemy
 h11==0.16.0
     # via uvicorn
-hiredis==3.4.0
+hiredis==3.4.1
     # via redis
 httptools==0.8.0
     # via uvicorn
