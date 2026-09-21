@@ -4,7 +4,7 @@ aiofiles==25.1.0
     # via act-rental (pyproject.toml)
 alembic==1.18.5
     # via act-rental (pyproject.toml)
-annotated-doc==0.0.4
+annotated-doc==0.0.5
     # via fastapi
 annotated-types==0.8.0
     # via pydantic
