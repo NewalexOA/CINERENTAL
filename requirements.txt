@@ -28,7 +28,7 @@ greenlet==3.5.4
     # via sqlalchemy
 h11==0.16.0
     # via uvicorn
-hiredis==3.4.0
+hiredis==3.4.1
     # via redis
 httptools==0.8.0
     # via uvicorn
@@ -54,9 +54,9 @@ pydantic==2.13.4
     #   fastapi
     #   fastapi-pagination
     #   pydantic-settings
-pydantic-core==2.46.4
+pydantic-core==2.49.0
     # via pydantic
-pydantic-settings==2.14.2
+pydantic-settings==2.15.0
     # via act-rental (pyproject.toml)
 python-barcode==0.16.1
     # via act-rental (pyproject.toml)
@@ -68,7 +68,7 @@ python-multipart==0.0.32
     # via act-rental (pyproject.toml)
 pyyaml==6.0.3
     # via uvicorn
-redis==8.0.1
+redis==8.1.0
     # via act-rental (pyproject.toml)
 segno==1.6.6
     # via act-rental (pyproject.toml)
