@@ -11,7 +11,7 @@ from typing import Annotated, Any, Optional
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Query, status
 from fastapi_pagination import Page, Params
-from fastapi_pagination.ext.sqlalchemy import paginate
+from fastapi_pagination.ext.sqlalchemy import apaginate
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -271,7 +271,7 @@ async def get_bookings(
             active_only=active_only,
         )
 
-        result: Page[BookingResponse] = await paginate(
+        result: Page[BookingResponse] = await apaginate(
             db,
             bookings_query,
             params,
