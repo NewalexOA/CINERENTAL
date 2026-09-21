@@ -1,0 +1,17 @@
+# Сторонние минифицированные библиотеки: jquery, bootstrap, select2,
+# moment, quagga, daterangepicker. Лежат в git, но не ревьюятся —
+# в графе дают только шум и раздувают базу.
+frontend/static/js/lib/
+frontend/static/css/lib/
+*.min.js
+*.min.css
+
+# Сборочные артефакты и окружения. Сейчас не в git, но если попадут —
+# граф их подхватит.
+frontend-react/dist/
+frontend-react/node_modules/
+docs/build/
+ACT-Rental-Launcher/src/dist/
+ACT-Rental-Launcher/src/build/
+.venv/
+htmlcov/
