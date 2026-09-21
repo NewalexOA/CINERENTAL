@@ -8,7 +8,7 @@ from typing import Annotated, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi_pagination import Page, Params
-from fastapi_pagination.ext.sqlalchemy import paginate
+from fastapi_pagination.ext.sqlalchemy import apaginate
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -174,7 +174,7 @@ async def get_projects_paginated(
         )
 
         # Use fastapi-pagination to paginate the query with transformer
-        result: Page[ProjectResponse] = await paginate(
+        result: Page[ProjectResponse] = await apaginate(
             db,
             projects_query,
             params,
@@ -705,7 +705,7 @@ async def get_project_bookings_paginated(
             date_filter=date_filter.value,
         )
 
-        result: Page[ProjectBookingResponse] = await paginate(
+        result: Page[ProjectBookingResponse] = await apaginate(
             db,
             query_obj,
             params,

@@ -11,7 +11,7 @@ from typing import List, Optional, cast
 from fastapi import APIRouter, Body, Depends, HTTPException, Query
 from fastapi import status as http_status
 from fastapi_pagination import Page, Params
-from fastapi_pagination.ext.sqlalchemy import paginate
+from fastapi_pagination.ext.sqlalchemy import apaginate
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.api.v1.decorators import (
@@ -264,7 +264,7 @@ async def get_equipment_list_paginated(
             include_deleted=include_deleted,
         )
 
-        result = await paginate(db, equipment_query, params)
+        result = await apaginate(db, equipment_query, params)
         return cast(Page[EquipmentResponse], result)
 
     except Exception as e:
@@ -775,7 +775,7 @@ async def get_equipment_bookings_paginated(
         )
 
         # Apply pagination using fastapi-pagination with transformer
-        result: Page[BookingResponse] = await paginate(
+        result: Page[BookingResponse] = await apaginate(
             db,
             bookings_query,
             params,
