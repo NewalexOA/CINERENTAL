@@ -148,6 +148,14 @@ body {
     border-bottom: 1px solid #000;
 }
 
+/* Blank guide line for the act number, filled in by hand */
+.act-number-line {
+    display: inline-block;
+    width: 5cm;
+    margin-left: 0.15cm;
+    border-bottom: 1px solid #000;
+}
+
 /* Equipment description styles */
 .equipment-description {
     color: #666;
