@@ -2,6 +2,31 @@
 
 This document lists notable changes to the ACT-Rental application.
 
+## [0.17.0-beta.7] - 2026-09-22
+
+The printed equipment list becomes a handover act, and the pagination layer
+is migrated to the API that `fastapi-pagination` 0.16 requires.
+
+### Features
+
+- **Project Print Form Is Now a Handover Act:** The heading reads `АКТ ВЫДАЧИ ОБОРУДОВАНИЯ от <дата> (<время>) №` with a ruled blank for the number, which is filled in by hand. The blank is an empty inline-block with a bottom border rather than a run of underscores, so its width is exact instead of depending on the font's underscore glyph and its spacing.
+- **Liability Column Removed From the Print Form:** The printed list is handed to the client, so the per-item `Сумма ответственности` column no longer belongs on it. The category separator `colspan` drops from 6/5 to 5/4 to match the new column count, and `.col-name` widens from 42% to 54% so the table still spans the page. Both layouts were checked against rendered output: four columns without the dates column, five with it.
+
+### Bug Fixes
+
+- **Pagination Broke Under `fastapi-pagination` 0.16:** 0.16.0 made `paginate()` from `fastapi_pagination.ext.sqlalchemy` sync-only and moved async pagination to a new `apaginate()` coroutine. Passing an `AsyncSession` to `paginate()` raises `Coroutine AsyncSession.scalar is not allowed in sync flow`, taking every paginated endpoint to a 500. All five call sites across `bookings.py`, `projects.py` and `equipment.py` now use `apaginate`; the signature is unchanged and transformer lambdas were left alone, since `AsyncItemsTransformer` accepts sync callables. The floor is `>=0.16.0` rather than Dependabot's `>=0.15.15`, because `apaginate` does not exist in 0.15.x.
+- **Print Form Timestamped in UTC:** `generated_at` was a naive `datetime.now()`. The container runs in UTC and the template filters convert only timezone-aware values to Moscow time, so `Документ сформирован` ran three hours early — and shortly before midnight would have carried the previous day's date. Making `generated_at` timezone-aware lets the existing `MOSCOW_TZ` conversion apply. A `format_time` filter joins `format_date` and `format_datetime`, following their string handling and timezone conversion.
+
+### Dependencies
+
+- **Runtime:** `fastapi` 0.140.0 → 0.141.1, `uvicorn` 0.51.0 → 0.53.0, `websockets` 16.1.1 → 17.1, `redis` 8.0.1 → 8.1.0, `hiredis` 3.4.0 → 3.4.1, `pydantic-core` 2.46.4 → 2.49.0, `pydantic-settings` 2.14.2 → 2.15.0, `annotated-doc` 0.0.4 → 0.0.5, `setuptools` 83.0.0 → 84.0.0. Each was merged only after CI ran against a current base; the runs originally attached to these pull requests had failed in July and August against an older `develop` and were stale rather than red.
+- **`fastapi-pagination` 0.15.15 → 0.16.0:** Handled separately from the others, since the bump alone breaks the application — see Bug Fixes.
+- **npm Security Groups:** 25 packages across the root and `frontend-react`, including `minimatch`, `brace-expansion`, `shell-quote`, `js-yaml`, `ws`, `undici`, `fastify` and `@babel/core`. The group also carried `react-router` 6.30.5 → 7.18.4, a major jump; `tsc && vite build` completes on the new version, so nothing broke at compile time, though no test exercises routing at runtime.
+
+### Chores
+
+- **Code Graph Ignore File:** `.code-review-graphignore` keeps vendored minified libraries in `frontend/static/{js,css}/lib` and build artefacts out of the code graph. The effect on the current graph is small — minified single-line files yield almost no AST nodes — so it is mainly insurance against `dist/`, `node_modules/` and `htmlcov/` landing there later.
+
 ## [0.17.0-beta.6] - 2026-07-27
 
 Dependency housekeeping following the refresh in beta.5.
