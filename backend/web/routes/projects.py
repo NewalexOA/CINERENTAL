@@ -5,7 +5,7 @@ This module contains routes for project management web pages.
 
 import json
 import traceback
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional, Tuple, Union
 
 from fastapi import APIRouter, Depends
@@ -267,7 +267,7 @@ async def print_project(
             'equipment': equipment_items_data,
             'total_items': len(equipment_items_data),
             'total_liability': total_liability,
-            'generated_at': datetime.now(),
+            'generated_at': datetime.now(timezone.utc),
             'show_dates_column': show_dates_column,
         }
 
