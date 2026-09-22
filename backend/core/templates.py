@@ -84,6 +84,31 @@ def format_datetime(date_value: Optional[Union[datetime, str]]) -> str:
     return date_value.strftime('%d.%m.%Y %H:%M')
 
 
+def format_time(date_value: Optional[Union[datetime, str]]) -> str:
+    """Format time for display.
+
+    Args:
+        date_value: Datetime to take the time from
+
+    Returns:
+        Formatted time string
+    """
+    if not date_value:
+        return ''
+
+    if isinstance(date_value, str):
+        try:
+            date_value = datetime.fromisoformat(date_value.replace('Z', '+00:00'))
+        except ValueError:
+            return str(date_value)
+
+    # Convert to Moscow timezone if datetime is timezone-aware
+    if date_value.tzinfo is not None:
+        date_value = date_value.astimezone(MOSCOW_TZ)
+
+    return date_value.strftime('%H:%M')
+
+
 def tojson_filter(obj: Any) -> str:
     """Convert Python object to JSON string for use in templates.
 
@@ -163,5 +188,6 @@ env: Environment = templates.env
 # Register filters
 env.filters['format_date'] = format_date
 env.filters['format_datetime'] = format_datetime
+env.filters['format_time'] = format_time
 env.filters['custom_tojson'] = tojson_filter
 env.filters['format_currency'] = format_currency

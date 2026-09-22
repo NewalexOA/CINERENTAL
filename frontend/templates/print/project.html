@@ -43,7 +43,7 @@
 
         <!-- Equipment Table -->
         <section class="equipment-section">
-            <h3 class="section-title">ОБОРУДОВАНИЕ</h3>
+            <h3 class="section-title">АКТ ВЫДАЧИ ОБОРУДОВАНИЯ от {{ generated_at | format_date }} ({{ generated_at | format_time }}) №<span class="act-number-line"></span></h3>
             <table class="equipment-table">
                 <thead>
                     <tr>
@@ -51,7 +51,6 @@
                         <th class="col-name">Наименование</th>
                         <th class="col-serial">Серийный номер</th>
                         <th class="col-qty">Кол-во</th>
-                        <th class="col-amount">Сумма ответственности</th>
                         {% if show_dates_column %}
                         <th class="col-dates">Даты оборудования</th>
                         {% endif %}
@@ -68,7 +67,7 @@
 
                             {% if current_id_at_level != last_id_at_this_level %}
                                 <tr class="category-separator L{{ level }}">
-                                    <td colspan="{% if show_dates_column %}6{% else %}5{% endif %}" class="category-header-cell padding-level-{{ level - 1 if level > 0 else 0 }}">
+                                    <td colspan="{% if show_dates_column %}5{% else %}4{% endif %}" class="category-header-cell padding-level-{{ level - 1 if level > 0 else 0 }}">
                                         {{ cat_info.name }}
                                     </td>
                         </tr>
@@ -95,7 +94,6 @@
                             </td>
                             <td class="col-serial">{{ item.serial_number or "—" }}</td>
                             <td class="col-qty">{{ item.quantity or 1 }}</td>
-                            <td class="col-amount">{{ (item.liability_amount * item.quantity) | format_currency }}</td>
                             {% if show_dates_column %}
                             <td class="col-dates">
                                 {% if item.has_different_dates %}
