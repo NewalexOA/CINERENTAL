@@ -24,7 +24,7 @@ fastapi==0.140.0
     #   fastapi-pagination
 fastapi-pagination==0.16.0
     # via act-rental (pyproject.toml)
-greenlet==3.5.4
+greenlet==3.5.6
     # via sqlalchemy
 h11==0.16.0
     # via uvicorn
