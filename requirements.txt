@@ -48,7 +48,7 @@ pillow==12.3.0
     # via
     #   python-barcode
     #   treepoem
-pydantic==2.13.4
+pydantic==2.13.5
     # via
     #   act-rental (pyproject.toml)
     #   fastapi
