@@ -2,7 +2,7 @@
 #    uv pip compile pyproject.toml -o /tmp/pb.txt
 aiofiles==25.1.0
     # via act-rental (pyproject.toml)
-alembic==1.18.5
+alembic==1.20.0
     # via act-rental (pyproject.toml)
 annotated-doc==0.0.5
     # via fastapi
