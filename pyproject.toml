@@ -31,7 +31,7 @@ fastapi-pagination = ">=0.16.0,<0.17.0"
 
 [tool.poetry.group.dev.dependencies]
 black = "^24.1.0"
-isort = "^6.0.0"
+isort = ">=6,<10"
 flake8 = "^7.0.0"
 mypy = "^1.8.0"
 pre-commit = "^3.6.0"
