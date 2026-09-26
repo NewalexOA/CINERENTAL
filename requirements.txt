@@ -76,7 +76,7 @@ sqlalchemy==2.0.51
     # via
     #   act-rental (pyproject.toml)
     #   alembic
-starlette==1.3.1
+starlette==1.7.0
     # via fastapi
 treepoem==3.28.0
     # via act-rental (pyproject.toml)
