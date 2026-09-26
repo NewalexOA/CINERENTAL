@@ -1,11 +1,12 @@
 """Integration tests for booking functionality."""
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, cast
 
 from fastapi import status
 from httpx import AsyncClient
 
+from backend.core.timezone_utils import MOSCOW_TZ
 from tests.conftest import async_test
 
 
@@ -358,7 +359,11 @@ async def test_filter_by_date_range(
     async_client: AsyncClient, test_client: Any, test_equipment: Any
 ) -> None:
     """Test filtering bookings by start_date and end_date."""
-    start_date = datetime.now() + timedelta(days=10)
+    # Send timezone-aware datetimes. The API reads a naive value as Moscow
+    # time (backend.core.timezone_utils.ensure_timezone_aware) and stores it
+    # as UTC, so a naive datetime.now() built between 00:00 and 03:00 came
+    # back dated to the previous day and this assertion failed.
+    start_date = datetime.now(MOSCOW_TZ) + timedelta(days=10)
     end_date = start_date + timedelta(days=3)
     data = {
         'client_id': test_client.id,
@@ -368,17 +373,25 @@ async def test_filter_by_date_range(
         'total_amount': 300.00,
     }
     await async_client.post('/api/v1/bookings/', json=data)
-    url = (
-        f'/api/v1/bookings/?start_date={start_date.isoformat()}'
-        f'&end_date={end_date.isoformat()}'
+    # Pass the range through params so the "+03:00" offset is percent-encoded
+    # instead of being read as a space.
+    response = await async_client.get(
+        '/api/v1/bookings/',
+        params={
+            'start_date': start_date.isoformat(),
+            'end_date': end_date.isoformat(),
+        },
     )
-    response = await async_client.get(url)
     assert response.status_code == status.HTTP_200_OK
     pagination_response = response.json()
     bookings = pagination_response['items']
+    # Responses carry UTC, so compare against the UTC date rather than the
+    # Moscow one: the two differ for any booking starting before 03:00 MSK.
+    expected_start = start_date.astimezone(timezone.utc).isoformat()[:10]
+    expected_end = end_date.astimezone(timezone.utc).isoformat()[:10]
     assert any(
-        b['start_date'].startswith(start_date.isoformat()[:10])
-        and b['end_date'].startswith(end_date.isoformat()[:10])
+        b['start_date'].startswith(expected_start)
+        and b['end_date'].startswith(expected_end)
         for b in bookings
     )
 
