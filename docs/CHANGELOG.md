@@ -2,6 +2,21 @@
 
 This document lists notable changes to the ACT-Rental application.
 
+## [0.17.0-beta.8] - 2026-09-28
+
+A dependency batch, unblocked by fixing the test that had been failing it.
+
+### Bug Fixes
+
+- **Booking Date Filter Test Failed Overnight:** `test_filter_by_date_range` built its range from a naive `datetime.now()`. The API reads a naive datetime as Moscow time — `ensure_timezone_aware` in `backend/core/timezone_utils.py` — and stores UTC, so between 00:00 and 03:00 the subtraction rolled the date back a day and the assertion on the date prefix failed. Dependabot triggers its CI at about 01:50 UTC, so every one of its pull requests carried a red check for this reason alone while anything merged during the day passed. The range is now built with `datetime.now(MOSCOW_TZ)`, compared against the UTC date of the response, and passed through `params` — `isoformat()` on an aware datetime emits `+03:00`, and a raw `+` in a query string decodes to a space. Verified by running the container at UTC+7 with a local clock of 01:59, a harsher skew than CI's: the test fails there before the change and passes after.
+
+### Dependencies
+
+- **Runtime:** `starlette` 1.3.1 → 1.7.0, `alembic` 1.18.5 → 1.20.0, `pydantic` 2.13.4 → 2.13.5, `uvicorn` 0.51.0 → 0.53.0, `greenlet` 3.5.4 → 3.5.6, `typing-inspection` 0.4.2 → 0.4.4. The `starlette` jump is the one that warranted attention — 1.x dropped the legacy `TemplateResponse` argument order back in beta.5 and took every server-rendered page to a 500 — but the call sites have used the current signature since then, and `tests/integration/test_web_routes.py` covers them.
+- **Tooling Ranges Widened:** `mypy` `^1.8.0` → `>=1.8,<3.0`, `isort` `^6.0.0` → `>=6,<10`, `pre-commit` `^3.6.0` → `>=3.6,<5.0`, `wheel` 0.47.0 → 0.48.0. Widening the `mypy` ceiling is the notable one, since a new major could surface type errors the pinned version never reported; the type check passes on the resolved version.
+
+All ten bumps were merged only after their branches were rebased onto the fixed test and re-ran green — none of them required a source change, which is what confirms the failures were the test's own.
+
 ## [0.17.0-beta.7] - 2026-09-22
 
 The printed equipment list becomes a handover act, and the pagination layer
