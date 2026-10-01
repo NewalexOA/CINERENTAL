@@ -60,7 +60,7 @@ pydantic-settings==2.15.0
     # via act-rental (pyproject.toml)
 python-barcode==0.16.1
     # via act-rental (pyproject.toml)
-python-dotenv==1.2.2
+python-dotenv==1.2.3
     # via
     #   pydantic-settings
     #   uvicorn
