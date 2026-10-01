@@ -32,7 +32,7 @@ hiredis==3.4.1
     # via redis
 httptools==0.8.0
     # via uvicorn
-idna==3.18
+idna==3.20
     # via anyio
 jinja2==3.1.6
     # via act-rental (pyproject.toml)
